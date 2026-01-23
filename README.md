@@ -1,36 +1,294 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎓 نظام إدارة مركز الشاطبي التعليمي (Al-Shatibi Center LMS)
 
-## Getting Started
+<div align="center">
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green?style=for-the-badge&logo=supabase)
+![TailwindCSS](https://img.shields.io/badge/Tailwind-4-38bdf8?style=for-the-badge&logo=tailwindcss)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+نظام إدارة متكامل وعصري لمراكز تحفيظ القرآن الكريم والمؤسسات التعليمية
+
+[المميزات](#-المميزات-الرئيسية) • [التثبيت](#-التثبيت) • [الاستخدام](#-الاستخدام) • [المساهمة](#-المساهمة)
+
+</div>
+
+---
+
+## 📋 نظرة عامة
+
+نظام شامل مصمم لإدارة مراكز تحفيظ القرآن والمؤسسات التعليمية، يوفر واجهة عصرية وسهلة الاستخدام تدعم اللغة العربية بالكامل (RTL) وتعمل على جميع الأجهزة.
+
+### 👥 المستخدمون المستهدفون:
+- **المديرون**: صلاحيات كاملة لإدارة النظام
+- **المشرفون**: متابعة التقارير والحضور
+- **المعلمون**: إدارة المجموعات والطلاب
+- **أولياء الأمور**: متابعة أبنائهم
+
+---
+
+## ✨ المميزات الرئيسية
+
+### 🎯 إدارة الطلاب
+- ✅ نظام الطلاب المعلقين (Pending Students) - يتطلب موافقة المدير
+- ✅ تسجيل وأرشفة الطلاب
+- ✅ تتبع الحضور اليومي
+- ✅ إدارة سجلات الاختبارات والدرجات
+- ✅ تحديد مواعيد الحضور لكل طالب
+- ✅ ملاحظات سلوكية وتربوية
+
+### 👨‍🏫 إدارة المعلمين
+- ✅ تتبع الحضور والمكافآت
+- ✅ نظام رواتب مرن (ثابت/شراكة)
+- ✅ الخصومات التلقائية والمكافآت
+- ✅ تقارير الأداء الشهرية
+
+### 💰 النظام المالي
+- ✅ إدارة الإيرادات والمصروفات
+- ✅ تتبع رسوم الطلاب
+- ✅ رواتب المعلمين والخصومات
+- ✅ تقارير مالية شاملة
+
+### ⚡ الأتمتة الذكية
+- ✅ قواعد برمجية قابلة للتخصيص
+- ✅ خصومات تلقائية عند التأخير
+- ✅ تنبيهات للطلاب المتغيبين
+- ✅ سجلات تنفيذ القواعد
+
+### 💬 نظام المحادثات
+- ✅ تواصل فوري بين الإدارة والمعلمين
+- ✅ محادثات مع أولياء الأمور
+- ✅ Real-time messaging عبر Supabase
+
+### 📱 تجربة مستخدم متميزة
+- ✅ تصميم Glassmorphism عصري
+- ✅ دعم كامل للسحب والـ Gestures
+- ✅ فتح القائمة الجانبية بالسحب من اليمين
+- ✅ Responsive على جميع الأجهزة
+- ✅ Dark mode friendly
+
+---
+
+## 🏗️ التقنيات المستخدمة
+
+```json
+{
+  "framework": "Next.js 16 (App Router)",
+  "language": "TypeScript",
+  "database": "Supabase (PostgreSQL)",
+  "state": "Zustand + TanStack Query",
+  "styling": "Tailwind CSS 4",
+  "animations": "Framer Motion",
+  "icons": "Lucide React"
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 التثبيت
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### المتطلبات الأساسية
+- Node.js v18 أو أحدث
+- npm أو yarn
+- حساب [Supabase](https://supabase.com)
 
-## Learn More
+### خطوات التثبيت
 
-To learn more about Next.js, take a look at the following resources:
+1. **استنساخ المشروع**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/al-shatibi-lms.git
+   cd al-shatibi-lms
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **تثبيت الحزم**
+   ```bash
+   npm install
+   # أو
+   yarn install
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **إعداد متغيرات البيئة**
+   ```bash
+   # انسخ ملف المثال
+   cp .env.example .env.local
+   
+   # افتح .env.local وضع مفاتيح Supabase الخاصة بك
+   ```
 
-## Deploy on Vercel
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. **إعداد قاعدة البيانات**
+   - افتح [Supabase Dashboard](https://supabase.com/dashboard)
+   - انتقل إلى SQL Editor
+   - انسخ محتوى ملف `supabase_schema.sql` وشغّله
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+5. **تشغيل التطبيق**
+   ```bash
+   npm run dev
+   ```
+
+   افتح [http://localhost:3000](http://localhost:3000) في المتصفح
+
+---
+
+## 📂 هيكل المشروع
+
+```
+src/
+├── app/                    # مسارات Next.js (App Router)
+│   ├── (dashboard)/        # صفحات الداشبورد
+│   ├── parent/             # صفحات ولي الأمر
+│   └── login/              # صفحة تسجيل الدخول
+├── components/             # المكونات المشتركة
+│   ├── layout/             # Sidebar, Header, Footer
+│   └── ui/                 # أزرار، نماذج، إلخ
+├── features/               # الميزات (Feature-based)
+│   ├── students/           # إدارة الطلاب
+│   ├── teachers/           # إدارة المعلمين
+│   ├── finance/            # المالية
+│   ├── automation/         # الأتمتة
+│   └── chat/               # المحادثات
+├── hooks/                  # Custom React Hooks
+├── lib/                    # Supabase client & utils
+├── store/                  # Zustand stores
+├── types/                  # TypeScript types
+└── services/               # API services
+```
+
+---
+
+## 💻 الاستخدام
+
+### تسجيل الدخول كمدير
+```
+البريد: admin@alshatibi.com
+كلمة المرور: (حسب إعدادك)
+```
+
+### إضافة طالب جديد
+1. انتقل إلى "الطلاب"
+2. اضغط على "إضافة طالب"
+3. املأ البيانات المطلوبة
+4. الطالب سيظهر في "طلاب جدد" في انتظار موافقة المدير
+5. المدير يمكنه قبول/رفض/تعديل البيانات
+
+### إعداد قاعدة أتمتة
+1. انتقل إلى "الأتمتة"
+2. اضغط على "إضافة قاعدة جديدة"
+3. حدد نوع القاعدة والشروط والإجراءات
+4. فعّل القاعدة
+
+---
+
+## 🗄️ قاعدة البيانات
+
+### الجداول الرئيسية:
+- `students` - بيانات الطلاب
+- `teachers` - بيانات المعلمين
+- `groups` - المجموعات الدراسية
+- `attendance` - حضور الطلاب
+- `teacher_attendance` - حضور المعلمين
+- `exams` - الاختبارات والدرجات
+- `fees` - رسوم الطلاب
+- `financial_transactions` - العمليات المالية
+- `deductions` - خصومات ومكافآت المعلمين
+- `automation_rules` - قواعد الأتمتة
+- `conversations` & `messages` - المحادثات
+
+---
+
+## 🎨 التخصيص
+
+### تغيير الألوان
+عدّل ملف `tailwind.config.js`:
+```js
+theme: {
+  extend: {
+    colors: {
+      primary: '#3b82f6',  // الأزرق الأساسي
+      // أضف ألوانك هنا
+    }
+  }
+}
+```
+
+### إضافة ميزة جديدة
+1. أنشئ مجلد في `src/features/your-feature/`
+2. أضف `services/`, `components/`, `hooks/`
+3. سجّل المسارات في `src/app/`
+
+---
+
+## 🔒 الأمان
+
+- ✅ Row Level Security (RLS) مفعّل على جميع الجداول
+- ✅ المفاتيح السرية في `.env.local` فقط
+- ✅ التحقق من الصلاحيات على مستوى الواجهة والخادم
+- ⚠️ **لا ترفع** `.env.local` إلى GitHub
+
+---
+
+## 🚀 النشر
+
+### Vercel (موصى به)
+```bash
+# ثبّت Vercel CLI
+npm i -g vercel
+
+# انشر المشروع
+vercel
+
+# أضف متغيرات البيئة في لوحة Vercel
+```
+
+### متغيرات البيئة للنشر:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+---
+
+## 🤝 المساهمة
+
+نرحب بمساهماتكم! يرجى:
+1. Fork المشروع
+2. إنشاء Branch جديد (`git checkout -b feature/amazing-feature`)
+3. Commit التغييرات (`git commit -m 'إضافة ميزة رائعة'`)
+4. Push للـ Branch (`git push origin feature/amazing-feature`)
+5. فتح Pull Request
+
+---
+
+## 📝 الترخيص
+
+هذا المشروع مرخص تحت [MIT License](LICENSE)
+
+---
+
+## 📞 التواصل
+
+- **المطوّر**: فريق مركز الشاطبي
+- **البريد الإلكتروني**: contact@alshatibi.com
+- **الموقع**: [alshatibi.com](https://alshatibi.com)
+
+---
+
+## 🙏 شكر خاص
+
+- [Next.js](https://nextjs.org/)
+- [Supabase](https://supabase.com/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Framer Motion](https://www.framer.com/motion/)
+- [Lucide Icons](https://lucide.dev/)
+
+---
+
+<div align="center">
+
+**صُنع بـ ❤️ في 2026**
+
+⭐ إذا أعجبك المشروع، لا تنسى وضع نجمة!
+
+</div>
