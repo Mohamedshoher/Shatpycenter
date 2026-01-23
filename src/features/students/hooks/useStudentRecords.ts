@@ -97,6 +97,19 @@ export const useStudentRecords = (studentId: string) => {
         }
     });
 
+    const plansQuery = useQuery({
+        queryKey: ['plans', studentId],
+        queryFn: () => import("../services/recordsService").then(m => m.getStudentPlans(studentId)),
+        enabled: !!studentId
+    });
+
+    const addPlan = useMutation({
+        mutationFn: addPlanRecord,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['plans', studentId] });
+        }
+    });
+
     return {
         attendance: attendanceQuery.data || [],
         isLoadingAttendance: attendanceQuery.isLoading,
@@ -104,11 +117,14 @@ export const useStudentRecords = (studentId: string) => {
         isLoadingExams: examsQuery.isLoading,
         fees: feesQuery.data || [],
         isLoadingFees: feesQuery.isLoading,
+        plans: plansQuery.data || [],
+        isLoadingPlans: plansQuery.isLoading,
         notes: notesQuery.data || [],
         isLoadingNotes: notesQuery.isLoading,
         addAttendance,
         addExam,
         addFee,
+        addPlan,
         addLeave,
         addNote,
         deleteExam,
