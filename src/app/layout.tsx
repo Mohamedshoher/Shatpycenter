@@ -11,8 +11,34 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "مركز الشاطبي",
-  description: "نظام إدارة الحلقات القرآنية",
+  title: "مركز الشاطبي - نظام إدارة تعليمي",
+  description: "نظام إدارة متكامل لمراكز تحفيظ القرآن والمؤسسات التعليمية",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "المنارة",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    siteName: "مركز الشاطبي التعليمي",
+    title: "المنارة - نظام إدارة تعليمي",
+    description: "نظام إدارة متكامل لمراكز تحفيظ القرآن",
+  },
+  twitter: {
+    card: "summary",
+    title: "مركز الشاطبي",
+    description: "نظام إدارة الحلقات القرآنية",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+  },
+  themeColor: "#3b82f6",
 };
 
 import BottomNavigation from "@/components/layout/BottomNavigation";
