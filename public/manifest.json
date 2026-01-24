@@ -1,8 +1,8 @@
 {
-    "name": "نظام الشاطبي التعليمي",
-    "short_name": "المنارة",
+    "name": "مركز الشاطبي",
+    "short_name": "مركز الشاطبي",
     "description": "نظام إدارة متكامل لمراكز تحفيظ القرآن والمؤسسات التعليمية",
-    "start_url": "/",
+    "start_url": "/login",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#3b82f6",

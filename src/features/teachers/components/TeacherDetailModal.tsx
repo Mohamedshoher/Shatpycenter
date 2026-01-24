@@ -485,9 +485,9 @@ export default function TeacherDetailModal({
 
     // تعريف التبويبات الأساسية للنافذة
     const tabs = [
-        { id: 'collection', label: 'سجل التحصيل', icon: CircleDollarSign },
-        { id: 'attendance', label: 'سجل الحضور', icon: Calendar },
         { id: 'payroll', label: 'الراتب والمحاسبة', icon: CreditCard },
+        { id: 'attendance', label: 'سجل الحضور', icon: Calendar },
+        { id: 'collection', label: 'سجل التحصيل', icon: CircleDollarSign },
     ];
 
 
@@ -905,63 +905,67 @@ export default function TeacherDetailModal({
                         {/* جدول سجل الانضباط والمكافآت التفصيلي */}
                         <div className="space-y-4">
                             <h4 className="font-black text-gray-800 text-center text-lg">سجل الانضباط والمكافآت (الشهر المختار)</h4>
-                            <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm overflow-x-auto no-scrollbar">
-                                <table className="w-full min-w-[600px] text-right text-sm">
-                                    <thead className="bg-gray-50 border-b border-gray-100 font-bold text-gray-500">
-                                        <tr>
-                                            <th className="px-6 py-4">التاريخ</th>
-                                            <th className="px-6 py-4">الحالة</th>
-                                            <th className="px-6 py-4">التفاصيل</th>
-                                            <th className="px-6 py-4">النوع</th>
-                                            {!isTeacher && <th className="px-6 py-4 text-center">إجراءات</th>}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50 font-bold">
-                                        {(() => {
-                                            const [year, month] = selectedMonthRaw.split('-');
-                                            const firstDay = new Date(parseInt(year), parseInt(month) - 1, 1);
-                                            const startOffset = (firstDay.getDay() + 1) % 7;
+                            <div className="bg-transparent border-none shadow-none overflow-visible">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {(() => {
+                                        const [year, month] = selectedMonthRaw.split('-');
+                                        const firstDay = new Date(parseInt(year), parseInt(month) - 1, 1);
+                                        const startOffset = (firstDay.getDay() + 1) % 7;
 
-                                            return Object.entries(attendanceData)
-                                                .filter(([day, status]) => {
-                                                    const d = Number(day);
-                                                    const weekDayIdx = (d - 1 + startOffset) % 7;
-                                                    const isWeekend = weekDayIdx === 5 || weekDayIdx === 6;
-                                                    return status !== 'present' && !isWeekend;
-                                                })
-                                                .map(([day, status]) => (
-                                                    <tr key={day} className="hover:bg-gray-50 transition-colors">
-                                                        <td className="px-6 py-4 text-gray-700">{day} {selectedMonth.split(' ')[0]}</td>
-                                                        <td className="px-6 py-4 text-gray-700">
-                                                            <span className={cn(
-                                                                "px-3 py-1 rounded-full text-[10px]",
-                                                                status.includes('reward') ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
-                                                            )}>
-                                                                {status.includes('reward') ? 'مكافأة' : 'خصم'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 font-sans text-gray-900">
-                                                            {status === 'absent' ? dailyRate.toFixed(2) :
-                                                                status === 'half' ? (dailyRate * 0.5).toFixed(2) :
-                                                                    status === 'quarter' ? (dailyRate * 0.25).toFixed(2) :
-                                                                        status === 'half_reward' ? (dailyRate * 0.5).toFixed(2) :
-                                                                            status === 'quarter_reward' ? (dailyRate * 0.25).toFixed(2) : '0'} ج.م
-                                                        </td>
-                                                        <td className="px-6 py-4 text-gray-400 text-xs text-right">
-                                                            {dayDetails[Number(day)]?.reason || `تلقائي: تسجيل حضور يوم ${weekDays[(Number(day) - 1 + startOffset) % 7]}`}
-                                                        </td>
-                                                        {!isTeacher && (
-                                                            <td className="px-6 py-4 text-center">
-                                                                <button onClick={() => onAttendanceChange(Number(day), 'present')} className="text-red-400 hover:text-red-600 transition-colors">
-                                                                    <Trash2 size={18} />
-                                                                </button>
-                                                            </td>
-                                                        )}
-                                                    </tr>
-                                                ));
-                                        })()}
-                                    </tbody>
-                                </table>
+                                        const records = Object.entries(attendanceData)
+                                            .filter(([day, status]) => {
+                                                const d = Number(day);
+                                                const weekDayIdx = (d - 1 + startOffset) % 7;
+                                                const isWeekend = weekDayIdx === 5 || weekDayIdx === 6;
+                                                return status !== 'present' && !isWeekend;
+                                            });
+
+                                        if (records.length === 0) {
+                                            return <div className="col-span-full py-8 text-center text-gray-400 text-sm font-bold bg-white rounded-3xl border border-gray-100 md:col-span-2">لا توجد سجلات انضباط أو خصومات لهذا الشهر</div>
+                                        }
+
+                                        return records.map(([day, status]) => {
+                                            const d = Number(day);
+                                            const weekDayIdx = (d - 1 + startOffset) % 7;
+                                            const amount = status === 'absent' ? dailyRate :
+                                                status === 'half' ? (dailyRate * 0.5) :
+                                                    status === 'quarter' ? (dailyRate * 0.25) :
+                                                        status === 'half_reward' ? (dailyRate * 0.5) :
+                                                            status === 'quarter_reward' ? (dailyRate * 0.25) : 0;
+
+                                            return (
+                                                <div key={day} className="bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-md transition-all relative group">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className={cn(
+                                                            "px-2 py-1 rounded-lg text-[10px] font-bold",
+                                                            status.includes('reward') ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
+                                                        )}>
+                                                            {status.includes('reward') ? 'مكافأة' : 'خصم'}
+                                                        </span>
+                                                        <span className="text-xs font-black text-gray-400 font-sans">{day} {selectedMonth.split(' ')[0]}</span>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between mb-3 text-right">
+                                                        <h5 className="font-bold text-gray-900 text-sm">
+                                                            {dayDetails[Number(day)]?.reason || `تسجيل ${status.includes('reward') ? 'مكافأة' : 'غياب'} يوم ${weekDays[(d - 1 + startOffset) % 7]}`}
+                                                        </h5>
+                                                        <span className="font-black font-sans text-gray-800 text-sm">{amount.toFixed(2)} ج.م</span>
+                                                    </div>
+
+                                                    {!isTeacher && (
+                                                        <button
+                                                            onClick={() => onAttendanceChange(Number(day), 'present')}
+                                                            className="w-full py-2 mt-1 bg-red-50 text-red-500 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                            حذف السجل
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1159,11 +1163,19 @@ export default function TeacherDetailModal({
                         <div className="p-5 md:p-8 relative bg-white border-b border-gray-50 shrink-0">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex flex-row-reverse items-center gap-3">
-                                    <div className="w-12 h-12 md:w-16 md:h-16 bg-blue-50 rounded-[20px] md:rounded-[24px] flex items-center justify-center text-blue-600 shadow-sm shrink-0">
-                                        <Briefcase size={26} />
-                                    </div>
                                     <div className="text-right min-w-0">
-                                        <h2 className="text-lg md:text-2xl font-black text-slate-900 truncate leading-tight">{teacher!.fullName}</h2>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <h2 className="text-lg md:text-2xl font-black text-slate-900 truncate leading-tight">{teacher!.fullName}</h2>
+                                            {!isTeacher && (
+                                                <button
+                                                    onClick={() => onEdit?.(teacher!)}
+                                                    className="text-gray-400 hover:text-blue-600 transition-colors"
+                                                    title="تعديل بيانات المعلم"
+                                                >
+                                                    <Edit3 size={18} />
+                                                </button>
+                                            )}
+                                        </div>
                                         <p className="text-blue-500 font-bold text-[10px] md:text-sm mt-0.5">الملف الشخصي للمدرس</p>
                                     </div>
                                 </div>

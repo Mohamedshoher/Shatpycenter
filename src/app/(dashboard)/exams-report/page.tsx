@@ -158,77 +158,53 @@ export default function ExamsReportPage() {
 
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans">
-            {/* Header */}
-            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30 px-4 md:px-6 py-4">
-                <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-4 max-w-5xl mx-auto">
-                    <div className="flex items-center justify-between w-full md:w-auto">
-                        <h1 className="text-xl font-black text-gray-800">
-                            تقارير الاختبارات <span className="md:inline hidden">({currentMonthLabel})</span>
-                        </h1>
-                        <button className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-full transition-colors order-first md:order-last">
-                            <Bell size={20} />
-                        </button>
-                    </div>
+            {/* Header - Compact */}
+            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30 px-4 md:px-6 py-3">
+                <div className="flex items-center justify-between max-w-5xl mx-auto gap-4">
+                    <h1 className="text-lg font-black text-gray-800">
+                        تقارير الاختبارات <span className="md:inline hidden">({currentMonthLabel})</span>
+                    </h1>
 
-                    <div className="flex bg-gray-100/50 p-1 rounded-2xl items-center gap-1 border border-gray-100 shadow-sm w-full md:w-auto overflow-x-auto no-scrollbar">
-                        <button
-                            onClick={() => setSelectedDate(new Date())}
-                            className={cn(
-                                "flex-1 md:flex-none px-4 md:px-6 py-2 rounded-xl md:rounded-[18px] text-[10px] md:text-xs font-bold transition-all whitespace-nowrap",
-                                isCurrentMonth ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-gray-400 hover:text-gray-600"
-                            )}
-                        >
-                            الحالي
-                        </button>
-
-                        <div className="flex items-center gap-2 bg-white px-3 md:px-4 py-2 rounded-xl md:rounded-[18px] border border-gray-200 shadow-sm min-w-[120px] md:min-w-[150px] justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex bg-gray-100/50 p-1 rounded-xl items-center gap-1 border border-gray-100">
+                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm justify-center cursor-pointer" onClick={goToPreviousMonth}>
                             <Calendar size={12} className="text-blue-500" />
-                            <span className="text-[10px] md:text-xs font-black text-gray-700 whitespace-nowrap">{monthLabelWithYear}</span>
-                            <ChevronDown size={12} className="text-gray-400" />
+                            <span className="text-[10px] font-black text-gray-700">{monthLabelWithYear}</span>
                         </div>
-
-                        <button
-                            onClick={goToPreviousMonth}
-                            className="flex items-center gap-1 md:gap-2 px-3 md:px-5 py-2 rounded-xl md:rounded-[18px] text-[10px] md:text-xs font-bold text-gray-400 hover:bg-white hover:text-gray-700 transition-all border border-transparent hover:border-gray-200 whitespace-nowrap"
-                        >
-                            <ChevronRight size={14} />
-                            <span className="hidden md:inline">السابق</span>
-                        </button>
                     </div>
                 </div>
 
 
-                {/* Tabs Navigation */}
-                <div className="max-w-5xl mx-auto mt-6 flex bg-gray-100/80 p-1 rounded-2xl md:rounded-[22px] gap-1 overflow-x-auto no-scrollbar">
+                {/* Tabs Navigation - Compact */}
+                <div className="max-w-5xl mx-auto mt-4 flex bg-gray-100/80 p-1 rounded-xl gap-1 overflow-x-auto no-scrollbar">
                     <button
                         onClick={() => setActiveTab('performance')}
                         className={cn(
-                            "flex-1 min-w-[100px] py-2.5 md:py-3 rounded-xl md:rounded-2xl text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap",
+                            "flex-1 min-w-[90px] py-2 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-1 whitespace-nowrap",
                             activeTab === 'performance' ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
                         )}
                     >
-                        <TrendingUp size={16} />
-                        مقارنة الأداء
+                        <TrendingUp size={14} />
+                        الأداء
                     </button>
                     <button
                         onClick={() => setActiveTab('mostTested')}
                         className={cn(
-                            "flex-1 min-w-[100px] py-2.5 md:py-3 rounded-xl md:rounded-2xl text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap",
+                            "flex-1 min-w-[90px] py-2 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-1 whitespace-nowrap",
                             activeTab === 'mostTested' ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
                         )}
                     >
-                        <Trophy size={16} />
-                        الأكثر اختباراً
+                        <Trophy size={14} />
+                        الأكثر
                     </button>
                     <button
                         onClick={() => setActiveTab('notTested')}
                         className={cn(
-                            "flex-1 min-w-[100px] py-2.5 md:py-3 rounded-xl md:rounded-2xl text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap",
+                            "flex-1 min-w-[90px] py-2 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-1 whitespace-nowrap",
                             activeTab === 'notTested' ? "bg-white text-amber-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
                         )}
                     >
-                        <AlertCircle size={16} />
-                        لم يختبروا
+                        <AlertCircle size={14} />
+                        الباقي
                     </button>
                 </div>
             </header>
@@ -278,21 +254,20 @@ export default function ExamsReportPage() {
                                     <div
                                         key={student.id}
                                         onClick={() => setSelectedStudentForDetails(student)}
-                                        className="bg-white/60 hover:bg-white transition-all rounded-[28px] p-4 flex items-center justify-between border border-transparent hover:border-amber-100/50 group cursor-pointer"
+                                        className="bg-white rounded-[20px] p-3 flex items-center justify-between border border-gray-100 shadow-sm group cursor-pointer"
                                     >
-                                        <div className="flex flex-row-reverse items-center gap-4">
-                                            <span className="text-base font-black text-gray-200 font-sans">{student.rank}.</span>
-                                            <div className="w-11 h-11 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shrink-0">
-                                                <User size={22} />
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500 shrink-0">
+                                                <User size={18} />
                                             </div>
                                             <div className="text-right">
-                                                <h3 className="font-bold text-gray-900 group-hover:text-amber-600 transition-colors text-sm md:text-base">{student.fullName}</h3>
-                                                <span className="text-[10px] md:text-xs text-gray-400 font-bold">{student.groupName}</span>
+                                                <h3 className="font-bold text-gray-900 group-hover:text-amber-600 transition-colors text-sm">{student.fullName}</h3>
+                                                <span className="text-[10px] text-gray-400 font-bold">{student.groupName}</span>
                                             </div>
                                         </div>
 
-                                        <button className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-amber-50 group-hover:text-amber-500 transition-all">
-                                            <ChevronRight size={20} className="rotate-0" />
+                                        <button className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                                            <ChevronRight size={16} />
                                         </button>
                                     </div>
                                 ))}
@@ -366,29 +341,25 @@ export default function ExamsReportPage() {
                                             if ((e.target as HTMLElement).closest('.wa-btn')) return;
                                             setSelectedStudentForDetails(student);
                                         }}
-                                        className="bg-white/60 hover:bg-white transition-all rounded-[32px] p-4 flex items-center justify-between border border-transparent hover:border-blue-100/50 group cursor-pointer"
+                                        className="bg-white rounded-[20px] p-3 flex items-center justify-between border border-gray-100 shadow-sm group cursor-pointer"
                                     >
-                                        <div className="flex flex-row-reverse items-center gap-3 md:gap-4 overflow-hidden">
-                                            <span className="text-base font-black text-gray-200 font-sans shrink-0">{student.rank}.</span>
-                                            <div className="w-11 h-11 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shrink-0">
-                                                <User size={22} />
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
+                                                <User size={18} />
                                             </div>
                                             <div className="text-right overflow-hidden">
-                                                <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-sm md:text-base truncate">{student.fullName}</h3>
-                                                <span className="text-[10px] md:text-xs text-gray-400 font-bold truncate block">{student.groupName}</span>
+                                                <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-sm truncate">{student.fullName}</h3>
+                                                <span className="text-[10px] text-gray-400 font-bold truncate block">{student.groupName}</span>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-row-reverse items-center gap-2">
-                                            <div className="bg-blue-50 px-3 py-1.5 rounded-2xl flex flex-row-reverse items-center gap-2">
-                                                <span className="text-blue-600 font-black text-xs md:text-sm font-sans">{student.examsCount}</span>
-                                                <span className="text-[9px] md:text-[10px] text-blue-400 font-bold uppercase whitespace-nowrap">اختبار</span>
+                                        <div className="flex items-center gap-2">
+                                            <div className="bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1.5">
+                                                <span className="text-blue-600 font-black text-xs font-sans">{student.examsCount}</span>
+                                                <span className="text-[9px] text-blue-400 font-bold">اختبار</span>
                                             </div>
-                                            <button
-                                                onClick={() => setSelectedStudentForDetails(student)}
-                                                className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all"
-                                            >
-                                                <ChevronRight size={20} className="rotate-0" />
+                                            <button className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                                                <ChevronRight size={16} />
                                             </button>
                                         </div>
                                     </div>

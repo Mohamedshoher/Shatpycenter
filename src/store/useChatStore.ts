@@ -9,6 +9,7 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   read: boolean;
+  isPinned?: boolean;
 }
 
 export interface Conversation {
@@ -28,7 +29,7 @@ interface ChatStoreState {
   unreadCount: number;
   userRole: 'director' | 'teacher' | 'parent' | null;
   userId: string | null;
-  
+
   // Actions
   setUserRole: (role: 'director' | 'teacher' | 'parent') => void;
   setUserId: (id: string) => void;
@@ -50,7 +51,7 @@ export const useChatStore = create<ChatStoreState>((set) => ({
 
   setUserRole: (role) => set({ userRole: role }),
   setUserId: (id) => set({ userId: id }),
-  
+
   setConversations: (conversations) =>
     set((state) => ({
       conversations,
@@ -67,11 +68,11 @@ export const useChatStore = create<ChatStoreState>((set) => ({
       const updatedConversations = state.conversations.map((conv) =>
         conv.id === message.conversationId
           ? {
-              ...conv,
-              lastMessage: message.content,
-              lastMessageTime: message.timestamp,
-              unreadCount: message.read ? conv.unreadCount : conv.unreadCount + 1,
-            }
+            ...conv,
+            lastMessage: message.content,
+            lastMessageTime: message.timestamp,
+            unreadCount: message.read ? conv.unreadCount : conv.unreadCount + 1,
+          }
           : conv
       );
       const totalUnread = updatedConversations.reduce(

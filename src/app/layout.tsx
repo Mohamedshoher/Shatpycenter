@@ -11,13 +11,13 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "مركز الشاطبي - نظام إدارة تعليمي",
+  title: "مركز الشاطبي",
   description: "نظام إدارة متكامل لمراكز تحفيظ القرآن والمؤسسات التعليمية",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "المنارة",
+    title: "مركز الشاطبي",
   },
   formatDetection: {
     telephone: false,
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "مركز الشاطبي التعليمي",
-    title: "المنارة - نظام إدارة تعليمي",
+    title: "مركز الشاطبي - نظام إدارة تعليمي",
     description: "نظام إدارة متكامل لمراكز تحفيظ القرآن",
   },
   twitter: {

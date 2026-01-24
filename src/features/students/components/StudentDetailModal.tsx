@@ -807,47 +807,57 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                         {/* جدول السجل التاريخي */}
                         <div className="space-y-3">
                             <h3 className="font-bold text-gray-900 mr-1">سجل المدفوعات التاريخي</h3>
-                            <div className="bg-white rounded-[24px] border border-gray-50 overflow-hidden shadow-sm">
-                                <table className="w-full text-right border-collapse">
-                                    <thead>
-                                        <tr className="bg-gray-50/50 border-b border-gray-50">
-                                            <th className="px-4 py-4 text-[11px] font-black text-gray-400">الشهر</th>
-                                            <th className="px-4 py-4 text-[11px] font-black text-gray-400">تاريخ الدفع</th>
-                                            <th className="px-4 py-4 text-[11px] font-black text-gray-400 text-center">المبلغ</th>
-                                            <th className="px-4 py-4 text-[11px] font-black text-gray-400 text-center">رقم الوصل</th>
-                                            <th className="px-4 py-4 text-[11px] font-black text-gray-400 text-center">المحصل</th>
-                                            {isDirector && <th className="px-4 py-4 text-center"></th>}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {fees.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((fee) => (
-                                            <tr key={fee.id} className="hover:bg-gray-50/50 transition-colors">
-                                                <td className="px-4 py-4 text-xs font-bold text-gray-800">{fee.month}</td>
-                                                <td className="px-4 py-4 text-[10px] font-bold text-gray-500">{fee.date}</td>
-                                                <td className="px-4 py-4 text-xs font-black text-green-600 text-center font-sans tracking-tight">
-                                                    {fee.amount.replace(/[^0-9.]/g, '')} ج.م
-                                                </td>
-                                                <td className="px-4 py-4 text-xs font-bold text-gray-700 text-center font-sans">{fee.receipt}</td>
-                                                <td className="px-4 py-4 text-xs font-bold text-gray-600 text-center">{fee.createdBy}</td>
-                                                {isDirector && (
-                                                    <td className="px-4 py-4 text-center">
-                                                        <button
-                                                            onClick={() => handleDeleteFee(fee.id, fee.receipt)}
-                                                            className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </td>
-                                                )}
-                                            </tr>
-                                        ))}
-                                        {fees.length === 0 && (
-                                            <tr>
-                                                <td colSpan={6} className="py-12 text-center text-gray-400 text-sm font-bold">لا توجد مدفوعات مسجلة</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                            <div className="space-y-3 pt-2">
+                                {fees.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((fee) => (
+                                    <div key={fee.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative group hover:shadow-md transition-all">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h5 className="font-bold text-gray-900 text-sm mb-1">{fee.month}</h5>
+                                                <p className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+                                                    <Calendar size={12} />
+                                                    {fee.date}
+                                                </p>
+                                            </div>
+                                            <div className="text-left">
+                                                <span className="block text-lg font-black text-green-600 font-sans tracking-tight">
+                                                    {fee.amount.replace(/[^0-9.]/g, '')} <span className="text-xs">ج.م</span>
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 bg-gray-50/50 p-2 rounded-xl">
+                                            <div className="flex items-center gap-2">
+                                                <span className="flex items-center gap-1">
+                                                    <FileText size={12} />
+                                                    وصل: {fee.receipt}
+                                                </span>
+                                                <span className="w-px h-3 bg-gray-300 mx-1" />
+                                                <span className="flex items-center gap-1">
+                                                    <User size={12} />
+                                                    {fee.createdBy}
+                                                </span>
+                                            </div>
+
+                                            {isDirector && (
+                                                <button
+                                                    onClick={() => handleDeleteFee(fee.id, fee.receipt)}
+                                                    className="w-7 h-7 bg-white text-red-500 rounded-lg border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm"
+                                                    title="حذف السجل"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                                {fees.length === 0 && (
+                                    <div className="text-center py-12 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-gray-300 mb-3 shadow-sm">
+                                            <CreditCard size={24} />
+                                        </div>
+                                        <p className="text-sm text-gray-400 font-bold">لا توجد مدفوعات مسجلة في السجل التاريخي</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1024,51 +1034,52 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[800px] h-fit max-h-[95vh] bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col"
                     >
-                        <div className="p-6 relative border-b border-gray-50">
+                        <div className="p-5 relative border-b border-gray-50">
                             <button
                                 onClick={onClose}
-                                className="absolute left-6 top-6 w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
+                                className="absolute left-5 top-5 w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
                             >
                                 <X size={20} />
                             </button>
 
-                            <div className="text-right">
-                                <h2 className="text-2xl font-bold text-gray-900">{student.fullName}</h2>
-                                <p className="text-blue-600 font-bold text-sm block mb-3">
-                                    {groups.find(g => g.id === student.groupId)?.name || 'بدون مجموعة'}
-                                </p>
+                            <div className="text-right mt-2 md:mt-0">
+                                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">{student.fullName}</h2>
 
-                                <div className="flex items-center justify-end gap-2 mt-2">
-                                    {user?.role !== 'teacher' && (
-                                        <button
-                                            onClick={handleArchiveToggle}
-                                            className={cn(
-                                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                                                isArchived ? "bg-green-50 text-green-600 hover:bg-green-100" : "bg-amber-50 text-amber-500 hover:bg-amber-100"
-                                            )}
-                                            title={isArchived ? "استعادة" : "أرشفة"}
-                                        >
-                                            {isArchived ? <RotateCcw size={18} /> : <Archive size={18} />}
-                                        </button>
-                                    )}
-                                    {user?.role !== 'teacher' && (
-                                        <>
-                                            <button
-                                                onClick={handleWhatsApp}
-                                                className="w-8 h-8 rounded-full bg-green-50 text-green-500 flex items-center justify-center hover:bg-green-100 transition-colors"
-                                                title="واتساب"
-                                            >
-                                                <MessageCircle size={16} />
-                                            </button>
-                                            <button
-                                                onClick={handleCall}
-                                                className="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center hover:bg-blue-100 transition-colors"
-                                                title="اتصال"
-                                            >
-                                                <Phone size={16} />
-                                            </button>
-                                        </>
-                                    )}
+                                <div className="flex items-center justify-end gap-3 flex-wrap-reverse">
+                                    <div className="flex items-center gap-2">
+                                        {user?.role !== 'teacher' && (
+                                            <>
+                                                <button
+                                                    onClick={handleArchiveToggle}
+                                                    className={cn(
+                                                        "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
+                                                        isArchived ? "bg-green-50 text-green-600 hover:bg-green-100" : "bg-amber-50 text-amber-500 hover:bg-amber-100"
+                                                    )}
+                                                    title={isArchived ? "استعادة" : "أرشفة"}
+                                                >
+                                                    {isArchived ? <RotateCcw size={16} /> : <Archive size={16} />}
+                                                </button>
+                                                <button
+                                                    onClick={handleWhatsApp}
+                                                    className="w-9 h-9 rounded-xl bg-green-50 text-green-500 flex items-center justify-center hover:bg-green-100 transition-colors"
+                                                    title="واتساب"
+                                                >
+                                                    <MessageCircle size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={handleCall}
+                                                    className="w-9 h-9 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center hover:bg-blue-100 transition-colors"
+                                                    title="اتصال"
+                                                >
+                                                    <Phone size={16} />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    <span className="text-blue-600 font-bold text-sm bg-blue-50 px-3 py-1.5 rounded-lg">
+                                        {groups.find(g => g.id === student.groupId)?.name || 'بدون مجموعة'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -1086,8 +1097,8 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                                             isActive ? "text-blue-600" : "text-gray-400 hover:text-gray-600"
                                         )}
                                     >
-                                        <Icon size={18} />
-                                        <span>{tab.label}</span>
+                                        <Icon size={20} className={cn("mb-1", isActive && "stroke-[2.5px]")} />
+                                        <span className="hidden md:inline">{tab.label}</span>
                                         {isActive && (
                                             <motion.div layoutId="modalTab" className="absolute bottom-0 left-2 right-2 h-1 bg-blue-600 rounded-t-full" />
                                         )}
@@ -1096,7 +1107,7 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                             })}
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-6 text-right">
+                        <div className="flex-1 overflow-y-auto p-5 md:p-6 text-right">
                             {renderTabContent()}
                         </div>
                     </motion.div>

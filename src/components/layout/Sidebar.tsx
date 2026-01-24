@@ -26,14 +26,15 @@ import { logout } from '@/features/auth/services/authService';
 import { useRouter } from 'next/navigation';
 
 export default function Sidebar() {
-    const { user } = useAuthStore();
+    const { user, setUser } = useAuthStore();
     const { isSidebarOpen, setSidebarOpen } = useUIStore();
     const pathname = usePathname();
     const router = useRouter();
 
     const handleLogout = async () => {
         await logout();
-        router.push('/login');
+        setUser(null);
+        router.replace('/login');
     };
 
     const navItems = [
@@ -173,12 +174,12 @@ export default function Sidebar() {
             >
                 <div className="h-full flex flex-col">
                     {/* Header */}
-                    <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+                    <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
                         <div className="flex items-center gap-2">
-                            <span className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                                <Zap size={18} fill="white" />
-                            </span>
-                            <span className="text-xl font-bold text-blue-900">المنارة</span>
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm p-1.5 border border-gray-50">
+                                <img src="/icon-192.png" alt="Logo" className="w-full h-full object-contain" />
+                            </div>
+                            <span className="text-lg font-black text-gray-900 tracking-tighter">مركز الشاطبي</span>
                         </div>
                         <button
                             onClick={() => setSidebarOpen(false)}

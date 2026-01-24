@@ -11,7 +11,8 @@ import {
     FileSpreadsheet,
     User,
     Zap,
-    MessageCircle
+    MessageCircle,
+    FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,16 +26,21 @@ export default function BottomNavigation() {
     }
 
     const navItems = [
-        { id: 'home', label: 'المنارة', icon: Zap, href: '/' },
+        { id: 'home', label: 'مركز الشاطبي', icon: Zap, href: '/' },
         { id: 'students', label: 'الطلاب', icon: Users, href: '/students' },
         { id: 'attendance', label: 'الحضور', icon: CalendarCheck, href: '/attendance-report' },
         { id: 'groups', label: 'المجموعات', icon: LayoutGrid, href: '/groups' },
-        { id: 'chat', label: 'الرسائل', icon: MessageCircle, href: '/chat' },
+        { id: 'exams', label: 'الاختبارات', icon: FileText, href: '/exams-report' },
     ];
+
+    const filteredNavItems = navItems.filter(item => {
+        if (user?.role === 'teacher' && item.id === 'home') return false;
+        return true;
+    });
 
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-3 z-50 flex justify-around items-center md:hidden">
-            {navItems.map((item) => {
+            {filteredNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname.startsWith(item.href);
 

@@ -42,5 +42,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         return null;
     }
 
+    // إذا كان مسجلاً ويحاول فتح صفحة الدخول، لا تظهر المحتوى (انتظر التحويل)
+    if (user && pathname === '/login') {
+        return null;
+    }
+
     return <>{children}</>;
 }

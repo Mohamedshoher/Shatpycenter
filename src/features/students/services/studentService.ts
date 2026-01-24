@@ -48,7 +48,7 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<string> 
                 full_name: student.fullName,
                 group_id: student.groupId,
                 parent_phone: student.parentPhone,
-                status: 'pending', // الحالة الافتراضية للطلاب الجدد
+                status: student.status || 'pending',
                 monthly_amount: student.monthlyAmount,
                 birth_date: student.birthDate,
                 address: student.address,

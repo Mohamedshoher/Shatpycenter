@@ -31,6 +31,7 @@ export default function ChatPage() {
     error,
     selectConversation,
     sendMessage,
+    togglePinMessage,
   } = useChat(userId, userRole as any);
 
   // Mock automation notifications
@@ -205,6 +206,7 @@ export default function ChatPage() {
                 conversation={selectedConversation}
                 messages={messages}
                 currentUserId={userId}
+                onTogglePin={togglePinMessage}
               />
               <MessageInput
                 onSend={sendMessage}
@@ -224,22 +226,33 @@ export default function ChatPage() {
 
       {/* Mobile Message View */}
       {selectedConversation && (
-        <div className="md:hidden fixed inset-0 bg-white z-30 flex flex-col">
-          <button
-            onClick={() => selectConversation(null as any)}
-            className="p-4 text-blue-500 font-semibold text-right"
-          >
-            العودة
-          </button>
-          <MessageArea
-            conversation={selectedConversation}
-            messages={messages}
-            currentUserId={userId}
-          />
-          <MessageInput
-            onSend={sendMessage}
-            disabled={sending}
-          />
+        <div className="md:hidden fixed inset-0 bg-white z-[60] flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white shadow-sm shrink-0">
+            <button
+              onClick={() => selectConversation(null as any)}
+              className="px-4 py-2 text-blue-600 bg-blue-50 rounded-xl font-bold text-sm"
+            >
+              العودة
+            </button>
+            <div className="text-right">
+              <h3 className="font-bold text-gray-900 leading-none">{selectedConversation.participantNames[1]}</h3>
+              <span className="text-[10px] text-gray-400 font-bold">نشط الآن</span>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col overflow-hidden bg-white">
+            <MessageArea
+              conversation={selectedConversation}
+              messages={messages}
+              currentUserId={userId}
+              showHeader={false}
+              onTogglePin={togglePinMessage}
+            />
+            <MessageInput
+              onSend={sendMessage}
+              disabled={sending}
+            />
+          </div>
         </div>
       )}
     </div>

@@ -88,7 +88,8 @@ export const getMessages = async (conversationId: string): Promise<ChatMessage[]
       senderRole: row.sender_role,
       content: row.content,
       timestamp: new Date(row.created_at),
-      read: row.read_by && row.read_by.length > 0 // Simplified: logic can be improved based on read_by array
+      read: row.read_by && row.read_by.length > 0,
+      isPinned: row.is_pinned || false
     })) as ChatMessage[];
   } catch (error) {
     console.error("Error fetching messages:", error);
@@ -294,10 +295,14 @@ export const canMessage = (
   return permissionsMap[userRole]?.includes(targetRole) || false;
 };
 
-// الحصول على عدد الرسائل غير المقروءة
-export const getUnreadCount = async (userId: string): Promise<number> => {
-  const conversations = await getConversations(userId);
-  return conversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
+// تثبيت أو إلغاء تثبيت رسالة
+export const togglePinMessage = async (messageId: string, isPinned: boolean): Promise<void> => {
+  const { error } = await supabase
+    .from('messages')
+    .update({ is_pinned: isPinned })
+    .eq('id', messageId);
+
+  if (error) throw error;
 };
 
 // للتوافق مع الكود القديم
@@ -309,6 +314,8 @@ export const chatService = {
   getOrCreateConversation,
   subscribeToConversations,
   subscribeToMessages,
+  markMessagesAsRead,
+  togglePinMessage,
   getUnreadCount: async (conversations: Conversation[]): Promise<number> => {
     if (conversations) return conversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
     return 0;

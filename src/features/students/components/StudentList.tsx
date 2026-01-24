@@ -191,8 +191,8 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
 
     return (
         <div className="space-y-6 pb-24 p-4 md:p-6">
-            <div className="flex items-center justify-between pt-2 gap-4">
-                <div className="flex items-center gap-2">
+            <div className="relative flex items-center justify-between pt-2 gap-4">
+                <div className="relative z-50 flex items-center gap-2">
                     <button
                         onClick={() => setIsAddModalOpen(true)}
                         className="w-12 h-12 bg-blue-600 rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-transform shrink-0"
@@ -211,7 +211,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 </div>
 
                 {!isSearchOpen && (
-                    <h1 className="text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2">
+                    <h1 className="text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
                         {customTitle || 'الطلاب'} ({filteredStudents?.length || 0})
                     </h1>
                 )}

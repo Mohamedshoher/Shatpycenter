@@ -97,7 +97,7 @@ export default function DashboardOverview() {
             icon: CalendarCheck,
             color: 'bg-green-500',
             roles: ['director', 'supervisor', 'teacher'],
-            link: '/attendance'
+            link: '/attendance-report'
         },
         {
             title: 'إيرادات الشهر',

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useChatStore, ChatMessage, Conversation } from '@/store/useChatStore';
 import { chatService } from '@/features/chat/services/chatService';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'parent') => {
+  const { user } = useAuthStore();
   const {
     conversations,
     selectedConversation,
@@ -28,46 +30,37 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
     setUserRole(userRole);
   }, [userId, userRole, setUserId, setUserRole]);
 
-  // Load conversations
+  // Subscribe to conversations
   useEffect(() => {
-    const loadConversations = async () => {
-      setLoading(true);
-      try {
-        const data = await chatService.getConversations(userId);
-        setConversations(data);
-      } catch (err) {
-        setError('خطأ في تحميل المحادثات');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!userId) return;
 
-    if (userId) {
-      loadConversations();
-    }
+    setLoading(true);
+    const unsubscribe = chatService.subscribeToConversations(userId, (data) => {
+      setConversations(data);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [userId, setConversations]);
 
-  // Load messages when conversation is selected
+  // Subscribe to messages when conversation is selected
   useEffect(() => {
     if (!selectedConversation) return;
 
-    const loadMessages = async () => {
-      try {
-        const data = await chatService.getMessages(selectedConversation.id);
-        setMessages(data);
-        
-        // Mark conversation as read if there are unread messages
-        const hasUnread = data.some((msg) => !msg.read && msg.senderId !== userId);
-        if (hasUnread) {
-          markAsRead(selectedConversation.id);
-        }
-      } catch (err) {
-        setError('خطأ في تحميل الرسائل');
-      }
-    };
+    const unsubscribe = chatService.subscribeToMessages(selectedConversation.id, (data) => {
+      setMessages(data);
 
-    loadMessages();
-  }, [selectedConversation, setMessages, markAsRead, userId]);
+      // Mark conversation as read if there are unread messages from others
+      const hasUnread = data.some((msg) => !msg.read && msg.senderId !== userId);
+      if (hasUnread) {
+        chatService.markMessagesAsRead(selectedConversation.id, userId).then(() => {
+          markAsRead(selectedConversation.id);
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedConversation?.id, setMessages, markAsRead, userId]);
 
   // Select conversation
   const handleSelectConversation = useCallback(
@@ -80,25 +73,53 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
   // Send message
   const handleSendMessage = useCallback(
     async (content: string) => {
-      if (!selectedConversation || !content.trim()) return;
+      if (!selectedConversation || !content.trim() || !userId) return;
 
-      setSending(true);
+      const tempId = `temp-${Date.now()}`;
+      const tempMessage: ChatMessage = {
+        id: tempId,
+        conversationId: selectedConversation.id,
+        senderId: userId,
+        senderName: user?.displayName || 'أنت',
+        senderRole: userRole,
+        content: content.trim(),
+        timestamp: new Date(),
+        read: true,
+        isPinned: false
+      };
+
+      // Optimistic update
+      setMessages([...messages, tempMessage]);
+
       try {
-        const newMessage = await chatService.sendMessage(
+        await chatService.sendMessage(
           selectedConversation.id,
           userId,
-          'أنت',
+          user?.displayName || 'أنت',
           userRole,
           content
         );
-        addMessage(newMessage);
+        // The real-time subscription will replace the temp message with the real one
       } catch (err) {
+        // Rollback on error
+        setMessages(messages.filter(m => m.id !== tempId));
         setError('خطأ في إرسال الرسالة');
-      } finally {
-        setSending(false);
       }
     },
-    [selectedConversation, userId, userRole, addMessage]
+    [selectedConversation, userId, userRole, user?.displayName, messages, setMessages]
+  );
+
+  // Toggle Pin
+  const togglePinMessage = useCallback(
+    async (messageId: string, currentPinStatus: boolean) => {
+      try {
+        await chatService.togglePinMessage(messageId, !currentPinStatus);
+      } catch (err) {
+        console.error('Pinning error:', err);
+        setError('خطأ في تثبيت الرسالة - تأكد من إضافة عمود is_pinned لجدول messages في Supabase');
+      }
+    },
+    []
   );
 
   // Check if user can message someone
@@ -119,6 +140,7 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
     error,
     selectConversation: handleSelectConversation,
     sendMessage: handleSendMessage,
+    togglePinMessage,
     canMessage,
   };
 };
