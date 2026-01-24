@@ -57,7 +57,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
                 category: transactionData.category as any,
                 date: transactionData.date,
                 description: transactionData.title,
-                performedBy: user?.id || 'unknown',
+                performedBy: user?.uid || 'unknown',
                 relatedUserId: undefined
             });
         },
@@ -73,7 +73,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
                     date,
                 };
                 onAdd(formData);
-                
+
                 // إعادة تعيين النموذج
                 resetForm();
                 onClose();
@@ -139,11 +139,11 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
     };
 
     return (
-        <div 
+        <div
             className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
             onClick={handleBackdropClick}
         >
-            <div 
+            <div
                 className="w-full max-w-md bg-white rounded-3xl p-6 max-h-[90vh] overflow-y-auto shadow-lg"
                 onClick={(e) => e.stopPropagation()}
             >
