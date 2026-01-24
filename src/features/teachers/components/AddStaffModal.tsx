@@ -30,7 +30,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
     const [formData, setFormData] = useState({
         fullName: initialTeacher?.fullName || '',
         phone: initialTeacher?.phone || '',
-        email: initialTeacher?.email || '',
+        email: (initialTeacher as any)?.email || '',
         role: (initialTeacher as any)?.role || 'teacher' as 'teacher' | 'supervisor',
         accountingType: (initialTeacher as any)?.accountingType || 'fixed' as 'fixed' | 'partnership',
         salary: (initialTeacher as any)?.salary || 0,
@@ -46,7 +46,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
             setFormData({
                 fullName: initialTeacher.fullName,
                 phone: initialTeacher.phone,
-                email: initialTeacher.email || '',
+                email: (initialTeacher as any).email || '',
                 role: (initialTeacher as any).role || 'teacher',
                 accountingType: (initialTeacher as any).accountingType || 'fixed',
                 salary: (initialTeacher as any).salary || 0,
