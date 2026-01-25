@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { MessageCircle, Badge } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useStudents } from '@/features/students/hooks/useStudents';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -18,6 +19,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   onSelect,
 }) => {
   const { user } = useAuthStore();
+  const { data: students } = useStudents();
 
   const getOtherName = (conversation: Conversation) => {
     if (!user) return 'محادثة';
@@ -43,7 +45,20 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     }
 
     const finalIdx = otherIndex !== -1 ? otherIndex : 0;
-    return conversation.participantNames[finalIdx] || 'محادثة';
+    const originalName = conversation.participantNames[finalIdx] || 'محادثة';
+
+    // تحسين العرض في حالة كان الاسم رقم هاتف (لأولياء الأمور) أو إذا كان الاسم هو نفسه المعرف
+    const otherId = clean(conversation.participantIds[finalIdx]);
+    const isPhoneNumber = originalName.match(/^[0-9+]+$/);
+
+    if (isPhoneNumber || originalName === otherId) {
+      const parentStudents = (students || []).filter(s => s.parentPhone === otherId || s.parentPhone === originalName);
+      if (parentStudents.length > 0) {
+        return `ولي أمر ${parentStudents.map(s => s.fullName.split(' ')[0]).join(' و ')}`;
+      }
+    }
+
+    return originalName;
   };
 
   if (conversations.length === 0) {

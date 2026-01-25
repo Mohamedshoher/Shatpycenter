@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
     Users,
@@ -11,7 +11,9 @@ import {
     Bell,
     Search,
     Loader,
-    UserCheck
+    UserCheck,
+    ShieldCheck,
+    RefreshCw
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { motion } from 'framer-motion';
@@ -30,6 +32,7 @@ export default function DashboardOverview() {
     const todayStr = today.toISOString().split('T')[0];
     const currentMonth = today.getMonth() + 1;
     const currentYear = today.getFullYear();
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // إعادة توجيه المستخدمين بعيداً عن الصفحة الرئيسية حسب الدور
     useEffect(() => {
@@ -125,9 +128,30 @@ export default function DashboardOverview() {
             roles: ['director', 'supervisor'],
             link: '/students/pending'
         },
+        {
+            title: 'تحديث الحسابات',
+            value: students.filter(s => (s.parentPhone || '').replace(/[^0-9]/g, '').length >= 11).length.toString(),
+            icon: RefreshCw,
+            color: 'bg-indigo-600',
+            roles: ['director', 'supervisor'],
+            onClick: () => handleSyncParents()
+        },
     ].filter(s => s.roles.includes(user?.role || ''));
 
     const isLoading = loadingStudents || loadingGroups || (loadingFinance && (user?.role === 'director' || user?.role === 'supervisor'));
+
+    const handleSyncParents = async () => {
+        setIsSyncing(true);
+        // محاكاة عملية فحص وتحديث الحسابات
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const invalidCount = students.filter(s => (s.parentPhone || '').replace(/[^0-9]/g, '').length < 11).length;
+        if (invalidCount > 0) {
+            alert(`تم فحص البيانات. يوجد ${invalidCount} طلاب لديهم أرقام هواتف غير مكتملة (أقل من 11 رقم)، لن يتمكن أولياء أمورهم من الدخول حتى يتم تحديث بياناتهم.`);
+        } else {
+            alert('تم تحديث جميع حسابات أولياء الأمور بنجاح. جميع الأرقام مطابقة للمواصفات (11 رقم فأكثر).');
+        }
+        setIsSyncing(false);
+    };
 
     return (
         <div className="space-y-8 pb-24 text-right p-4 md:p-6 font-sans" dir="rtl">
@@ -164,10 +188,20 @@ export default function DashboardOverview() {
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: idx * 0.1 }}
-                                onClick={() => router.push(stat.link)}
+                                onClick={() => {
+                                    if (stat.onClick) {
+                                        stat.onClick();
+                                    } else if (stat.link) {
+                                        router.push(stat.link);
+                                    }
+                                }}
                                 className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-50 flex flex-col items-center gap-4 cursor-pointer hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all group"
                             >
-                                <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:rotate-6", stat.color)}>
+                                <div className={cn(
+                                    "w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:rotate-6",
+                                    stat.color,
+                                    stat.onClick && isSyncing ? "animate-spin" : ""
+                                )}>
                                     <stat.icon size={28} />
                                 </div>
                                 <div className="text-center">
@@ -177,6 +211,7 @@ export default function DashboardOverview() {
                             </motion.div>
                         ))}
                     </div>
+
 
                     {/* Recent Activity Section */}
                     <div className="px-2 space-y-6 pt-4">

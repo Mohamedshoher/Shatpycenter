@@ -70,6 +70,13 @@ export default function EditStudentModal({ student, isOpen, onClose }: EditStude
     // دالة معالجة إرسال النموذج
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // التحقق من طول رقم الهاتف (لا يقل عن 11 رقم لضمان عمل الحساب تلقائياً)
+        if (formData.parentPhone.replace(/[^0-9]/g, '').length < 11) {
+            alert('رقم الهاتف يجب أن يكون 11 رقماً على الأقل لضمان عمل حساب ولي الأمر بشكل صحيح.');
+            return;
+        }
+
         mutation.mutate(formData as any); // تنفيذ عملية التعديل
     };
 
@@ -96,6 +103,7 @@ export default function EditStudentModal({ student, isOpen, onClose }: EditStude
                         value={formData.parentPhone}
                         onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
                         required
+                        minLength={11}
                         dir="ltr"
                     />
                     <Input

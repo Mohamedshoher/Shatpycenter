@@ -190,12 +190,13 @@ export default function ParentDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* زر التواصل السريع عبر واتساب */}
+            {/* زر المراسلة الداخلية العائم */}
             <button
-                onClick={() => window.open('https://wa.me/201234567890', '_blank')}
-                className="fixed bottom-6 left-6 w-14 h-14 bg-teal-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-all hover:bg-teal-700"
+                onClick={() => setIsChatOpen(true)}
+                className="fixed bottom-10 left-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-all hover:bg-indigo-700 hover:rotate-12"
+                title="المراسلة الداخلية"
             >
-                <MessageCircle size={28} />
+                <MessageCircle size={32} />
             </button>
         </div>
     );

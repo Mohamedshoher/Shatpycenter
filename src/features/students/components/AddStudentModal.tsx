@@ -71,6 +71,13 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // التحقق من طول رقم الهاتف (لا يقل عن 11 رقم لضمان عمل الحساب تلقائياً)
+        if (formData.parentPhone.replace(/[^0-9]/g, '').length < 11) {
+            alert('رقم الهاتف يجب أن يكون 11 رقماً على الأقل لضمان إنشاء حساب لولي الأمر.');
+            return;
+        }
+
         mutation.mutate(formData as any);
     };
 
@@ -91,6 +98,7 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
                         value={formData.parentPhone}
                         onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
                         required
+                        minLength={11}
                         dir="ltr"
                     />
                     <Input

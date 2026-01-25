@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { chatService } from '../services/chatService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useStudents } from '@/features/students/hooks/useStudents';
 
 interface ParentChatModalProps {
     isOpen: boolean;
@@ -19,11 +20,16 @@ interface ParentChatModalProps {
 
 export const ParentChatModal: React.FC<ParentChatModalProps> = ({ isOpen, onClose, contacts }) => {
     const { user } = useAuthStore();
+    const { data: students } = useStudents();
     const [view, setView] = useState<'conversations' | 'contacts'>('conversations');
     const [searchQuery, setSearchQuery] = useState('');
 
     const userId = user?.uid || '';
     const userRole = 'parent';
+
+    const parentDescriptiveName = (students || []).filter(s => s.parentPhone === user?.displayName).length > 0
+        ? `ولي أمر ${(students || []).filter(s => s.parentPhone === user?.displayName).map(k => k.fullName).join(' و ')}`
+        : user?.displayName || 'ولي أمر';
 
     const {
         conversations,
@@ -33,14 +39,22 @@ export const ParentChatModal: React.FC<ParentChatModalProps> = ({ isOpen, onClos
         sending,
         selectConversation,
         sendMessage,
-    } = useChat(userId, userRole);
+    } = useChat(userId, userRole, parentDescriptiveName);
 
     const startConversation = async (contact: any) => {
         if (!user) return;
+
+        // تجهيز اسم ولي الأمر بشكل وصفي (ولي أمر الطالب فلان)
+        const parentPhone = user.displayName || "";
+        const myKids = students?.filter(s => s.parentPhone === parentPhone) || [];
+        const parentDescriptiveName = myKids.length > 0
+            ? `ولي أمر ${myKids.map(k => k.fullName).join(' و ')}`
+            : parentPhone || 'ولي أمر';
+
         try {
             const convo = await chatService.getOrCreateConversation(
                 [user.uid, contact.id === 'director' ? 'director' : contact.id],
-                [user.displayName, contact.fullName],
+                [parentDescriptiveName, contact.fullName],
                 contact.id === 'director' ? 'director-teacher' : 'teacher-parent' as any
             );
             selectConversation(convo);
@@ -76,7 +90,7 @@ export const ParentChatModal: React.FC<ParentChatModalProps> = ({ isOpen, onClos
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="bg-white rounded-[40px] w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden relative z-10 shadow-2xl"
+                className="bg-white rounded-[40px] w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden relative z-10 shadow-2xl"
             >
                 {/* Header */}
                 <div className="bg-white border-b border-gray-100 p-6 flex items-center justify-between shrink-0">
@@ -185,7 +199,14 @@ export const ParentChatModal: React.FC<ParentChatModalProps> = ({ isOpen, onClos
                                             <ArrowRight size={20} />
                                         </button>
                                         <div>
-                                            <h3 className="font-black text-gray-900">{selectedConversation.participantNames[1]}</h3>
+                                            <h3 className="font-black text-gray-900">
+                                                {(() => {
+                                                    const clean = (id: string) => id ? id.replace('mock-', '').toLowerCase().trim() : '';
+                                                    const myId = clean(userId);
+                                                    const otherIndex = selectedConversation.participantIds.findIndex(id => clean(id) !== myId);
+                                                    return selectedConversation.participantNames[otherIndex === -1 ? 0 : otherIndex] || 'محادثة';
+                                                })()}
+                                            </h3>
                                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-teal-600">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
                                                 متصل الآن

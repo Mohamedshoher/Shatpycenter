@@ -70,11 +70,23 @@ export const subscribeToConversations = (
       callback(convos);
     })
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') console.log('📡 متصل بنظام المحادثات اللحظي');
+      if (status === 'SUBSCRIBED') {
+        console.log('📡 متصل بنظام المحادثات اللحظي');
+      }
     });
+
+  // Also subscribe to a global channel for cross-user updates if needed
+  const globalChannel = supabase
+    .channel('chat-global')
+    .on('broadcast', { event: 'refresh_list' }, async () => {
+      const convos = await getConversations(userId);
+      callback(convos);
+    })
+    .subscribe();
 
   return () => {
     channel.unsubscribe();
+    globalChannel.unsubscribe();
   };
 };
 
@@ -200,16 +212,26 @@ export const sendMessage = async (
     .eq('id', conversationId);
 
   // 3. Broadcast to force immediate update on other side
-  supabase.channel(`chat-messages-${conversationId}`).send({
-    type: 'broadcast',
-    event: 'new_msg',
-    payload: { senderId }
+  const msgChannel = supabase.channel(`chat-messages-${conversationId}`);
+  msgChannel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      msgChannel.send({
+        type: 'broadcast',
+        event: 'new_msg',
+        payload: { senderId }
+      });
+    }
   });
 
-  supabase.channel(`chat-conversations-global`).send({
-    type: 'broadcast',
-    event: 'refresh_list',
-    payload: { conversationId }
+  const globalChannel = supabase.channel('chat-global');
+  globalChannel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      globalChannel.send({
+        type: 'broadcast',
+        event: 'refresh_list',
+        payload: { conversationId }
+      });
+    }
   });
 
   return {
@@ -253,10 +275,15 @@ export const getOrCreateConversation = async (
 
   if (found) {
     // التأكد من بث إشارة حتى لو كانت موجودة لضمان ظهورها في القائمة
-    supabase.channel(`chat-conversations-global`).send({
-      type: 'broadcast',
-      event: 'refresh_list',
-      payload: { conversationId: found.id }
+    const globalChannel = supabase.channel('chat-global');
+    globalChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        globalChannel.send({
+          type: 'broadcast',
+          event: 'refresh_list',
+          payload: { conversationId: found.id }
+        });
+      }
     });
 
     return {
@@ -287,10 +314,15 @@ export const getOrCreateConversation = async (
   if (error) throw error;
 
   // بث إشارة لضمان ظهور المحادثة الجديدة في قائمة الطرفين فوراً
-  supabase.channel(`chat-conversations-global`).send({
-    type: 'broadcast',
-    event: 'refresh_list',
-    payload: { conversationId: newConvo.id }
+  const globalChannel = supabase.channel('chat-global');
+  globalChannel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      globalChannel.send({
+        type: 'broadcast',
+        event: 'refresh_list',
+        payload: { conversationId: newConvo.id }
+      });
+    }
   });
 
   return {

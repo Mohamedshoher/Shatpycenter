@@ -6,6 +6,7 @@ import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Pin, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStudents } from '@/features/students/hooks/useStudents';
 
 interface MessageAreaProps {
   conversation: Conversation | null;
@@ -22,6 +23,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   showHeader = true,
   onTogglePin,
 }) => {
+  const { data: students } = useStudents();
   const [activePinnedIndex, setActivePinnedIndex] = useState(0);
   const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
   const cleanedCurrentUserId = cleanId(currentUserId);
@@ -70,8 +72,21 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
     // Fallback logic
     if (idx === -1) idx = 0;
 
-    return conversation.participantNames[idx] || 'محادثة';
-  }, [conversation, currentUserId]);
+    const originalName = conversation.participantNames[idx] || 'محادثة';
+    const otherId = clean(conversation.participantIds[idx]);
+
+    // تحسين العرض في حالة كان الاسم رقم هاتف (لأولياء الأمور)
+    const isPhoneNumber = originalName.match(/^[0-9+]+$/);
+
+    if (isPhoneNumber || originalName === otherId) {
+      const parentStudents = (students || []).filter(s => s.parentPhone === otherId || s.parentPhone === originalName);
+      if (parentStudents.length > 0) {
+        return `ولي أمر ${parentStudents.map(s => s.fullName).join(' و ')}`;
+      }
+    }
+
+    return originalName;
+  }, [conversation, currentUserId, students]);
 
   return (
     <div className="flex flex-col flex-1 bg-white overflow-hidden relative">

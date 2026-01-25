@@ -3,7 +3,7 @@ import { useChatStore, ChatMessage, Conversation } from '@/store/useChatStore';
 import { chatService } from '@/features/chat/services/chatService';
 import { useAuthStore } from '@/store/useAuthStore';
 
-export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'parent') => {
+export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'parent', customSenderName?: string) => {
   const { user } = useAuthStore();
   const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
   const cleanedUserId = cleanId(userId);
@@ -75,12 +75,13 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
     async (content: string) => {
       if (!selectedConversation || !content.trim() || !cleanedUserId) return;
 
+      const senderName = customSenderName || user?.displayName || 'أنت';
       const tempId = `temp-${Date.now()}`;
       const tempMessage: ChatMessage = {
         id: tempId,
         conversationId: selectedConversation.id,
         senderId: cleanedUserId,
-        senderName: user?.displayName || 'أنت',
+        senderName: senderName,
         senderRole: userRole,
         content: content.trim(),
         timestamp: new Date(),
@@ -95,7 +96,7 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
         await chatService.sendMessage(
           selectedConversation.id,
           cleanedUserId,
-          user?.displayName || 'أنت',
+          senderName,
           userRole,
           content
         );
@@ -106,7 +107,7 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
         setError('خطأ في إرسال الرسالة');
       }
     },
-    [selectedConversation, cleanedUserId, userRole, user?.displayName, messages, setMessages]
+    [selectedConversation, cleanedUserId, userRole, user?.displayName, customSenderName, messages, setMessages]
   );
 
   // Toggle Pin
