@@ -2,8 +2,10 @@
 
 import Sidebar from '@/components/layout/Sidebar';
 import { ChatFloatingButton } from '@/components/ChatFloatingButton';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useEffect } from 'react';
 
 export default function DashboardLayout({
     children,
@@ -11,8 +13,18 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
-
+    const router = useRouter();
+    const { user } = useAuthStore();
     const { setSidebarOpen } = useUIStore();
+
+    // منع أولياء الأمور من دخول لوحة تحكم الإدارة
+    useEffect(() => {
+        if (user?.role === 'parent') {
+            router.push('/parent');
+        }
+    }, [user, router]);
+
+    if (user?.role === 'parent') return null; // تجنب الوميض (flash) قبل التوجيه
 
     return (
         <div className="flex min-h-screen bg-gray-50 text-right overflow-x-hidden">

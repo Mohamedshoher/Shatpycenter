@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLogin } from '../hooks/useLogin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,17 +22,42 @@ export default function LoginForm() {
     const [selectedTeacherId, setSelectedTeacherId] = useState('');
     const [phone, setPhone] = useState('');
 
+    // Load saved credentials for all roles
+    useEffect(() => {
+        const savedMainTab = localStorage.getItem('shatibi_last_main_tab') as MainTab | null;
+        const savedRoleTab = localStorage.getItem('shatibi_last_role_tab') as RoleTab | null;
+        const savedTeacherId = localStorage.getItem('shatibi_last_teacher_id');
+        const savedPhone = localStorage.getItem('shatibi_parent_phone');
+        const savedPass = localStorage.getItem('shatibi_last_pass');
+
+        if (savedMainTab) setMainTab(savedMainTab);
+        if (savedRoleTab) setRoleTab(savedRoleTab);
+        if (savedTeacherId) setSelectedTeacherId(savedTeacherId);
+        if (savedPhone) setPhone(savedPhone);
+        if (savedPass) setPassword(savedPass);
+    }, []);
+
     const activeTeachers = teachers?.filter(t => t.status === 'active') || [];
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         let loginIdentifier: string = roleTab;
+
+        // Save preferences and credentials
+        localStorage.setItem('shatibi_last_main_tab', mainTab);
+        localStorage.setItem('shatibi_last_pass', password);
+
         if (mainTab === 'parent') {
             loginIdentifier = `parent-${phone}`;
-        } else if (roleTab === 'teacher') {
-            if (!selectedTeacherId) return;
-            loginIdentifier = `teacher-${selectedTeacherId}`;
+            localStorage.setItem('shatibi_parent_phone', phone);
+        } else {
+            localStorage.setItem('shatibi_last_role_tab', roleTab);
+            if (roleTab === 'teacher') {
+                if (!selectedTeacherId) return;
+                loginIdentifier = `teacher-${selectedTeacherId}`;
+                localStorage.setItem('shatibi_last_teacher_id', selectedTeacherId);
+            }
         }
 
         await login(loginIdentifier, password);
@@ -221,7 +246,7 @@ export default function LoginForm() {
                                     <div className="relative">
                                         <Input
                                             type="tel"
-                                            placeholder="01xxxxxxxxx"
+                                            placeholder="رقم الهاتف بدون 02"
                                             value={phone}
                                             onChange={(e) => setPhone(e.target.value)}
                                             required

@@ -31,10 +31,12 @@ export default function DashboardOverview() {
     const currentMonth = today.getMonth() + 1;
     const currentYear = today.getFullYear();
 
-    // إعادة توجيه المدرس بعيداً عن الصفحة الرئيسية
+    // إعادة توجيه المستخدمين بعيداً عن الصفحة الرئيسية حسب الدور
     useEffect(() => {
         if (user?.role === 'teacher') {
             router.push('/students');
+        } else if (user?.role === 'parent') {
+            router.push('/parent');
         }
     }, [user, router]);
 

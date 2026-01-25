@@ -22,7 +22,7 @@ export const useLogin = () => {
             }
         } catch (err: any) {
             console.error(err);
-            let message = 'حدث خطأ في تسجيل الدخول.';
+            let message = err.message || 'حدث خطأ في تسجيل الدخول.';
             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-email') {
                 message = 'بيانات الدخول غير صحيحة.';
             } else if (err.code === 'auth/configuration-not-found') {

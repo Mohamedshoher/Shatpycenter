@@ -287,9 +287,10 @@ export const canMessage = (
   targetRole: 'director' | 'teacher' | 'parent'
 ): boolean => {
   const permissionsMap: { [key: string]: string[] } = {
-    director: ['teacher', 'parent'],
-    teacher: ['director', 'parent'],
-    parent: ['teacher'],
+    director: ['teacher', 'parent', 'supervisor'],
+    teacher: ['director', 'parent', 'supervisor'],
+    parent: ['teacher', 'director', 'supervisor'],
+    supervisor: ['director', 'teacher', 'parent'],
   };
 
   return permissionsMap[userRole]?.includes(targetRole) || false;

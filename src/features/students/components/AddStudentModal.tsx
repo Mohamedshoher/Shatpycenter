@@ -19,17 +19,18 @@ interface AddStudentModalProps {
 
 export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: AddStudentModalProps) {
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
+    const isTeacher = user?.role === 'teacher';
+
     const [formData, setFormData] = useState({
         fullName: '',
         parentPhone: '',
         address: '',
         enrollmentDate: new Date().toISOString().split('T')[0],
-        status: 'active' as const,
+        status: (isTeacher ? 'pending' : 'active') as 'active' | 'archived' | 'pending',
         groupId: defaultGroupId || '',
         monthlyAmount: 0,
     });
-
-    const { user } = useAuthStore();
 
     const { data: groups } = useQuery({
         queryKey: ['groups'],
@@ -45,6 +46,9 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
         mutationFn: (newStudent: Omit<Student, 'id'>) => addStudent(newStudent),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['students'] });
+            if (isTeacher) {
+                alert('تم إرسال بيانات الطالب، وفي انتظار مراجعة وقبول الإدارة.');
+            }
             onClose();
             // Reset form
             setFormData({
@@ -52,7 +56,7 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
                 parentPhone: '',
                 address: '',
                 enrollmentDate: new Date().toISOString().split('T')[0],
-                status: 'active',
+                status: isTeacher ? 'pending' : 'active',
                 groupId: defaultGroupId || '',
                 monthlyAmount: 0,
             });
@@ -127,6 +131,16 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
                             ))}
                         </select>
                     </div>
+                    {isTeacher && (
+                        <div className="col-span-full bg-blue-50 border border-blue-100 p-4 rounded-2xl flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shrink-0">
+                                <span className="text-xl font-bold">!</span>
+                            </div>
+                            <p className="text-sm font-bold text-blue-700">
+                                تنبيه: سيتم تسجيل الطالب كطلب جديد، ولن يظهر في مجموعتك إلا بعد مراجعة وقبول الإدارة أو المشرف.
+                            </p>
+                        </div>
+                    )}
                 </div>
                 <div className="flex items-center gap-3 pt-4 justify-start">
                     <Button type="submit" disabled={mutation.isPending} className="px-8">
