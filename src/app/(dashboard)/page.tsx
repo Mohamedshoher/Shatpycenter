@@ -178,97 +178,104 @@ export default function DashboardOverview() {
     };
 
     return (
-        <div className="space-y-8 pb-24 text-right p-4 md:p-6 font-sans" dir="rtl">
-            {/* Header */}
-            <div className="flex items-center justify-between px-2 pt-4">
-                <div>
-                    <h1 className="text-2xl font-black text-gray-900 leading-tight">مرحباً، {user?.displayName || 'مستخدم'} 👋</h1>
-                    <p className="text-sm text-gray-400 font-bold mt-1">
-                        {today.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                    </p>
-                </div>
-                <div className="flex gap-3">
-                    <button onClick={() => router.push('/chat')} className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors">
-                        <MessageCircle size={22} />
-                    </button>
-                    <button className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 relative">
-                        <Bell size={22} />
-                        <span className="absolute top-3.5 right-3.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                    </button>
-                </div>
-            </div>
-
-            {isLoading ? (
-                <div className="h-64 flex items-center justify-center">
-                    <Loader className="w-8 h-8 text-blue-600 animate-spin" />
-                </div>
-            ) : (
-                <>
-                    {/* Main Stats Grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-2">
-                        {stats.map((stat, idx) => (
-                            <motion.div
-                                key={idx}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: idx * 0.1 }}
-                                onClick={() => {
-                                    if (stat.onClick) {
-                                        stat.onClick();
-                                    } else if (stat.link) {
-                                        router.push(stat.link);
-                                    }
-                                }}
-                                className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-50 flex flex-col items-center gap-4 cursor-pointer hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all group"
-                            >
-                                <div className={cn(
-                                    "w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:rotate-6",
-                                    stat.color,
-                                    stat.onClick && isSyncing ? "animate-spin" : ""
-                                )}>
-                                    <stat.icon size={28} />
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-xs text-gray-400 font-bold mb-1">{stat.title}</p>
-                                    <p className="text-2xl font-black text-gray-900 font-sans">{stat.value}</p>
-                                </div>
-                            </motion.div>
-                        ))}
+        <div className="min-h-screen bg-[#f8faff] pb-32">
+            <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-8 md:space-y-12 text-right">
+                {/* Header Section */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-6 px-2">
+                    <div className="text-center sm:text-right">
+                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 leading-tight">
+                            مرحباً، {user?.displayName || 'مستخدم'} 👋
+                        </h1>
+                        <p className="text-base text-gray-400 font-bold mt-2">
+                            {today.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
                     </div>
+                    <div className="flex gap-4 shrink-0">
+                        <button onClick={() => router.push('/chat')} className="w-14 h-14 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-100 transition-all">
+                            <MessageCircle size={24} />
+                        </button>
+                        <button className="w-14 h-14 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 relative hover:border-blue-100 transition-all">
+                            <Bell size={24} />
+                            <span className="absolute top-4 right-4 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                        </button>
+                    </div>
+                </div>
 
-
-                    {/* Recent Activity Section */}
-                    <div className="px-2 space-y-6 pt-4">
-                        <div className="flex items-center justify-between px-1">
-                            <h3 className="font-black text-gray-900 text-xl tracking-tight">آخر التحديثات</h3>
-                            <button onClick={() => router.push('/students')} className="text-blue-600 text-sm font-bold bg-blue-50 px-4 py-1.5 rounded-full hover:bg-blue-100 transition-colors">عرض الكل</button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {[
-                                { tag: 'حضور', text: `تم تسجيل حضور ${todayAttendance.length} طالباً اليوم حتى الآن`, time: 'اليوم', icon: CalendarCheck, color: 'text-orange-500', bg: 'bg-orange-50', roles: ['director', 'supervisor', 'teacher'] },
-                                { tag: 'طلاب', text: `تم تسجيل ${students.length} طالباً في النظام`, time: 'محدث', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50', roles: ['director', 'supervisor'] },
-                                { tag: 'مالية', text: `إجمالي إيرادات النقدية لهذا الشهر: ${monthlyIncome.toLocaleString()} ج.م`, time: 'هذا الشهر', icon: CreditCard, color: 'text-purple-500', bg: 'bg-purple-50', roles: ['director'] },
-                            ]
-                                .filter(item => item.roles.includes(user?.role || ''))
-                                .map((item, idx) => (
-                                    <div key={idx} className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex items-center gap-5 hover:border-blue-100 transition-colors">
-                                        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0", item.bg, item.color)}>
-                                            <item.icon size={22} />
-                                        </div>
-                                        <div className="flex-1 text-right">
-                                            <div className="flex items-center justify-end gap-3 mb-1.5">
-                                                <span className="text-xs text-gray-300 font-bold">{item.time}</span>
-                                                <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider", item.bg, item.color)}>{item.tag}</span>
-                                            </div>
-                                            <p className="text-[15px] font-bold text-gray-700 leading-snug">{item.text}</p>
-                                        </div>
+                {isLoading ? (
+                    <div className="h-64 flex items-center justify-center font-bold text-gray-400">
+                        <Loader className="w-10 h-10 text-blue-600 animate-spin ml-3" />
+                        جاري تحميل البيانات...
+                    </div>
+                ) : (
+                    <>
+                        {/* Main Stats Grid - Fluid 2 to 4 columns */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 px-2">
+                            {stats.map((stat, idx) => (
+                                <motion.div
+                                    key={idx}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    onClick={() => {
+                                        if (stat.onClick) stat.onClick();
+                                        else if (stat.link) router.push(stat.link);
+                                    }}
+                                    className="bg-white rounded-[32px] p-6 md:p-8 shadow-sm border border-gray-50 flex flex-col items-center gap-4 cursor-pointer hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-2 transition-all group"
+                                >
+                                    <div className={cn(
+                                        "w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:rotate-6",
+                                        stat.color,
+                                        stat.onClick && isSyncing ? "animate-spin" : ""
+                                    )}>
+                                        <stat.icon size={32} />
                                     </div>
-                                ))}
+                                    <div className="text-center">
+                                        <p className="text-sm text-gray-400 font-bold mb-1">{stat.title}</p>
+                                        <p className="text-3xl font-black text-gray-900 font-sans">{stat.value}</p>
+                                    </div>
+                                </motion.div>
+                            ))}
                         </div>
-                    </div>
-                </>
-            )}
+
+                        {/* Recent Activity Section */}
+                        <div className="px-2 space-y-6">
+                            <div className="flex items-center justify-between px-2">
+                                <h3 className="font-black text-gray-900 text-2xl tracking-tight">آخر التحديثات</h3>
+                                <button onClick={() => router.push('/students')} className="text-blue-600 text-sm font-bold bg-blue-50 px-6 py-2 rounded-full hover:bg-blue-100 transition-all border border-blue-100/50">
+                                    عرض السجل الكامل
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                {[
+                                    { tag: 'حضور', text: `تم تسجيل حضور ${todayAttendance.length} طالباً اليوم حتى الآن`, time: 'اليوم', icon: CalendarCheck, color: 'text-orange-500', bg: 'bg-orange-50', roles: ['director', 'supervisor', 'teacher'] },
+                                    { tag: 'طلاب', text: `تم تسجيل ${students.length} طالباً في النظام`, time: 'محدث', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50', roles: ['director', 'supervisor'] },
+                                    { tag: 'مالية', text: `إجمالي إيرادات النقدية لهذا الشهر: ${monthlyIncome.toLocaleString()} ج.م`, time: 'هذا الشهر', icon: CreditCard, color: 'text-purple-500', bg: 'bg-purple-50', roles: ['director'] },
+                                ]
+                                    .filter(item => item.roles.includes(user?.role || ''))
+                                    .map((item, idx) => (
+                                        <motion.div
+                                            key={idx}
+                                            whileHover={{ x: -4 }}
+                                            className="bg-white rounded-[28px] p-6 shadow-sm border border-gray-50 flex items-center gap-6 hover:border-blue-100 transition-all"
+                                        >
+                                            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner", item.bg, item.color)}>
+                                                <item.icon size={26} />
+                                            </div>
+                                            <div className="flex-1 text-right min-w-0">
+                                                <div className="flex items-center justify-end gap-3 mb-2">
+                                                    <span className="text-xs text-gray-300 font-bold">{item.time}</span>
+                                                    <span className={cn("text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-wider", item.bg, item.color)}>{item.tag}</span>
+                                                </div>
+                                                <p className="text-base font-bold text-gray-700 leading-snug">{item.text}</p>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
 
 
             {/* نافذة إدارة طلبات الإجازة */}

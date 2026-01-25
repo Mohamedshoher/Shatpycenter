@@ -71,23 +71,23 @@ export default function ParentDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50/50 font-sans pb-10" dir="rtl">
-            {/* رأس الصفحة الثابت */}
-            <header className="bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto flex items-center justify-between relative h-10">
+        <div className="min-h-screen bg-gray-50/50 font-sans pb-32" dir="rtl">
+            {/* رأس الصفحة الثابت - مرن مع الحاوية */}
+            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between relative">
                     {/* الجانب الأيمن: زر تسجيل الخروج */}
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold active:scale-95 transition-all shrink-0"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-red-600 hover:text-white transition-all shadow-sm active:scale-95 shrink-0"
                     >
                         <LogOut size={16} />
-                        <span className="hidden sm:inline">خروج</span>
+                        <span className="hidden xs:inline">تسجيل خروج</span>
                     </button>
 
                     {/* المنتصف: شعار المركز */}
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <div className="bg-white w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border border-gray-100">
-                            <img src="/logo.png" alt="المنارة" className="w-6 h-6 object-contain" />
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                        <div className="bg-white w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center shadow-lg border border-gray-50">
+                            <img src="/logo.png" alt="المنارة" className="w-8 h-8 md:w-10 md:h-10 object-contain" />
                         </div>
                     </div>
 
@@ -95,12 +95,12 @@ export default function ParentDashboard() {
                     <div className="flex items-center gap-2 shrink-0">
                         <button
                             onClick={() => setIsChatOpen(true)}
-                            className="relative flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold active:scale-95 transition-all"
+                            className="relative flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-indigo-600 hover:text-white transition-all active:scale-95"
                         >
                             <MessageCircle size={16} />
                             <span className="hidden sm:inline">المراسلة</span>
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold active:scale-95 transition-all">
+                        <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-blue-600 hover:text-white transition-all active:scale-95">
                             <Home size={16} />
                             <span className="hidden sm:inline">الرئيسية</span>
                         </button>
@@ -108,30 +108,35 @@ export default function ParentDashboard() {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 py-8">
-                {/* قسم رسالة الترحيب بولي الأمر */}
+            <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
+                {/* قسم رسالة الترحيب بولي الأمر - خطوط مرنة */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-10 text-right"
+                    className="mb-12 md:mb-16 text-center sm:text-right"
                 >
-                    <h2 className="text-3xl md:text-4xl font-black text-gray-900 leading-tight">
+                    <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-tight">
                         {myKids.length > 0
                             ? `مرحباً ولي أمر ${myKids.map(k => k.fullName.split(' ')[0]).join(' و ')} 👋`
                             : "مرحباً بك ولي أمرنا العزيز 👋"}
                     </h2>
-                    <p className="text-gray-400 font-bold mt-2 text-sm md:text-base">
-                        يسعدنا متابعتك لتقدم أبنائك في مركز الشاطبي التعليمي
+                    <p className="text-base md:text-xl text-gray-400 font-bold mt-4 max-w-2xl">
+                        نسعد بمتابعتك المستمرة لرحلة أبنائك التعليمية في مركز الشاطبي وتطورهم في حفظ القرآن الكريم.
                     </p>
                 </motion.div>
 
-                {/* عنوان قسم الأبناء */}
-                <div className="flex items-center gap-3 mb-8 border-r-4 border-teal-500 pr-3">
-                    <h1 className="text-xl font-black text-gray-600 uppercase tracking-wide">أبنائي الطلاب ({myKids.length})</h1>
+                {/* عنوان القسم والشبكة المرنة */}
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3 border-r-4 border-teal-500 pr-4">
+                        <h1 className="text-xl md:text-2xl font-black text-gray-700 uppercase tracking-wide">أبنائي الطلاب</h1>
+                        <span className="bg-teal-50 text-teal-600 px-3 py-1 rounded-full text-xs font-black">
+                            {myKids.length} سجلات
+                        </span>
+                    </div>
                 </div>
 
-                {/* شبكة عرض بطاقات الطلاب */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* شبكة توزيع البطاقات: عمود في الهاتف، عمودين في التابلت، 3 في الكمبيوتر */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                     {myKids.map((kid) => (
                         <StudentCard
                             key={kid.id}
@@ -143,14 +148,16 @@ export default function ParentDashboard() {
                         />
                     ))}
 
-                    {/* حالة عدم وجود طلاب مسجلين */}
+                    {/* حالة عدم وجود طلاب */}
                     {myKids.length === 0 && (
-                        <div className="col-span-full py-20 text-center space-y-4">
-                            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-400">
-                                <AlertCircle size={40} />
+                        <div className="col-span-full py-24 text-center space-y-6">
+                            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-400 shadow-inner">
+                                <AlertCircle size={48} />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-600">عذراً، لم نجد طلاب مسجلين بهذا الرقم</h3>
-                            <p className="text-gray-400">يرجى التواصل مع إدارة المركز للتحديث.</p>
+                            <div>
+                                <h3 className="text-2xl font-bold text-gray-600">عذراً، لا توجد بيانات</h3>
+                                <p className="text-gray-400 mt-2">لم نجد طلاباً مرتبطين بهذا الرقم في قاعدة البيانات.</p>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -322,76 +329,76 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={onSelect}
-            className="bg-white rounded-[40px] p-6 shadow-sm border border-gray-100 hover:shadow-2xl hover:shadow-blue-500/10 transition-all group relative overflow-hidden cursor-pointer active:scale-[0.98]"
+            className="bg-white rounded-3xl md:rounded-[40px] p-4 md:p-6 shadow-sm border border-gray-100 hover:shadow-2xl hover:shadow-blue-500/10 transition-all group relative overflow-hidden cursor-pointer active:scale-[0.98]"
         >
             {/* زخرفة خلفية للبطاقة */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-bl-[100px] -mr-10 -mt-10 group-hover:scale-110 transition-transform" />
+            <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-blue-500/5 rounded-bl-[100px] -mr-10 -mt-10 group-hover:scale-110 transition-transform" />
 
             {/* علامات الحالة (مفصول / سداد رسوم) */}
-            <div className="absolute top-6 left-6 z-10 flex flex-col gap-2 items-end">
+            <div className="absolute top-4 md:top-6 left-4 md:left-6 z-10 flex flex-col gap-1 md:gap-2 items-end">
                 {kid.status === 'archived' && (
-                    <div className="bg-red-500 text-white px-3 py-1 rounded-full text-[9px] font-black shadow-lg border border-white/20">
+                    <div className="bg-red-500 text-white px-2 md:px-3 py-1 rounded-full text-[8px] md:text-[9px] font-black shadow-lg border border-white/20">
                         مفصول لحين مراجعة الإدارة
                     </div>
                 )}
                 {hasUnpaidFees && (
-                    <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-[9px] font-black shadow-lg border border-white/20">
+                    <div className="bg-orange-500 text-white px-2 md:px-3 py-1 rounded-full text-[8px] md:text-[9px] font-black shadow-lg border border-white/20">
                         لحين سداد الرسوم
                     </div>
                 )}
             </div>
 
-            <div className="flex flex-col items-center text-center space-y-4 relative z-10">
+            <div className="flex flex-col items-center text-center space-y-3 md:space-y-4 relative z-10">
                 {/* أيقونة الطالب */}
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[30px] flex items-center justify-center text-white shadow-xl shadow-blue-500/20 group-hover:rotate-6 transition-transform">
-                    <UserIcon size={38} />
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl md:rounded-[30px] flex items-center justify-center text-white shadow-xl shadow-blue-500/20 group-hover:rotate-6 transition-transform">
+                    <UserIcon size={28} className="md:w-10 md:h-10" />
                 </div>
 
                 <div>
-                    <h2 className="text-xl font-black text-gray-900 mb-1 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{kid.fullName}</h2>
-                    <div className="flex items-center justify-center flex-wrap gap-2 text-[10px] font-bold">
-                        <div className="flex items-center gap-1.5 text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
-                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                    <h2 className="text-lg md:text-xl font-black text-gray-900 mb-1 group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate max-w-[200px]">{kid.fullName}</h2>
+                    <div className="flex items-center justify-center flex-wrap gap-1.5 md:gap-2 text-[9px] md:text-[10px] font-bold">
+                        <div className="flex items-center gap-1 md:gap-1.5 text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
+                            <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-teal-500" />
                             {group?.name || "بدون مجموعة"}
                         </div>
                         {teacher && (
-                            <span className="text-gray-400 text-[9px]">بإشراف أ/ {teacher.fullName}</span>
+                            <span className="text-gray-400 text-[8px] md:text-[9px]">بإشراف أ/ {teacher.fullName}</span>
                         )}
                     </div>
                 </div>
 
                 {/* إحصائيات سريعة (حضور واختبارات) */}
-                <div className="grid grid-cols-2 gap-4 w-full pt-4">
-                    <div className="bg-gray-50/80 p-4 rounded-3xl border border-gray-100 group-hover:bg-white group-hover:shadow-inner transition-all">
-                        <p className="text-[10px] text-gray-400 font-black mb-1">الحضور</p>
+                <div className="grid grid-cols-2 gap-3 md:gap-4 w-full pt-2 md:pt-4">
+                    <div className="bg-gray-50/80 p-3 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 group-hover:bg-white group-hover:shadow-inner transition-all">
+                        <p className="text-[9px] md:text-[10px] text-gray-400 font-black mb-1">الحضور</p>
                         <div className="flex items-baseline justify-center gap-1">
-                            <span className="text-xl font-black text-gray-900">{presentCount}</span>
-                            <span className="text-[10px] text-gray-400 font-bold">/ {totalAttendance || 0}</span>
+                            <span className="text-lg md:text-xl font-black text-gray-900">{presentCount}</span>
+                            <span className="text-[8px] md:text-[10px] text-gray-400 font-bold">/ {totalAttendance || 0}</span>
                         </div>
                     </div>
-                    <div className="bg-gray-50/80 p-4 rounded-3xl border border-gray-100 group-hover:bg-white group-hover:shadow-inner transition-all">
-                        <p className="text-[10px] text-gray-400 font-black mb-1">الاختبارات</p>
+                    <div className="bg-gray-50/80 p-3 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 group-hover:bg-white group-hover:shadow-inner transition-all">
+                        <p className="text-[9px] md:text-[10px] text-gray-400 font-black mb-1">الاختبارات</p>
                         <div className="flex items-baseline justify-center gap-1">
-                            <span className="text-xl font-black text-gray-900">{exams.length}</span>
-                            <span className="text-[10px] text-gray-400 font-bold">سجلات</span>
+                            <span className="text-lg md:text-xl font-black text-gray-900">{exams.length}</span>
+                            <span className="text-[8px] md:text-[10px] text-gray-400 font-bold">سجلات</span>
                         </div>
                     </div>
                 </div>
 
                 {/* أزرار الإجراءات السريعة */}
-                <div className="flex items-center gap-3 w-full pt-2">
-                    <div className="flex-1 h-12 bg-blue-600 text-white shadow-lg shadow-blue-500/20 text-sm font-black rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
-                        عرض التفاصيل
-                        <ChevronLeft size={16} />
+                <div className="flex items-center gap-2 md:gap-3 w-full pt-1 md:pt-2">
+                    <div className="flex-1 h-11 md:h-12 bg-blue-600 text-white shadow-lg shadow-blue-500/20 text-xs md:text-sm font-black rounded-xl md:rounded-2xl flex items-center justify-center gap-1.5 md:gap-2 hover:bg-blue-700 transition-all">
+                        التفاصيل
+                        <ChevronLeft size={14} className="md:w-4 md:h-4" />
                     </div>
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
                             onLeaveRequest();
                         }}
-                        className="h-12 w-28 bg-orange-50 text-orange-600 text-xs font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-orange-600 hover:text-white border border-orange-100"
+                        className="h-11 md:h-12 w-24 md:w-28 bg-orange-50 text-orange-600 text-[10px] md:text-xs font-black rounded-xl md:rounded-2xl flex items-center justify-center gap-1.5 md:gap-2 active:scale-95 transition-all hover:bg-orange-600 hover:text-white border border-orange-100"
                     >
-                        <Calendar size={14} />
+                        <Calendar size={12} className="md:w-3.5 md:h-3.5" />
                         إجازة
                     </button>
                 </div>

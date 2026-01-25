@@ -14,7 +14,9 @@ import {
     Menu,
     X,
     Settings2,
-    BarChart3
+    BarChart3,
+    ChevronDown,
+    Filter
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -45,6 +47,7 @@ export default function GroupsPage() {
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+    const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
     const { user } = useAuthStore();
 
     // تحسين بيانات المجموعات بإضافة اسم المعلم وعدد الطلاب ولون
@@ -84,128 +87,161 @@ export default function GroupsPage() {
     }).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
 
     return (
-        <div className="space-y-6 pb-24 bg-[#f8faff] min-h-screen p-4 md:p-6 text-right">
-            {/* Header */}
-            <div className="flex items-center justify-between pt-2 pb-2 gap-4 relative h-12">
-                <AnimatePresence mode="wait">
-                    {isSearchOpen ? (
-                        <motion.div
-                            key="search"
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="absolute inset-0 z-20 flex items-center"
-                        >
-                            <div className="relative flex-1">
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    placeholder="ابحث باسم المجموعة أو المدرس..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full h-12 bg-white border border-purple-100 rounded-2xl px-10 text-right font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500/10 transition-all shadow-sm"
-                                />
-                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-500" size={18} />
-                                <button
-                                    onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+        <div className="min-h-screen bg-[#f8faff] pb-32">
+            <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 text-right">
+                {/* Header Section */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="w-full sm:w-auto order-2 sm:order-1">
+                        <AnimatePresence mode="wait">
+                            {isSearchOpen ? (
+                                <motion.div
+                                    key="search"
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="relative"
                                 >
-                                    <X size={18} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="header"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex items-center justify-between w-full"
-                        >
-                            {/* Right side: Search button */}
-                            <button
-                                onClick={() => setIsSearchOpen(true)}
-                                className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 hover:bg-gray-200 transition-all active:scale-95"
-                            >
-                                <Search size={20} />
-                            </button>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        placeholder="بحث باسم المجموعة..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full sm:w-80 h-12 bg-white border border-purple-100 rounded-2xl px-10 text-right font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500/10 transition-all shadow-sm"
+                                    />
+                                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-500" size={18} />
+                                    <button
+                                        onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="header-actions"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="flex items-center gap-3"
+                                >
+                                    <button
+                                        onClick={() => setIsSearchOpen(true)}
+                                        className="w-12 h-12 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 hover:text-purple-600 hover:border-purple-100 transition-all shadow-sm"
+                                    >
+                                        <Search size={22} />
+                                    </button>
 
-                            {/* Center: Title */}
-                            <h1 className="text-xl font-bold text-[#1e293b] absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
-                                المجموعات({filteredGroups?.length || 0})
-                            </h1>
+                                    {user?.role !== 'teacher' && (
+                                        <>
+                                            {/* Filter Dropdown */}
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                                                    className={cn(
+                                                        "h-12 px-7 bg-white border border-gray-100 rounded-2xl flex items-center gap-4 text-gray-600 font-bold transition-all shadow-sm min-w-[150px]",
+                                                        isFilterDropdownOpen ? "border-purple-500 ring-2 ring-purple-500/10" : "hover:border-purple-200"
+                                                    )}
+                                                >
+                                                    <Filter size={18} className="text-purple-500 shrink-0" />
+                                                    <span className="text-sm flex-1 text-center">{filter}</span>
+                                                    <ChevronDown size={16} className={cn("transition-transform duration-300 shrink-0", isFilterDropdownOpen && "rotate-180")} />
+                                                </button>
 
-                            {/* Left side: Functional Icons */}
-                            <div className="flex items-center gap-2">
-                                {user?.role !== 'teacher' && (
-                                    <>
-                                        <button
-                                            onClick={() => setIsManageModalOpen(true)}
-                                            className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-sm border border-blue-100/50"
-                                            title="تعديل المجموعات"
-                                        >
-                                            <Settings2 size={20} />
-                                        </button>
-                                        <button
-                                            onClick={() => setIsAddModalOpen(true)}
-                                            className="w-10 h-10 bg-purple-600 text-white rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-purple-500/20"
-                                            title="إضافة مجموعة"
-                                        >
-                                            <Plus size={20} />
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                                                <AnimatePresence>
+                                                    {isFilterDropdownOpen && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                            className="absolute top-14 left-0 sm:right-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1"
+                                                        >
+                                                            {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
+                                                                <button
+                                                                    key={type}
+                                                                    onClick={() => {
+                                                                        setFilter(type);
+                                                                        setIsFilterDropdownOpen(false);
+                                                                    }}
+                                                                    className={cn(
+                                                                        "w-full px-5 py-3 text-right text-sm font-bold transition-all flex items-center justify-between",
+                                                                        filter === type ? "bg-purple-50 text-purple-600" : "text-gray-600 hover:bg-gray-50"
+                                                                    )}
+                                                                >
+                                                                    {type}
+                                                                    {filter === type && <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
+                                                                </button>
+                                                            ))}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
 
-            {/* Filter Bar */}
-            {user?.role !== 'teacher' && (
-                <div className="flex flex-row-reverse gap-2 overflow-x-auto no-scrollbar pb-2">
-                    {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
-                        <button
-                            key={type}
-                            onClick={() => setFilter(type)}
-                            className={cn(
-                                "flex-shrink-0 px-6 py-2.5 rounded-2xl text-xs font-bold transition-all border",
-                                filter === type
-                                    ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/20"
-                                    : "bg-white text-gray-500 border-gray-100 hover:border-purple-200"
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setIsManageModalOpen(true)}
+                                                    className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center hover:bg-blue-100 transition-all border border-blue-100/50"
+                                                    title="تعديل المجموعات"
+                                                >
+                                                    <Settings2 size={22} />
+                                                </button>
+                                                <button
+                                                    onClick={() => setIsAddModalOpen(true)}
+                                                    className="w-12 h-12 bg-purple-600 text-white rounded-2xl flex items-center justify-center hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20"
+                                                    title="إضافة مجموعة"
+                                                >
+                                                    <Plus size={22} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </motion.div>
                             )}
-                        >
-                            {type}
-                        </button>
-                    ))}
-                </div>
-            )}
+                        </AnimatePresence>
+                    </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {isLoading ? (
-                    [1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-white rounded-3xl animate-pulse shadow-sm" />)
-                ) : (
-                    filteredGroups?.map((group) => (
-                        <div key={group.id} className="bg-white rounded-[32px] p-5 shadow-sm border border-gray-50 flex items-center justify-between group hover:shadow-md transition-all">
-                            {/* Group Info on the left */}
-                            <Link href={`/groups/${group.id}`} className="text-right flex flex-col gap-1 cursor-pointer">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-[#1e293b] text-lg hover:text-purple-600 transition-colors">{group.name}</h3>
-                                    <span className={cn("inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold min-w-[28px]", group.color)}>
-                                        {group.count}
+                    <h1 className="text-2xl md:text-3xl font-black text-[#1e293b] order-1 sm:order-2">
+                        المجموعات <span className="text-purple-600 text-lg md:text-xl">({filteredGroups?.length || 0})</span>
+                    </h1>
+                </div>
+
+                {/* Main Dynamic Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                    {isLoading ? (
+                        Array.from({ length: 8 }).map((_, i) => (
+                            <div key={i} className="h-32 bg-white rounded-[32px] animate-pulse shadow-sm" />
+                        ))
+                    ) : (
+                        filteredGroups?.map((group) => (
+                            <motion.div
+                                layout
+                                key={group.id}
+                                className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-50 flex flex-col justify-between gap-4 hover:shadow-xl hover:shadow-purple-500/5 transition-all group"
+                            >
+                                <div className="flex justify-between items-start gap-4">
+                                    <Link href={`/groups/${group.id}`} className="min-w-0 flex-1">
+                                        <h3 className="font-black text-[#1e293b] text-xl group-hover:text-purple-600 transition-colors truncate">
+                                            {group.name}
+                                        </h3>
+                                    </Link>
+                                    <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0", group.color)}>
+                                        {group.count} طلاب
                                     </span>
                                 </div>
-                                <p className="text-xs text-gray-400 font-bold">المدرس: {group.teacher}</p>
-                            </Link>
 
-                            {/* Report Button on the right */}
-                            <button className="flex items-center gap-2 bg-[#eef2ff] text-[#4f46e5] px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-colors">
-                                <span className="order-2">تقرير</span>
-                                <BarChart3 size={18} className="order-1" />
-                            </button>
-                        </div>
-                    ))
-                )}
+                                <div className="flex items-center justify-between">
+                                    <button className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm shrink-0">
+                                        <BarChart3 size={20} />
+                                    </button>
+
+                                    <div className="flex flex-col text-right min-w-0">
+                                        <span className="text-[10px] text-gray-400 font-bold">المدرس المسؤول</span>
+                                        <span className="text-sm font-bold text-gray-700 truncate">{group.teacher}</span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
+                </div>
             </div>
 
             {/* Modals */}

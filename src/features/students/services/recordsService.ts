@@ -388,7 +388,15 @@ export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+            // التحقق مما إذا كان الخطأ بسبب عدم وجود الجدول (كود 42P01 في PostgreSQL)
+            if (error.code === '42P01') {
+                console.warn("جدول 'leave_requests' غير موجود بعد. يرجى إنشاء الجدول في Supabase.");
+                return [];
+            }
+            throw error;
+        }
+
         return (data || []).map(row => ({
             id: row.id,
             studentId: row.student_id,

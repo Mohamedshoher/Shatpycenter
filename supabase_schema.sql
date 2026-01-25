@@ -243,3 +243,19 @@ create table if not exists student_notes (
 -- تفعيل RLS لملحوظات الطلاب
 alter table student_notes enable row level security;
 create policy "Public access" on student_notes for all using (true);
+
+-- 18. إنشاء جدول طلبات الإجازة
+create table if not exists leave_requests (
+  id uuid default uuid_generate_v4() primary key,
+  student_id uuid references students(id) on delete cascade,
+  student_name text not null,
+  start_date date not null,
+  end_date date not null,
+  reason text,
+  status text default 'pending', -- pending, approved, rejected
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- تفعيل RLS لطلبات الإجازة
+alter table leave_requests enable row level security;
+create policy "Public access" on leave_requests for all using (true);
