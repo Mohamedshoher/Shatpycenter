@@ -19,6 +19,7 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
     selectConversation,
     setMessages,
     addMessage,
+    updateMessage,
     markAsRead,
     setUnreadCount,
   } = useChatStore();
@@ -53,13 +54,9 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
     const unsubscribe = chatService.subscribeToMessages(selectedConversation.id, (data) => {
       setMessages(data);
 
-      // Mark conversation as read if there are unread messages from others
-      const hasUnread = data.some((msg) => !msg.read && cleanId(msg.senderId) !== cleanedUserId);
-      if (hasUnread) {
-        chatService.markMessagesAsRead(selectedConversation.id, cleanedUserId).then(() => {
-          markAsRead(selectedConversation.id);
-        });
-      }
+      // تصفير العداد فوراً وبشكل قسري طالما المحادثة مفتوحة
+      markAsRead(selectedConversation.id);
+      chatService.markMessagesAsRead(selectedConversation.id, cleanedUserId);
     });
 
     return () => unsubscribe();
@@ -115,14 +112,23 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
   // Toggle Pin
   const togglePinMessage = useCallback(
     async (messageId: string, currentPinStatus: boolean) => {
+      if (!selectedConversation) return;
+
+      const newStatus = !currentPinStatus;
+
+      // التحديث المتفائل (اللحظي) في الواجهة المحلية
+      updateMessage(messageId, { isPinned: newStatus });
+
       try {
-        await chatService.togglePinMessage(messageId, !currentPinStatus);
+        await chatService.togglePinMessage(selectedConversation.id, messageId, newStatus);
       } catch (err) {
         console.error('Pinning error:', err);
-        setError('خطأ في تثبيت الرسالة - تأكد من إضافة عمود is_pinned لجدول messages في Supabase');
+        // التراجع في حالة الفشل
+        updateMessage(messageId, { isPinned: currentPinStatus });
+        setError('خطأ في تثبيت الرسالة');
       }
     },
-    []
+    [selectedConversation, updateMessage]
   );
 
   // Check if user can message someone

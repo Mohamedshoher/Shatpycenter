@@ -27,7 +27,7 @@ export const getConversations = async (userId: string): Promise<Conversation[]> 
       participantNames: row.participant_names || [],
       lastMessage: row.last_message || '',
       lastMessageTime: new Date(row.last_message_at),
-      unreadCount: row.unread_counts?.[userId] || 0,
+      unreadCount: row.unread_counts?.[cId] || 0, // استخدام المعرف المنظف هنا
       type: row.type || 'director-teacher'
     })) as Conversation[];
   } catch (error) {
@@ -59,15 +59,19 @@ export const subscribeToConversations = (
         const newData = payload.new;
         const oldData = payload.old;
         const participants = newData?.participants || oldData?.participants || [];
-
-        // التحقق باستخدام المعرف النظيف لضمان استلام التنبيه
         if (participants.includes(cId)) {
           const convos = await getConversations(userId);
           callback(convos);
         }
       }
     )
-    .subscribe();
+    .on('broadcast', { event: 'refresh_list' }, async () => {
+      const convos = await getConversations(userId);
+      callback(convos);
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') console.log('📡 متصل بنظام المحادثات اللحظي');
+    });
 
   return () => {
     channel.unsubscribe();
@@ -122,17 +126,25 @@ export const subscribeToMessages = (
       {
         event: '*',
         schema: 'public',
-        table: 'messages'
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`
       },
-      async (payload: any) => {
-        // التحقق من أن الرسالة تنتمي لهذه المحادثة
-        if (payload.new?.conversation_id === conversationId || payload.old?.conversation_id === conversationId) {
-          const msgs = await getMessages(conversationId);
-          callback(msgs);
-        }
+      async () => {
+        const msgs = await getMessages(conversationId);
+        callback(msgs);
       }
     )
-    .subscribe();
+    .on('broadcast', { event: 'new_msg' }, async () => {
+      const msgs = await getMessages(conversationId);
+      callback(msgs);
+    })
+    .on('broadcast', { event: 'pin_change' }, async () => {
+      const msgs = await getMessages(conversationId);
+      callback(msgs);
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') console.log(`💬 يراقب المحادثة: ${conversationId}`);
+    });
 
   return () => {
     channel.unsubscribe();
@@ -187,6 +199,19 @@ export const sendMessage = async (
     })
     .eq('id', conversationId);
 
+  // 3. Broadcast to force immediate update on other side
+  supabase.channel(`chat-messages-${conversationId}`).send({
+    type: 'broadcast',
+    event: 'new_msg',
+    payload: { senderId }
+  });
+
+  supabase.channel(`chat-conversations-global`).send({
+    type: 'broadcast',
+    event: 'refresh_list',
+    payload: { conversationId }
+  });
+
   return {
     id: msgData.id,
     conversationId,
@@ -203,19 +228,19 @@ export const sendMessage = async (
 export const getOrCreateConversation = async (
   participantIds: string[],
   participantNames: string[],
-  type: 'director-teacher' | 'teacher-parent' | 'parent-teacher'
+  type: string
 ): Promise<Conversation> => {
 
-  // ترتيب المعرفات والأسماء معاً لضمان المطابقة
-  const combined = participantIds.map((id, index) => ({
+  // تنظيف وترتيب المعرفات والأسماء معاً لضمان المطابقة المطلقة
+  const cleanedParticipants = participantIds.map((id, index) => ({
     id: cleanId(id),
-    name: participantNames[index]
+    name: participantNames[index] || 'مستخدم'
   })).sort((a, b) => a.id.localeCompare(b.id));
 
-  const sortedIds = combined.map(c => c.id);
-  const sortedNames = combined.map(c => c.name);
+  const sortedIds = cleanedParticipants.map(p => p.id);
+  const sortedNames = cleanedParticipants.map(p => p.name);
 
-  // البحث عن محادثة موجودة بنفس المشاركين تماماً
+  // 1. البحث عن محادثة موجودة بنفس المشاركين تماماً (باستخدام المعرفات المنظفة)
   const { data: existing } = await supabase
     .from('conversations')
     .select('*')
@@ -227,29 +252,31 @@ export const getOrCreateConversation = async (
   );
 
   if (found) {
+    // التأكد من بث إشارة حتى لو كانت موجودة لضمان ظهورها في القائمة
+    supabase.channel(`chat-conversations-global`).send({
+      type: 'broadcast',
+      event: 'refresh_list',
+      payload: { conversationId: found.id }
+    });
+
     return {
       id: found.id,
       participantIds: found.participants,
       participantNames: found.participant_names,
       lastMessage: found.last_message || '',
       lastMessageTime: new Date(found.last_message_at),
-      unreadCount: 0, // Should be contextual to user, but here generalized
+      unreadCount: 0,
       type: found.type
     };
   }
 
-  // Create new
-  const participantNamesObj: any = {};
-  // Storing as array inside JSONB or better just keep argument 'participantNames' as is.
-  // The schema uses participant_names as JSONB or Text Array? Let's use Text Array for simplicity matching input.
-  // Based on SQL I will write: participant_names text[]
-
+  // 2. إنشاء محادثة جديدة إذا لم توجد
   const { data: newConvo, error } = await supabase
     .from('conversations')
     .insert([{
       participants: sortedIds,
       participant_names: sortedNames,
-      type,
+      type: type || 'director-teacher',
       last_message: '',
       last_message_at: new Date().toISOString(),
       unread_counts: {}
@@ -258,6 +285,13 @@ export const getOrCreateConversation = async (
     .single();
 
   if (error) throw error;
+
+  // بث إشارة لضمان ظهور المحادثة الجديدة في قائمة الطرفين فوراً
+  supabase.channel(`chat-conversations-global`).send({
+    type: 'broadcast',
+    event: 'refresh_list',
+    payload: { conversationId: newConvo.id }
+  });
 
   return {
     id: newConvo.id,
@@ -277,10 +311,19 @@ export const markMessagesAsRead = async (
 ): Promise<void> => {
 
   // 1. Reset unread count for this user in Conversation
+  const cId = cleanId(userId);
   const { data: convo } = await supabase.from('conversations').select('unread_counts').eq('id', conversationId).single();
+
   if (convo) {
-    const newCounts = { ...convo.unread_counts, [userId]: 0 };
+    const newCounts = { ...convo.unread_counts, [cId]: 0 };
     await supabase.from('conversations').update({ unread_counts: newCounts }).eq('id', conversationId);
+
+    // بث إشارة لتحديث العدادات المفتوحة في المتصفحات الأخرى
+    supabase.channel(`chat-conversations-global`).send({
+      type: 'broadcast',
+      event: 'refresh_list',
+      payload: { conversationId, type: 'read_update' }
+    });
   }
 
   // 2. Mark messages as read (add userId to read_by array)
@@ -314,13 +357,20 @@ export const canMessage = (
 };
 
 // تثبيت أو إلغاء تثبيت رسالة
-export const togglePinMessage = async (messageId: string, isPinned: boolean): Promise<void> => {
+export const togglePinMessage = async (conversationId: string, messageId: string, isPinned: boolean): Promise<void> => {
   const { error } = await supabase
     .from('messages')
     .update({ is_pinned: isPinned })
     .eq('id', messageId);
 
   if (error) throw error;
+
+  // بث إشارة لضمان التحديث الفوري لدى الطرفين
+  supabase.channel(`chat-messages-${conversationId}`).send({
+    type: 'broadcast',
+    event: 'pin_change',
+    payload: { messageId, isPinned }
+  });
 };
 
 // للتوافق مع الكود القديم

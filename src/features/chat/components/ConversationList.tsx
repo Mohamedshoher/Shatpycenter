@@ -21,15 +21,29 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   const getOtherName = (conversation: Conversation) => {
     if (!user) return 'محادثة';
-    const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
-    const currentCleanId = cleanId(user.uid || '');
+    const clean = (id: string) => id ? id.replace('mock-', '').toLowerCase().trim() : '';
+    const myId = clean(user.uid || '');
+    const myAltId = user.teacherId ? clean(user.teacherId) : '';
+    const myName = (user.displayName || '').trim();
 
-    // البحث عن المشارك الآخر
-    const otherIndex = conversation.participantIds.findIndex(id => cleanId(id) !== currentCleanId);
+    // 1. محاولة استبعاد معرف المستخدم الحالي
+    let otherIndex = conversation.participantIds.findIndex(id => {
+      const cid = clean(id);
+      return cid !== myId && cid !== myAltId;
+    });
 
-    // إذا وجدنا مشاركاً آخر، نأخذ اسمه، وإلا نأخذ المشارك الثاني افتراضياً
-    const finalIndex = otherIndex !== -1 ? otherIndex : (conversation.participantIds.length > 1 ? 1 : 0);
-    return conversation.participantNames[finalIndex] || 'محادثة';
+    // 2. إذا لم ينجح المعرف، نستبعد بالاسم
+    if (otherIndex === -1) {
+      otherIndex = conversation.participantNames.findIndex(name => name.trim() !== myName);
+    }
+
+    // 3. خيار أخير: إذا كان هناك شخصان، نأخذ الشخص الذي ليس في الترتيب الأول إذا كان الأول هو أنا
+    if (otherIndex === -1 && conversation.participantIds.length > 1) {
+      otherIndex = clean(conversation.participantIds[0]) === myId ? 1 : 0;
+    }
+
+    const finalIdx = otherIndex !== -1 ? otherIndex : 0;
+    return conversation.participantNames[finalIdx] || 'محادثة';
   };
 
   if (conversations.length === 0) {

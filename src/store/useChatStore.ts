@@ -37,6 +37,7 @@ interface ChatStoreState {
   selectConversation: (conversation: Conversation) => void;
   setMessages: (messages: ChatMessage[]) => void;
   addMessage: (message: ChatMessage) => void;
+  updateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   markAsRead: (conversationId: string) => void;
   setUnreadCount: (count: number) => void;
 }
@@ -85,6 +86,13 @@ export const useChatStore = create<ChatStoreState>((set) => ({
         unreadCount: totalUnread,
       };
     }),
+
+  updateMessage: (messageId, updates) =>
+    set((state) => ({
+      messages: state.messages.map((msg) =>
+        msg.id === messageId ? { ...msg, ...updates } : msg
+      ),
+    })),
 
   markAsRead: (conversationId) =>
     set((state) => {

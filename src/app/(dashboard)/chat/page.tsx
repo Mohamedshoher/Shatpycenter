@@ -5,13 +5,15 @@ import { useChat } from '@/features/chat/hooks/useChat';
 import { ConversationList } from '@/features/chat/components/ConversationList';
 import { MessageArea } from '@/features/chat/components/MessageArea';
 import { MessageInput } from '@/features/chat/components/MessageInput';
-import { Search, Loader, AlertCircle, Zap, X, UserPlus } from 'lucide-react';
+import { Search, Loader, AlertCircle, Zap, X, UserPlus, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { chatService } from '@/features/chat/services/chatService';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { Teacher } from '@/types';
+import { useStudents } from '@/features/students/hooks/useStudents';
+import { useGroups } from '@/features/groups/hooks/useGroups';
+import { Teacher, Student, Group } from '@/types';
 
 export default function ChatPage() {
   const { user } = useAuthStore();
@@ -54,16 +56,19 @@ export default function ChatPage() {
   ];
 
   const { data: teachersList = [] } = useTeachers();
-  const queryClient = useQueryClient();
-  const [view, setView] = useState<'conversations' | 'contacts'>('conversations');
+  const { data: studentsList = [] } = useStudents();
+  const { data: groupsList = [] } = useGroups();
 
-  const startConversation = async (teacher: any) => {
+  const queryClient = useQueryClient();
+  const [view, setView] = useState<'conversations' | 'contacts' | 'parents'>('conversations');
+
+  const startConversation = async (participant: any) => {
     if (!user) return;
     try {
       const convo = await chatService.getOrCreateConversation(
-        [user.uid, teacher.id],
-        [user.displayName, teacher.fullName],
-        'director-teacher'
+        [user.uid, participant.id],
+        [user.displayName, participant.fullName],
+        participant.role === 'parent' ? 'teacher-parent' : 'director-teacher'
       );
 
       // إجبار النظام على اختيار المحادثة الجديدة فوراً
@@ -83,14 +88,39 @@ export default function ChatPage() {
     setIsClient(true);
   }, []);
 
-  const filteredConversations = conversations.filter((conv) =>
-    conv.participantNames.some((name) =>
-      name.includes(searchQuery)
-    )
-  );
+  const filteredConversations = useMemo(() => {
+    const clean = (id: string) => id ? id.replace('mock-', '').toLowerCase().trim() : '';
+    const myId = clean(userId);
+    const myAltId = user?.teacherId ? clean(user.teacherId) : '';
+    const myName = (user?.displayName || '').trim();
+
+    return conversations
+      .filter((conv) =>
+        conv.participantNames.some((name) =>
+          name.includes(searchQuery)
+        )
+      )
+      .sort((a, b) => {
+        // 1. الترتيب حسب الرسائل غير المقروءة (الأكثر أولاً)
+        if (a.unreadCount !== b.unreadCount) {
+          return b.unreadCount - a.unreadCount;
+        }
+
+        // 2. إذا كانت الرسائل متساوية (كلاهما 0 أو نفس العدد)، نرتب أبجدياً باسم الطرف الآخر
+        const getOther = (c: any) => {
+          let idx = c.participantIds.findIndex((id: string) => {
+            const cid = clean(id);
+            return cid !== myId && cid !== myAltId;
+          });
+          if (idx === -1) idx = c.participantNames.findIndex((n: string) => n.trim() !== myName);
+          return (c.participantNames[idx === -1 ? 0 : idx] || '').trim();
+        };
+
+        return getOther(a).localeCompare(getOther(b), 'ar');
+      });
+  }, [conversations, searchQuery, userId, user]);
 
   const filteredTeachers = useMemo(() => {
-    // التأكد من أن المدرس الحالي لا يراسل نفسه في القائمة
     const currentTeacherId = user?.teacherId || user?.uid || '';
     const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
     const cleanCurrentId = cleanId(currentTeacherId);
@@ -101,7 +131,6 @@ export default function ChatPage() {
       return isSearchMatch && isNotMe;
     });
 
-    // إضافة المدير العام في بداية القائمة للمدرسين
     if (user?.role === 'teacher') {
       const directorContact = {
         id: 'director',
@@ -118,6 +147,109 @@ export default function ChatPage() {
 
     return list;
   }, [teachersList, searchQuery, user]);
+
+  const filteredParents = useMemo(() => {
+    const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
+    const currentTeacherId = cleanId(user?.teacherId || user?.uid || '');
+
+    // 1. تحديد مجموعات هذا المدرس
+    const myGroups = groupsList.filter(g => cleanId(g.teacherId || '') === currentTeacherId);
+
+    // 2. تحديد طلاب هذه المجموعات (أو كل الطلاب للمدير)
+    const myStudents = studentsList.filter(s =>
+      (user?.role === 'director' || user?.role === 'supervisor') ||
+      (s.groupId && myGroups.some(g => g.id === s.groupId))
+    );
+
+    // 3. إنشاء قائمة أولياء الأمور
+    const uniqueParents = new Map();
+    myStudents.forEach(student => {
+      if (student.parentPhone && !uniqueParents.has(student.parentPhone)) {
+        uniqueParents.set(student.parentPhone, {
+          id: student.parentPhone,
+          fullName: `ولي أمر ${student.fullName}`,
+          role: 'parent',
+          phone: student.parentPhone
+        });
+      }
+    });
+
+    return Array.from(uniqueParents.values()).filter((p: any) =>
+      p.fullName.includes(searchQuery)
+    );
+  }, [studentsList, groupsList, searchQuery, user]);
+
+  const renderSideContent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <Loader className="w-6 h-6 text-blue-500 animate-spin" />
+        </div>
+      );
+    }
+
+    if (view === 'conversations') {
+      return (
+        <ConversationList
+          conversations={filteredConversations}
+          selectedId={selectedConversation?.id}
+          onSelect={selectConversation}
+        />
+      );
+    }
+
+    if (view === 'contacts') {
+      return (
+        <div className="divide-y divide-gray-50">
+          {filteredTeachers.map((teacher: any) => (
+            <button
+              key={teacher.id}
+              onClick={() => startConversation(teacher)}
+              className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 transition-all text-right group"
+            >
+              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                <UserPlus size={22} />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-gray-900">{teacher.fullName}</h4>
+                <p className="text-xs text-gray-400 font-bold">مدرس - {teacher.phone}</p>
+              </div>
+            </button>
+          ))}
+          {filteredTeachers.length === 0 && (
+            <div className="p-8 text-center text-gray-400 font-bold">لا يوجد مدرسين بهذا الاسم</div>
+          )}
+        </div>
+      );
+    }
+
+    if (view === 'parents') {
+      return (
+        <div className="divide-y divide-gray-50">
+          {filteredParents.map((parent: any) => (
+            <button
+              key={parent.id}
+              onClick={() => startConversation(parent)}
+              className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 transition-all text-right group"
+            >
+              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                <Users size={22} />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-gray-900">{parent.fullName}</h4>
+                <p className="text-xs text-gray-400 font-bold">ولي أمر - {parent.phone}</p>
+              </div>
+            </button>
+          ))}
+          {filteredParents.length === 0 && (
+            <div className="p-8 text-center text-gray-400 font-bold">لا يوجد أولياء أمور متاحين للمراسلة</div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   if (!isClient) {
     return null;
@@ -155,7 +287,7 @@ export default function ChatPage() {
             <button
               onClick={() => setView('conversations')}
               className={cn(
-                "flex-1 py-2.5 rounded-2xl text-sm font-bold transition-all",
+                "flex-1 py-2.5 rounded-2xl text-[10px] font-bold transition-all",
                 view === 'conversations' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
               )}
             >
@@ -164,12 +296,22 @@ export default function ChatPage() {
             <button
               onClick={() => setView('contacts')}
               className={cn(
-                "flex-1 py-2.5 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2",
+                "flex-1 py-2.5 rounded-2xl text-[10px] font-bold transition-all flex items-center justify-center gap-1",
                 view === 'contacts' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
               )}
             >
-              <UserPlus size={16} />
+              <UserPlus size={12} />
               المدرسين
+            </button>
+            <button
+              onClick={() => setView('parents')}
+              className={cn(
+                "flex-1 py-2.5 rounded-2xl text-[10px] font-bold transition-all flex items-center justify-center gap-1",
+                view === 'parents' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              )}
+            >
+              <Users size={12} />
+              أولياء الأمور
             </button>
           </div>
 
@@ -181,7 +323,7 @@ export default function ChatPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={view === 'conversations' ? "ابحث عن محادثة..." : "ابحث عن مدرس..."}
+                placeholder="ابحث..."
                 className="w-full pr-11 pl-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500/20 font-bold text-sm text-right"
               />
             </div>
@@ -189,38 +331,7 @@ export default function ChatPage() {
 
           {/* Conversations/Contacts List */}
           <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader className="w-6 h-6 text-blue-500 animate-spin" />
-              </div>
-            ) : view === 'conversations' ? (
-              <ConversationList
-                conversations={filteredConversations}
-                selectedId={selectedConversation?.id}
-                onSelect={selectConversation}
-              />
-            ) : (
-              <div className="divide-y divide-gray-50">
-                {filteredTeachers.map((teacher: any) => (
-                  <button
-                    key={teacher.id}
-                    onClick={() => startConversation(teacher)}
-                    className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 transition-all text-right group"
-                  >
-                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                      <UserPlus size={22} />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900">{teacher.fullName}</h4>
-                      <p className="text-xs text-gray-400 font-bold">مدرس - {teacher.phone}</p>
-                    </div>
-                  </button>
-                ))}
-                {filteredTeachers.length === 0 && (
-                  <div className="p-8 text-center text-gray-400 font-bold">لا يوجد مدرسين بهذا الاسم</div>
-                )}
-              </div>
-            )}
+            {renderSideContent()}
           </div>
         </div>
 
@@ -236,7 +347,7 @@ export default function ChatPage() {
           {selectedConversation ? (
             <>
               <MessageArea
-                key={selectedConversation.id} // إجبار المكون على إعادة التحميل بالكامل عند تغيير المحادثة
+                key={selectedConversation.id}
                 conversation={selectedConversation}
                 messages={messages}
                 currentUserId={userId}
