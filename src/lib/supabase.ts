@@ -10,7 +10,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.log('✅ Supabase initialized with URL:', supabaseUrl);
 }
 
+// ✨ إعدادات Realtime محسّنة للحصول على أداء فوري
 export const supabase = createClient(
     supabaseUrl || '',
-    supabaseAnonKey || ''
+    supabaseAnonKey || '',
+    {
+        realtime: {
+            params: {
+                eventsPerSecond: 10, // زيادة عدد الأحداث في الثانية
+            },
+        },
+        global: {
+            headers: {
+                'x-client-info': 'shatbi-lms-v2',
+            },
+        },
+    }
 );

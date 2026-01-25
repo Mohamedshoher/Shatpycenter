@@ -37,6 +37,8 @@ interface ChatStoreState {
   selectConversation: (conversation: Conversation) => void;
   setMessages: (messages: ChatMessage[]) => void;
   addMessage: (message: ChatMessage) => void;
+  appendMessage: (message: ChatMessage) => void; // ✨ للإضافة الفورية
+  removeMessage: (messageId: string) => void; // ✨ للحذف الفوري
   updateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   markAsRead: (conversationId: string) => void;
   setUnreadCount: (count: number) => void;
@@ -86,6 +88,18 @@ export const useChatStore = create<ChatStoreState>((set) => ({
         unreadCount: totalUnread,
       };
     }),
+
+  // ✨ إضافة رسالة فورية (للـ Optimistic Updates)
+  appendMessage: (message) =>
+    set((state) => ({
+      messages: [...state.messages, message],
+    })),
+
+  // ✨ حذف رسالة (للـ Rollback)
+  removeMessage: (messageId) =>
+    set((state) => ({
+      messages: state.messages.filter((msg) => msg.id !== messageId),
+    })),
 
   updateMessage: (messageId, updates) =>
     set((state) => ({

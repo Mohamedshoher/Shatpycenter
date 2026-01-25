@@ -19,6 +19,8 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
     selectConversation,
     setMessages,
     addMessage,
+    appendMessage, // ✨ للإضافة الفورية
+    removeMessage, // ✨ للحذف الفوري
     updateMessage,
     markAsRead,
     setUnreadCount,
@@ -89,8 +91,8 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
         isPinned: false
       };
 
-      // Optimistic update
-      setMessages([...messages, tempMessage]);
+      // ✨ إضافة فورية للرسالة - تظهر مباشرة
+      appendMessage(tempMessage);
 
       try {
         await chatService.sendMessage(
@@ -100,14 +102,15 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
           userRole,
           content
         );
-        // The real-time subscription will replace the temp message with the real one
+        // ✅ الرسالة الحقيقية ستأتي عبر الـ subscription وتستبدل المؤقتة
       } catch (err) {
-        // Rollback on error
-        setMessages(messages.filter(m => m.id !== tempId));
+        // ❌ حذف الرسالة المؤقتة في حالة الفشل
+        removeMessage(tempId);
         setError('خطأ في إرسال الرسالة');
+        console.error('Send message error:', err);
       }
     },
-    [selectedConversation, cleanedUserId, userRole, user?.displayName, customSenderName, messages, setMessages]
+    [selectedConversation, cleanedUserId, userRole, user?.displayName, customSenderName, appendMessage, removeMessage]
   );
 
   // Toggle Pin

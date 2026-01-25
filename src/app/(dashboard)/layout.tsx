@@ -2,6 +2,7 @@
 
 import Sidebar from '@/components/layout/Sidebar';
 import { ChatFloatingButton } from '@/components/ChatFloatingButton';
+import { PresenceTracker } from '@/components/PresenceTracker';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -28,6 +29,8 @@ export default function DashboardLayout({
 
     return (
         <div className="flex min-h-screen bg-gray-50 text-right overflow-x-hidden">
+            <PresenceTracker />
+
             {/* منطقة السحب لفتح القائمة الجانبية على الموبيل */}
             <div
                 className="fixed top-0 right-0 bottom-0 w-4 z-[45] md:hidden"

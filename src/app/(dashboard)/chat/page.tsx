@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { Teacher, Student, Group } from '@/types';
+import { useUserPresence } from '@/features/chat/hooks/useUserPresence';
 
 export default function ChatPage() {
   const { user } = useAuthStore();
@@ -251,6 +252,22 @@ export default function ChatPage() {
     return null;
   };
 
+  // ✨ حساب معرف المستخدم الآخر للهاتف في المستوى الأعلى
+  const mobileOtherData = useMemo(() => {
+    if (!selectedConversation) return { id: null, name: 'محادثة' };
+
+    const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
+    const currentCleanId = cleanId(userId);
+    const otherIndex = selectedConversation.participantIds.findIndex(id => cleanId(id) !== currentCleanId);
+    const id = otherIndex !== -1 ? selectedConversation.participantIds[otherIndex] : null;
+    const name = selectedConversation.participantNames[otherIndex === -1 ? 1 : otherIndex] || 'محادثة';
+
+    return { id, name };
+  }, [selectedConversation, userId]);
+
+  // ✨ استدعاء هوك الحضور في المستوى الأعلى دائماً
+  const { formattedLastSeen: mobileLastSeen, isOnline: mobileIsOnline } = useUserPresence(mobileOtherData.id);
+
   if (!isClient) {
     return null;
   }
@@ -381,14 +398,16 @@ export default function ChatPage() {
             </button>
             <div className="text-right">
               <h3 className="font-bold text-gray-900 leading-none">
-                {(() => {
-                  const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
-                  const currentCleanId = cleanId(userId);
-                  const otherIndex = selectedConversation.participantIds.findIndex(id => cleanId(id) !== currentCleanId);
-                  return selectedConversation.participantNames[otherIndex === -1 ? 1 : otherIndex] || 'محادثة';
-                })()}
+                {mobileOtherData.name}
               </h3>
-              <span className="text-[10px] text-gray-400 font-bold">نشط الآن</span>
+              <div className="flex items-center gap-1.5 justify-end">
+                {mobileIsOnline && (
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                )}
+                <span className="text-[10px] text-gray-400 font-bold">
+                  {mobileLastSeen}
+                </span>
+              </div>
             </div>
           </div>
 

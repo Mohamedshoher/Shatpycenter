@@ -141,12 +141,16 @@ export const subscribeToMessages = (
         table: 'messages',
         filter: `conversation_id=eq.${conversationId}`
       },
-      async () => {
+      async (payload) => {
+        // ✨ تحديث فوري عند أي تغيير في قاعدة البيانات
+        console.log('💬 رسالة جديدة في قاعدة البيانات');
         const msgs = await getMessages(conversationId);
         callback(msgs);
       }
     )
-    .on('broadcast', { event: 'new_msg' }, async () => {
+    .on('broadcast', { event: 'new_msg' }, async (payload) => {
+      // ✨ تحديث فوري عند البث
+      console.log('⚡ رسالة جديدة عبر البث الفوري');
       const msgs = await getMessages(conversationId);
       callback(msgs);
     })
@@ -155,10 +159,15 @@ export const subscribeToMessages = (
       callback(msgs);
     })
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') console.log(`💬 يراقب المحادثة: ${conversationId}`);
+      if (status === 'SUBSCRIBED') {
+        console.log(`✅ متصل بالمحادثة: ${conversationId}`);
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('❌ خطأ في الاتصال بالمحادثة');
+      }
     });
 
   return () => {
+    console.log(`🔌 قطع الاتصال بالمحادثة: ${conversationId}`);
     channel.unsubscribe();
   };
 };
@@ -189,7 +198,6 @@ export const sendMessage = async (
   if (msgError) throw msgError;
 
   // 2. Update Conversation (last message, time, increment unread for others)
-  // We need to fetch the conversation to update unread counts properly (atomic increment is harder with JSONB)
   const { data: convo } = await supabase.from('conversations').select('unread_counts, participants').eq('id', conversationId).single();
 
   const newUnreadCounts = convo?.unread_counts || {};
@@ -211,28 +219,30 @@ export const sendMessage = async (
     })
     .eq('id', conversationId);
 
-  // 3. Broadcast to force immediate update on other side
-  const msgChannel = supabase.channel(`chat-messages-${conversationId}`);
-  msgChannel.subscribe((status) => {
-    if (status === 'SUBSCRIBED') {
-      msgChannel.send({
-        type: 'broadcast',
-        event: 'new_msg',
-        payload: { senderId }
-      });
-    }
-  });
+  // ✨ 3. بث فوري للرسالة الجديدة (بدون إنشاء قنوات جديدة)
+  // استخدام broadcast مباشرة على القنوات الموجودة
+  try {
+    // بث الرسالة الجديدة مباشرة
+    await supabase.channel(`chat-messages-${conversationId}`).send({
+      type: 'broadcast',
+      event: 'new_msg',
+      payload: {
+        messageId: msgData.id,
+        senderId: senderCId,
+        timestamp: new Date().toISOString()
+      }
+    });
 
-  const globalChannel = supabase.channel('chat-global');
-  globalChannel.subscribe((status) => {
-    if (status === 'SUBSCRIBED') {
-      globalChannel.send({
-        type: 'broadcast',
-        event: 'refresh_list',
-        payload: { conversationId }
-      });
-    }
-  });
+    // تحديث قائمة المحادثات
+    await supabase.channel('chat-global').send({
+      type: 'broadcast',
+      event: 'refresh_list',
+      payload: { conversationId }
+    });
+  } catch (broadcastError) {
+    console.warn('⚠️ Broadcast warning (non-critical):', broadcastError);
+    // لا نرمي خطأ هنا لأن postgres_changes ستتولى التحديث
+  }
 
   return {
     id: msgData.id,
@@ -274,17 +284,16 @@ export const getOrCreateConversation = async (
   );
 
   if (found) {
-    // التأكد من بث إشارة حتى لو كانت موجودة لضمان ظهورها في القائمة
-    const globalChannel = supabase.channel('chat-global');
-    globalChannel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        globalChannel.send({
-          type: 'broadcast',
-          event: 'refresh_list',
-          payload: { conversationId: found.id }
-        });
-      }
-    });
+    // ✨ بث فوري لضمان ظهور المحادثة في القائمة
+    try {
+      await supabase.channel('chat-global').send({
+        type: 'broadcast',
+        event: 'refresh_list',
+        payload: { conversationId: found.id }
+      });
+    } catch (e) {
+      console.warn('⚠️ Broadcast warning:', e);
+    }
 
     return {
       id: found.id,
@@ -313,17 +322,16 @@ export const getOrCreateConversation = async (
 
   if (error) throw error;
 
-  // بث إشارة لضمان ظهور المحادثة الجديدة في قائمة الطرفين فوراً
-  const globalChannel = supabase.channel('chat-global');
-  globalChannel.subscribe((status) => {
-    if (status === 'SUBSCRIBED') {
-      globalChannel.send({
-        type: 'broadcast',
-        event: 'refresh_list',
-        payload: { conversationId: newConvo.id }
-      });
-    }
-  });
+  // ✨ بث فوري لضمان ظهور المحادثة الجديدة في قائمة الطرفين فوراً
+  try {
+    await supabase.channel('chat-global').send({
+      type: 'broadcast',
+      event: 'refresh_list',
+      payload: { conversationId: newConvo.id }
+    });
+  } catch (e) {
+    console.warn('⚠️ Broadcast warning:', e);
+  }
 
   return {
     id: newConvo.id,
@@ -397,12 +405,16 @@ export const togglePinMessage = async (conversationId: string, messageId: string
 
   if (error) throw error;
 
-  // بث إشارة لضمان التحديث الفوري لدى الطرفين
-  supabase.channel(`chat-messages-${conversationId}`).send({
-    type: 'broadcast',
-    event: 'pin_change',
-    payload: { messageId, isPinned }
-  });
+  // ✨ بث فوري لضمان التحديث الفوري لدى الطرفين
+  try {
+    await supabase.channel(`chat-messages-${conversationId}`).send({
+      type: 'broadcast',
+      event: 'pin_change',
+      payload: { messageId, isPinned }
+    });
+  } catch (broadcastError) {
+    console.warn('⚠️ Pin broadcast warning (non-critical):', broadcastError);
+  }
 };
 
 // للتوافق مع الكود القديم

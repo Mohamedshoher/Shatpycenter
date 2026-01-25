@@ -24,6 +24,7 @@ import { logout } from "@/features/auth/services/authService";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { PresenceTracker } from "@/components/PresenceTracker";
 
 export default function ParentDashboard() {
     const { user, setUser } = useAuthStore();
@@ -72,6 +73,7 @@ export default function ParentDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50/50 font-sans pb-32" dir="rtl">
+            <PresenceTracker />
             {/* رأس الصفحة الثابت - مرن مع الحاوية */}
             <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between relative">
@@ -87,7 +89,7 @@ export default function ParentDashboard() {
                     {/* المنتصف: شعار المركز */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                         <div className="bg-white w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center shadow-lg border border-gray-50">
-                            <img src="/logo.png" alt="المنارة" className="w-8 h-8 md:w-10 md:h-10 object-contain" />
+                            <img src="/icon-192.png" alt="شعار المركز" className="w-8 h-8 md:w-10 md:h-10 object-contain" />
                         </div>
                     </div>
 

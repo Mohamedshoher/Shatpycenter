@@ -7,6 +7,7 @@ import { ar } from 'date-fns/locale';
 import { Pin, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudents } from '@/features/students/hooks/useStudents';
+import { useUserPresence } from '@/features/chat/hooks/useUserPresence';
 
 interface MessageAreaProps {
   conversation: Conversation | null;
@@ -31,6 +32,19 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pinnedMessages = useMemo(() => messages.filter(m => m.isPinned), [messages]);
+
+  // ✨ الحصول على معرف الطرف الآخر
+  const otherUserId = useMemo(() => {
+    if (!conversation) return null;
+    const clean = (id: string) => id ? id.replace('mock-', '').toLowerCase().trim() : '';
+    const myId = clean(currentUserId);
+
+    const otherIndex = conversation.participantIds.findIndex(id => clean(id) !== myId);
+    return otherIndex !== -1 ? conversation.participantIds[otherIndex] : null;
+  }, [conversation, currentUserId]);
+
+  // ✨ استخدام hook لآخر ظهور
+  const { formattedLastSeen, isOnline } = useUserPresence(otherUserId);
 
   const scrollToMessage = (id: string) => {
     const element = document.getElementById(`msg-${id}`);
@@ -95,9 +109,14 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
           <h2 className="text-lg font-semibold text-gray-900 text-right font-black">
             {otherName}
           </h2>
-          <p className="text-[10px] text-gray-500 text-right font-bold">
-            {conversation.participantNames.length} مشاركين
-          </p>
+          <div className="flex items-center gap-2 justify-end">
+            {isOnline && (
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            )}
+            <p className="text-[10px] text-gray-500 text-right font-bold">
+              {formattedLastSeen}
+            </p>
+          </div>
         </div>
       )}
 
