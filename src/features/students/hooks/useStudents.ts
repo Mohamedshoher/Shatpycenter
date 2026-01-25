@@ -26,9 +26,20 @@ export const useStudents = () => {
         },
     });
 
+    const deleteStudentMutation = useMutation({
+        mutationFn: (id: string) => {
+            const { deleteStudent: deleteStudentService } = require('../services/studentService');
+            return deleteStudentService(id);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+        },
+    });
+
     return {
         ...studentsQuery,
         archiveStudent: (id: string) => updateStatusMutation.mutate({ id, status: 'archived' }),
         restoreStudent: (id: string, groupId: string | null) => updateStatusMutation.mutate({ id, status: 'active', groupId }),
+        deleteStudent: (id: string) => deleteStudentMutation.mutate(id),
     };
 };

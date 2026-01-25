@@ -7,8 +7,6 @@ import {
     CreditCard,
     CalendarCheck,
     TrendingUp,
-    MessageCircle,
-    Bell,
     Search,
     Loader,
     UserCheck,
@@ -189,15 +187,6 @@ export default function DashboardOverview() {
                         <p className="text-base text-gray-400 font-bold mt-2">
                             {today.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
-                    </div>
-                    <div className="flex gap-4 shrink-0">
-                        <button onClick={() => router.push('/chat')} className="w-14 h-14 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-100 transition-all">
-                            <MessageCircle size={24} />
-                        </button>
-                        <button className="w-14 h-14 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 relative hover:border-blue-100 transition-all">
-                            <Bell size={24} />
-                            <span className="absolute top-4 right-4 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                        </button>
                     </div>
                 </div>
 

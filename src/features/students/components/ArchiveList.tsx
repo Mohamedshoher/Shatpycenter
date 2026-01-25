@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useStudents } from '../hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
     Search,
     RotateCcw,
@@ -26,9 +27,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
 export default function ArchiveList() {
-    const { data: students, isLoading, restoreStudent } = useStudents();
+    const { data: students, isLoading, restoreStudent, deleteStudent } = useStudents();
     const { data: groups } = useGroups();
     const { toggleSidebar } = useUIStore();
+    const { user } = useAuthStore();
     const router = useRouter();
 
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -254,23 +256,30 @@ export default function ArchiveList() {
                                 onClick={() => setSelectedStudent(student)}
                                 className="bg-white/80 rounded-[32px] p-5 border border-gray-100 flex items-center justify-between hover:shadow-lg hover:shadow-gray-200/50 transition-all group cursor-pointer active:scale-[0.99]"
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 bg-gray-100 rounded-[22px] flex items-center justify-center text-gray-400 relative overflow-hidden">
+                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                    <div className="w-14 h-14 bg-gray-100 rounded-[22px] flex items-center justify-center text-gray-400 relative overflow-hidden shrink-0">
                                         <User size={28} />
                                         <div className="absolute inset-0 bg-gray-200/30 backdrop-blur-[2px]" />
                                     </div>
-                                    <div className="space-y-1">
-                                        <h3 className="font-bold text-gray-900 leading-none">{student.fullName}</h3>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-1 rounded-lg">
+                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                        <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+                                            <h3
+                                                onClick={(e) => { e.stopPropagation(); setSelectedStudent(student); }}
+                                                className="font-bold text-gray-900 leading-none hover:text-blue-600 transition-colors cursor-pointer truncate max-w-[200px]"
+                                            >
+                                                {student.fullName}
+                                            </h3>
+                                            <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-1 rounded-lg shrink-0">
                                                 {groups?.find(g => g.id === student.groupId)?.name || 'غير محدد'}
                                             </span>
-                                            <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg">
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg shrink-0">
                                                 <Clock size={10} />
                                                 منذ {daysInArchive} أيام
                                             </span>
                                             {isIndebted && (
-                                                <span className="text-[10px] text-red-500 font-bold flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg animate-pulse">
+                                                <span className="text-[10px] text-red-500 font-bold flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg animate-pulse shrink-0">
                                                     <AlertCircle size={10} />
                                                     مدين
                                                 </span>
@@ -278,25 +287,32 @@ export default function ArchiveList() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 shrink-0">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setRestoreTarget(student);
                                             setTargetGroupId(student.groupId || '');
                                         }}
-                                        className="p-3.5 bg-green-50 text-green-600 rounded-2xl hover:bg-green-600 hover:text-white transition-all active:scale-95 shadow-sm"
+                                        className="p-3 bg-green-50 text-green-600 rounded-2xl hover:bg-green-600 hover:text-white transition-all active:scale-95 shadow-sm"
                                         title="استعادة الطالب"
                                     >
-                                        <RotateCcw size={20} />
+                                        <RotateCcw size={18} />
                                     </button>
-                                    <button
-                                        onClick={() => setSelectedStudent(student)}
-                                        className="p-3.5 bg-gray-50 text-gray-600 rounded-2xl hover:bg-gray-100 transition-all active:scale-95 border border-gray-100/50"
-                                        title="عرض التفاصيل"
-                                    >
-                                        <ArrowRight size={20} className="rotate-180" />
-                                    </button>
+                                    {user?.role === 'director' && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm(`هل أنت متأكد من حذف الطالب ${student.fullName} نهائياً؟ لا يمكن التراجع عن هذه الخطوة.`)) {
+                                                    deleteStudent(student.id);
+                                                }
+                                            }}
+                                            className="p-3 bg-red-50 text-red-600 rounded-2xl hover:bg-red-600 hover:text-white transition-all active:scale-95 shadow-sm"
+                                            title="حذف نهائي"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         );

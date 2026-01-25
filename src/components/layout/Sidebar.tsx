@@ -208,7 +208,7 @@ export default function Sidebar() {
                                     href={item.href}
                                     onClick={() => setSidebarOpen(false)} // Close on mobile navigation
                                     className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200",
+                                        "flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200",
                                         isActive
                                             ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
                                             : "text-gray-600 hover:bg-blue-50 hover:text-blue-700"

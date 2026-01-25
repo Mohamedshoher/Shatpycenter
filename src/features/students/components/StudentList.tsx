@@ -92,6 +92,12 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         }
     }, [todayAttendance]);
 
+    const getGroupName = (groupId: string | null) => {
+        if (!groupId) return '';
+        const group = groups?.find(g => g.id === groupId);
+        return group ? group.name : '';
+    };
+
     const filteredStudents = students?.filter(student => {
         if (user?.role === 'teacher') {
             if (!student.groupId || !myGroupsIds.includes(student.groupId)) return false;
@@ -103,7 +109,12 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             : (filter === 'الكل' || student.groupId === filter);
         const isActive = student.status === 'active';
         return matchesSearch && matchesGroup && isActive;
-    })?.sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
+    })?.sort((a, b) => {
+        const groupA = getGroupName(a.groupId);
+        const groupB = getGroupName(b.groupId);
+        if (groupA !== groupB) return groupA.localeCompare(groupB, 'ar');
+        return a.fullName.localeCompare(b.fullName, 'ar');
+    });
 
     const handleOpenModal = (student: Student, tab: string = 'attendance') => {
         setSelectedTab(tab);
@@ -173,11 +184,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         setIsEditModalOpen(true);
     };
 
-    const getGroupName = (groupId: string | null) => {
-        if (!groupId) return '';
-        const group = groups?.find(g => g.id === groupId);
-        return group ? group.name : '';
-    };
+
 
     if (isLoading) {
         return (
@@ -294,7 +301,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-2">
-                {filteredStudents?.map((student) => (
+                {filteredStudents?.map((student, index) => (
                     <div
                         key={student.id}
                         onClick={() => handleOpenModal(student, 'attendance')}
@@ -302,8 +309,13 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                     >
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-                                    <User size={20} />
+                                <div className="relative">
+                                    <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+                                        <User size={20} />
+                                    </div>
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-white border border-gray-100 rounded-full flex items-center justify-center text-[10px] font-black text-blue-600 shadow-sm">
+                                        {index + 1}
+                                    </span>
                                 </div>
                                 <div className="flex items-baseline gap-2">
                                     <h3 className="font-bold text-gray-900 text-lg leading-tight">

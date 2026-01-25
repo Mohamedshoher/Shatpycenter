@@ -21,7 +21,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';
 import { useAllExams } from '@/features/students/hooks/useAllExams';
 
-type TabType = 'notTested' | 'mostTested' | 'performance';
+type TabType = 'notTested' | 'mostTested' | 'performance' | 'cycle';
 
 const EXAM_TYPE_MAP: Record<string, string> = {
     'new': 'جديد',
@@ -42,7 +42,7 @@ export default function ExamsReportPage() {
     }) || [];
     const assignedGroupIds = filteredGroupsList.map((g: any) => g.id);
 
-    const [activeTab, setActiveTab] = useState<TabType>('notTested');
+    const [activeTab, setActiveTab] = useState<TabType>('cycle');
     const [selectedGroupId, setSelectedGroupId] = useState('all');
     const [selectedExamType, setSelectedExamType] = useState('new');
     const [examsLimit, setExamsLimit] = useState('1');
@@ -50,7 +50,9 @@ export default function ExamsReportPage() {
 
     // استخدام التاريخ المختار بدلاً من offset
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [viewDate, setViewDate] = useState(new Date());
     const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<any>(null);
+    const [postponedStudentIds, setPostponedStudentIds] = useState<string[]>([]);
 
     const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
     const { data: allExams = [] } = useAllExams(monthKey);
@@ -176,6 +178,16 @@ export default function ExamsReportPage() {
 
                 {/* Tabs Navigation - Compact */}
                 <div className="max-w-5xl mx-auto mt-4 flex bg-gray-100/80 p-1 rounded-xl gap-1 overflow-x-auto no-scrollbar">
+                    <button
+                        onClick={() => setActiveTab('cycle')}
+                        className={cn(
+                            "flex-1 min-w-[90px] py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap",
+                            activeTab === 'cycle' ? "bg-white text-orange-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                        )}
+                    >
+                        <Calendar size={14} />
+                        الدورة
+                    </button>
                     <button
                         onClick={() => setActiveTab('performance')}
                         className={cn(
@@ -368,6 +380,172 @@ export default function ExamsReportPage() {
                         </motion.div>
                     )}
 
+                    {/* التبويب 4: الدورة */}
+                    {activeTab === 'cycle' && (
+                        <motion.div
+                            key="cycle"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="space-y-6"
+                        >
+                            <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-4">
+                                <h2 className="text-xl md:text-2xl font-black text-gray-800 w-full text-center md:text-right">دورة الاختبارات اليومية</h2>
+                                <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
+                                    <button
+                                        onClick={() => {
+                                            const d = new Date(viewDate);
+                                            d.setDate(d.getDate() + 1);
+                                            setViewDate(d);
+                                        }}
+                                        className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all"
+                                    >
+                                        <ChevronRight className="rotate-180" size={20} />
+                                    </button>
+                                    <div className="px-4 py-1 text-center min-w-[120px]">
+                                        <p className="text-[10px] font-black text-blue-600 uppercase">
+                                            {viewDate.toLocaleDateString('ar-EG', { weekday: 'long' })}
+                                        </p>
+                                        <p className="text-xs font-bold text-gray-400">
+                                            {viewDate.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const d = new Date(viewDate);
+                                            d.setDate(d.getDate() - 1);
+                                            setViewDate(d);
+                                        }}
+                                        className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all"
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {(() => {
+                                const jsDay = viewDate.getDay();
+                                const dayMap: Record<number, number> = { 6: 0, 0: 1, 1: 2, 2: 3, 3: 4 };
+                                const dayIndex = dayMap[jsDay] ?? -1;
+
+                                if (dayIndex === -1) {
+                                    return (
+                                        <div className="text-center py-20 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-100">
+                                            <div className="w-16 h-16 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <Calendar size={32} />
+                                            </div>
+                                            <h3 className="text-lg font-black text-gray-800">عطلة نهاية الأسبوع</h3>
+                                            <p className="text-sm text-gray-400 font-bold mt-1">لا توجد اختبارات مبرمجة ليومي الخميس والجمعة</p>
+                                        </div>
+                                    );
+                                }
+
+                                let base = (students || [])
+                                    .filter((s: any) => s.status === 'active')
+                                    .filter((s: any) => {
+                                        if (selectedGroupId !== 'all') return s.groupId === selectedGroupId;
+                                        if (user?.role === 'teacher') return assignedGroupIds.includes(s.groupId);
+                                        return true;
+                                    })
+                                    .sort((a, b) => {
+                                        const gA = groups?.find(g => g.id === a.groupId)?.name || '';
+                                        const gB = groups?.find(g => g.id === b.groupId)?.name || '';
+                                        if (gA !== gB) return gA.localeCompare(gB, 'ar');
+                                        return a.fullName.localeCompare(b.fullName, 'ar');
+                                    });
+
+                                const weekIndex = Math.floor((viewDate.getDate() - 1) / 7) % 2;
+
+                                if (dayIndex === 4) { // Wednesday: Catch-up
+                                    const postponedStudents = base.filter(s => postponedStudentIds.includes(s.id));
+                                    return (
+                                        <div className="space-y-4">
+                                            <div className="bg-orange-50 p-6 rounded-[28px] border border-orange-100 text-center">
+                                                <h3 className="text-orange-700 font-black text-lg">يوم الاستدراك</h3>
+                                                <p className="text-orange-600/70 text-sm font-bold mt-1">الطلاب المؤجلون من هذا الأسبوع</p>
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-3">
+                                                {postponedStudents.map((student: any) => (
+                                                    <div key={student.id} className="bg-white rounded-[24px] p-4 flex items-center justify-between border border-gray-100 shadow-sm">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 font-black text-lg shrink-0">
+                                                                <AlertCircle size={24} />
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <h3 className="font-bold text-gray-900 text-base">{student.fullName}</h3>
+                                                                <p className="text-xs text-gray-400 font-bold">{groups?.find(g => g.id === student.groupId)?.name}</p>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setSelectedStudentForDetails(student)}
+                                                            className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/20"
+                                                        >
+                                                            <ChevronRight size={18} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {postponedStudents.length === 0 && (
+                                                    <div className="text-center py-10 text-gray-400 font-bold border-2 border-dashed border-gray-50 rounded-[32px]">
+                                                        لا يوجد طلاب مؤجلون حالياً
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                const startIndex = (weekIndex * 20) + (dayIndex * 5);
+                                const scheduledStudents = base.slice(startIndex, startIndex + 5)
+                                    .filter(s => !postponedStudentIds.includes(s.id));
+
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between px-2">
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">قائمة اليوم ({scheduledStudents.length})</span>
+                                            <span className="text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-right">
+                                                من رقم {startIndex + 1} إلى {startIndex + 5}
+                                            </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {scheduledStudents.map((student: any) => (
+                                                <div key={student.id} className="bg-white rounded-[24px] p-4 flex items-center justify-between border border-gray-100 shadow-sm hover:border-orange-200 transition-all group overflow-hidden relative">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 font-black text-lg shrink-0">
+                                                            {base.indexOf(student) + 1}
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <h3 className="font-bold text-gray-900 text-base">{student.fullName}</h3>
+                                                            <p className="text-xs text-gray-400 font-bold">{groups?.find(g => g.id === student.groupId)?.name}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {user?.role === 'teacher' && (
+                                                            <button
+                                                                className="text-[10px] font-black bg-gray-50 text-gray-400 px-3 py-2 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-100"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setPostponedStudentIds(prev => [...prev, student.id]);
+                                                                }}
+                                                            >
+                                                                تأجيل للأربعاء
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => setSelectedStudentForDetails(student)}
+                                                            className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-500 group-hover:text-white transition-all"
+                                                        >
+                                                            <ChevronRight size={18} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </motion.div>
+                    )}
                     {/* التبويب 3: مقارنة الأداء */}
                     {activeTab === 'performance' && (
                         <motion.div

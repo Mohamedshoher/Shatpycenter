@@ -42,7 +42,7 @@ export default function BottomNavigation() {
         <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 px-1 py-1.5 z-50 flex justify-around items-center md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
             {filteredNavItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname.startsWith(item.href);
+                const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
 
                 return (
                     <Link
