@@ -22,6 +22,9 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   showHeader = true,
   onTogglePin,
 }) => {
+  const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
+  const cleanedCurrentUserId = cleanId(currentUserId);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pinnedMessages = messages.filter(m => m.isPinned);
 
@@ -37,12 +40,16 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
     );
   }
 
+  const currentCleanId = cleanId(currentUserId);
+  const otherIndex = conversation.participantIds.findIndex(id => cleanId(id) !== currentCleanId);
+  const otherName = conversation.participantNames[otherIndex === -1 ? 1 : otherIndex] || 'محادثة';
+
   return (
     <div className="flex flex-col flex-1 bg-white overflow-hidden relative">
       {showHeader && (
         <div className="border-b border-gray-200 p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
           <h2 className="text-lg font-semibold text-gray-900 text-right font-black">
-            {conversation.participantNames[1]}
+            {otherName}
           </h2>
           <p className="text-[10px] text-gray-500 text-right font-bold">
             {conversation.participantNames.length} مشاركين
@@ -78,7 +85,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
           </div>
         ) : (
           messages.map((message) => {
-            const isCurrentUser = message.senderId === currentUserId;
+            const isCurrentUser = cleanId(message.senderId) === cleanedCurrentUserId;
             return (
               <div
                 key={message.id}
@@ -97,13 +104,21 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                   )}
                   <p className="text-[13px] break-words leading-relaxed font-bold tracking-tight">{message.content}</p>
 
-                  <div className="flex items-center justify-end gap-2 mt-1.5 opacity-60">
+                  <div className="flex items-center justify-end gap-1.5 mt-1.5 opacity-60">
                     <p className="text-[9px] font-bold">
                       {formatDistanceToNow(new Date(message.timestamp), {
                         locale: ar,
                         addSuffix: false,
                       })}
                     </p>
+                    {isCurrentUser && (
+                      <span className={cn("inline-flex", message.read ? "text-teal-400" : "text-gray-400")}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                          {message.read && <polyline points="15 6 9 12 4 7" style={{ transform: 'translateX(4px)' }}></polyline>}
+                        </svg>
+                      </span>
+                    )}
                     {message.isPinned && <Pin size={9} className="fill-current" />}
                   </div>
 

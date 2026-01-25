@@ -3,13 +3,17 @@ import { supabase } from '@/lib/supabase';
 
 // ===== المحادثات =====
 
+// تنظيف المعرفات من السوابق الوهمية لضمان المطابقة
+const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
+
 // الحصول على المحادثات
 export const getConversations = async (userId: string): Promise<Conversation[]> => {
   try {
+    const cId = cleanId(userId);
     const { data, error } = await supabase
       .from('conversations')
       .select('*')
-      .contains('participants', [userId])
+      .contains('participants', [cId])
       .order('last_message_at', { ascending: false });
 
     if (error) {
@@ -41,26 +45,32 @@ export const subscribeToConversations = (
   getConversations(userId).then(callback);
 
   // Realtime subscription
+  const cId = cleanId(userId);
   const channel = supabase
-    .channel('public:conversations')
+    .channel(`chat-conversations-${cId}`)
     .on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
-        table: 'conversations',
-        filter: `participants=cs.{${userId}}` // Checks if participants array contains userId (requires verify filter syntax or handle client side filtering if complex)
+        table: 'conversations'
       },
-      async (payload) => {
-        // For simplicity and correctness, iterate fetching is safer than patching state manually on client for now
-        const convos = await getConversations(userId);
-        callback(convos);
+      async (payload: any) => {
+        const newData = payload.new;
+        const oldData = payload.old;
+        const participants = newData?.participants || oldData?.participants || [];
+
+        // التحقق باستخدام المعرف النظيف لضمان استلام التنبيه
+        if (participants.includes(cId)) {
+          const convos = await getConversations(userId);
+          callback(convos);
+        }
       }
     )
     .subscribe();
 
   return () => {
-    supabase.removeChannel(channel);
+    channel.unsubscribe();
   };
 };
 
@@ -106,24 +116,26 @@ export const subscribeToMessages = (
   getMessages(conversationId).then(callback);
 
   const channel = supabase
-    .channel(`public:messages:${conversationId}`)
+    .channel(`chat-messages-${conversationId}`)
     .on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
-        table: 'messages',
-        filter: `conversation_id=eq.${conversationId}`
+        table: 'messages'
       },
-      async (payload) => {
-        const msgs = await getMessages(conversationId);
-        callback(msgs);
+      async (payload: any) => {
+        // التحقق من أن الرسالة تنتمي لهذه المحادثة
+        if (payload.new?.conversation_id === conversationId || payload.old?.conversation_id === conversationId) {
+          const msgs = await getMessages(conversationId);
+          callback(msgs);
+        }
       }
     )
     .subscribe();
 
   return () => {
-    supabase.removeChannel(channel);
+    channel.unsubscribe();
   };
 };
 
@@ -141,11 +153,11 @@ export const sendMessage = async (
     .from('messages')
     .insert([{
       conversation_id: conversationId,
-      sender_id: senderId,
+      sender_id: cleanId(senderId),
       sender_name: senderName,
       sender_role: senderRole,
       content: content,
-      read_by: [senderId] // Sender has read it
+      read_by: [cleanId(senderId)] // Sender has read it
     }])
     .select()
     .single();
@@ -159,8 +171,9 @@ export const sendMessage = async (
   const newUnreadCounts = convo?.unread_counts || {};
   const participants = convo?.participants || [];
 
+  const senderCId = cleanId(senderId);
   participants.forEach((pId: string) => {
-    if (pId !== senderId) {
+    if (pId !== senderCId) {
       newUnreadCounts[pId] = (newUnreadCounts[pId] || 0) + 1;
     }
   });
@@ -193,17 +206,21 @@ export const getOrCreateConversation = async (
   type: 'director-teacher' | 'teacher-parent' | 'parent-teacher'
 ): Promise<Conversation> => {
 
-  const sortedIds = participantIds.sort();
+  // ترتيب المعرفات والأسماء معاً لضمان المطابقة
+  const combined = participantIds.map((id, index) => ({
+    id: cleanId(id),
+    name: participantNames[index]
+  })).sort((a, b) => a.id.localeCompare(b.id));
 
-  // Check if exists
+  const sortedIds = combined.map(c => c.id);
+  const sortedNames = combined.map(c => c.name);
+
+  // البحث عن محادثة موجودة بنفس المشاركين تماماً
   const { data: existing } = await supabase
     .from('conversations')
     .select('*')
     .contains('participants', sortedIds);
 
-  // Since 'contains' might be broad, we can refine or just take the first if logic allows.
-  // Ideally we want exact match on participants. 
-  // For now filtering in JS if needed or assuming unique pair.
   const found = existing?.find(c =>
     c.participants.length === sortedIds.length &&
     c.participants.every((id: string) => sortedIds.includes(id))
@@ -231,7 +248,7 @@ export const getOrCreateConversation = async (
     .from('conversations')
     .insert([{
       participants: sortedIds,
-      participant_names: participantNames, // array of strings
+      participant_names: sortedNames,
       type,
       last_message: '',
       last_message_at: new Date().toISOString(),

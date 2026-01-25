@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useChat } from '@/features/chat/hooks/useChat';
 import { ConversationList } from '@/features/chat/components/ConversationList';
 import { MessageArea } from '@/features/chat/components/MessageArea';
@@ -11,6 +11,7 @@ import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { chatService } from '@/features/chat/services/chatService';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { Teacher } from '@/types';
 
 export default function ChatPage() {
   const { user } = useAuthStore();
@@ -64,11 +65,17 @@ export default function ChatPage() {
         [user.displayName, teacher.fullName],
         'director-teacher'
       );
+
+      // إجبار النظام على اختيار المحادثة الجديدة فوراً
       selectConversation(convo);
+
+      // التبديل إلى تبويب المحادثات لإظهار النتيجة
       setView('conversations');
-      queryClient.invalidateQueries({ queryKey: ['all-exams'] }); // Trigger refresh if needed, or just let useChat handle it
+
+      // مسح نص البحث لراحة المستخدم
+      setSearchQuery('');
     } catch (err) {
-      console.error("Error starting conversation:", err);
+      console.error("خطأ أثناء بدء المحادثة:", err);
     }
   };
 
@@ -82,9 +89,35 @@ export default function ChatPage() {
     )
   );
 
-  const filteredTeachers = teachersList.filter((t: any) =>
-    t.fullName.includes(searchQuery) && t.id !== user?.teacherId
-  );
+  const filteredTeachers = useMemo(() => {
+    // التأكد من أن المدرس الحالي لا يراسل نفسه في القائمة
+    const currentTeacherId = user?.teacherId || user?.uid || '';
+    const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
+    const cleanCurrentId = cleanId(currentTeacherId);
+
+    let list = teachersList.filter((t: any) => {
+      const isSearchMatch = t.fullName.includes(searchQuery);
+      const isNotMe = cleanId(t.id) !== cleanCurrentId;
+      return isSearchMatch && isNotMe;
+    });
+
+    // إضافة المدير العام في بداية القائمة للمدرسين
+    if (user?.role === 'teacher') {
+      const directorContact = {
+        id: 'director',
+        fullName: 'المدير العام',
+        phone: 'الإدارة العليا',
+        role: 'director',
+        assignedGroups: [],
+        status: 'active'
+      } as any;
+      if (directorContact.fullName.includes(searchQuery)) {
+        list = [directorContact, ...list];
+      }
+    }
+
+    return list;
+  }, [teachersList, searchQuery, user]);
 
   if (!isClient) {
     return null;
@@ -203,6 +236,7 @@ export default function ChatPage() {
           {selectedConversation ? (
             <>
               <MessageArea
+                key={selectedConversation.id} // إجبار المكون على إعادة التحميل بالكامل عند تغيير المحادثة
                 conversation={selectedConversation}
                 messages={messages}
                 currentUserId={userId}
@@ -235,13 +269,21 @@ export default function ChatPage() {
               العودة
             </button>
             <div className="text-right">
-              <h3 className="font-bold text-gray-900 leading-none">{selectedConversation.participantNames[1]}</h3>
+              <h3 className="font-bold text-gray-900 leading-none">
+                {(() => {
+                  const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
+                  const currentCleanId = cleanId(userId);
+                  const otherIndex = selectedConversation.participantIds.findIndex(id => cleanId(id) !== currentCleanId);
+                  return selectedConversation.participantNames[otherIndex === -1 ? 1 : otherIndex] || 'محادثة';
+                })()}
+              </h3>
               <span className="text-[10px] text-gray-400 font-bold">نشط الآن</span>
             </div>
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden bg-white">
             <MessageArea
+              key={selectedConversation.id}
               conversation={selectedConversation}
               messages={messages}
               currentUserId={userId}

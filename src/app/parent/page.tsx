@@ -38,28 +38,30 @@ export default function ParentDashboard() {
     const parentPhone = user?.displayName || "";
     const myKids = students?.filter(s => s.parentPhone === parentPhone) || [];
 
-    // Filter allowed contacts for chat
+    // تصفية جهات الاتصال المسموح بالتواصل معها (المدير والمشرف ومدرسي الأبناء فقط)
     const allowedContacts = teachers?.filter(t => {
-        // 1. Director & Supervisor are always allowed
+        // 1. المدير والمشرف متاحون دائماً
         if (t.role === 'supervisor') return true;
-        // 2. Teachers of the parent's children
+        // 2. مدرسو المجموعات التي ينتمي إليها الأبناء
         const kidTeacherIds = myKids.map(k => k.groupId).map(gid => groups?.find(g => g.id === gid)?.teacherId);
         if (kidTeacherIds.includes(t.id)) return true;
         return false;
     }) || [];
 
-    // Add Director as a manual contact if not in teachers (assuming mock-director)
+    // إضافة المدير كجهة اتصال يدوية (بافتراض وجود مدير عام للنظام)
     const contacts = [
         { id: 'director', fullName: 'المدير العام', role: 'director' },
         ...allowedContacts
     ];
 
+    // دالة تسجيل الخروج ومسح بيانات الجلسة
     const handleLogout = async () => {
         await logout();
         setUser(null);
         router.push("/login");
     };
 
+    // حالة التحميل الأولية
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -70,9 +72,10 @@ export default function ParentDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50/50 font-sans pb-10" dir="rtl">
+            {/* رأس الصفحة الثابت */}
             <header className="bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto flex items-center justify-between relative h-10">
-                    {/* Right: Logout Button */}
+                    {/* الجانب الأيمن: زر تسجيل الخروج */}
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold active:scale-95 transition-all shrink-0"
@@ -81,14 +84,14 @@ export default function ParentDashboard() {
                         <span className="hidden sm:inline">خروج</span>
                     </button>
 
-                    {/* Center: Logo */}
+                    {/* المنتصف: شعار المركز */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                         <div className="bg-white w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border border-gray-100">
                             <img src="/logo.png" alt="المنارة" className="w-6 h-6 object-contain" />
                         </div>
                     </div>
 
-                    {/* Left: Navigation Buttons */}
+                    {/* الجانب الأيسر: أزرار التنقل السريع */}
                     <div className="flex items-center gap-2 shrink-0">
                         <button
                             onClick={() => setIsChatOpen(true)}
@@ -106,7 +109,7 @@ export default function ParentDashboard() {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 py-8">
-                {/* Welcome Message Section */}
+                {/* قسم رسالة الترحيب بولي الأمر */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -122,10 +125,12 @@ export default function ParentDashboard() {
                     </p>
                 </motion.div>
 
+                {/* عنوان قسم الأبناء */}
                 <div className="flex items-center gap-3 mb-8 border-r-4 border-teal-500 pr-3">
                     <h1 className="text-xl font-black text-gray-600 uppercase tracking-wide">أبنائي الطلاب ({myKids.length})</h1>
                 </div>
 
+                {/* شبكة عرض بطاقات الطلاب */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {myKids.map((kid) => (
                         <StudentCard
@@ -138,6 +143,7 @@ export default function ParentDashboard() {
                         />
                     ))}
 
+                    {/* حالة عدم وجود طلاب مسجلين */}
                     {myKids.length === 0 && (
                         <div className="col-span-full py-20 text-center space-y-4">
                             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-400">
@@ -150,7 +156,7 @@ export default function ParentDashboard() {
                 </div>
             </main>
 
-            {/* Student Detail Modal */}
+            {/* نافذة تفاصيل الطالب المنبثقة */}
             <AnimatePresence>
                 {selectedKidForDetail && (
                     <ParentStudentDetailModal
@@ -163,7 +169,7 @@ export default function ParentDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* Leave Request Modal */}
+            {/* نافذة طلب الإجازة المنبثقة */}
             <AnimatePresence>
                 {selectedKidForLeave && (
                     <LeaveRequestModal
@@ -173,7 +179,7 @@ export default function ParentDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* Parent Chat Modal */}
+            {/* نافذة المراسلة المنبثقة */}
             <AnimatePresence>
                 {isChatOpen && (
                     <ParentChatModal
@@ -184,7 +190,7 @@ export default function ParentDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* زر الدعم الفني عبر واتساب (اختياري الآن) */}
+            {/* زر التواصل السريع عبر واتساب */}
             <button
                 onClick={() => window.open('https://wa.me/201234567890', '_blank')}
                 className="fixed bottom-6 left-6 w-14 h-14 bg-teal-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-all hover:bg-teal-700"
@@ -195,12 +201,16 @@ export default function ParentDashboard() {
     );
 }
 
+/**
+ * مكون منبثق لتقديم طلب إجازة
+ */
 function LeaveRequestModal({ kid, onClose }: { kid: any, onClose: () => void }) {
     const { addLeave } = useStudentRecords(kid.id);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [reason, setReason] = useState('');
 
+    // معالجة إرسال الطلب
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!startDate || !endDate || !reason) return alert('يرجى ملء جميع الحقول');
@@ -215,9 +225,8 @@ function LeaveRequestModal({ kid, onClose }: { kid: any, onClose: () => void }) 
             });
             onClose();
         } catch (err) {
-            console.error("Error submitting leave request:", err);
-            // Error is already handled by mutation or mock success, 
-            // but we catch here to prevent crash if mutation throws.
+            console.error("خطأ أثناء إرسال طلب الإجازة:", err);
+            // يتم التعامل مع الأخطاء برمجياً في خدمة السجلات لضمان تجربة مستخدم سلسة
         }
     };
 
@@ -293,6 +302,9 @@ function LeaveRequestModal({ kid, onClose }: { kid: any, onClose: () => void }) 
     );
 }
 
+/**
+ * مكون بطاقة عرض الطالب المختصرة
+ */
 function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid: any, groups: any[], teachers: any[], onSelect: () => void, onLeaveRequest: () => void }) {
     const { attendance, exams, fees } = useStudentRecords(kid.id);
     const group = groups.find(g => g.id === kid.groupId);
@@ -301,7 +313,7 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
     const presentCount = attendance.filter(a => a.status === 'present').length;
     const totalAttendance = attendance.length;
 
-    // Check if there are unpaid fees
+    // التحقق من وجود مصروفات غير مدفوعة
     const hasUnpaidFees = fees.length === 0;
 
     return (
@@ -311,8 +323,10 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
             onClick={onSelect}
             className="bg-white rounded-[40px] p-6 shadow-sm border border-gray-100 hover:shadow-2xl hover:shadow-blue-500/10 transition-all group relative overflow-hidden cursor-pointer active:scale-[0.98]"
         >
+            {/* زخرفة خلفية للبطاقة */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-bl-[100px] -mr-10 -mt-10 group-hover:scale-110 transition-transform" />
 
+            {/* علامات الحالة (مفصول / سداد رسوم) */}
             <div className="absolute top-6 left-6 z-10 flex flex-col gap-2 items-end">
                 {kid.status === 'archived' && (
                     <div className="bg-red-500 text-white px-3 py-1 rounded-full text-[9px] font-black shadow-lg border border-white/20">
@@ -327,6 +341,7 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
             </div>
 
             <div className="flex flex-col items-center text-center space-y-4 relative z-10">
+                {/* أيقونة الطالب */}
                 <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[30px] flex items-center justify-center text-white shadow-xl shadow-blue-500/20 group-hover:rotate-6 transition-transform">
                     <UserIcon size={38} />
                 </div>
@@ -344,6 +359,7 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
                     </div>
                 </div>
 
+                {/* إحصائيات سريعة (حضور واختبارات) */}
                 <div className="grid grid-cols-2 gap-4 w-full pt-4">
                     <div className="bg-gray-50/80 p-4 rounded-3xl border border-gray-100 group-hover:bg-white group-hover:shadow-inner transition-all">
                         <p className="text-[10px] text-gray-400 font-black mb-1">الحضور</p>
@@ -361,6 +377,7 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
                     </div>
                 </div>
 
+                {/* أزرار الإجراءات السريعة */}
                 <div className="flex items-center gap-3 w-full pt-2">
                     <div className="flex-1 h-12 bg-blue-600 text-white shadow-lg shadow-blue-500/20 text-sm font-black rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
                         عرض التفاصيل
@@ -381,3 +398,4 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
         </motion.div>
     );
 }
+

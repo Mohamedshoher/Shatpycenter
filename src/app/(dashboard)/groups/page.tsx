@@ -161,22 +161,24 @@ export default function GroupsPage() {
             </div>
 
             {/* Filter Bar */}
-            <div className="flex flex-row-reverse gap-2 overflow-x-auto no-scrollbar pb-2">
-                {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
-                    <button
-                        key={type}
-                        onClick={() => setFilter(type)}
-                        className={cn(
-                            "flex-shrink-0 px-6 py-2.5 rounded-2xl text-xs font-bold transition-all border",
-                            filter === type
-                                ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/20"
-                                : "bg-white text-gray-500 border-gray-100 hover:border-purple-200"
-                        )}
-                    >
-                        {type}
-                    </button>
-                ))}
-            </div>
+            {user?.role !== 'teacher' && (
+                <div className="flex flex-row-reverse gap-2 overflow-x-auto no-scrollbar pb-2">
+                    {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
+                        <button
+                            key={type}
+                            onClick={() => setFilter(type)}
+                            className={cn(
+                                "flex-shrink-0 px-6 py-2.5 rounded-2xl text-xs font-bold transition-all border",
+                                filter === type
+                                    ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/20"
+                                    : "bg-white text-gray-500 border-gray-100 hover:border-purple-200"
+                            )}
+                        >
+                            {type}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

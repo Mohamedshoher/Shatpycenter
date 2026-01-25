@@ -168,7 +168,7 @@ export default function ExamsReportPage() {
                     <div className="flex bg-gray-100/50 p-1 rounded-xl items-center gap-1 border border-gray-100">
                         <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm justify-center cursor-pointer" onClick={goToPreviousMonth}>
                             <Calendar size={12} className="text-blue-500" />
-                            <span className="text-[10px] font-black text-gray-700">{monthLabelWithYear}</span>
+                            <span className="text-xs font-black text-gray-700">{monthLabelWithYear}</span>
                         </div>
                     </div>
                 </div>
@@ -179,7 +179,7 @@ export default function ExamsReportPage() {
                     <button
                         onClick={() => setActiveTab('performance')}
                         className={cn(
-                            "flex-1 min-w-[90px] py-2 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-1 whitespace-nowrap",
+                            "flex-1 min-w-[90px] py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap",
                             activeTab === 'performance' ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
                         )}
                     >
@@ -189,7 +189,7 @@ export default function ExamsReportPage() {
                     <button
                         onClick={() => setActiveTab('mostTested')}
                         className={cn(
-                            "flex-1 min-w-[90px] py-2 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-1 whitespace-nowrap",
+                            "flex-1 min-w-[90px] py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap",
                             activeTab === 'mostTested' ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
                         )}
                     >
@@ -199,7 +199,7 @@ export default function ExamsReportPage() {
                     <button
                         onClick={() => setActiveTab('notTested')}
                         className={cn(
-                            "flex-1 min-w-[90px] py-2 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-1 whitespace-nowrap",
+                            "flex-1 min-w-[90px] py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap",
                             activeTab === 'notTested' ? "bg-white text-amber-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
                         )}
                     >
@@ -226,7 +226,7 @@ export default function ExamsReportPage() {
                                         <select
                                             value={selectedGroupId}
                                             onChange={(e) => setSelectedGroupId(e.target.value)}
-                                            className="appearance-none bg-white border border-gray-100 px-8 py-2.5 pr-4 rounded-xl md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/10 w-full md:min-w-[150px] text-right"
+                                            className="appearance-none bg-white border border-gray-100 px-8 py-3 pr-4 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold text-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/10 w-full md:min-w-[150px] text-right"
                                         >
                                             <option value="all">كل المجموعات</option>
                                             {filteredGroupsList?.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -237,7 +237,7 @@ export default function ExamsReportPage() {
                                         <select
                                             value={selectedExamType}
                                             onChange={(e) => setSelectedExamType(e.target.value)}
-                                            className="appearance-none bg-white border border-gray-100 px-8 py-2.5 pr-4 rounded-xl md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/10 w-full md:min-w-[140px] text-right"
+                                            className="appearance-none bg-white border border-gray-100 px-8 py-3 pr-4 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold text-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/10 w-full md:min-w-[140px] text-right"
                                         >
                                             <option value="new">جديد</option>
                                             <option value="near">ماضي قريب</option>
@@ -261,8 +261,8 @@ export default function ExamsReportPage() {
                                                 <User size={18} />
                                             </div>
                                             <div className="text-right">
-                                                <h3 className="font-bold text-gray-900 group-hover:text-amber-600 transition-colors text-sm">{student.fullName}</h3>
-                                                <span className="text-[10px] text-gray-400 font-bold">{student.groupName}</span>
+                                                <h3 className="font-bold text-gray-900 group-hover:text-amber-600 transition-colors text-base">{student.fullName}</h3>
+                                                <span className="text-xs text-gray-400 font-bold">{student.groupName}</span>
                                             </div>
                                         </div>
 
@@ -348,15 +348,15 @@ export default function ExamsReportPage() {
                                                 <User size={18} />
                                             </div>
                                             <div className="text-right overflow-hidden">
-                                                <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-sm truncate">{student.fullName}</h3>
-                                                <span className="text-[10px] text-gray-400 font-bold truncate block">{student.groupName}</span>
+                                                <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-base truncate">{student.fullName}</h3>
+                                                <span className="text-xs text-gray-400 font-bold truncate block">{student.groupName}</span>
                                             </div>
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            <div className="bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1.5">
-                                                <span className="text-blue-600 font-black text-xs font-sans">{student.examsCount}</span>
-                                                <span className="text-[9px] text-blue-400 font-bold">اختبار</span>
+                                            <div className="bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                                <span className="text-blue-600 font-black text-sm font-sans">{student.examsCount}</span>
+                                                <span className="text-xs text-blue-400 font-bold">اختبار</span>
                                             </div>
                                             <button className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
                                                 <ChevronRight size={16} />

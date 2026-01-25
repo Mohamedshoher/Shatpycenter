@@ -4,6 +4,7 @@ import { Conversation } from '@/store/useChatStore';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { MessageCircle, Badge } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -16,6 +17,21 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   selectedId,
   onSelect,
 }) => {
+  const { user } = useAuthStore();
+
+  const getOtherName = (conversation: Conversation) => {
+    if (!user) return 'محادثة';
+    const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
+    const currentCleanId = cleanId(user.uid || '');
+
+    // البحث عن المشارك الآخر
+    const otherIndex = conversation.participantIds.findIndex(id => cleanId(id) !== currentCleanId);
+
+    // إذا وجدنا مشاركاً آخر، نأخذ اسمه، وإلا نأخذ المشارك الثاني افتراضياً
+    const finalIndex = otherIndex !== -1 ? otherIndex : (conversation.participantIds.length > 1 ? 1 : 0);
+    return conversation.participantNames[finalIndex] || 'محادثة';
+  };
+
   if (conversations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-500">
@@ -31,17 +47,16 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         <button
           key={conversation.id}
           onClick={() => onSelect(conversation)}
-          className={`w-full p-4 text-right transition-colors ${
-            selectedId === conversation.id
-              ? 'bg-blue-50 border-r-4 border-blue-500'
-              : 'hover:bg-gray-50'
-          }`}
+          className={`w-full p-4 text-right transition-colors ${selectedId === conversation.id
+            ? 'bg-blue-50 border-r-4 border-blue-500'
+            : 'hover:bg-gray-50'
+            }`}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold text-gray-900">
-                  {conversation.participantNames[1] || 'محادثة'}
+                  {getOtherName(conversation)}
                 </h3>
                 {conversation.unreadCount > 0 && (
                   <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
