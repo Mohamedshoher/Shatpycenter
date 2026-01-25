@@ -13,16 +13,22 @@ import {
     Loader,
     UserCheck,
     ShieldCheck,
-    RefreshCw
+    RefreshCw,
+    CalendarDays,
+    Check,
+    X as CloseIcon,
+    Calendar
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getStudents } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { getTransactionsByMonth } from '@/features/finance/services/financeService';
+import { getLeaveRequests, updateLeaveRequest, LeaveRequest } from '@/features/students/services/recordsService';
 import { supabase } from '@/lib/supabase';
+import { Student, Group, FinancialTransaction } from '@/types';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardOverview() {
@@ -33,6 +39,8 @@ export default function DashboardOverview() {
     const currentMonth = today.getMonth() + 1;
     const currentYear = today.getFullYear();
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+    const queryClient = useQueryClient();
 
     // إعادة توجيه المستخدمين بعيداً عن الصفحة الرئيسية حسب الدور
     useEffect(() => {
@@ -44,17 +52,17 @@ export default function DashboardOverview() {
     }, [user, router]);
 
     // جلب البيانات الحقيقية
-    const { data: students = [], isLoading: loadingStudents } = useQuery({
+    const { data: students = [] as Student[], isLoading: loadingStudents } = useQuery({
         queryKey: ['students'],
         queryFn: getStudents
     });
 
-    const { data: groups = [], isLoading: loadingGroups } = useQuery({
+    const { data: groups = [] as Group[], isLoading: loadingGroups } = useQuery({
         queryKey: ['groups'],
         queryFn: getGroups
     });
 
-    const { data: transactions = [], isLoading: loadingFinance } = useQuery({
+    const { data: transactions = [] as FinancialTransaction[], isLoading: loadingFinance } = useQuery({
         queryKey: ['transactions', currentYear, currentMonth],
         queryFn: () => getTransactionsByMonth(currentYear, currentMonth),
         enabled: user?.role === 'director' || user?.role === 'supervisor'
@@ -69,23 +77,31 @@ export default function DashboardOverview() {
     });
 
     // تصفية البيانات حسب دور المستخدم
-    const myGroups = user?.role === 'teacher' ? groups.filter(g => g.teacherId === user.teacherId) : groups;
-    const myGroupsIds = myGroups.map(g => g.id);
+    const myGroups = user?.role === 'teacher' ? groups.filter((g: Group) => g.teacherId === user.teacherId) : groups;
+    const myGroupsIds = myGroups.map((g: Group) => g.id);
     // استبعاد الطلاب المؤرشفين من العد الإجمالي
-    const activeStudents = students.filter(s => s.status !== 'archived');
+    const activeStudents = students.filter((s: Student) => s.status !== 'archived');
     const myStudents = user?.role === 'teacher'
-        ? activeStudents.filter(s => myGroupsIds.includes(s.groupId || ''))
+        ? activeStudents.filter((s: Student) => myGroupsIds.includes(s.groupId || ''))
         : activeStudents;
     const myAttendanceCount = user?.role === 'teacher'
-        ? todayAttendance.filter(a => myStudents.some(s => s.id === a.student_id)).length
+        ? todayAttendance.filter((a: any) => myStudents.some((s: Student) => s.id === a.student_id)).length
         : todayAttendance.length;
 
     const monthlyIncome = transactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
+        .filter((t: FinancialTransaction) => t.type === 'income')
+        .reduce((sum: number, t: FinancialTransaction) => sum + t.amount, 0);
 
     // حساب عدد الطلاب المعلقين
-    const pendingStudents = students.filter(s => s.status === 'pending');
+    const pendingStudents = students.filter((s: Student) => s.status === 'pending');
+
+    const { data: leaveRequests = [], refetch: refetchLeaves } = useQuery({
+        queryKey: ['leave-requests'],
+        queryFn: getLeaveRequests,
+        enabled: user?.role === 'director' || user?.role === 'supervisor'
+    });
+
+    const pendingLeaves = leaveRequests.filter(r => r.status === 'pending');
 
     const stats = [
         {
@@ -95,6 +111,14 @@ export default function DashboardOverview() {
             color: 'bg-blue-500',
             roles: ['director', 'supervisor', 'teacher'],
             link: '/students'
+        },
+        {
+            title: 'طلبات الإجازة',
+            value: pendingLeaves.length.toString(),
+            icon: CalendarDays,
+            color: 'bg-orange-500',
+            roles: ['director', 'supervisor'],
+            onClick: () => setIsLeaveModalOpen(true)
         },
         {
             title: 'الحضور اليوم',
@@ -144,7 +168,7 @@ export default function DashboardOverview() {
         setIsSyncing(true);
         // محاكاة عملية فحص وتحديث الحسابات
         await new Promise(resolve => setTimeout(resolve, 1500));
-        const invalidCount = students.filter(s => (s.parentPhone || '').replace(/[^0-9]/g, '').length < 11).length;
+        const invalidCount = students.filter((s: Student) => (s.parentPhone || '').replace(/[^0-9]/g, '').length < 11).length;
         if (invalidCount > 0) {
             alert(`تم فحص البيانات. يوجد ${invalidCount} طلاب لديهم أرقام هواتف غير مكتملة (أقل من 11 رقم)، لن يتمكن أولياء أمورهم من الدخول حتى يتم تحديث بياناتهم.`);
         } else {
@@ -247,6 +271,80 @@ export default function DashboardOverview() {
             )}
 
 
+            {/* نافذة إدارة طلبات الإجازة */}
+            <AnimatePresence>
+                {isLeaveModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsLeaveModalOpen(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="bg-white rounded-[40px] w-full max-w-2xl max-h-[80vh] overflow-hidden relative z-10 shadow-2xl flex flex-col"
+                        >
+                            <div className="p-8 border-b border-gray-100 flex items-center justify-between shrink-0">
+                                <h2 className="text-2xl font-black text-gray-900 border-r-4 border-orange-500 pr-4">طلبات الإجازة المعلقة</h2>
+                                <button onClick={() => setIsLeaveModalOpen(false)} className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400">
+                                    <CloseIcon size={24} />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-8 space-y-4">
+                                {pendingLeaves.length === 0 ? (
+                                    <div className="text-center py-12 text-gray-400 font-bold">
+                                        لا توجد طلبات إجازة معلقة حالياً
+                                    </div>
+                                ) : (
+                                    pendingLeaves.map((req: LeaveRequest) => (
+                                        <div key={req.id} className="bg-gray-50 rounded-3xl p-6 border border-gray-100">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div>
+                                                    <h3 className="font-black text-gray-900 text-lg">{req.studentName}</h3>
+                                                    <p className="text-xs text-blue-600 font-bold">
+                                                        من {req.startDate} إلى {req.endDate}
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            await updateLeaveRequest(req.id, { status: 'approved' });
+                                                            refetchLeaves();
+                                                        }}
+                                                        className="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center hover:bg-green-600 hover:text-white transition-all"
+                                                        title="موافقة"
+                                                    >
+                                                        <Check size={20} />
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            await updateLeaveRequest(req.id, { status: 'rejected' });
+                                                            refetchLeaves();
+                                                        }}
+                                                        className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                                                        title="رفض"
+                                                    >
+                                                        <CloseIcon size={20} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white rounded-2xl p-4 text-sm text-gray-600 font-bold shadow-sm">
+                                                <p className="text-[10px] text-gray-400 mb-1">السبب:</p>
+                                                {req.reason}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

@@ -380,7 +380,30 @@ export const deletePlanRecord = async (id: string): Promise<void> => {
 
 // ===== طلبات الإجازة (لم يتم إنشاء جدول لها في السكيما المقترحة بعد، سأتركها فارغة أو أستخدم جدولاً افتراضياً) =====
 // سنفترض وجود جدول leave_requests أو نعيد مصفوفة فارغة حالياً
-export const getLeaveRequests = async (): Promise<LeaveRequest[]> => { return []; };
+// ===== طلبات الإجازة =====
+export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('leave_requests')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return (data || []).map(row => ({
+            id: row.id,
+            studentId: row.student_id,
+            studentName: row.student_name,
+            startDate: row.start_date,
+            endDate: row.end_date,
+            reason: row.reason,
+            status: row.status,
+            createdAt: row.created_at
+        }));
+    } catch (error) {
+        console.error("Error fetching leave requests:", error);
+        return [];
+    }
+};
 export const getStudentLeaveRequests = async (studentId: string): Promise<LeaveRequest[]> => { return []; };
 export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status' | 'createdAt'>): Promise<LeaveRequest> => {
     try {
@@ -431,7 +454,22 @@ export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status
         } as LeaveRequest;
     }
 };
-export const updateLeaveRequest = async (id: string, data: Partial<LeaveRequest>): Promise<void> => { };
+export const updateLeaveRequest = async (id: string, data: Partial<LeaveRequest>): Promise<void> => {
+    try {
+        const updates: any = {};
+        if (data.status) updates.status = data.status;
+
+        const { error } = await supabase
+            .from('leave_requests')
+            .update(updates)
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error("Error updating leave request:", error);
+        throw error;
+    }
+};
 export const deleteLeaveRequest = async (id: string): Promise<void> => { };
 
 // ===== حساب الحضور الشهري =====
