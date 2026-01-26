@@ -10,6 +10,7 @@ import {
     ChevronRight,
     User,
     AlertCircle,
+    LayoutGrid,
     Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -389,40 +390,6 @@ export default function ExamsReportPage() {
                             exit={{ opacity: 0, y: -20 }}
                             className="space-y-6"
                         >
-                            <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-4">
-                                <h2 className="text-xl md:text-2xl font-black text-gray-800 w-full text-center md:text-right">دورة الاختبارات اليومية</h2>
-                                <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
-                                    <button
-                                        onClick={() => {
-                                            const d = new Date(viewDate);
-                                            d.setDate(d.getDate() + 1);
-                                            setViewDate(d);
-                                        }}
-                                        className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all"
-                                    >
-                                        <ChevronRight className="rotate-180" size={20} />
-                                    </button>
-                                    <div className="px-4 py-1 text-center min-w-[120px]">
-                                        <p className="text-[10px] font-black text-blue-600 uppercase">
-                                            {viewDate.toLocaleDateString('ar-EG', { weekday: 'long' })}
-                                        </p>
-                                        <p className="text-xs font-bold text-gray-400">
-                                            {viewDate.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            const d = new Date(viewDate);
-                                            d.setDate(d.getDate() - 1);
-                                            setViewDate(d);
-                                        }}
-                                        className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all"
-                                    >
-                                        <ChevronRight size={20} />
-                                    </button>
-                                </div>
-                            </div>
-
                             {(() => {
                                 const jsDay = viewDate.getDay();
                                 const dayMap: Record<number, number> = { 6: 0, 0: 1, 1: 2, 2: 3, 3: 4 };
@@ -495,51 +462,101 @@ export default function ExamsReportPage() {
                                 }
 
                                 const startIndex = (weekIndex * 20) + (dayIndex * 5);
-                                const scheduledStudents = base.slice(startIndex, startIndex + 5)
-                                    .filter(s => !postponedStudentIds.includes(s.id));
+
+                                // تجميع الطلاب حسب المجموعات للحصول على دورة لكل مجموعة
+                                const studentsByGroup: { groupId: string, name: string, students: any[] }[] = [];
+                                base.forEach(s => {
+                                    const gid = s.groupId || 'unknown';
+                                    let groupObj = studentsByGroup.find(g => g.groupId === gid);
+                                    if (!groupObj) {
+                                        const groupName = groups?.find(g => g.id === gid)?.name || 'غير محدد';
+                                        groupObj = { groupId: gid, name: groupName, students: [] };
+                                        studentsByGroup.push(groupObj);
+                                    }
+                                    groupObj.students.push(s);
+                                });
+
+                                // حساب إجمالي الطلاب المقرر اختبارهم اليوم (5 من كل مجموعة)
+                                const totalScheduled = studentsByGroup.reduce((sum, g) => {
+                                    const groupStart = startIndex % g.students.length;
+                                    const groupScheduled = g.students.slice(groupStart, groupStart + 5);
+                                    return sum + groupScheduled.filter(s => !postponedStudentIds.includes(s.id)).length;
+                                }, 0);
 
                                 return (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between px-2">
-                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">قائمة اليوم ({scheduledStudents.length})</span>
-                                            <span className="text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-right">
-                                                من رقم {startIndex + 1} إلى {startIndex + 5}
+                                    <div className="space-y-6">
+                                        {/* رأس الصفحة المدمج - سطر واحد دائماً */}
+                                        <div className="flex items-center justify-between gap-2 px-1">
+                                            <div className="flex items-center bg-white p-1 rounded-2xl border border-gray-100 shadow-sm shrink-0 scale-95 origin-right">
+                                                <button onClick={() => { const d = new Date(viewDate); d.setDate(d.getDate() + 1); setViewDate(d); }} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all"><ChevronRight className="rotate-180" size={18} /></button>
+                                                <div className="px-2 py-0.5 text-center min-w-[100px]">
+                                                    <p className="text-[9px] font-black text-blue-600 uppercase leading-none">{viewDate.toLocaleDateString('ar-EG', { weekday: 'long' })}</p>
+                                                    <p className="text-[10px] font-bold text-gray-400 leading-none mt-0.5">{viewDate.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}</p>
+                                                </div>
+                                                <button onClick={() => { const d = new Date(viewDate); d.setDate(d.getDate() - 1); setViewDate(d); }} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all"><ChevronRight size={18} /></button>
+                                            </div>
+
+                                            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-2 rounded-full shadow-sm uppercase shrink-0">
+                                                قائمة اليوم ({totalScheduled} طالب)
                                             </span>
                                         </div>
 
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {scheduledStudents.map((student: any) => (
-                                                <div key={student.id} className="bg-white rounded-[24px] p-4 flex items-center justify-between border border-gray-100 shadow-sm hover:border-orange-200 transition-all group overflow-hidden relative">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 font-black text-lg shrink-0">
-                                                            {base.indexOf(student) + 1}
+                                        <div className="space-y-8">
+                                            {studentsByGroup.map((group) => {
+                                                const groupStart = startIndex % group.students.length;
+                                                const scheduledInGroup = group.students.slice(groupStart, groupStart + 5)
+                                                    .filter(s => !postponedStudentIds.includes(s.id));
+
+                                                if (scheduledInGroup.length === 0) return null;
+
+                                                return (
+                                                    <div key={group.groupId} className="space-y-3">
+                                                        <div className="flex items-center gap-3 px-1">
+                                                            <div className="h-px bg-gray-200 flex-1" />
+                                                            <h4 className="text-[10px] font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-2">
+                                                                <LayoutGrid size={10} />
+                                                                مجموعة: {group.name}
+                                                            </h4>
+                                                            <div className="h-px bg-gray-200 flex-1" />
                                                         </div>
-                                                        <div className="text-right">
-                                                            <h3 className="font-bold text-gray-900 text-base">{student.fullName}</h3>
-                                                            <p className="text-xs text-gray-400 font-bold">{groups?.find(g => g.id === student.groupId)?.name}</p>
+
+                                                        <div className="grid grid-cols-1 gap-3">
+                                                            {scheduledInGroup.map((student: any) => (
+                                                                <div key={student.id} className="bg-white rounded-[24px] p-4 flex items-center justify-between border border-gray-100 shadow-sm hover:border-blue-200 transition-all group overflow-hidden relative">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="w-12 h-12 bg-blue-50/50 rounded-2xl flex items-center justify-center text-blue-600 font-black text-lg shrink-0 font-sans">
+                                                                            {group.students.indexOf(student) + 1}
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <h3 className="font-bold text-gray-900 text-base">{student.fullName}</h3>
+                                                                            <p className="text-xs text-gray-400 font-bold">{group.name}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {user?.role === 'teacher' && (
+                                                                            <button
+                                                                                className="text-[10px] font-black bg-gray-50 text-gray-400 px-3 py-2 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-100"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setPostponedStudentIds(prev => [...prev, student.id]);
+                                                                                }}
+                                                                            >
+                                                                                تأجيل للأربعاء
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={() => setSelectedStudentForDetails(student)}
+                                                                            className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm"
+                                                                        >
+                                                                            <ChevronRight size={18} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {user?.role === 'teacher' && (
-                                                            <button
-                                                                className="text-[10px] font-black bg-gray-50 text-gray-400 px-3 py-2 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-100"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setPostponedStudentIds(prev => [...prev, student.id]);
-                                                                }}
-                                                            >
-                                                                تأجيل للأربعاء
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => setSelectedStudentForDetails(student)}
-                                                            className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-500 group-hover:text-white transition-all"
-                                                        >
-                                                            <ChevronRight size={18} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 );

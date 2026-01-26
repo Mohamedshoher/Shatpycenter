@@ -191,7 +191,7 @@ export default function Sidebar() {
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-2.5">
+                    <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1.5 custom-scrollbar">
                         {filteredNavItems.map((item) => {
                             const Icon = item.icon;
                             // التأكد من أن التحديد دقيق ولا يتداخل مع الروابط الفرعية التي لها خيار منفصل في القائمة
@@ -209,13 +209,13 @@ export default function Sidebar() {
                                     href={item.href}
                                     onClick={() => setSidebarOpen(false)} // Close on mobile navigation
                                     className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200",
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200",
                                         isActive
                                             ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
                                             : "text-gray-600 hover:bg-blue-50 hover:text-blue-700"
                                     )}
                                 >
-                                    <Icon size={20} className={cn(isActive ? "text-white" : "text-gray-400")} />
+                                    <Icon size={18} className={cn(isActive ? "text-white" : "text-gray-400")} />
                                     <span>{item.label}</span>
                                 </Link>
                             );
@@ -223,20 +223,29 @@ export default function Sidebar() {
                     </nav>
 
                     {/* Footer / User Profile & Logout */}
-                    <div className="p-4 pb-12 md:pb-6 border-t border-gray-100 bg-gray-50/50">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
+                    <div className="mt-auto p-3 pb-12 md:pb-6 border-t border-gray-100 bg-gray-50/50 space-y-2">
+                        {/* User Profile Card */}
+                        <div className="flex items-center gap-3 bg-white p-2 rounded-[20px] border border-gray-100 shadow-sm overflow-hidden">
+                            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-sm font-black shrink-0 shadow-sm shadow-blue-200">
                                 {user?.displayName?.[0] || 'U'}
                             </div>
                             <div className="flex-1 overflow-hidden">
-                                <p className="text-sm font-black truncate text-gray-900 leading-none mb-1">{user?.displayName || 'مستخدم'}</p>
-                                <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider truncate">{user?.role}</p>
+                                <p className={cn(
+                                    "truncate text-gray-900 leading-tight mb-0.5",
+                                    user?.role === 'teacher' ? "text-[10px] font-bold" : "text-sm font-black"
+                                )}>
+                                    {user?.displayName || 'مستخدم'}
+                                </p>
+                                <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider truncate">
+                                    {user?.role === 'director' ? 'المدير العام' : user?.role === 'teacher' ? 'مدرس' : 'مراقب'}
+                                </p>
                             </div>
                         </div>
 
+                        {/* Full Logout Button with Text */}
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-2 w-full px-4 py-3 text-sm font-black text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-95"
+                            className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-black text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-[20px] border border-red-100 transition-all active:scale-95 shadow-sm"
                         >
                             <LogOut size={18} />
                             <span>تسجيل الخروج</span>

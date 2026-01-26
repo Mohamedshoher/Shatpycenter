@@ -835,9 +835,9 @@ export default function TeacherDetailModal({
                                                         "aspect-square w-full rounded-xl md:rounded-2xl border flex flex-col items-center justify-center text-xs md:text-sm font-bold transition-all relative",
                                                         isToday ? "border-blue-500 ring-2 ring-blue-500/10 shadow-lg shadow-blue-500/10" : "border-gray-50",
                                                         isWeekend || isTeacher ? "bg-red-50/10 border-red-50 text-red-400 cursor-default" :
-                                                            status === 'present' && !isFuture ? "bg-green-50 border-green-100 text-green-600" :
+                                                            status === 'present' && !isFuture ? "bg-emerald-400 border-emerald-500 text-white shadow-sm shadow-emerald-500/10" :
                                                                 (status === 'quarter' || status === 'half') ? "bg-orange-50 border-orange-100 text-orange-600" :
-                                                                    (status === 'quarter_reward' || status === 'half_reward') ? "bg-green-50 border-green-200 text-green-700" :
+                                                                    (status === 'quarter_reward' || status === 'half_reward') ? "bg-green-50 border-green-200 text-green-600" :
                                                                         status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
                                                                             "bg-white text-gray-400"
                                                     )}
@@ -847,14 +847,15 @@ export default function TeacherDetailModal({
                                                     {(status === 'quarter' || status === 'half' || status === 'present' || status === 'quarter_reward' || status === 'half_reward') && !isFuture && !isWeekend && (
                                                         <div className={cn(
                                                             "absolute bottom-1 md:bottom-2 w-1 h-1 rounded-full",
-                                                            (status?.includes('reward') || status === 'present') ? "bg-green-400" : "bg-orange-400"
+                                                            status === 'present' ? "bg-white/60" :
+                                                                status?.includes('reward') ? "bg-green-400" : "bg-orange-400"
                                                         )} />
                                                     )}
                                                 </button>
                                                 {isToday && <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />}
                                                 {status === 'present' && !isWeekend && (
                                                     <div className="absolute top-1 left-1">
-                                                        <CheckCircle2 size={10} className="text-green-500/50" />
+                                                        <CheckCircle2 size={10} className="text-white/40" />
                                                     </div>
                                                 )}
 
@@ -862,16 +863,22 @@ export default function TeacherDetailModal({
                                                 <AnimatePresence>
                                                     {activeDayMenu === day && !isTeacher && (
                                                         <>
-                                                            <div className="fixed inset-0 z-[110] bg-black/20 backdrop-blur-[2px]" onClick={() => setActiveDayMenu(null)} />
                                                             <motion.div
-                                                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                                                initial={{ opacity: 0 }}
+                                                                animate={{ opacity: 1 }}
+                                                                exit={{ opacity: 0 }}
+                                                                className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm"
+                                                                onClick={() => setActiveDayMenu(null)}
+                                                            />
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                                                className="fixed md:absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:top-full md:left-auto md:right-0 md:translate-x-0 md:translate-y-0 mt-2 w-[90%] max-w-[320px] md:w-72 bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 z-[111] space-y-4"
+                                                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                                                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[340px] bg-white rounded-[32px] shadow-2xl border border-gray-100 p-6 z-[201] space-y-4"
                                                             >
-                                                                <div className="flex flex-row-reverse items-center justify-between border-b border-gray-50 pb-2">
-                                                                    <h5 className="font-black text-gray-800 text-sm">تعديل سجل يوم {day}</h5>
-                                                                    <button onClick={() => setActiveDayMenu(null)} className="text-gray-400"><X size={16} /></button>
+                                                                <div className="flex flex-row-reverse items-center justify-between border-b border-gray-50 pb-3">
+                                                                    <h5 className="font-black text-gray-800 text-base">تعديل سجل يوم {day}</h5>
+                                                                    <button onClick={() => setActiveDayMenu(null)} className="text-gray-400 hover:bg-gray-50 p-1 rounded-full transition-all"><X size={20} /></button>
                                                                 </div>
 
                                                                 <div className="grid grid-cols-2 gap-2">
@@ -1303,44 +1310,67 @@ export default function TeacherDetailModal({
                                         </button>
                                     </div>
 
-                                    <div className="flex-1 overflow-y-auto no-scrollbar rounded-2xl border border-gray-100 bg-gray-50/30">
-                                        <table className="w-full text-right">
-                                            <thead className="sticky top-0 bg-white border-b border-gray-100 shadow-sm z-10">
-                                                <tr>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400"># الوصل</th>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400">الطالب</th>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400">المجموعة</th>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400">التاريخ</th>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400">المبلغ</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-50">
-                                                {collectedPayments.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={5} className="py-12 text-center text-gray-400 text-sm font-bold">
+                                    <div className="flex-1 overflow-y-auto no-scrollbar p-1">
+                                        <div className="space-y-3">
+                                            {(() => {
+                                                if (collectedPayments.length === 0) {
+                                                    return (
+                                                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-white rounded-[32px] border-2 border-dashed border-gray-100">
                                                             لا توجد عمليات تحصيل مسجلة لهذا الشهر.
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    collectedPayments.map((payment) => (
-                                                        <tr key={payment.id} className="bg-white hover:bg-gray-50 transition-colors">
-                                                            <td className="px-6 py-4 text-xs font-black text-gray-300 font-sans">#{payment.id}</td>
-                                                            <td className="px-6 py-4">
-                                                                <div className="flex flex-col items-end gap-1">
-                                                                    <span className="text-sm font-bold text-gray-900">{payment.studentName}</span>
-                                                                    {payment.status === 'archived' && (
-                                                                        <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">مؤرشف</span>
-                                                                    )}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                const sorted = [...collectedPayments].sort((a, b) => (parseInt(a.id) || 0) - (parseInt(b.id) || 0));
+                                                const cards: React.ReactNode[] = [];
+                                                let lastId = -1;
+
+                                                sorted.forEach((payment, index) => {
+                                                    const currentId = parseInt(payment.id);
+
+                                                    if (lastId !== -1 && currentId > lastId + 1) {
+                                                        const missingCount = currentId - lastId - 1;
+                                                        cards.push(
+                                                            <div key={`gap-${index}`} className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center justify-between text-red-600">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center font-black text-xs">
+                                                                        <AlertCircle size={18} />
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="text-sm font-black">سقوط في أرقام الوصل</p>
+                                                                        <p className="text-[10px] font-bold opacity-70">
+                                                                            {missingCount === 1 ? `الوصل رقم #${lastId + 1} مفقود` : `الوصولات من #${lastId + 1} إلى #${currentId - 1} مفقودة`}
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-xs font-bold text-gray-500">{payment.groupName}</td>
-                                                            <td className="px-6 py-4 text-xs font-bold text-gray-500 font-sans">{payment.date}</td>
-                                                            <td className="px-6 py-4 text-sm font-black text-green-600 font-sans">{payment.amount} ج.م</td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    cards.push(
+                                                        <div key={payment.id + index} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-all">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center font-black text-xs text-gray-400 font-sans border border-gray-100">
+                                                                    #{payment.id}
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{payment.studentName}</h4>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-bold">{payment.groupName}</span>
+                                                                        <span className="text-[10px] text-gray-400 font-bold font-sans" dir="ltr">{payment.date}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-left font-sans">
+                                                                <p className="text-lg font-black text-green-600">{payment.amount.toLocaleString()} <span className="text-[10px] font-bold">ج.م</span></p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                    lastId = currentId;
+                                                });
+                                                return cards;
+                                            })()}
+                                        </div>
                                     </div>
                                 </motion.div>
                             </>
@@ -1359,7 +1389,7 @@ export default function TeacherDetailModal({
                                 >
                                     <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                                            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
                                                 <CircleDollarSign size={24} />
                                             </div>
                                             <div className="text-right">
@@ -1367,52 +1397,72 @@ export default function TeacherDetailModal({
                                                 <p className="text-xs text-gray-400 font-bold">إجمالي: {totalCollectedByManager.toLocaleString()} ج.م</p>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => setShowManagerCollectedDetails(false)}
-                                            className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
-                                        >
+                                        <button onClick={() => setShowManagerCollectedDetails(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
                                             <X size={20} />
                                         </button>
                                     </div>
 
-                                    <div className="flex-1 overflow-y-auto no-scrollbar rounded-2xl border border-gray-100 bg-gray-50/30">
-                                        <table className="w-full text-right">
-                                            <thead className="sticky top-0 bg-white border-b border-gray-100 shadow-sm z-10">
-                                                <tr>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400"># الوصل</th>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400">الطالب</th>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400">المجموعة</th>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400">تاريخ التسجيل</th>
-                                                    <th className="px-6 py-4 text-xs font-bold text-gray-400">المبلغ</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-50">
-                                                {managerCollectedPayments.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={5} className="py-12 text-center text-gray-400 text-sm font-bold">
+                                    <div className="flex-1 overflow-y-auto no-scrollbar p-1">
+                                        <div className="space-y-3">
+                                            {(() => {
+                                                if (managerCollectedPayments.length === 0) {
+                                                    return (
+                                                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-white rounded-[32px] border-2 border-dashed border-gray-100">
                                                             لا توجد عمليات تحصيل للمدير مسجلة لهذا الشهر.
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    managerCollectedPayments.map((payment) => (
-                                                        <tr key={payment.id} className="bg-white hover:bg-gray-50 transition-colors">
-                                                            <td className="px-6 py-4 text-xs font-black text-gray-300 font-sans">#{payment.id}</td>
-                                                            <td className="px-6 py-4">
-                                                                <div className="flex flex-col items-end gap-1">
-                                                                    <span className="text-sm font-bold text-gray-900">{payment.studentName}</span>
-                                                                    {payment.status === 'archived' && (
-                                                                        <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">مؤرشف</span>
-                                                                    )}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                const sorted = [...managerCollectedPayments].sort((a, b) => (parseInt(a.id) || 0) - (parseInt(b.id) || 0));
+                                                const cards: React.ReactNode[] = [];
+                                                let lastId = -1;
+
+                                                sorted.forEach((payment, index) => {
+                                                    const currentId = parseInt(payment.id);
+
+                                                    if (lastId !== -1 && currentId > lastId + 1) {
+                                                        const missingCount = currentId - lastId - 1;
+                                                        cards.push(
+                                                            <div key={`mgr-gap-${index}`} className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center justify-between text-red-600">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center font-black text-xs">
+                                                                        <AlertCircle size={18} />
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="text-sm font-black">سقوط في أرقام الوصل (مدير)</p>
+                                                                        <p className="text-[10px] font-bold opacity-70">
+                                                                            {missingCount === 1 ? `الوصل رقم #${lastId + 1} مفقود` : `الوصولات من #${lastId + 1} إلى #${currentId - 1} مفقودة`}
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-xs font-bold text-gray-500">{payment.groupName}</td>
-                                                            <td className="px-6 py-4 text-xs font-bold text-gray-500 font-sans">{payment.date}</td>
-                                                            <td className="px-6 py-4 text-sm font-black text-green-600 font-sans">{payment.amount} ج.م</td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    cards.push(
+                                                        <div key={payment.id + index} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between group hover:border-indigo-200 transition-all">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center font-black text-xs text-gray-400 font-sans border border-gray-100">
+                                                                    #{payment.id}
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <h4 className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{payment.studentName}</h4>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-bold">{payment.groupName}</span>
+                                                                        <span className="text-[10px] text-gray-400 font-bold font-sans" dir="ltr">{payment.date}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-left font-sans">
+                                                                <p className="text-lg font-black text-emerald-600">{payment.amount.toLocaleString()} <span className="text-[10px] font-bold">ج.م</span></p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                    lastId = currentId;
+                                                });
+                                                return cards;
+                                            })()}
+                                        </div>
                                     </div>
                                 </motion.div>
                             </>

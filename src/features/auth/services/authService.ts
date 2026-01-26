@@ -69,12 +69,24 @@ export const loginWithRole = async (identifier: string, password: string): Promi
     }
 
     if (role === 'teacher') {
-        // البحث عن المعلم في قاعدة البيانات باستخدام الاسم أو رقم الهاتف أو المعرف
-        const { data: teacher } = await supabase
+        const searchId = teacherId || identifier.replace('teacher-', '');
+
+        // محاولة البحث بالمعرف أولاً (UUID)
+        let { data: teacher } = await supabase
             .from('teachers')
             .select('id, full_name')
-            .or(`full_name.eq."${identifier}",phone.eq."${identifier}",id.filter.(eq.${identifier})`)
+            .eq('id', searchId)
             .maybeSingle();
+
+        // إذا لم يعثر عليه بالمعرف، نجرب الاسم أو الهاتف
+        if (!teacher) {
+            const { data: teacherByName } = await supabase
+                .from('teachers')
+                .select('id, full_name')
+                .or(`full_name.eq."${identifier}",phone.eq."${identifier}"`)
+                .maybeSingle();
+            teacher = teacherByName;
+        }
 
         if (teacher) {
             teacherId = teacher.id;
@@ -116,7 +128,7 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
     return {
         uid: uid,
         email: `${role}@shatibi.center`,
-        displayName: role === 'director' ? 'المدير العام' : 'مستخدم وهمي',
+        displayName: role === 'director' ? 'المدير العام' : role === 'teacher' ? 'معلم' : 'مستخدم',
         role: role as UserRole,
         createdAt: Date.now(),
         lastLogin: Date.now()
