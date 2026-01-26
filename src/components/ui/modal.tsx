@@ -34,7 +34,7 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -61,7 +61,7 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 md:p-6 text-right">
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-12 text-right">
                             {children}
                         </div>
                     </motion.div>

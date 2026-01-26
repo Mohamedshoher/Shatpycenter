@@ -29,7 +29,7 @@ export default function DeleteConfirmModal({
 
     return (
         <div
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+            className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center"
             onClick={handleBackdropClick}
         >
             <div
