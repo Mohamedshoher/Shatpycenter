@@ -102,15 +102,51 @@ export const updateStudent = async (id: string, data: Partial<Student>): Promise
 
 export const deleteStudent = async (id: string): Promise<void> => {
     try {
+        console.log(`🗑️ البدء في حذف الطالب: ${id}`);
+
+        // 1. حذف السجلات المرتبطة يدوياً لضمان عدم وجود قيود (Cascading)
+        const tablesToClear = [
+            { name: 'attendance', col: 'student_id' },
+            { name: 'exams', col: 'student_id' },
+            { name: 'fees', col: 'student_id' },
+            { name: 'plans', col: 'student_id' },
+            { name: 'student_notes', col: 'student_id' },
+            { name: 'leave_requests', col: 'student_id' },
+            { name: 'user_presence', col: 'user_id' },
+        ];
+
+        for (const table of tablesToClear) {
+            const { error: clearError } = await supabase
+                .from(table.name)
+                .delete()
+                .eq(table.col, id);
+
+            if (clearError) {
+                console.warn(`⚠️ لم يتمكن من تنظيف الجدول ${table.name}:`, clearError.message);
+            }
+        }
+
+        // 2. تنظيف المعاملات المالية المرتبطة
+        await supabase.from('financial_transactions').delete().eq('related_user_id', id);
+
+        // 3. حذف الطالب نهائياً
         const { error } = await supabase
             .from('students')
             .delete()
             .eq('id', id);
 
-        if (error) throw error;
-    } catch (error) {
+        if (error) {
+            console.error("❌ فشل حذف الطالب من جدول students:", error);
+            throw error;
+        }
+
+        console.log(`✅ تم حذف الطالب ${id} وكل سجلاته بنجاح.`);
+    } catch (error: any) {
         console.error("Error deleting student:", error);
-        throw error;
+        // استخراج تفاصيل الخطأ بدقة
+        const techDetails = error.message || error.details || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+        console.error("Full Technical Error:", techDetails);
+        throw new Error(`تعذر حذف الطالب: ${techDetails}`);
     }
 };
 

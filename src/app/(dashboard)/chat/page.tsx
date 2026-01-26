@@ -5,7 +5,7 @@ import { useChat } from '@/features/chat/hooks/useChat';
 import { ConversationList } from '@/features/chat/components/ConversationList';
 import { MessageArea } from '@/features/chat/components/MessageArea';
 import { MessageInput } from '@/features/chat/components/MessageInput';
-import { Search, Loader, AlertCircle, Zap, X, UserPlus, Users } from 'lucide-react';
+import { Search, Loader, AlertCircle, X, UserPlus, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { chatService } from '@/features/chat/services/chatService';
@@ -38,23 +38,7 @@ export default function ChatPage() {
     togglePinMessage,
   } = useChat(userId, userRole as any);
 
-  // Mock automation notifications
-  const automationNotifications = [
-    {
-      id: 'notif-1',
-      teacher: 'أحمد علي',
-      action: 'تم خصم ربع يوم',
-      reason: 'عدم تسليم التقرير اليومي',
-      timestamp: new Date(),
-    },
-    {
-      id: 'notif-2',
-      teacher: 'فاطمة محمد',
-      action: 'تم خصم ربع يوم',
-      reason: 'عدم تسليم التقرير اليومي',
-      timestamp: new Date(Date.now() - 60000),
-    },
-  ];
+
 
   const { data: teachersList = [] } = useTeachers();
   const { data: studentsList = [] } = useStudents();
@@ -280,15 +264,6 @@ export default function ChatPage() {
           <h1 className="text-3xl font-black text-gray-900">
             الرسائل
           </h1>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="flex items-center gap-2 px-4 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all font-bold"
-            >
-              <Zap className="w-5 h-5 text-amber-500" />
-              <span className="text-sm">الأتمتة ({automationNotifications.length})</span>
-            </button>
-          </div>
         </div>
         <p className="text-gray-500 font-bold">
           {unreadCount > 0 ? `${unreadCount} رسائل جديدة` : 'جميع الرسائل مقروءة'}

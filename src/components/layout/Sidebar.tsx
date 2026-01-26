@@ -106,6 +106,7 @@ export default function Sidebar() {
         },
     ];
 
+
     const filteredNavItems = navItems.filter(item =>
         user && item.roles.includes(user.role)
     );

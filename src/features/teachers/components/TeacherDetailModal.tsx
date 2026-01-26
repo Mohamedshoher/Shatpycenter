@@ -46,6 +46,7 @@ import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction } from '@/features/finance/services/financeService';
 import { addTransaction } from '@/features/finance/services/financeService';
 import { supabase } from '@/lib/supabase';
+import { automationService } from '@/features/automation/services/automationService';
 
 export default function TeacherDetailModal({
     teacher,
@@ -324,6 +325,21 @@ export default function TeacherDetailModal({
                 actualAmount,
                 prefix + (manualEntryNote || 'بدون سبب')
             );
+
+            // إرسال إشعار فوري للمعلم عبر المحادثة
+            try {
+                await automationService.sendManualNotification(
+                    teacher.id,
+                    teacher.fullName,
+                    actualAmount,
+                    manualEntryType as 'reward' | 'deduction',
+                    manualEntryNote,
+                    { uid: user?.uid || 'director', displayName: user?.displayName || 'المدير العام' }
+                );
+            } catch (notifyError) {
+                console.error("Failed to notify teacher via chat:", notifyError);
+            }
+
             setManualEntryAmount('');
             setManualEntryNote('');
             loadDeductions(); // إعادة تحميل البيانات
@@ -473,6 +489,27 @@ export default function TeacherDetailModal({
         }
 
         onAttendanceChange(activeDayMenu!, finalStatus);
+
+        // إرسال إشعار فوري للمعلم في حالة الخصم أو المكافأة عبر التقويم
+        if (tempStatus === 'discipline' || tempStatus === 'reward') {
+            try {
+                const numericAmount = tempAmount === 'day' ? 1 : tempAmount === 'half' ? 0.5 : 0.25;
+                const specificDate = `${selectedMonthRaw}-${String(activeDayMenu!).padStart(2, '0')}`;
+                const note = tempReason ? `${tempReason} (بتاريخ ${specificDate})` : `إجراء إداري لليوم الموافق ${specificDate}`;
+
+                automationService.sendManualNotification(
+                    teacher!.id,
+                    teacher!.fullName,
+                    numericAmount,
+                    tempStatus === 'reward' ? 'reward' : 'deduction',
+                    note,
+                    { uid: user?.uid || 'director', displayName: user?.displayName || 'المدير العام' }
+                ).catch(err => console.error("Calendar notification failed", err));
+            } catch (notifyError) {
+                console.error("Failed to notify teacher from calendar:", notifyError);
+            }
+        }
+
         if (tempReason) {
             setDayDetails(prev => ({
                 ...prev,

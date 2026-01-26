@@ -4,7 +4,7 @@ import { ChatMessage, Conversation } from '@/store/useChatStore';
 import { useEffect, useRef, useMemo, useState } from 'react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { Pin, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pin, X, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useUserPresence } from '@/features/chat/hooks/useUserPresence';
@@ -186,6 +186,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         ) : (
           messages.map((message, index) => {
             const isCurrentUser = cleanId(message.senderId) === cleanedCurrentUserId;
+            const isSystemAlert = message.content.includes('⚠️ تنبيه إداري');
+            const isRewardAlert = message.content.includes('🌟 مكافأة إدارية');
 
             // حساب ما إذا كانت الرسالة في يوم جديد لإرسال فاصل
             const showDateSeparator = index === 0 || !isSameDay(new Date(message.timestamp), new Date(messages[index - 1].timestamp));
@@ -210,17 +212,35 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                   <div
                     className={cn(
                       "max-w-[85%] lg:max-w-md px-4 py-2.5 rounded-[22px] relative transition-all duration-200 shadow-sm",
-                      isCurrentUser ? "bg-blue-600 text-white rounded-tr-none" : "bg-gray-100 text-gray-900 rounded-tl-none",
+                      isSystemAlert
+                        ? "bg-red-50 text-red-900 border border-red-200 rounded-tr-none rounded-tl-none ring-2 ring-red-100"
+                        : isRewardAlert
+                          ? "bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-tr-none rounded-tl-none ring-2 ring-emerald-100"
+                          : isCurrentUser
+                            ? "bg-blue-600 text-white rounded-tr-none"
+                            : "bg-gray-100 text-gray-900 rounded-tl-none",
                       message.isPinned && "ring-2 ring-blue-400 ring-offset-2"
                     )}
                   >
+                    {(isSystemAlert || isRewardAlert) && (
+                      <div className={cn(
+                        "mb-2 flex items-center gap-2 border-b pb-2",
+                        isSystemAlert ? "text-red-600 border-red-200" : "text-emerald-600 border-emerald-200"
+                      )}>
+                        <AlertTriangle size={16} fill="currentColor" className={isSystemAlert ? "text-red-100" : "text-emerald-100"} />
+                        <span className={cn("text-xs font-black", isSystemAlert ? "text-red-700" : "text-emerald-700")}>
+                          {isSystemAlert ? 'تنبيه إداري' : 'مكافأة تشجيعية'}
+                        </span>
+                      </div>
+                    )}
+
                     {message.isPinned && (
                       <div className="absolute -top-2 -right-2 bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-lg transform rotate-12">
                         <Pin size={10} className="fill-current" />
                       </div>
                     )}
 
-                    <p className="text-[13px] break-words leading-relaxed font-bold tracking-tight">{message.content}</p>
+                    <p className={cn("text-[13px] break-words leading-relaxed font-bold tracking-tight", isSystemAlert && "text-red-900")}>{message.content}</p>
 
                     <div className="flex items-center justify-end gap-1.5 mt-1.5 opacity-60">
                       <p className="text-[9px] font-bold">

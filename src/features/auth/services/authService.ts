@@ -68,21 +68,22 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         displayName = dbPhone;
     }
 
-    if (role === 'teacher' && teacherId) {
-        // Try fetching teacher from Supabase
+    if (role === 'teacher') {
+        // البحث عن المعلم في قاعدة البيانات باستخدام الاسم أو رقم الهاتف أو المعرف
         const { data: teacher } = await supabase
             .from('teachers')
-            .select('full_name') // Using snake_case column name
-            .eq('id', teacherId) // Assuming teacherId is UUID
-            .single();
+            .select('id, full_name')
+            .or(`full_name.eq."${identifier}",phone.eq."${identifier}",id.filter.(eq.${identifier})`)
+            .maybeSingle();
 
         if (teacher) {
+            teacherId = teacher.id;
             displayName = teacher.full_name;
         }
     }
 
     return {
-        uid: `mock-${identifier}`,
+        uid: `mock-${teacherId || identifier}`, // نستخدم المعرف الحقيقي (UUID) لضمان مطابقة المحادثات
         email: `${identifier}@shatibi.center`,
         displayName,
         role,
