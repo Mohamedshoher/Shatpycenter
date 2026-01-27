@@ -92,6 +92,41 @@ export const getStudentAttendance = async (studentId: string): Promise<Attendanc
     }
 };
 
+export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record<string, AttendanceRecord[]>> => {
+    try {
+        const { data, error } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('month_key', monthKey)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Supabase error fetching month attendance:", error);
+            return {};
+        }
+
+        const map: Record<string, AttendanceRecord[]> = {};
+        (data || []).forEach(row => {
+            if (!map[row.student_id]) map[row.student_id] = [];
+
+            const dateObj = new Date(row.date);
+            map[row.student_id].push({
+                id: row.id,
+                studentId: row.student_id,
+                day: dateObj.getDate(),
+                month: row.month_key || `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`,
+                status: row.status as 'present' | 'absent',
+                recordedBy: '',
+                timestamp: new Date(row.created_at).getTime()
+            });
+        });
+        return map;
+    } catch (error) {
+        console.error("Error in getAllAttendanceForMonth:", error);
+        return {};
+    }
+};
+
 export const getAllAttendance = async (): Promise<AttendanceRecord[]> => {
     // Basic implementation if needed
     return [];

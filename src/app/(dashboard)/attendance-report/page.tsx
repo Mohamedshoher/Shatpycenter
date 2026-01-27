@@ -115,18 +115,18 @@ export default function AttendanceReportPage() {
     const { data: reportData } = useQuery({
         queryKey: ['report-data'],
         queryFn: async () => {
-            const { getStudentAttendance, getLatestNotes } = await import('@/features/students/services/recordsService');
-            const attendancePromises = (students || []).map(s =>
-                getStudentAttendance(s.id).catch(() => [])
-            );
-            const [attendanceResults, latestNotes] = await Promise.all([
-                Promise.all(attendancePromises),
+            const { getAllAttendanceForMonth, getLatestNotes } = await import('@/features/students/services/recordsService');
+
+            const today = new Date();
+            const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+            // جلب ملحوظات الطلاب (استعلام واحد للكل)
+            // وجلب حضور الشهر الحالي (استعلام واحد للكل) - هذا يحل مشكلة الـ 340 طلب المتزامن
+            const [attendanceMap, latestNotes] = await Promise.all([
+                getAllAttendanceForMonth(currentMonthKey),
                 getLatestNotes()
             ]);
-            const attendanceMap: Record<string, any[]> = {};
-            (students || []).forEach((s, i) => {
-                attendanceMap[s.id] = attendanceResults[i];
-            });
+
             return { attendanceMap, latestNotes };
         },
         enabled: !!(students && students.length > 0)
@@ -150,16 +150,26 @@ export default function AttendanceReportPage() {
                 const continuousAbsences = calculateContinuousAbsence(attendance);
                 const latestNote = allLatestNotes?.[s.id];
 
+                // تحديد التاريخ المختار للتحقق من حالة الحضور الحالية
+                const checkDate = new Date();
+                if (selectedDateMode === 'yesterday') checkDate.setDate(checkDate.getDate() - 1);
+                if (selectedDateMode === 'before') checkDate.setDate(checkDate.getDate() - 2);
+                const day = checkDate.getDate();
+                const month = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`;
+
+                const currentStatus = attendance.find(a => a.day === day && a.month === month)?.status;
+
                 return {
                     ...s,
                     totalAbsences,
                     continuousAbsences,
+                    currentStatus,
                     lastNote: latestNote?.text || "لا توجد ملحوظات مسجلة",
                     lastNoteDate: latestNote?.date || "",
                     groupName: groups?.find(g => g.id === s.groupId)?.name || 'غير محدد'
                 };
             });
-    }, [students, allAttendanceData, groups, user, assignedGroupIds]);
+    }, [students, allAttendanceData, groups, user, assignedGroupIds, selectedDateMode, allLatestNotes]);
 
     // تصفية الطلاب بناءً على المدخلات
     const filteredStudents = processedStudents.filter(s => {
@@ -482,14 +492,14 @@ export default function AttendanceReportPage() {
                                             disabled={attendanceLoading[student.id]}
                                             className={cn(
                                                 "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1",
-                                                recordedAttendance[student.id] === 'present'
+                                                (recordedAttendance[student.id] === 'present' || student.currentStatus === 'present')
                                                     ? "bg-green-500 text-white shadow-sm"
                                                     : "text-gray-400 hover:text-green-600"
                                             )}
                                         >
                                             {attendanceLoading[student.id] ? (
                                                 <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                            ) : recordedAttendance[student.id] === 'present' ? (
+                                            ) : (recordedAttendance[student.id] === 'present' || student.currentStatus === 'present') ? (
                                                 <Check size={12} strokeWidth={3} />
                                             ) : null}
                                             حاضر
@@ -502,14 +512,14 @@ export default function AttendanceReportPage() {
                                             disabled={attendanceLoading[student.id]}
                                             className={cn(
                                                 "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1",
-                                                recordedAttendance[student.id] === 'absent'
+                                                (recordedAttendance[student.id] === 'absent' || student.currentStatus === 'absent')
                                                     ? "bg-red-500 text-white shadow-sm"
                                                     : "text-gray-400 hover:text-red-600"
                                             )}
                                         >
                                             {attendanceLoading[student.id] ? (
                                                 <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                            ) : recordedAttendance[student.id] === 'absent' ? (
+                                            ) : (recordedAttendance[student.id] === 'absent' || student.currentStatus === 'absent') ? (
                                                 <X size={12} strokeWidth={3} />
                                             ) : null}
                                             غائب

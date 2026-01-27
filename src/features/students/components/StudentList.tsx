@@ -66,21 +66,25 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const { data: todayAttendance } = useQuery({
         queryKey: ['today-attendance', students?.map(s => s.id)],
         queryFn: async () => {
-            if (!students) return {};
-            const { getStudentAttendance } = await import('../services/recordsService');
+            if (!students || students.length === 0) return {};
+            const { getAllAttendanceForMonth } = await import('../services/recordsService');
+
             const today = new Date();
             const dayNum = today.getDate();
             const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
+            // جلب حضور الشهر بالكامل لكل الطلاب في استعلام واحد
+            const allAttendanceMap = await getAllAttendanceForMonth(monthKey);
+
             const attendanceMap: Record<string, 'present' | 'absent'> = {};
-            const promises = students.map(async (student) => {
-                const records = await getStudentAttendance(student.id).catch(() => []);
-                const todayRec = records.find(r => r.day === dayNum && r.month === monthKey);
+            students.forEach(student => {
+                const studentRecords = allAttendanceMap[student.id] || [];
+                const todayRec = studentRecords.find(r => r.day === dayNum);
                 if (todayRec) {
                     attendanceMap[student.id] = todayRec.status;
                 }
             });
-            await Promise.all(promises);
+
             return attendanceMap;
         },
         enabled: !!(students && students.length > 0)
@@ -159,19 +163,29 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         const day = today.getDate();
         const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
-        // 2. تحديث الكاش العالمي للحضور فوراً (هذا ما تراه النافذة المنبثقة)
+        // 2. تحديث الكاش العالمي للحضور (تفاصيل الطالب)
         queryClient.setQueryData(['attendance', student.id], (old: any) => {
             const records = Array.isArray(old) ? old : [];
             const filtered = records.filter((r: any) => !(r.day === day && r.month === monthKey));
             return [...filtered, { studentId: student.id, day, month: monthKey, status }];
         });
 
-        // 3. إرسال حدث للمزامنة الإضافية
+        // 3. تحديث كاش قائمة الحضور اليومية (لتجنب اختفاء التحديد عند التحديث)
+        if (students) {
+            queryClient.setQueryData(
+                ['today-attendance', students.map(s => s.id)],
+                (old: Record<string, 'present' | 'absent'> | undefined) => {
+                    return { ...(old || {}), [student.id]: status };
+                }
+            );
+        }
+
+        // 4. إرسال حدث للمزامنة الإضافية
         window.dispatchEvent(new CustomEvent('updateAttendance', {
             detail: { studentId: student.id, day, status, month: monthKey }
         }));
 
-        // 4. الحفظ النهائي في قاعدة البيانات في الخلفية
+        // 5. الحفظ النهائي في قاعدة البيانات في الخلفية
         try {
             const { addAttendanceRecord } = await import('../services/recordsService');
             await addAttendanceRecord({
@@ -180,20 +194,17 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 month: monthKey,
                 status
             });
-            // إعادة المزامنة لتأكيد البيانات
+            // نكتفي بتحديث التفاصيل فقط لضمان دقة البيانات في النوافذ المنبثقة
             queryClient.invalidateQueries({ queryKey: ['attendance', student.id] });
-            queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
+            // لا نقوم بإلغاء صلاحية 'today-attendance' هنا لتجنب وميض الواجهة أو ضياع التحديثات المتتالية
         } catch (error) {
             console.error('Error saving attendance, adding to offline queue:', error);
-            // بدلاً من حذف الحالة، نضيفها لزمام المزامنة الأوفلاين
             addToOfflineQueue('attendance', {
                 studentId: student.id,
                 day,
                 month: monthKey,
                 status
             });
-
-            // لا نحذف الحالة من الواجهة، ستبقى خضراء/حمراء وكأنها حُفظت
         }
     };
 
