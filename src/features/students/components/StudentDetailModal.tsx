@@ -341,7 +341,7 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                 date: dateString,
                 description: `رسوم شهر ${labelToUse} - الطالب: ${student.fullName} (وصل: ${receiptNum})`,
                 relatedUserId: student.id,
-                performedBy: user?.displayName || 'غير معروف'
+                performedBy: user?.uid || 'غير معروف'
             });
         } catch (error) {
             console.error("Error adding financial transaction:", error);

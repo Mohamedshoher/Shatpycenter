@@ -255,65 +255,67 @@ export default function ArchiveList() {
                             <div
                                 key={student.id}
                                 onClick={() => setSelectedStudent(student)}
-                                className="bg-white/80 rounded-[32px] p-5 border border-gray-100 flex items-center justify-between hover:shadow-lg hover:shadow-gray-200/50 transition-all group cursor-pointer active:scale-[0.99]"
+                                className="bg-white rounded-2xl p-3.5 sm:p-4 shadow-sm border border-gray-100 relative group cursor-pointer hover:shadow-md transition-all active:scale-[0.99] flex flex-col gap-1"
                             >
-                                <div className="flex items-center gap-4 flex-1 min-w-0">
-                                    <div className="w-14 h-14 bg-gray-100 rounded-[22px] flex items-center justify-center text-gray-400 relative overflow-hidden shrink-0">
-                                        <User size={28} />
-                                        <div className="absolute inset-0 bg-gray-200/30 backdrop-blur-[2px]" />
-                                    </div>
-                                    <div className="flex-1 min-w-0 space-y-1.5">
-                                        <div className="flex items-baseline gap-2 flex-wrap min-w-0">
-                                            <h3
-                                                onClick={(e) => { e.stopPropagation(); setSelectedStudent(student); }}
-                                                className="font-bold text-gray-900 leading-none hover:text-blue-600 transition-colors cursor-pointer truncate max-w-[200px]"
-                                            >
+                                {/* السطر الأول: الاسم والمجموعة */}
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 shrink-0">
+                                            <User size={20} />
+                                        </div>
+                                        <div className="flex items-baseline gap-2 min-w-0 flex-1">
+                                            <h3 className="font-bold text-gray-900 truncate text-lg sm:text-xl">
                                                 {student.fullName}
                                             </h3>
-                                            <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-1 rounded-lg shrink-0">
+                                            <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-lg border border-gray-100 shrink-0">
                                                 {groups?.find(g => g.id === student.groupId)?.name || 'غير محدد'}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg shrink-0">
-                                                <Clock size={10} />
-                                                منذ {daysInArchive} أيام
-                                            </span>
-                                            {isIndebted && (
-                                                <span className="text-[10px] text-red-500 font-bold flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg animate-pulse shrink-0">
-                                                    <AlertCircle size={10} />
-                                                    مدين
-                                                </span>
-                                            )}
-                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setRestoreTarget(student);
-                                            setTargetGroupId(student.groupId || '');
-                                        }}
-                                        className="p-3 bg-green-50 text-green-600 rounded-2xl hover:bg-green-600 hover:text-white transition-all active:scale-95 shadow-sm"
-                                        title="استعادة الطالب"
-                                    >
-                                        <RotateCcw size={18} />
-                                    </button>
-                                    {user?.role === 'director' && (
+
+                                {/* السطر الثاني: مدة الأرشفة، الدين، وأزرار التحكم */}
+                                <div className="flex items-center justify-between pt-1 border-t border-gray-50 mt-0.5">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] sm:text-xs text-amber-600 font-bold flex items-center gap-1 bg-amber-50 px-2.5 py-1.5 rounded-xl border border-amber-100/50">
+                                            <Clock size={12} />
+                                            {daysInArchive}
+                                        </span>
+                                        {isIndebted && (
+                                            <span className="text-[10px] sm:text-xs text-red-600 font-bold flex items-center gap-1 bg-red-50 px-2.5 py-1.5 rounded-xl border border-red-100/50">
+                                                <AlertCircle size={12} />
+                                                مدين
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-xl border border-gray-100">
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (confirm(`هل أنت متأكد من حذف الطالب ${student.fullName} نهائياً؟ لا يمكن التراجع عن هذه الخطوة.`)) {
-                                                    deleteStudent(student.id);
-                                                }
+                                                setRestoreTarget(student);
+                                                setTargetGroupId(student.groupId || '');
                                             }}
-                                            className="p-3 bg-red-50 text-red-600 rounded-2xl hover:bg-red-600 hover:text-white transition-all active:scale-95 shadow-sm"
-                                            title="حذف نهائي"
+                                            className="w-9 h-9 flex items-center justify-center bg-white text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-all active:scale-95 shadow-sm border border-gray-100"
+                                            title="استعادة"
                                         >
-                                            <Trash2 size={18} />
+                                            <RotateCcw size={18} />
                                         </button>
-                                    )}
+                                        {user?.role === 'director' && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm(`هل أنت متأكد من حذف الطالب ${student.fullName} نهائياً؟`)) {
+                                                        deleteStudent(student.id);
+                                                    }
+                                                }}
+                                                className="w-9 h-9 flex items-center justify-center bg-white text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all active:scale-95 shadow-sm border border-gray-100"
+                                                title="حذف"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );

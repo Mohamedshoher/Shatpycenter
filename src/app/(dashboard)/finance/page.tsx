@@ -17,14 +17,17 @@ import AddTransactionModal from '@/features/finance/components/AddTransactionMod
 import DeleteConfirmModal from '@/features/finance/components/DeleteConfirmModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTransactionsByMonth, deleteTransaction } from '@/features/finance/services/financeService';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { TransactionData } from '@/features/finance/components/AddTransactionModal';
 import type { FinancialTransaction } from '@/types';
 
 interface Transaction extends TransactionData {
     id: string;
+    performedBy?: string;
 }
 
 export default function FinancePage() {
+    const { user } = useAuthStore();
     const [activeTab, setActiveTab] = useState<'income' | 'expenses'>('income');
     const [selectedMonth, setSelectedMonth] = useState<string>('2026-01');
     const [isClient, setIsClient] = useState(false);
@@ -61,7 +64,8 @@ export default function FinancePage() {
             category: tr.category as any,
             amount: tr.amount,
             date: tr.date,
-            notes: ''
+            notes: '',
+            performedBy: tr.performedBy
         }));
     }, [dbTransactions]);
 
@@ -71,19 +75,45 @@ export default function FinancePage() {
     }, [transactions, selectedMonth]);
 
     // حساب الإجماليات
-    const { totalIncome, totalExpenses, balance } = useMemo(() => {
-        const income = filteredTransactions
-            .filter(tr => tr.type === 'income')
+    const { teacherFees, feesByManager, fromTeachers, otherIncome, totalReceived, totalExpenses, balance } = useMemo(() => {
+        const incomeTransactions = filteredTransactions.filter(tr => tr.type === 'income');
+        const expenseTransactions = filteredTransactions.filter(tr => tr.type === 'expense');
+
+        // 1. ما حصله المدرسون (رسوم طلاب مسجلة بواسطة غير المدير)
+        const feesByTeachers = incomeTransactions
+            .filter(tr => tr.category === 'fees' && tr.performedBy !== user?.uid)
             .reduce((sum, tr) => sum + tr.amount, 0);
-        const expenses = filteredTransactions
-            .filter(tr => tr.type === 'expense')
+
+        // 2. ما حصله المدير (رسوم طلاب مسجلة بواسطته مباشرة)
+        const feesByManager = incomeTransactions
+            .filter(tr => tr.category === 'fees' && tr.performedBy === user?.uid)
             .reduce((sum, tr) => sum + tr.amount, 0);
+
+        // 3. المبالغ المستلمة من المدرسين (كاش يدوي)
+        const fromTeachers = incomeTransactions
+            .filter(tr => tr.category === 'تحصيل من مدرس')
+            .reduce((sum, tr) => sum + tr.amount, 0);
+
+        // 4. إيرادات أخرى (تبرعات، أخرى)
+        const otherIncome = incomeTransactions
+            .filter(tr => tr.category === 'donation' || tr.category === 'other')
+            .reduce((sum, tr) => sum + tr.amount, 0);
+
+        // إجمالي المستلم الفعلي (عند المدير)
+        const managerTotal = feesByManager + fromTeachers + otherIncome;
+
+        const totalExp = expenseTransactions.reduce((sum, tr) => sum + tr.amount, 0);
+
         return {
-            totalIncome: income,
-            totalExpenses: expenses,
-            balance: income - expenses
+            teacherFees: feesByTeachers,
+            feesByManager,
+            fromTeachers,
+            otherIncome,
+            totalReceived: managerTotal,
+            totalExpenses: totalExp,
+            balance: managerTotal - totalExp
         };
-    }, [filteredTransactions]);
+    }, [filteredTransactions, user?.uid]);
 
     // تصنيفات الإنفاق
     const expenseBreakdown = useMemo(() => {
@@ -132,9 +162,7 @@ export default function FinancePage() {
     });
 
     const handleAddTransaction = (data: TransactionData) => {
-        // سيتم التعامل معها بواسطة المكون وإعادة التحميل
         setIsModalOpen(false);
-        // إعادة تحميل البيانات
         queryClient.invalidateQueries({ queryKey: ['transactions', selectedMonth] });
     };
 
@@ -178,7 +206,7 @@ export default function FinancePage() {
     };
 
     return (
-        <div className="space-y-6 pb-24 text-right p-4 md:p-6">
+        <div className="pb-32 transition-all duration-500 bg-gray-50/50 min-h-screen">
             {/* Delete Confirm Modal */}
             <DeleteConfirmModal
                 isOpen={deleteConfirmOpen}
@@ -198,51 +226,35 @@ export default function FinancePage() {
                 onAdd={handleAddTransaction}
             />
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-2 pt-4">
-                <div className="w-10 h-10 bg-gray-100 rounded-xl" />
-                <h1 className="text-xl font-bold text-gray-900">المصروفات والمالية</h1>
-                <Button
-                    onClick={() => setIsModalOpen(true)}
-                    className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center p-0 hover:bg-blue-700"
-                >
-                    <Plus size={20} />
-                </Button>
-            </div>
-
-            {/* Loading State */}
-            {isLoading ? (
-                <div className="flex items-center justify-center h-96 px-2">
-                    <div className="flex flex-col items-center gap-3">
-                        <Loader size={40} className="text-blue-600 animate-spin" />
-                        <p className="text-gray-500 text-sm">جاري تحميل البيانات...</p>
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
+                <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 relative">
+                    {/* Controls Row - Left */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="w-11 h-11 bg-blue-600 text-white rounded-[16px] flex items-center justify-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                            title="إضافة معاملة"
+                        >
+                            <Plus size={22} />
+                        </button>
                     </div>
-                </div>
-            ) : (
-                <>
-                    {/* Month Selector */}
-                    <div className="px-2 relative space-y-3">
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handlePreviousMonth}
-                                className="flex-1 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl p-2 flex items-center justify-center text-gray-600 font-semibold transition-colors text-sm"
-                            >
-                                ← السابق
-                            </button>
-                            <div className="relative flex-[2]">
+
+                    {/* Month Picker - Center */}
+                    {!isLoading && isClient && (
+                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+                            <div className="relative">
                                 <button
                                     onClick={() => setShowMonthPicker(!showMonthPicker)}
-                                    className="w-full bg-white border border-gray-200 rounded-2xl p-3 flex items-center justify-between hover:border-gray-300 transition-colors"
+                                    className="h-12 px-6 bg-white border border-blue-100 rounded-[18px] flex items-center gap-3 text-blue-700 font-black transition-all shadow-md shadow-blue-500/5 active:scale-95 hover:border-blue-300 hover:bg-blue-50/30"
                                 >
-                                    <ChevronDown size={20} className="text-gray-400" />
-                                    <div className="flex items-center gap-2 text-gray-900 font-semibold">
-                                        <Calendar size={18} />
-                                        {months.find(m => m.value === selectedMonth)?.label}
-                                    </div>
-                                    <div className="w-6" />
+                                    <Calendar size={20} className="text-blue-600" />
+                                    <span className="text-sm whitespace-nowrap">{months.find(m => m.value === selectedMonth)?.label}</span>
+                                    <ChevronDown size={16} className={cn("transition-transform duration-300 text-blue-400", showMonthPicker && "rotate-180")} />
                                 </button>
+
                                 {showMonthPicker && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg z-10">
+                                    <div className="absolute top-[120%] left-1/2 -translate-x-1/2 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1">
                                         {months.map(month => (
                                             <button
                                                 key={month.value}
@@ -251,277 +263,231 @@ export default function FinancePage() {
                                                     setShowMonthPicker(false);
                                                 }}
                                                 className={cn(
-                                                    "w-full text-right px-4 py-3 border-b last:border-b-0 transition-colors",
-                                                    selectedMonth === month.value
-                                                        ? "bg-blue-50 text-blue-600 font-bold"
-                                                        : "text-gray-700 hover:bg-gray-50"
+                                                    "w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
+                                                    selectedMonth === month.value ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
                                                 )}
                                             >
                                                 {month.label}
+                                                {selectedMonth === month.value && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                                             </button>
                                         ))}
                                     </div>
                                 )}
                             </div>
-                            <button
-                                onClick={handleCurrentMonth}
-                                className="flex-1 bg-blue-500 hover:bg-blue-600 border border-blue-600 rounded-xl p-2 flex items-center justify-center text-white font-semibold transition-colors text-sm"
-                            >
-                                الحالي
-                            </button>
+                        </div>
+                    )}
+
+                    {/* Title/Balance - Right */}
+                    <div className="flex items-center gap-2">
+                        <div className="text-right hidden sm:block">
+                            <h1 className="text-sm font-black text-gray-900 leading-tight">المالية والمصروفات</h1>
+                            <p className="text-[10px] font-bold text-gray-400">مركز الشاطبي</p>
+                        </div>
+                        <div className="w-11 h-11 bg-white border border-gray-100 rounded-[16px] flex items-center justify-center text-blue-600 shadow-sm">
+                            <Wallet size={22} />
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    {/* Balance Cards */}
-                    <div className="grid grid-cols-2 gap-4 px-2">
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-3xl p-5 shadow-sm border border-green-200">
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white">
-                                    <ArrowUpCircle size={24} />
-                                </div>
-                                <span className="text-xs text-green-700 font-bold">إجمالي الدخل</span>
-                                <span className="text-lg font-bold text-green-900">{totalIncome.toLocaleString()} ج.م</span>
-                            </div>
-                        </div>
-                        <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-3xl p-5 shadow-sm border border-red-200">
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center text-white">
-                                    <ArrowDownCircle size={24} />
-                                </div>
-                                <span className="text-xs text-red-700 font-bold">إجمالي المصروفات</span>
-                                <span className="text-lg font-bold text-red-900">{totalExpenses.toLocaleString()} ج.م</span>
-                            </div>
-                        </div>
+            {/* Content */}
+            <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+                {/* Loading State */}
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+                        <p className="text-gray-400 font-bold">جاري تحميل البيانات المالية...</p>
                     </div>
-
-                    {/* Net Balance Card */}
-                    <div className="px-2">
-                        <div className={cn(
-                            "rounded-3xl p-5 shadow-sm border",
-                            balance >= 0
-                                ? "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200"
-                                : "bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200"
-                        )}>
-                            <div className="flex flex-col items-center gap-2">
-                                <span className={cn(
-                                    "text-xs font-bold",
-                                    balance >= 0 ? "text-blue-700" : "text-orange-700"
-                                )}>
-                                    الرصيد المتبقي
-                                </span>
-                                <span className={cn(
-                                    "text-2xl font-bold",
-                                    balance >= 0 ? "text-blue-900" : "text-orange-900"
-                                )}>
-                                    {balance >= 0 ? '+' : '-'}{Math.abs(balance).toLocaleString()} ج.م
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Tabs */}
-                    <div className="flex bg-gray-100/50 p-1 rounded-2xl mx-2">
-                        <button
-                            onClick={() => setActiveTab('expenses')}
-                            className={cn(
-                                "flex-1 py-3 rounded-xl text-sm font-bold transition-all",
-                                activeTab === 'expenses' ? "bg-white shadow-sm text-gray-900" : "text-gray-400"
-                            )}
-                        >
-                            المصروفات
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('income')}
-                            className={cn(
-                                "flex-1 py-3 rounded-xl text-sm font-bold transition-all",
-                                activeTab === 'income' ? "bg-white shadow-sm text-gray-900" : "text-gray-400"
-                            )}
-                        >
-                            الإيرادات
-                        </button>
-                    </div>
-
-                    {/* Income Section */}
-                    {activeTab === 'income' && (
-                        <div className="px-2 space-y-4">
-                            {/* Income Categories Summary */}
-                            <div className="space-y-3">
-                                <h3 className="font-bold text-gray-900">تفصيل الإيرادات</h3>
-                                {filteredTransactions.filter(tr => tr.type === 'income').length > 0 ? (
-                                    <div className="space-y-2">
-                                        {Array.from(new Set(
-                                            filteredTransactions
-                                                .filter(tr => tr.type === 'income')
-                                                .map(tr => tr.category)
-                                        )).map(category => {
-                                            const categoryTotal = filteredTransactions
-                                                .filter(tr => tr.type === 'income' && tr.category === category)
-                                                .reduce((sum, tr) => sum + tr.amount, 0);
-                                            const categoryCount = filteredTransactions
-                                                .filter(tr => tr.type === 'income' && tr.category === category).length;
-
-                                            const categoryLabels: Record<string, string> = {
-                                                'fees': 'الاشتراكات والرسوم',
-                                                'donation': 'التبرعات',
-                                                'تحصيل من مدرس': 'تحصيل من المدرسين',
-                                                'other': 'إيرادات أخرى'
-                                            };
-
-                                            return (
-                                                <div key={category} className="bg-white rounded-2xl p-4 border border-gray-100">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="text-right">
-                                                            <p className="text-xs text-gray-500 mb-1">{categoryCount} عملية</p>
-                                                            <p className="text-sm font-bold text-green-600">{categoryTotal.toLocaleString()} ج.م</p>
-                                                        </div>
-                                                        <p className="font-semibold text-gray-700">{categoryLabels[category as string] || category}</p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                ) : (
+                    <>
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Teacher Collections */}
+                            <div className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-3 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110" />
+                                <div className="flex items-center justify-between relative z-10">
+                                    <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+                                        <ArrowUpCircle size={20} />
                                     </div>
-                                ) : (
-                                    <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                                        <p className="text-gray-500 text-sm">لا توجد إيرادات في هذا الشهر</p>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-bold text-gray-400">محصل بواسطة المدرسين</p>
+                                        <h3 className="text-xl font-black text-purple-600 font-sans tracking-tight">
+                                            {teacherFees.toLocaleString()} <span className="text-[10px]">ج.م</span>
+                                        </h3>
                                     </div>
-                                )}
+                                </div>
                             </div>
 
-                            {/* Detailed Transactions */}
-                            <div className="space-y-3">
-                                <h3 className="font-bold text-gray-900 text-base">تفاصيل المعاملات</h3>
-                                {filteredTransactions.filter(tr => tr.type === 'income').length > 0 ? (
+                            {/* Total Received */}
+                            <div className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-3 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110" />
+                                <div className="flex flex-col gap-2 relative z-10">
+                                    <div className="flex items-center justify-between">
+                                        <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
+                                            <ArrowUpCircle size={20} />
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-bold text-gray-400">إجمالي المستلم (الصندوق)</p>
+                                            <h3 className="text-xl font-black text-green-600 font-sans tracking-tight">
+                                                {totalReceived.toLocaleString()} <span className="text-[10px]">ج.م</span>
+                                            </h3>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1 border-t border-gray-50 pt-2 mt-1">
+                                        <div className="flex justify-between items-center text-[9px] font-bold">
+                                            <span className="text-gray-400">رسوم مباشرة:</span>
+                                            <span className="text-green-600">{feesByManager.toLocaleString()} ج.م</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[9px] font-bold">
+                                            <span className="text-gray-400">تحصيل مدرسين:</span>
+                                            <span className="text-blue-500">{fromTeachers.toLocaleString()} ج.م</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[9px] font-bold">
+                                            <span className="text-gray-400">إيرادات أخرى:</span>
+                                            <span className="text-purple-500">{otherIncome.toLocaleString()} ج.م</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Expenses */}
+                            <div className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-3 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110" />
+                                <div className="flex items-center justify-between relative z-10">
+                                    <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center">
+                                        <ArrowDownCircle size={20} />
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-bold text-gray-400">المصروفات</p>
+                                        <h3 className="text-xl font-black text-red-600 font-sans tracking-tight">
+                                            {totalExpenses.toLocaleString()} <span className="text-[10px]">ج.م</span>
+                                        </h3>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Balance/Profit */}
+                            <div className={cn(
+                                "rounded-[28px] p-5 shadow-sm border flex flex-col gap-3 relative overflow-hidden group",
+                                balance >= 0 ? "bg-blue-600 text-white border-blue-600" : "bg-orange-500 text-white border-orange-500"
+                            )}>
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110" />
+                                <div className="flex items-center justify-between relative z-10">
+                                    <div className="w-10 h-10 bg-white/20 text-white rounded-xl flex items-center justify-center backdrop-blur-md">
+                                        <Wallet size={20} />
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-bold opacity-80">{balance >= 0 ? 'صافي الربح' : 'صافي الخسارة'}</p>
+                                        <h3 className="text-xl font-black font-sans tracking-tight">
+                                            {balance >= 0 ? '+' : ''}{balance.toLocaleString()} <span className="text-[10px]">ج.م</span>
+                                        </h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Tabs & Transactions */}
+                        <div className="space-y-6">
+                            <div className="flex bg-white p-1.5 rounded-[20px] shadow-sm border border-gray-100 max-w-md mx-auto">
+                                <button
+                                    onClick={() => setActiveTab('expenses')}
+                                    className={cn(
+                                        "flex-1 py-3 rounded-[14px] text-xs font-black transition-all",
+                                        activeTab === 'expenses' ? "bg-red-50 text-red-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                                    )}
+                                >
+                                    المصروفات
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('income')}
+                                    className={cn(
+                                        "flex-1 py-3 rounded-[14px] text-xs font-black transition-all",
+                                        activeTab === 'income' ? "bg-green-50 text-green-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                                    )}
+                                >
+                                    الإيرادات
+                                </button>
+                            </div>
+
+                            {/* Detailed List */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {filteredTransactions
+                                    .filter(tr => tr.type === (activeTab === 'income' ? 'income' : 'expense'))
+                                    .length > 0 ? (
                                     filteredTransactions
-                                        .filter(tr => tr.type === 'income')
+                                        .filter(tr => tr.type === (activeTab === 'income' ? 'income' : 'expense'))
                                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                                         .map((tr) => (
-                                            <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-shadow">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex flex-col items-start gap-1">
-                                                        <span className="font-bold text-green-600 text-lg">+{tr.amount.toLocaleString()} ج.م</span>
-                                                        <span className="text-xs text-gray-400">{new Date(tr.date).toLocaleDateString('ar-EG')}</span>
+                                            <div
+                                                key={tr.id}
+                                                className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-4 hover:shadow-xl hover:shadow-blue-500/5 transition-all group relative overflow-hidden h-full"
+                                            >
+                                                {/* Line 1: Title & Icon */}
+                                                <div className="flex justify-between items-start gap-4">
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-bold text-gray-900 text-sm leading-relaxed" dir="rtl">
+                                                            {tr.title}
+                                                        </h4>
                                                     </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="text-right">
-                                                            <p className="text-sm font-bold text-gray-800">{tr.title}</p>
-                                                            <p className="text-xs text-gray-400">بواسطة: المدير العام</p>
-                                                            {tr.notes && <p className="text-xs text-blue-600 mt-1">📝 {tr.notes}</p>}
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                onClick={() => handleDeleteClick(tr.id)}
-                                                                className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600"
-                                                                title="حذف المعاملة"
-                                                            >
-                                                                <Trash2 size={18} />
-                                                            </button>
-                                                            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-green-600">
-                                                                <ArrowUpCircle size={20} />
-                                                            </div>
-                                                        </div>
+                                                    <div className={cn(
+                                                        "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
+                                                        activeTab === 'income' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                    )}>
+                                                        {activeTab === 'income' ? <ArrowUpCircle size={22} /> : <ArrowDownCircle size={22} />}
+                                                    </div>
+                                                </div>
+
+                                                {/* Line 2: Amount & Date */}
+                                                <div className="flex justify-between items-center bg-gray-50/50 p-3 rounded-2xl">
+                                                    <div className={cn(
+                                                        "text-base font-black font-sans tracking-tight",
+                                                        activeTab === 'income' ? "text-green-600" : "text-red-600"
+                                                    )}>
+                                                        {activeTab === 'income' ? '+' : '-'}{tr.amount.toLocaleString()} <span className="text-[10px]">ج.م</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-gray-400">
+                                                        <span className="text-[10px] font-bold">
+                                                            {new Date(tr.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })}
+                                                        </span>
+                                                        <Calendar size={12} />
+                                                    </div>
+                                                </div>
+
+                                                {/* Line 3: Category & Delete */}
+                                                <div className="flex justify-between items-center mt-auto pt-1">
+                                                    <button
+                                                        onClick={() => handleDeleteClick(tr.id)}
+                                                        className="w-10 h-10 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-all shadow-sm active:scale-90"
+                                                        title="حذف"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+
+                                                    <div className="text-right">
+                                                        <span className="text-[10px] font-black text-gray-500 bg-gray-100/50 px-4 py-1.5 rounded-xl border border-gray-100/50">
+                                                            {tr.category === 'fees' ? 'رسوم واشتراكات' :
+                                                                tr.category === 'salary' ? 'رواتب' :
+                                                                    tr.category === 'donation' ? 'تبرعات' :
+                                                                        tr.category === 'utilities' ? 'مرافق' : tr.category}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
                                         ))
                                 ) : (
-                                    <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                                        <p className="text-gray-500 text-sm">لا توجد معاملات في هذا الشهر</p>
+                                    <div className="col-span-full py-20 text-center space-y-3 bg-white rounded-[40px] border border-gray-100 border-dashed">
+                                        <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mx-auto">
+                                            <Wallet size={40} />
+                                        </div>
+                                        <p className="text-gray-400 font-bold">لا توجد معاملات مسجلة في هذا التبويب</p>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    )}
-
-                    {/* Expenses Section */}
-                    {activeTab === 'expenses' && (
-                        <div className="px-2 space-y-4">
-                            {/* Expense Categories Summary */}
-                            <div className="space-y-3">
-                                <h3 className="font-bold text-gray-900">تفصيل المصروفات</h3>
-                                {filteredTransactions.filter(tr => tr.type === 'expense').length > 0 ? (
-                                    <div className="space-y-2">
-                                        {Object.entries(expenseBreakdown).map(([category, amount]) => {
-                                            const categoryCount = filteredTransactions
-                                                .filter(tr => tr.type === 'expense' && tr.category === category).length;
-
-                                            const categoryLabels: Record<string, string> = {
-                                                'salary': 'الرواتب والمستحقات',
-                                                'utilities': 'المرافق والصيانة',
-                                                'fees': 'الرسوم والعمولات',
-                                                'other': 'مصروفات أخرى'
-                                            };
-
-                                            return (
-                                                <div key={category} className="bg-white rounded-2xl p-4 border border-gray-100">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="text-right">
-                                                            <p className="text-xs text-gray-500 mb-1">{categoryCount} عملية</p>
-                                                            <p className="text-sm font-bold text-red-600">{amount.toLocaleString()} ج.م</p>
-                                                        </div>
-                                                        <p className="font-semibold text-gray-700">{categoryLabels[category as string] || category}</p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                        {Object.keys(expenseBreakdown).length === 0 && (
-                                            <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                                                <p className="text-gray-500 text-sm">لا توجد مصروفات في هذا الشهر</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                                        <p className="text-gray-500 text-sm">لا توجد مصروفات في هذا الشهر</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Detailed Transactions */}
-                            <div className="space-y-3">
-                                <h3 className="font-bold text-gray-900 text-base">تفاصيل المعاملات</h3>
-                                {filteredTransactions.filter(tr => tr.type === 'expense').length > 0 ? (
-                                    filteredTransactions
-                                        .filter(tr => tr.type === 'expense')
-                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                        .map((tr) => (
-                                            <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-shadow">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex flex-col items-start gap-1">
-                                                        <span className="font-bold text-red-600 text-lg">-{tr.amount.toLocaleString()} ج.م</span>
-                                                        <span className="text-xs text-gray-400">{new Date(tr.date).toLocaleDateString('ar-EG')}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="text-right">
-                                                            <p className="text-sm font-bold text-gray-800">{tr.title}</p>
-                                                            <p className="text-xs text-gray-400">بواسطة: المدير العام</p>
-                                                            {tr.notes && <p className="text-xs text-blue-600 mt-1">📝 {tr.notes}</p>}
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                onClick={() => handleDeleteClick(tr.id)}
-                                                                className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600"
-                                                                title="حذف المعاملة"
-                                                            >
-                                                                <Trash2 size={18} />
-                                                            </button>
-                                                            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600">
-                                                                <ArrowDownCircle size={20} />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))
-                                ) : (
-                                    <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                                        <p className="text-gray-500 text-sm">لا توجد معاملات في هذا الشهر</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </>
-            )}
+                    </>
+                )}
+            </div>
         </div>
     );
 }

@@ -18,6 +18,7 @@ export interface Student {
   enrollmentDate: string; // ISO Date YYYY-MM-DD
   birthDate?: string; // ISO Date YYYY-MM-DD
   address: string;
+  isOrphan?: boolean;
   parentPhone: string;
   studentPhone?: string;
   guardianName?: string;

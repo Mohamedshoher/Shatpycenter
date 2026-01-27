@@ -105,11 +105,24 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         }
 
         const matchesSearch = (student.fullName || '').toLowerCase().startsWith(searchTerm.toLowerCase());
-        const matchesGroup = groupId
-            ? student.groupId === groupId
-            : (filter === 'الكل' || student.groupId === filter);
-        const isActive = student.status === 'active';
-        return matchesSearch && matchesGroup && isActive;
+
+        let matchesFilter = true;
+        if (groupId) {
+            matchesFilter = student.groupId === groupId;
+        } else if (filter === 'الكل') {
+            matchesFilter = true;
+        } else if (filter === 'الأيتام') {
+            matchesFilter = !!student.isOrphan;
+        } else if (filter === 'أرقام ناقصة') {
+            const phone = student.parentPhone.replace(/[^0-9]/g, '');
+            matchesFilter = phone.length < 11;
+        } else {
+            // It's a group ID
+            matchesFilter = student.groupId === filter;
+        }
+
+        const isActive = student.status !== 'archived';
+        return matchesSearch && matchesFilter && isActive;
     })?.sort((a, b) => {
         const groupA = getGroupName(a.groupId);
         const groupB = getGroupName(b.groupId);
@@ -285,6 +298,25 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                 >
                                                     الكل
                                                 </button>
+                                                <button
+                                                    onClick={() => { setFilter('الأيتام'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'الأيتام' ? "bg-orange-50 text-orange-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    الأيتام
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('أرقام ناقصة'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'أرقام ناقصة' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    أرقام ناقصة
+                                                </button>
+                                                <div className="h-px bg-gray-100 my-1" />
                                                 {myGroups.map((group) => (
                                                     <button
                                                         key={group.id}

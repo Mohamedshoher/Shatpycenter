@@ -25,11 +25,11 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
     const [formData, setFormData] = useState({
         fullName: '',
         parentPhone: '',
-        address: '',
+        isOrphan: false,
         enrollmentDate: new Date().toISOString().split('T')[0],
         status: (isTeacher ? 'pending' : 'active') as 'active' | 'archived' | 'pending',
         groupId: defaultGroupId || '',
-        monthlyAmount: 0,
+        monthlyAmount: 80,
     });
 
     const { data: groups } = useQuery({
@@ -54,11 +54,11 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
             setFormData({
                 fullName: '',
                 parentPhone: '',
-                address: '',
+                isOrphan: false,
                 enrollmentDate: new Date().toISOString().split('T')[0],
                 status: isTeacher ? 'pending' : 'active',
                 groupId: defaultGroupId || '',
-                monthlyAmount: 0,
+                monthlyAmount: 80,
             });
         },
     });
@@ -71,18 +71,11 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        // التحقق من طول رقم الهاتف (لا يقل عن 11 رقم لضمان عمل الحساب تلقائياً)
-        if (formData.parentPhone.replace(/[^0-9]/g, '').length < 11) {
-            alert('رقم الهاتف يجب أن يكون 11 رقماً على الأقل لضمان إنشاء حساب لولي الأمر.');
-            return;
-        }
-
         mutation.mutate(formData as any);
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="إضافة طالب جديد">
+        <Modal isOpen={isOpen} onClose={onClose} title="إضافة طالب جديد" className="max-w-4xl h-[95vh] md:h-auto">
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input
@@ -94,19 +87,22 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
                     />
                     <Input
                         label="رقم هاتف ولي الأمر"
+                        type="tel"
                         placeholder="0123456789"
                         value={formData.parentPhone}
                         onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
                         required
-                        minLength={11}
                         dir="ltr"
                     />
-                    <Input
-                        label="العنوان"
-                        placeholder="أدخل عنوان الطالب..."
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    />
+                    <div className="flex items-center justify-between bg-orange-50/50 border border-orange-100 p-4 rounded-xl h-12">
+                        <label className="text-sm font-bold text-gray-700">هل الطالب يتيم؟</label>
+                        <input
+                            type="checkbox"
+                            checked={formData.isOrphan}
+                            onChange={(e) => setFormData({ ...formData, isOrphan: e.target.checked })}
+                            className="w-5 h-5 rounded-md border-gray-300 text-purple-600 focus:ring-purple-500"
+                        />
+                    </div>
                     <Input
                         label="تاريخ الالتحاق"
                         type="date"
