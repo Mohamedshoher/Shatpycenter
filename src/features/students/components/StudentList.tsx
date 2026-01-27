@@ -393,7 +393,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
                                     className={cn(
-                                        "px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all duration-75 border active:scale-95",
+                                        "px-6 sm:px-10 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-75 border active:scale-95",
                                         attendanceState[student.id] === 'present'
                                             ? "bg-green-600 text-white border-green-600 shadow-lg"
                                             : "bg-white text-green-600 border-gray-100 hover:bg-green-50"
@@ -404,7 +404,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'absent'); }}
                                     className={cn(
-                                        "px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all duration-75 border active:scale-95",
+                                        "px-6 sm:px-10 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-75 border active:scale-95",
                                         attendanceState[student.id] === 'absent'
                                             ? "bg-red-500 text-white border-red-500 shadow-lg"
                                             : "bg-white text-red-500 border-gray-100 hover:bg-red-50"
