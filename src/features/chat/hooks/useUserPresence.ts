@@ -8,6 +8,7 @@ import {
 export const useUserPresence = (userId: string | null) => {
     const [lastSeen, setLastSeen] = useState<Date | null>(null);
     const [isOnline, setIsOnline] = useState(false);
+    const [isTyping, setIsTyping] = useState(false);
     const [formattedLastSeen, setFormattedLastSeen] = useState('غير متصل');
 
     useEffect(() => {
@@ -17,6 +18,7 @@ export const useUserPresence = (userId: string | null) => {
         const unsubscribe = subscribeToUserPresence(userId, (presence) => {
             setLastSeen(presence.lastSeen);
             setIsOnline(presence.isOnline);
+            setIsTyping(presence.isTyping || false);
             setFormattedLastSeen(formatLastSeen(presence.lastSeen, presence.isOnline));
         });
 
@@ -37,6 +39,7 @@ export const useUserPresence = (userId: string | null) => {
     return {
         lastSeen,
         isOnline,
+        isTyping,
         formattedLastSeen,
     };
 };

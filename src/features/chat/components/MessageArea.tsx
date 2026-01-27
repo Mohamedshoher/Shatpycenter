@@ -43,8 +43,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
     return otherIndex !== -1 ? conversation.participantIds[otherIndex] : null;
   }, [conversation, currentUserId]);
 
-  // ✨ استخدام hook لآخر ظهور
-  const { formattedLastSeen, isOnline } = useUserPresence(otherUserId);
+  // ✨ استخدام hook لآخر ظهور وحالة الكتابة
+  const { formattedLastSeen, isOnline, isTyping } = useUserPresence(otherUserId);
 
   const scrollToMessage = (id: string) => {
     const element = document.getElementById(`msg-${id}`);
@@ -111,10 +111,13 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
           </h2>
           <div className="flex items-center gap-2 justify-end">
             {isOnline && (
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
             )}
-            <p className="text-[10px] text-gray-500 text-right font-bold">
-              {formattedLastSeen}
+            <p className={cn(
+              "text-[10px] font-bold text-right transition-colors",
+              isTyping ? "text-blue-500" : "text-gray-500"
+            )}>
+              {isTyping ? 'يكتب الآن...' : formattedLastSeen}
             </p>
           </div>
         </div>

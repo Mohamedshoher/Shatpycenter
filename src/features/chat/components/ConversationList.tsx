@@ -63,49 +63,72 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   if (conversations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-500">
-        <MessageCircle className="w-12 h-12 mb-2 opacity-50" />
-        <p className="text-sm">لا توجد محادثات</p>
+      <div className="flex flex-col items-center justify-center h-full py-12 text-gray-400">
+        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+          <MessageCircle className="w-8 h-8 opacity-20" />
+        </div>
+        <p className="text-sm font-bold">لا توجد محادثات نشطة</p>
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-gray-200">
-      {conversations.map((conversation) => (
-        <button
-          key={conversation.id}
-          onClick={() => onSelect(conversation)}
-          className={`w-full p-4 text-right transition-colors ${selectedId === conversation.id
-            ? 'bg-blue-50 border-r-4 border-blue-500'
-            : 'hover:bg-gray-50'
-            }`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-gray-900">
-                  {getOtherName(conversation)}
+    <div className="divide-y divide-gray-50">
+      {conversations.map((conversation) => {
+        const otherName = getOtherName(conversation);
+        const initials = otherName.split(' ').map(n => n[0]).join('').slice(0, 2);
+        const isSelected = selectedId === conversation.id;
+
+        return (
+          <button
+            key={conversation.id}
+            onClick={() => onSelect(conversation)}
+            className={`w-full p-4 flex items-center gap-4 transition-all duration-200 relative group ${isSelected
+                ? 'bg-blue-50/50'
+                : 'hover:bg-gray-50'
+              }`}
+          >
+            {/* Selected Indicator */}
+            {isSelected && (
+              <div className="absolute right-0 top-0 bottom-0 w-1 bg-blue-600 rounded-l-full" />
+            )}
+
+            {/* Avatar */}
+            <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-transform group-active:scale-95 ${isSelected
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-500'
+              }`}>
+              {initials}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0 text-right">
+              <div className="flex items-center justify-between gap-2 mb-0.5">
+                <h3 className={`font-black truncate ${isSelected ? 'text-blue-900' : 'text-gray-900'} text-sm`}>
+                  {otherName}
                 </h3>
+                <span className="text-[10px] text-gray-400 font-bold whitespace-nowrap shrink-0">
+                  {formatDistanceToNow(new Date(conversation.lastMessageTime), {
+                    locale: ar,
+                    addSuffix: false,
+                  })}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <p className={`text-xs truncate ${isSelected ? 'text-blue-700/70' : 'text-gray-500'} font-medium`}>
+                  {conversation.lastMessage || 'ابدأ المحادثة الآن...'}
+                </p>
                 {conversation.unreadCount > 0 && (
-                  <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-black text-white bg-red-500 rounded-full shadow-sm animate-in zoom-in scale-110">
                     {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-600 truncate">
-                {conversation.lastMessage}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                {formatDistanceToNow(new Date(conversation.lastMessageTime), {
-                  locale: ar,
-                  addSuffix: true,
-                })}
-              </p>
             </div>
-          </div>
-        </button>
-      ))}
+          </button>
+        );
+      })}
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 
 // مخزن مؤقت للحالة في الذاكرة
 let globalChannel: RealtimeChannel | null = null;
-const presenceSubscribers: Map<string, Set<(presence: { lastSeen: Date; isOnline: boolean }) => void>> = new Map();
+const presenceSubscribers: Map<string, Set<(presence: { lastSeen: Date; isOnline: boolean; isTyping?: boolean }) => void>> = new Map();
 const onlineUsers = new Set<string>();
 
 // ✨ تهيئة نظام التواجد العام
@@ -24,10 +24,12 @@ const initGlobalPresence = (myUserId: string) => {
 
             // إشعار جميع المستمعين بالتحديث
             presenceSubscribers.forEach((callbacks, userId) => {
+                const presenceForUser = Object.values(state).flat().find((p: any) => p.user_id === userId) as any;
                 const isOnline = onlineUsers.has(userId);
                 callbacks.forEach(cb => cb({
                     lastSeen: new Date(),
-                    isOnline
+                    isOnline,
+                    isTyping: presenceForUser?.is_typing || false
                 }));
             });
         })
@@ -50,23 +52,23 @@ const initGlobalPresence = (myUserId: string) => {
         });
 };
 
-const notifySubscribers = (userId: string, isOnline: boolean) => {
+const notifySubscribers = (userId: string, isOnline: boolean, isTyping: boolean = false) => {
     const callbacks = presenceSubscribers.get(userId);
     if (callbacks) {
-        callbacks.forEach(cb => cb({ lastSeen: new Date(), isOnline }));
+        callbacks.forEach(cb => cb({ lastSeen: new Date(), isOnline, isTyping }));
     }
 };
 
-// ✨ تحديث آخر ظهور للمستخدم (track)
-export const updateUserPresence = async (userId: string): Promise<void> => {
+// ✨ تحديث آخر ظهور للمستخدم (track) مع دعم حالة الكتابة
+export const updateUserPresence = async (userId: string, isTyping: boolean = false): Promise<void> => {
     const cleanId = userId.replace('mock-', '');
     if (!globalChannel) {
         initGlobalPresence(cleanId);
     } else {
-        // إعادة التتبع لضمان البقاء متصلاً
         await globalChannel?.track({
             user_id: cleanId,
             online_at: new Date().toISOString(),
+            is_typing: isTyping
         });
     }
 };
@@ -105,7 +107,7 @@ export const getUserPresence = async (userId: string): Promise<{ lastSeen: Date;
 // ✨ الاستماع لحالة المستخدم في الوقت الفعلي
 export const subscribeToUserPresence = (
     userId: string,
-    callback: (presence: { lastSeen: Date; isOnline: boolean }) => void
+    callback: (presence: { lastSeen: Date; isOnline: boolean; isTyping?: boolean }) => void
 ): (() => void) => {
     const cleanId = userId.replace('mock-', '');
 
