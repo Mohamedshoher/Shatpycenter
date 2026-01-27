@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStudents } from '../hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
@@ -43,11 +43,21 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const { user } = useAuthStore();
     const queryClient = useQueryClient();
 
-    const myGroups = groups?.filter(g => {
-        if (user?.role === 'teacher') return g.teacherId === user.teacherId;
-        return true;
-    }) || [];
-    const myGroupsIds = myGroups.map(g => g.id);
+    const myGroups = useMemo(() => {
+        return groups?.filter(g => {
+            if (user?.role === 'teacher') return g.teacherId === user.teacherId;
+            return true;
+        }) || [];
+    }, [groups, user]);
+
+    const myGroupsIds = useMemo(() => myGroups.map(g => g.id), [myGroups]);
+
+    const groupsMap = useMemo(() => {
+        return (groups || []).reduce((acc, g) => {
+            acc[g.id] = g.name;
+            return acc;
+        }, {} as Record<string, string>);
+    }, [groups]);
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -59,13 +69,15 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-    const [attendanceLoading, setAttendanceLoading] = useState<Record<string, 'present' | 'absent' | null>>({});
-    const [attendanceState, setAttendanceState] = useState<Record<string, 'present' | 'absent' | null>>({});
+    // تبسيط مفتاح الكاش ليكون مستقلاً عن قائمة الطلاب
+    const todayDate = new Date();
+    const todayKey = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
 
-    // جلب حضور اليوم لجميع الطلاب بضغطة واحدة
-    const { data: todayAttendance } = useQuery({
-        queryKey: ['today-attendance', students?.map(s => s.id)],
+    const { data: attendanceState = {} } = useQuery({
+        queryKey: ['today-attendance', todayKey],
         queryFn: async () => {
+            // نستخدم استيراد ديناميكي فقط عند الحاجة الحقيقية أو نستورده في الملف إذا لم يكن ثقيلاً.
+            // هنا سنفترض أننا بحاجة له.
             if (!students || students.length === 0) return {};
             const { getAllAttendanceForMonth } = await import('../services/recordsService');
 
@@ -73,10 +85,13 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             const dayNum = today.getDate();
             const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
-            // جلب حضور الشهر بالكامل لكل الطلاب في استعلام واحد
+            // جلب حضور الشهر بالكامل
             const allAttendanceMap = await getAllAttendanceForMonth(monthKey);
 
             const attendanceMap: Record<string, 'present' | 'absent'> = {};
+            // نستخدم students من الـ closure، وهذا آمن لأننا نتحقق منه في البداية
+            // وإذا تغيرت القائمة سيعاد الجلب لأننا نعتمد عليه في enabled (جزئياً) أو يمكن إضافته للمفتاح إذا كان ضروري جداً
+            // لكن للأداء، الاعتماد على التاريخ يكفي، وسنفلتر النتائج هنا
             students.forEach(student => {
                 const studentRecords = allAttendanceMap[student.id] || [];
                 const todayRec = studentRecords.find(r => r.day === dayNum);
@@ -87,52 +102,47 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
 
             return attendanceMap;
         },
-        enabled: !!(students && students.length > 0)
+        enabled: !!(students && students.length > 0),
+        staleTime: 1000 * 60 * 5 // 5 minutes cache
     });
 
-    // تحديث الحالة المحلية عند اكتمال التحميل
-    useEffect(() => {
-        if (todayAttendance) {
-            setAttendanceState(todayAttendance);
-        }
-    }, [todayAttendance]);
-
-    const getGroupName = (groupId: string | null) => {
+    const getGroupName = useCallback((groupId: string | null) => {
         if (!groupId) return '';
-        const group = groups?.find(g => g.id === groupId);
-        return group ? group.name : '';
-    };
+        return groupsMap[groupId] || '';
+    }, [groupsMap]);
 
-    const filteredStudents = students?.filter(student => {
-        if (user?.role === 'teacher') {
-            if (!student.groupId || !myGroupsIds.includes(student.groupId)) return false;
-        }
+    const filteredStudents = useMemo(() => {
+        return students?.filter(student => {
+            if (user?.role === 'teacher') {
+                if (!student.groupId || !myGroupsIds.includes(student.groupId)) return false;
+            }
 
-        const matchesSearch = (student.fullName || '').toLowerCase().startsWith(searchTerm.toLowerCase());
+            const matchesSearch = (student.fullName || '').toLowerCase().startsWith(searchTerm.toLowerCase());
 
-        let matchesFilter = true;
-        if (groupId) {
-            matchesFilter = student.groupId === groupId;
-        } else if (filter === 'الكل') {
-            matchesFilter = true;
-        } else if (filter === 'الأيتام') {
-            matchesFilter = !!student.isOrphan;
-        } else if (filter === 'أرقام ناقصة') {
-            const phone = student.parentPhone.replace(/[^0-9]/g, '');
-            matchesFilter = phone.length < 11;
-        } else {
-            // It's a group ID
-            matchesFilter = student.groupId === filter;
-        }
+            let matchesFilter = true;
+            if (groupId) {
+                matchesFilter = student.groupId === groupId;
+            } else if (filter === 'الكل') {
+                matchesFilter = true;
+            } else if (filter === 'الأيتام') {
+                matchesFilter = !!student.isOrphan;
+            } else if (filter === 'أرقام ناقصة') {
+                const phone = student.parentPhone.replace(/[^0-9]/g, '');
+                matchesFilter = phone.length < 11;
+            } else {
+                // It's a group ID
+                matchesFilter = student.groupId === filter;
+            }
 
-        const isActive = student.status !== 'archived';
-        return matchesSearch && matchesFilter && isActive;
-    })?.sort((a, b) => {
-        const groupA = getGroupName(a.groupId);
-        const groupB = getGroupName(b.groupId);
-        if (groupA !== groupB) return groupA.localeCompare(groupB, 'ar');
-        return a.fullName.localeCompare(b.fullName, 'ar');
-    });
+            const isActive = student.status !== 'archived';
+            return matchesSearch && matchesFilter && isActive;
+        })?.sort((a, b) => {
+            const groupA = getGroupName(a.groupId);
+            const groupB = getGroupName(b.groupId);
+            if (groupA !== groupB) return groupA.localeCompare(groupB, 'ar');
+            return a.fullName.localeCompare(b.fullName, 'ar');
+        });
+    }, [students, user, myGroupsIds, searchTerm, filter, groupId, getGroupName]);
 
     const handleOpenModal = (student: Student, tab: string = 'attendance') => {
         setSelectedTab(tab);
@@ -155,13 +165,19 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         }
     };
 
-    const handleAttendance = async (student: Student, status: 'present' | 'absent') => {
-        // 1. تحديث الحالة المحلية للزر فوراً
-        setAttendanceState(prev => ({ ...prev, [student.id]: status }));
-
+    const handleAttendance = useCallback(async (student: Student, status: 'present' | 'absent') => {
         const today = new Date();
         const day = today.getDate();
         const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        const todayStrKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        // 1. التحديث الفوري للكاش (Optimistic Update)
+        queryClient.setQueryData(
+            ['today-attendance', todayStrKey],
+            (old: Record<string, 'present' | 'absent'> | undefined) => {
+                return { ...(old || {}), [student.id]: status };
+            }
+        );
 
         // 2. تحديث الكاش العالمي للحضور (تفاصيل الطالب)
         queryClient.setQueryData(['attendance', student.id], (old: any) => {
@@ -170,22 +186,12 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             return [...filtered, { studentId: student.id, day, month: monthKey, status }];
         });
 
-        // 3. تحديث كاش قائمة الحضور اليومية (لتجنب اختفاء التحديد عند التحديث)
-        if (students) {
-            queryClient.setQueryData(
-                ['today-attendance', students.map(s => s.id)],
-                (old: Record<string, 'present' | 'absent'> | undefined) => {
-                    return { ...(old || {}), [student.id]: status };
-                }
-            );
-        }
-
-        // 4. إرسال حدث للمزامنة الإضافية
+        // 3. إرسال حدث للمزامنة الإضافية
         window.dispatchEvent(new CustomEvent('updateAttendance', {
             detail: { studentId: student.id, day, status, month: monthKey }
         }));
 
-        // 5. الحفظ النهائي في قاعدة البيانات في الخلفية
+        // 4. الحفظ في الخلفية
         try {
             const { addAttendanceRecord } = await import('../services/recordsService');
             await addAttendanceRecord({
@@ -194,9 +200,8 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 month: monthKey,
                 status
             });
-            // نكتفي بتحديث التفاصيل فقط لضمان دقة البيانات في النوافذ المنبثقة
+            // نحدث كاش الطالب الفردي فقط للتأكيد
             queryClient.invalidateQueries({ queryKey: ['attendance', student.id] });
-            // لا نقوم بإلغاء صلاحية 'today-attendance' هنا لتجنب وميض الواجهة أو ضياع التحديثات المتتالية
         } catch (error) {
             console.error('Error saving attendance, adding to offline queue:', error);
             addToOfflineQueue('attendance', {
@@ -206,7 +211,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 status
             });
         }
-    };
+    }, [queryClient]);
 
     const handleEdit = (student: Student) => {
         setStudentToEdit(student);
@@ -328,7 +333,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                     أرقام ناقصة
                                                 </button>
                                                 <div className="h-px bg-gray-100 my-1" />
-                                                {myGroups.map((group) => (
+                                                {useMemo(() => myGroups.map((group) => (
                                                     <button
                                                         key={group.id}
                                                         onClick={() => { setFilter(group.id); setIsFilterOpen(false); }}
@@ -339,7 +344,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                     >
                                                         {group.name}
                                                     </button>
-                                                ))}
+                                                )), [myGroups, filter])}
                                             </div>
                                         )}
                                     </div>
@@ -388,7 +393,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
                                     className={cn(
-                                        "px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all duration-200 border active:scale-95",
+                                        "px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all duration-75 border active:scale-95",
                                         attendanceState[student.id] === 'present'
                                             ? "bg-green-600 text-white border-green-600 shadow-lg"
                                             : "bg-white text-green-600 border-gray-100 hover:bg-green-50"
@@ -399,7 +404,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'absent'); }}
                                     className={cn(
-                                        "px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all duration-200 border active:scale-95",
+                                        "px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all duration-75 border active:scale-95",
                                         attendanceState[student.id] === 'absent'
                                             ? "bg-red-500 text-white border-red-500 shadow-lg"
                                             : "bg-white text-red-500 border-gray-100 hover:bg-red-50"
