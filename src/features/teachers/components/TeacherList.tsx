@@ -119,9 +119,10 @@ export default function TeacherList() {
                     {user?.role !== 'teacher' && (
                         <button
                             onClick={() => setIsAddModalOpen(true)}
-                            className="w-12 h-12 bg-blue-600 rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-transform shrink-0"
+                            className="w-12 h-12 bg-blue-600 rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-all shrink-0 cursor-pointer relative z-[100]"
+                            title="إضافة معلم جديد"
                         >
-                            <UserPlus size={22} />
+                            <UserPlus size={22} className="pointer-events-none" />
                         </button>
                     )}
                     <button onClick={toggleSidebar} className="md:hidden w-12 h-12 bg-white rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0">
@@ -245,26 +246,30 @@ export default function TeacherList() {
                         className="bg-white rounded-[32px] p-5 shadow-sm border border-gray-50 flex flex-col gap-4 relative group cursor-pointer hover:border-teal-200 transition-all hover:shadow-md"
                     >
                         {/* Top Section */}
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-500">
+                        <div className="flex items-center justify-between group/card">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-500 shrink-0">
                                     <Briefcase size={20} />
                                 </div>
-                                <h3 className="font-bold text-gray-800 text-lg hover:text-teal-600 transition-colors">{teacher.fullName}</h3>
-                            </div>
-                        </div>
-
-                        {/* Middle Section: Phone and Status */}
-                        <div className="flex items-center justify-between px-1">
-                            <div className="flex items-center gap-2">
-                                <span className="bg-green-50 text-green-800 px-3 py-1 rounded-full text-[10px] font-bold">
-                                    {teacher.status === 'active' ? 'نشط' : 'غير نشط'}
-                                </span>
+                                <div className="flex flex-col min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-gray-800 text-lg group-hover/card:text-teal-600 transition-colors truncate">
+                                            {teacher.fullName}
+                                        </h3>
+                                        <span className={cn(
+                                            "shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black",
+                                            teacher.status === 'active' ? "bg-green-100 text-green-700 border border-green-200" : "bg-red-100 text-red-700 border border-red-200"
+                                        )}>
+                                            {teacher.status === 'active' ? 'نشط' : 'غير نشط'}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                             <a
                                 href={`tel:${teacher.phone}`}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-8 h-8 flex items-center justify-center text-teal-400 hover:text-teal-600 transition-colors"
+                                className="w-10 h-10 flex items-center justify-center bg-teal-50 text-teal-400 rounded-xl hover:bg-teal-500 hover:text-white transition-all active:scale-90 shadow-sm shrink-0"
+                                title="اتصال هاتفي"
                             >
                                 <Phone size={18} />
                             </a>

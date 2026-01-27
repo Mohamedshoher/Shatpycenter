@@ -102,7 +102,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="إضافة معلم جديد">
+        <Modal isOpen={isOpen} onClose={onClose} title="إضافة موظف جديد">
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Role Toggle */}
                 <div className="bg-gray-50/50 p-1 rounded-[20px] flex gap-1 border border-gray-100">

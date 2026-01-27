@@ -54,8 +54,8 @@ export default function DashboardLayout({
 
             <Sidebar />
 
-            <div className="flex-1 flex flex-col md:mr-64 transition-all duration-300">
-                <main className="flex-1 overflow-y-auto">
+            <div className="flex-1 flex flex-col md:mr-64 transition-all duration-300 relative">
+                <main className="flex-1">
                     {children}
                 </main>
             </div>

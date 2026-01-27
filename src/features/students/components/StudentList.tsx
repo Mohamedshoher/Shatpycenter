@@ -203,105 +203,107 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
 
     return (
         <div className="space-y-4 md:space-y-6 pb-24 p-3 md:p-6 transition-all duration-500">
-            <div className="relative flex items-center justify-between pt-2 gap-4">
-                <div className="relative z-50 flex items-center gap-2">
-                    <button
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="w-12 h-12 bg-blue-600 rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-transform shrink-0"
-                        title="إضافة طالب جديد"
-                    >
-                        <UserPlus size={22} />
-                    </button>
-                    {/* تم حذف أيقونة الأرشيف من هنا بطلب المستخدم لتبسيط الواجهة على الموبيل */}
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl -mx-3 px-3 py-4 border-b border-gray-100 mb-2 shadow-sm">
+                <div className="relative flex items-center justify-between gap-4">
+                    <div className="relative z-50 flex items-center gap-2">
+                        <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="w-12 h-12 bg-blue-600 rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-transform shrink-0"
+                            title="إضافة طالب جديد"
+                        >
+                            <UserPlus size={22} />
+                        </button>
 
-                    <button
-                        onClick={toggleSidebar}
-                        className="md:hidden w-12 h-12 bg-white rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
-                    >
-                        <Menu size={22} />
-                    </button>
-                </div>
+                        <button
+                            onClick={toggleSidebar}
+                            className="md:hidden w-12 h-12 bg-white rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
+                        >
+                            <Menu size={22} />
+                        </button>
+                    </div>
 
-                {!isSearchOpen && (
-                    <h1 className="text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
-                        {customTitle || 'الطلاب'} ({filteredStudents?.length || 0})
-                    </h1>
-                )}
+                    {!isSearchOpen && (
+                        <h1 className="text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
+                            {customTitle || 'الطلاب'} ({filteredStudents?.length || 0})
+                        </h1>
+                    )}
 
-                <div className={cn(
-                    "flex items-center gap-2 transition-all duration-300",
-                    isSearchOpen ? "flex-1" : ""
-                )}>
-                    {isSearchOpen ? (
-                        <div className="relative flex-1 animate-in slide-in-from-right-4 duration-300">
-                            <input
-                                autoFocus
-                                type="text"
-                                placeholder="ابحث باسم الطالب..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full h-12 bg-gray-50 border border-blue-100 rounded-[20px] px-10 text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
-                            />
-                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
-                            <button
-                                onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setIsSearchOpen(true)}
-                                className="w-12 h-12 bg-gray-50 rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
-                            >
-                                <Search size={22} />
-                            </button>
-                            {!groupId && (
-                                <div className="relative">
-                                    {isFilterOpen && (
-                                        <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
-                                    )}
-                                    <button
-                                        onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                        className={cn(
-                                            "w-12 h-12 rounded-[20px] border flex items-center justify-center transition-all active:scale-95 relative z-50",
-                                            isFilterOpen || filter !== 'الكل' ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
+                    <div className={cn(
+                        "flex items-center gap-2 transition-all duration-300",
+                        isSearchOpen ? "flex-1" : ""
+                    )}>
+                        {isSearchOpen ? (
+                            <div className="relative flex-1 animate-in slide-in-from-right-4 duration-300">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="ابحث باسم الطالب..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full h-12 bg-gray-50 border border-blue-100 rounded-[20px] px-10 text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                                />
+                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
+                                <button
+                                    onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setIsSearchOpen(true)}
+                                    className="w-12 h-12 bg-gray-50 rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
+                                >
+                                    <Search size={22} />
+                                </button>
+                                {!groupId && (
+                                    <div className="relative">
+                                        {isFilterOpen && (
+                                            <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
                                         )}
-                                    >
-                                        <SlidersHorizontal size={22} />
-                                    </button>
+                                        <button
+                                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                            className={cn(
+                                                "w-12 h-12 rounded-[20px] border flex items-center justify-center transition-all active:scale-95 relative z-50",
+                                                isFilterOpen || filter !== 'الكل' ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
+                                            )}
+                                        >
+                                            <SlidersHorizontal size={22} />
+                                        </button>
 
-                                    {isFilterOpen && (
-                                        <div className="absolute top-[110%] left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[150px] animate-in fade-in zoom-in-95 duration-200">
-                                            <button
-                                                onClick={() => { setFilter('الكل'); setIsFilterOpen(false); }}
-                                                className={cn(
-                                                    "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors mb-1",
-                                                    filter === 'الكل' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
-                                                )}
-                                            >
-                                                الكل
-                                            </button>
-                                            {myGroups.map((group) => (
+                                        {isFilterOpen && (
+                                            <div className="absolute top-[110%] left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[150px] animate-in fade-in zoom-in-95 duration-200">
                                                 <button
-                                                    key={group.id}
-                                                    onClick={() => { setFilter(group.id); setIsFilterOpen(false); }}
+                                                    onClick={() => { setFilter('الكل'); setIsFilterOpen(false); }}
                                                     className={cn(
-                                                        "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors",
-                                                        filter === group.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                        "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'الكل' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
                                                     )}
                                                 >
-                                                    {group.name}
+                                                    الكل
                                                 </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                                {myGroups.map((group) => (
+                                                    <button
+                                                        key={group.id}
+                                                        onClick={() => { setFilter(group.id); setIsFilterOpen(false); }}
+                                                        className={cn(
+                                                            "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors",
+                                                            filter === group.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                        )}
+                                                    >
+                                                        {group.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -322,58 +324,54 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                         {index + 1}
                                     </span>
                                 </div>
-                                <div className="flex items-baseline gap-1.5 sm:gap-2">
-                                    <h3 className="font-bold text-gray-900 text-base sm:text-lg leading-tight">
+                                <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 overflow-hidden">
+                                    <h3 className="font-bold text-gray-900 text-sm sm:text-base md:text-lg leading-tight truncate whitespace-nowrap">
                                         {student.fullName}
                                     </h3>
-                                    <span className="text-xs text-gray-400 font-medium">
+                                    <span className="text-[10px] sm:text-xs text-gray-400 font-medium shrink-0">
                                         {getGroupName(student.groupId)}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 gap-4 flex-wrap md:flex-nowrap">
-                            <div className="flex gap-1.5 md:gap-2 w-full md:w-auto">
-                                <div className="flex gap-1.5 md:gap-2 w-full md:w-auto">
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
-                                        className={cn(
-                                            "flex-1 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border active:scale-95",
-                                            attendanceState[student.id] === 'present'
-                                                ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-500/30"
-                                                : "bg-white text-green-600 border-gray-200 hover:border-green-200 hover:bg-green-50"
-                                        )}
-                                    >
-                                        حاضر
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'absent'); }}
-                                        className={cn(
-                                            "flex-1 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border active:scale-95",
-                                            attendanceState[student.id] === 'absent'
-                                                ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/30"
-                                                : "bg-white text-red-500 border-gray-200 hover:border-red-200 hover:bg-red-50"
-                                        )}
-                                    >
-                                        غياب
-                                    </button>
-                                </div>
+                        <div className="flex items-center gap-1 sm:gap-2 pt-2 overflow-x-auto no-scrollbar relative">
+                            <div className="flex gap-1 shrink-0">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
+                                    className={cn(
+                                        "px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all duration-200 border active:scale-95",
+                                        attendanceState[student.id] === 'present'
+                                            ? "bg-green-600 text-white border-green-600 shadow-lg"
+                                            : "bg-white text-green-600 border-gray-100 hover:bg-green-50"
+                                    )}
+                                >
+                                    حاضر
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'absent'); }}
+                                    className={cn(
+                                        "px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all duration-200 border active:scale-95",
+                                        attendanceState[student.id] === 'absent'
+                                            ? "bg-red-500 text-white border-red-500 shadow-lg"
+                                            : "bg-white text-red-500 border-gray-100 hover:bg-red-50"
+                                    )}
+                                >
+                                    غياب
+                                </button>
                             </div>
 
-                            <div className="flex items-center gap-4 md:gap-3 bg-gray-50/50 p-1.5 rounded-2xl border border-gray-50 flex-1 md:flex-none justify-center">
-                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="text-gray-400 hover:text-green-600 transition-colors p-1" title="المالية"><CreditCard size={22} /></button>
+                            <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
 
-                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'exams'); }} className="text-gray-400 hover:text-blue-600 transition-colors p-1" title="الاختبارات"><BookOpen size={22} /></button>
-
-                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'notes'); }} className="text-gray-400 hover:text-gray-700 transition-colors p-1" title="ملاحظات"><FileText size={22} /></button>
+                            <div className="flex items-center gap-1 sm:gap-1.5 bg-gray-100/50 p-1 rounded-xl border border-gray-50 shrink-0">
+                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 transition-colors" title="المالية"><CreditCard size={18} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'exams'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-colors" title="الاختبارات"><BookOpen size={18} /></button>
 
                                 {(user?.role === 'director' || user?.role === 'supervisor') && (
                                     <>
-                                        <button onClick={(e) => { e.stopPropagation(); handleCall(student); }} className="text-gray-400 hover:text-blue-500 transition-colors p-1" title="اتصال"><Phone size={22} /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleWhatsApp(student); }} className="text-gray-400 hover:text-green-500 transition-colors p-1" title="واتساب"><MessageCircle size={22} /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleArchive(student); }} className="text-gray-400 hover:text-amber-500 transition-colors p-1" title="أرشفة"><Archive size={22} /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); setStudentToEdit(student); setIsEditModalOpen(true); }} className="text-gray-400 hover:text-blue-600 transition-colors p-1" title="تعديل"><Edit3 size={22} /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleCall(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors" title="اتصال"><Phone size={18} /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleArchive(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-amber-500 transition-colors" title="أرشفة"><Archive size={18} /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setStudentToEdit(student); setIsEditModalOpen(true); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-colors" title="تعديل"><Edit3 size={18} /></button>
                                     </>
                                 )}
                             </div>
