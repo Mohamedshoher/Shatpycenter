@@ -22,6 +22,7 @@ import {
     User,
     BookOpen
 } from 'lucide-react';
+import { addToOfflineQueue } from '@/lib/offline-queue';
 
 import AddStudentModal from './AddStudentModal';
 import StudentDetailModal from './StudentDetailModal';
@@ -170,12 +171,16 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             queryClient.invalidateQueries({ queryKey: ['attendance', student.id] });
             queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
         } catch (error) {
-            console.error('Error saving attendance:', error);
-            setAttendanceState(prev => {
-                const newState = { ...prev };
-                delete newState[student.id];
-                return newState;
+            console.error('Error saving attendance, adding to offline queue:', error);
+            // بدلاً من حذف الحالة، نضيفها لزمام المزامنة الأوفلاين
+            addToOfflineQueue('attendance', {
+                studentId: student.id,
+                day,
+                month: monthKey,
+                status
             });
+
+            // لا نحذف الحالة من الواجهة، ستبقى خضراء/حمراء وكأنها حُفظت
         }
     };
 
@@ -197,7 +202,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     }
 
     return (
-        <div className="space-y-6 pb-24 p-4 md:p-6">
+        <div className="space-y-4 md:space-y-6 pb-24 p-3 md:p-6 transition-all duration-500">
             <div className="relative flex items-center justify-between pt-2 gap-4">
                 <div className="relative z-50 flex items-center gap-2">
                     <button
@@ -305,7 +310,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                     <div
                         key={student.id}
                         onClick={() => handleOpenModal(student, 'attendance')}
-                        className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative group cursor-pointer hover:shadow-md transition-all"
+                        className="bg-white rounded-2xl p-3.5 sm:p-4 shadow-sm border border-gray-100 relative group cursor-pointer hover:shadow-md transition-all"
                     >
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
@@ -317,8 +322,8 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                         {index + 1}
                                     </span>
                                 </div>
-                                <div className="flex items-baseline gap-2">
-                                    <h3 className="font-bold text-gray-900 text-lg leading-tight">
+                                <div className="flex items-baseline gap-1.5 sm:gap-2">
+                                    <h3 className="font-bold text-gray-900 text-base sm:text-lg leading-tight">
                                         {student.fullName}
                                     </h3>
                                     <span className="text-xs text-gray-400 font-medium">
@@ -334,7 +339,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
                                         className={cn(
-                                            "flex-1 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all border",
+                                            "flex-1 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border active:scale-95",
                                             attendanceState[student.id] === 'present'
                                                 ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-500/30"
                                                 : "bg-white text-green-600 border-gray-200 hover:border-green-200 hover:bg-green-50"
@@ -345,7 +350,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'absent'); }}
                                         className={cn(
-                                            "flex-1 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all border",
+                                            "flex-1 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border active:scale-95",
                                             attendanceState[student.id] === 'absent'
                                                 ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/30"
                                                 : "bg-white text-red-500 border-gray-200 hover:border-red-200 hover:bg-red-50"

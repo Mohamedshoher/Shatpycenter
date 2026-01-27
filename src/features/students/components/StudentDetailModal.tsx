@@ -455,12 +455,12 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                                     <div
                                         key={day}
                                         className={cn(
-                                            "aspect-square rounded-xl flex flex-col items-center justify-center border transition-all text-sm font-bold shadow-sm",
+                                            "aspect-square rounded-xl flex flex-col items-center justify-center border transition-all duration-200 text-sm font-bold shadow-sm",
                                             isFuture ? "bg-gray-50/50 border-gray-50 text-gray-200 pointer-events-none" :
                                                 status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
                                                     status === 'present' ? "bg-green-50 border-green-100 text-green-600" :
                                                         "bg-white border-gray-100 text-gray-400",
-                                            (canEditAttendance) && !isFuture ? "cursor-pointer hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5" : "cursor-default"
+                                            (canEditAttendance) && !isFuture ? "cursor-pointer hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5 active:scale-90" : "cursor-default"
                                         )}
                                         onClick={() => {
                                             if (!isFuture && canEditAttendance && student) {

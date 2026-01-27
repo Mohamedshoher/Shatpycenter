@@ -11,6 +11,7 @@ import {
     deleteFeeRecord,
     addLeaveRequest
 } from "../services/recordsService";
+import { addToOfflineQueue } from "@/lib/offline-queue";
 
 export const useStudentRecords = (studentId: string) => {
     const queryClient = useQueryClient();
@@ -35,21 +36,57 @@ export const useStudentRecords = (studentId: string) => {
 
     const addAttendance = useMutation({
         mutationFn: addAttendanceRecord,
-        onSuccess: () => {
+        onMutate: async (newRecord) => {
+            await queryClient.cancelQueries({ queryKey: ['attendance', studentId] });
+            const previousAttendance = queryClient.getQueryData(['attendance', studentId]);
+
+            queryClient.setQueryData(['attendance', studentId], (old: any) => {
+                const records = Array.isArray(old) ? old : [];
+                const filtered = records.filter((r: any) => !(r.day === newRecord.day && r.month === newRecord.month));
+                return [...filtered, { ...newRecord, id: 'temp-' + Date.now() }];
+            });
+
+            return { previousAttendance };
+        },
+        onError: (err, newRecord, context) => {
+            console.error('Attendance mutation error, saving to offline queue:', err);
+            addToOfflineQueue('attendance', newRecord);
+            // We don't rollback the cache here because we want it to stay "saved" in UI
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['attendance', studentId] });
+            queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
         }
     });
 
     const addExam = useMutation({
         mutationFn: addExamRecord,
-        onSuccess: () => {
+        onMutate: async (newRecord) => {
+            await queryClient.cancelQueries({ queryKey: ['exams', studentId] });
+            const previousExams = queryClient.getQueryData(['exams', studentId]);
+            queryClient.setQueryData(['exams', studentId], (old: any) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
+            return { previousExams };
+        },
+        onError: (err, newRecord) => {
+            addToOfflineQueue('exam', newRecord);
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['exams', studentId] });
         }
     });
 
     const addFee = useMutation({
         mutationFn: addFeeRecord,
-        onSuccess: () => {
+        onMutate: async (newRecord) => {
+            await queryClient.cancelQueries({ queryKey: ['fees', studentId] });
+            const previousFees = queryClient.getQueryData(['fees', studentId]);
+            queryClient.setQueryData(['fees', studentId], (old: any) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
+            return { previousFees };
+        },
+        onError: (err, newRecord) => {
+            addToOfflineQueue('fee', newRecord);
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['fees'] });
         }
     });
@@ -105,7 +142,16 @@ export const useStudentRecords = (studentId: string) => {
 
     const addPlan = useMutation({
         mutationFn: addPlanRecord,
-        onSuccess: () => {
+        onMutate: async (newRecord) => {
+            await queryClient.cancelQueries({ queryKey: ['plans', studentId] });
+            const previousPlans = queryClient.getQueryData(['plans', studentId]);
+            queryClient.setQueryData(['plans', studentId], (old: any) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
+            return { previousPlans };
+        },
+        onError: (err, newRecord) => {
+            addToOfflineQueue('plan', newRecord);
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['plans', studentId] });
         }
     });
