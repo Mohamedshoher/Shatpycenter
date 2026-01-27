@@ -417,8 +417,13 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                             <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
 
                             <div className="flex items-center gap-1 sm:gap-1.5 bg-gray-100/50 p-1 rounded-xl border border-gray-50 shrink-0">
-                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 transition-colors" title="المالية"><CreditCard size={18} /></button>
+                                {user?.role !== 'director' && (
+                                    <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 transition-colors" title="المالية"><CreditCard size={18} /></button>
+                                )}
                                 <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'exams'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-colors" title="الاختبارات"><BookOpen size={18} /></button>
+                                {user?.role === 'teacher' && (
+                                    <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'notes'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="الملاحظات"><FileText size={18} /></button>
+                                )}
 
                                 {(user?.role === 'director' || user?.role === 'supervisor') && (
                                     <>
