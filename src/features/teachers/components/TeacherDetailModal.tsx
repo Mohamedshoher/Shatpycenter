@@ -832,32 +832,30 @@ export default function TeacherDetailModal({
                                                         setTempStatus(status?.includes('reward') ? 'reward' : (status === 'present' ? 'present' : (status === 'absent' ? 'absent' : 'discipline')));
                                                     }}
                                                     className={cn(
-                                                        "aspect-square w-full rounded-xl md:rounded-2xl border flex flex-col items-center justify-center text-xs md:text-sm font-bold transition-all relative",
+                                                        "aspect-square w-full rounded-xl md:rounded-2xl border flex flex-col items-center justify-center text-xs md:text-sm font-bold transition-all relative shadow-sm",
                                                         isToday ? "border-blue-500 ring-2 ring-blue-500/10 shadow-lg shadow-blue-500/10" : "border-gray-50",
                                                         isWeekend || isTeacher ? "bg-red-50/10 border-red-50 text-red-400 cursor-default" :
-                                                            status === 'present' && !isFuture ? "bg-emerald-400 border-emerald-500 text-white shadow-sm shadow-emerald-500/10" :
+                                                            status === 'present' && !isFuture ? "bg-green-50 border-green-100 text-green-600" :
                                                                 (status === 'quarter' || status === 'half') ? "bg-orange-50 border-orange-100 text-orange-600" :
                                                                     (status === 'quarter_reward' || status === 'half_reward') ? "bg-green-50 border-green-200 text-green-600" :
                                                                         status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
-                                                                            "bg-white text-gray-400"
+                                                                            "bg-white text-gray-400 hover:border-blue-200"
                                                     )}
                                                 >
-                                                    <span className="text-[10px] md:text-xs">{day}</span>
-                                                    {isWeekend && <span className="text-[6px] md:text-[7px] mt-1 font-black uppercase text-red-500/40">إجازة</span>}
-                                                    {(status === 'quarter' || status === 'half' || status === 'present' || status === 'quarter_reward' || status === 'half_reward') && !isFuture && !isWeekend && (
+                                                    <span className="mb-0.5">{day}</span>
+                                                    {isWeekend && <span className="text-[6px] md:text-[7px] mt-0.5 font-black uppercase text-red-500/40">إجازة</span>}
+                                                    {!isFuture && status === 'present' && !isWeekend && (
+                                                        <CheckCircle2 size={14} className="text-green-600/80" />
+                                                    )}
+                                                    {(status === 'quarter' || status === 'half' || status === 'quarter_reward' || status === 'half_reward') && !isFuture && !isWeekend && (
                                                         <div className={cn(
-                                                            "absolute bottom-1 md:bottom-2 w-1 h-1 rounded-full",
-                                                            status === 'present' ? "bg-white/60" :
-                                                                status?.includes('reward') ? "bg-green-400" : "bg-orange-400"
+                                                            "w-1 h-1 rounded-full mt-1",
+                                                            status?.includes('reward') ? "bg-green-400" : "bg-orange-400"
                                                         )} />
                                                     )}
                                                 </button>
                                                 {isToday && <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />}
-                                                {status === 'present' && !isWeekend && (
-                                                    <div className="absolute top-1 left-1">
-                                                        <CheckCircle2 size={10} className="text-white/40" />
-                                                    </div>
-                                                )}
+
 
                                                 {/* القائمة المنبثقة لتعديل حضور يوم محدد */}
                                                 <AnimatePresence>

@@ -243,6 +243,9 @@ export default function AttendanceReportPage() {
 
     // دالة لتسجيل الحضور
     const recordAttendance = async (studentId: string, status: 'present' | 'absent') => {
+        // إذا كان جارٍ التحميل حالياً لهذا الطالب، نرفض الضغطة الجديدة
+        if (attendanceLoading[studentId]) return;
+
         try {
             setAttendanceLoading(prev => ({ ...prev, [studentId]: true }));
 
@@ -259,11 +262,14 @@ export default function AttendanceReportPage() {
                 month
             });
 
+            // تحديث الحالة المحلية فوراً
             setRecordedAttendance(prev => ({ ...prev, [studentId]: status }));
 
-            // إعادة تحميل بيانات الحضور
-            queryClient.invalidateQueries({ queryKey: ['all-attendance'] });
+            // إعادة تحميل بيانات الحضور للتطبيق بالكامل
+            await queryClient.invalidateQueries({ queryKey: ['report-data'] });
+            await queryClient.invalidateQueries({ queryKey: ['all-attendance'] });
 
+            // إخفاء مؤشر النجاح بعد ثانيتين
             setTimeout(() => {
                 setRecordedAttendance(prev => {
                     const newState = { ...prev };
@@ -464,22 +470,70 @@ export default function AttendanceReportPage() {
                                     </div>
                                 </div>
 
-                                {/* السطر الثالث: نص الملحوظة مباشرة */}
-                                <div className="bg-gray-50/60 rounded-xl p-2.5 border border-gray-100 text-right group-hover:bg-blue-50/20 transition-colors relative">
-                                    {student.lastNoteDate && (
-                                        <span className="absolute left-2.5 top-2 text-[9px] text-gray-300 font-bold bg-white/50 px-1.5 py-0.5 rounded-md border border-gray-100">
-                                            {student.lastNoteDate}
-                                        </span>
-                                    )}
-                                    <p className="text-[11px] font-bold text-gray-600 leading-normal line-clamp-2 pl-12 pr-1">
-                                        {student.lastNote}
-                                    </p>
+                                {/* السطر الثالث: أزرار التحضير السريع والملحوظة */}
+                                <div className="flex items-center gap-2">
+                                    {/* أزرار التحضير */}
+                                    <div className="flex bg-gray-100 p-1 rounded-xl shrink-0">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                recordAttendance(student.id, 'present');
+                                            }}
+                                            disabled={attendanceLoading[student.id]}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1",
+                                                recordedAttendance[student.id] === 'present'
+                                                    ? "bg-green-500 text-white shadow-sm"
+                                                    : "text-gray-400 hover:text-green-600"
+                                            )}
+                                        >
+                                            {attendanceLoading[student.id] ? (
+                                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                            ) : recordedAttendance[student.id] === 'present' ? (
+                                                <Check size={12} strokeWidth={3} />
+                                            ) : null}
+                                            حاضر
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                recordAttendance(student.id, 'absent');
+                                            }}
+                                            disabled={attendanceLoading[student.id]}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1",
+                                                recordedAttendance[student.id] === 'absent'
+                                                    ? "bg-red-500 text-white shadow-sm"
+                                                    : "text-gray-400 hover:text-red-600"
+                                            )}
+                                        >
+                                            {attendanceLoading[student.id] ? (
+                                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                            ) : recordedAttendance[student.id] === 'absent' ? (
+                                                <X size={12} strokeWidth={3} />
+                                            ) : null}
+                                            غائب
+                                        </button>
+                                    </div>
+
+                                    {/* نص الملحوظة */}
+                                    <div className="bg-gray-50/60 rounded-xl p-2 border border-gray-100 text-right flex-1 group-hover:bg-blue-50/20 transition-colors relative min-h-[38px] flex items-center">
+                                        {student.lastNoteDate && (
+                                            <span className="absolute left-2 top-0.5 text-[7px] text-gray-300 font-bold">
+                                                {student.lastNoteDate}
+                                            </span>
+                                        )}
+                                        <p className="text-[10px] font-bold text-gray-500 leading-tight line-clamp-2 pr-1">
+                                            {student.lastNote}
+                                        </p>
+                                    </div>
                                 </div>
                             </motion.div>
                         ))
                     )}
                 </div>
             </main>
+
 
             {/* نافذة الرسم البياني المنبثقة */}
             <AnimatePresence>
