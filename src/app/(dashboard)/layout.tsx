@@ -29,12 +29,12 @@ export default function DashboardLayout({
     if (user?.role === 'parent') return null; // تجنب الوميض (flash) قبل التوجيه
 
     return (
-        <div className="flex min-h-screen bg-gray-50 text-right overflow-x-hidden">
+        <div className="flex min-h-screen bg-gray-50 text-right">
             <PresenceTracker />
 
             {/* منطقة السحب لفتح القائمة الجانبية على الموبيل */}
             <div
-                className="fixed top-0 right-0 bottom-0 w-4 z-[45] md:hidden"
+                className="fixed top-0 right-0 bottom-0 w-4 z-[130] md:hidden"
                 onTouchStart={(e) => {
                     const touch = e.touches[0];
                     const startX = touch.clientX;
@@ -54,8 +54,8 @@ export default function DashboardLayout({
 
             <Sidebar />
 
-            <div className="flex-1 flex flex-col md:mr-64 transition-all duration-300 relative">
-                <main className="flex-1">
+            <div className="flex-1 md:mr-64 transition-all duration-300">
+                <main className="p-0">
                     {children}
                 </main>
             </div>

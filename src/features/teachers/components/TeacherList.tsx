@@ -112,133 +112,134 @@ export default function TeacherList() {
     }
 
     return (
-        <div className="space-y-6 pb-24 p-4 md:p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between pt-2 gap-4">
-                <div className="flex items-center gap-2">
-                    {user?.role !== 'teacher' && (
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="w-12 h-12 bg-blue-600 rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-all shrink-0 cursor-pointer relative z-[100]"
-                            title="إضافة معلم جديد"
-                        >
-                            <UserPlus size={22} className="pointer-events-none" />
-                        </button>
-                    )}
-                    <button onClick={toggleSidebar} className="md:hidden w-12 h-12 bg-white rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0">
-                        <Menu size={22} />
-                    </button>
-                </div>
-
-                {!isSearchOpen && (
-                    <h1 className="text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2">
-                        {user?.role === 'teacher' ? 'بياناتي الشخصية' : `المعلمون (${filteredTeachers?.length || 0})`}
-                    </h1>
-                )}
-
-                {user?.role !== 'teacher' && (
-                    <div className={cn("flex items-center gap-2 transition-all duration-300", isSearchOpen ? "flex-1" : "")}>
-                        {isSearchOpen ? (
-                            <div className="relative flex-1 animate-in slide-in-from-right-4 duration-300">
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    placeholder="ابحث باسم المعلم..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full h-12 bg-gray-50 border border-blue-100 rounded-[20px] px-10 text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
-                                />
-                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
-                                <button onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
-                                    <X size={18} />
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 relative">
-                                <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-gray-50 rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95">
-                                    <Search size={22} />
-                                </button>
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                        className={cn(
-                                            "w-12 h-12 rounded-[20px] border flex items-center justify-center transition-all active:scale-95",
-                                            isFilterOpen || filter !== 'الكل' || sectionFilter !== 'الكل'
-                                                ? "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-500/20"
-                                                : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
-                                        )}
-                                    >
-                                        <SlidersHorizontal size={22} />
-                                    </button>
-
-                                    {/* Filter Menu */}
-                                    {isFilterOpen && (
-                                        <div className="absolute top-14 left-0 w-64 bg-white rounded-[28px] shadow-2xl border border-gray-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-left">
-                                            <div className="space-y-4">
-                                                {/* Status Filter */}
-                                                <div className="space-y-2">
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase text-right mr-1">الحالة</p>
-                                                    <div className="flex flex-wrap gap-2 justify-end">
-                                                        {['الكل', 'نشط', 'غير نشط'].map((f) => (
-                                                            <button
-                                                                key={f}
-                                                                onClick={() => setFilter(f)}
-                                                                className={cn(
-                                                                    "px-3 py-1.5 rounded-full text-xs font-bold transition-all",
-                                                                    filter === f
-                                                                        ? "bg-blue-600 text-white"
-                                                                        : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                                                                )}
-                                                            >
-                                                                {f}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Section Filter */}
-                                                <div className="space-y-2 border-t border-gray-50 pt-3">
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase text-right mr-1">القسم</p>
-                                                    <div className="flex flex-wrap gap-2 justify-end">
-                                                        {['الكل', 'قرآن', 'نور بيان', 'تلقين', 'إقراء'].map((s) => (
-                                                            <button
-                                                                key={s}
-                                                                onClick={() => setSectionFilter(s)}
-                                                                className={cn(
-                                                                    "px-3 py-1.5 rounded-full text-xs font-bold transition-all",
-                                                                    sectionFilter === s
-                                                                        ? "bg-teal-600 text-white"
-                                                                        : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                                                                )}
-                                                            >
-                                                                {s}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    onClick={() => {
-                                                        setFilter('الكل');
-                                                        setSectionFilter('الكل');
-                                                        setIsFilterOpen(false);
-                                                    }}
-                                                    className="w-full py-2 text-[10px] font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                                >
-                                                    إعادة تعيين الفلاتر
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+        <div className="pb-24 transition-all duration-500">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
+                <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
+                    <div className="flex items-center gap-2 relative z-50">
+                        {user?.role !== 'teacher' && (
+                            <button
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-600 rounded-[18px] sm:rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-all shrink-0 cursor-pointer"
+                                title="إضافة معلم جديد"
+                            >
+                                <UserPlus size={22} className="pointer-events-none" />
+                            </button>
                         )}
+                        <button onClick={toggleSidebar} className="md:hidden w-11 h-11 bg-white rounded-[18px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0">
+                            <Menu size={22} />
+                        </button>
                     </div>
-                )}
+
+                    {!isSearchOpen && (
+                        <h1 className="text-lg sm:text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
+                            {user?.role === 'teacher' ? 'بياناتي الشخصية' : <>المعلمون <span className="text-blue-500 font-black">({filteredTeachers?.length || 0})</span></>}
+                        </h1>
+                    )}
+
+                    {user?.role !== 'teacher' && (
+                        <div className={cn("flex items-center gap-2 transition-all duration-300", isSearchOpen ? "flex-1" : "")}>
+                            {isSearchOpen ? (
+                                <div className="relative flex-1 animate-in slide-in-from-right-4 duration-300">
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        placeholder="ابحث باسم المعلم..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full h-11 sm:h-12 bg-gray-50 border border-blue-100 rounded-[18px] sm:rounded-[20px] px-10 text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                                    />
+                                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
+                                    <button
+                                        onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
+                                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setIsSearchOpen(true)}
+                                        className="w-11 h-11 sm:w-12 sm:h-12 bg-gray-50 rounded-[18px] sm:rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
+                                    >
+                                        <Search size={22} />
+                                    </button>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                            className={cn(
+                                                "w-11 h-11 sm:w-12 sm:h-12 rounded-[18px] sm:rounded-[20px] border flex items-center justify-center transition-all active:scale-95",
+                                                isFilterOpen || filter !== 'الكل' || sectionFilter !== 'الكل'
+                                                    ? "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-500/20"
+                                                    : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
+                                            )}
+                                        >
+                                            <SlidersHorizontal size={22} />
+                                        </button>
+
+                                        {isFilterOpen && (
+                                            <div className="absolute top-[115%] left-0 w-64 bg-white rounded-[28px] shadow-2xl border border-gray-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-left">
+                                                <div className="space-y-4">
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase text-right mr-1">الحالة</p>
+                                                        <div className="flex flex-wrap gap-2 justify-end">
+                                                            {['الكل', 'نشط', 'غير نشط'].map((f) => (
+                                                                <button
+                                                                    key={f}
+                                                                    onClick={() => setFilter(f)}
+                                                                    className={cn(
+                                                                        "px-3 py-1.5 rounded-full text-xs font-bold transition-all",
+                                                                        filter === f ? "bg-blue-600 text-white" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                                                    )}
+                                                                >
+                                                                    {f}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-2 border-t border-gray-50 pt-3">
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase text-right mr-1">القسم</p>
+                                                        <div className="flex flex-wrap gap-2 justify-end">
+                                                            {['الكل', 'قرآن', 'نور بيان', 'تلقين', 'إقراء'].map((s) => (
+                                                                <button
+                                                                    key={s}
+                                                                    onClick={() => setSectionFilter(s)}
+                                                                    className={cn(
+                                                                        "px-3 py-1.5 rounded-full text-xs font-bold transition-all",
+                                                                        sectionFilter === s ? "bg-teal-600 text-white" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                                                    )}
+                                                                >
+                                                                    {s}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            setFilter('الكل');
+                                                            setSectionFilter('الكل');
+                                                            setIsFilterOpen(false);
+                                                        }}
+                                                        className="w-full py-2 text-[10px] font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                    >
+                                                        إعادة تعيين الفلاتر
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Teacher Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 mt-2 max-w-7xl mx-auto">
                 {filteredTeachers?.map((teacher) => (
                     <div
                         key={teacher.id}

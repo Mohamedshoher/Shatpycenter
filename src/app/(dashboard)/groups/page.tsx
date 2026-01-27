@@ -48,6 +48,7 @@ export default function GroupsPage() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isManageModalOpen, setIsManageModalOpen] = useState(false);
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+    const { toggleSidebar } = useUIStore();
     const { user } = useAuthStore();
 
     // تحسين بيانات المجموعات بإضافة اسم المعلم وعدد الطلاب ولون
@@ -87,122 +88,121 @@ export default function GroupsPage() {
     }).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
 
     return (
-        <div className="min-h-screen bg-[#f8faff] pb-32">
-            <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 text-right">
-                {/* Header Section */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="w-full sm:w-auto order-2 sm:order-1">
-                        <AnimatePresence mode="wait">
-                            {isSearchOpen ? (
-                                <motion.div
-                                    key="search"
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    className="relative"
+        <div className="pb-32 transition-all duration-500">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
+                <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
+                    <div className="flex items-center gap-2 relative z-50">
+                        {user?.role !== 'teacher' && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setIsAddModalOpen(true)}
+                                    className="w-11 h-11 sm:w-12 sm:h-12 bg-purple-600 text-white rounded-[18px] sm:rounded-[20px] flex items-center justify-center hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20"
+                                    title="إضافة مجموعة"
                                 >
-                                    <input
-                                        autoFocus
-                                        type="text"
-                                        placeholder="بحث باسم المجموعة..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full sm:w-80 h-12 bg-white border border-purple-100 rounded-2xl px-10 text-right font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500/10 transition-all shadow-sm"
-                                    />
-                                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-500" size={18} />
-                                    <button
-                                        onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
-                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
-                                    >
-                                        <X size={18} />
-                                    </button>
-                                </motion.div>
-                            ) : (
-                                <motion.div
-                                    key="header-actions"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="flex items-center gap-3"
+                                    <Plus size={22} />
+                                </button>
+                                <button
+                                    onClick={() => setIsManageModalOpen(true)}
+                                    className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-[18px] sm:rounded-[20px] flex items-center justify-center hover:bg-blue-100 transition-all border border-blue-100/50"
+                                    title="تعديل المجموعات"
                                 >
-                                    <button
-                                        onClick={() => setIsSearchOpen(true)}
-                                        className="w-12 h-12 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 hover:text-purple-600 hover:border-purple-100 transition-all shadow-sm"
-                                    >
-                                        <Search size={22} />
-                                    </button>
-
-                                    {user?.role !== 'teacher' && (
-                                        <>
-                                            {/* Filter Dropdown */}
-                                            <div className="relative">
-                                                <button
-                                                    onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                                                    className={cn(
-                                                        "h-12 px-7 bg-white border border-gray-100 rounded-2xl flex items-center gap-4 text-gray-600 font-bold transition-all shadow-sm min-w-[150px]",
-                                                        isFilterDropdownOpen ? "border-purple-500 ring-2 ring-purple-500/10" : "hover:border-purple-200"
-                                                    )}
-                                                >
-                                                    <Filter size={18} className="text-purple-500 shrink-0" />
-                                                    <span className="text-sm flex-1 text-center">{filter}</span>
-                                                    <ChevronDown size={16} className={cn("transition-transform duration-300 shrink-0", isFilterDropdownOpen && "rotate-180")} />
-                                                </button>
-
-                                                <AnimatePresence>
-                                                    {isFilterDropdownOpen && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                            className="absolute top-14 left-0 sm:right-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1"
-                                                        >
-                                                            {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
-                                                                <button
-                                                                    key={type}
-                                                                    onClick={() => {
-                                                                        setFilter(type);
-                                                                        setIsFilterDropdownOpen(false);
-                                                                    }}
-                                                                    className={cn(
-                                                                        "w-full px-5 py-3 text-right text-sm font-bold transition-all flex items-center justify-between",
-                                                                        filter === type ? "bg-purple-50 text-purple-600" : "text-gray-600 hover:bg-gray-50"
-                                                                    )}
-                                                                >
-                                                                    {type}
-                                                                    {filter === type && <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
-                                                                </button>
-                                                            ))}
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => setIsManageModalOpen(true)}
-                                                    className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center hover:bg-blue-100 transition-all border border-blue-100/50"
-                                                    title="تعديل المجموعات"
-                                                >
-                                                    <Settings2 size={22} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setIsAddModalOpen(true)}
-                                                    className="w-12 h-12 bg-purple-600 text-white rounded-2xl flex items-center justify-center hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20"
-                                                    title="إضافة مجموعة"
-                                                >
-                                                    <Plus size={22} />
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                    <Settings2 size={22} />
+                                </button>
+                            </div>
+                        )}
+                        <button
+                            onClick={toggleSidebar}
+                            className="md:hidden w-11 h-11 bg-white rounded-[18px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
+                        >
+                            <Menu size={22} />
+                        </button>
                     </div>
 
-                    <h1 className="text-2xl md:text-3xl font-black text-[#1e293b] order-1 sm:order-2">
-                        المجموعات <span className="text-purple-600 text-lg md:text-xl">({filteredGroups?.length || 0})</span>
-                    </h1>
+                    {!isSearchOpen && (
+                        <h1 className="text-lg sm:text-xl font-black text-[#1e293b] absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
+                            المجموعات <span className="text-purple-600 font-black">({filteredGroups?.length || 0})</span>
+                        </h1>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                        {isSearchOpen ? (
+                            <div className="relative flex-1 min-w-[200px] sm:min-w-[300px] animate-in slide-in-from-right-4 duration-300">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="بحث باسم المجموعة..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full h-11 sm:h-12 bg-white border border-purple-100 rounded-[18px] sm:rounded-[20px] px-10 text-right font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500/10 transition-all shadow-sm"
+                                />
+                                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-purple-500" size={18} />
+                                <button
+                                    onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
+                                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setIsSearchOpen(true)}
+                                    className="w-11 h-11 sm:w-12 sm:h-12 bg-white border border-gray-100 rounded-[18px] sm:rounded-[20px] flex items-center justify-center text-gray-400 hover:text-purple-600 hover:border-purple-100 transition-all shadow-sm"
+                                >
+                                    <Search size={22} />
+                                </button>
+
+                                {user?.role !== 'teacher' && (
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                                            className={cn(
+                                                "h-11 sm:h-12 px-3 sm:px-6 bg-white border border-gray-100 rounded-[18px] sm:rounded-[20px] flex items-center gap-2 text-gray-600 font-bold transition-all shadow-sm",
+                                                isFilterDropdownOpen ? "border-purple-500 ring-2 ring-purple-500/10" : "hover:border-purple-200"
+                                            )}
+                                        >
+                                            <Filter size={18} className="text-purple-500 shrink-0" />
+                                            <span className="text-xs sm:text-sm hidden sm:inline">{filter}</span>
+                                            <ChevronDown size={14} className={cn("transition-transform duration-300 shrink-0", isFilterDropdownOpen && "rotate-180")} />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {isFilterDropdownOpen && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    className="absolute top-[115%] left-0 w-40 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1"
+                                                >
+                                                    {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
+                                                        <button
+                                                            key={type}
+                                                            onClick={() => {
+                                                                setFilter(type);
+                                                                setIsFilterDropdownOpen(false);
+                                                            }}
+                                                            className={cn(
+                                                                "w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
+                                                                filter === type ? "bg-purple-50 text-purple-600" : "text-gray-600 hover:bg-gray-50"
+                                                            )}
+                                                        >
+                                                            {type}
+                                                            {filter === type && <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
+                                                        </button>
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 mt-2">
 
                 {/* Main Dynamic Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

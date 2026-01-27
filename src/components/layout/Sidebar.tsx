@@ -169,7 +169,7 @@ export default function Sidebar() {
                     if (info.offset.x < -100) setSidebarOpen(true);
                 }}
                 className={cn(
-                    "fixed top-0 right-0 z-[60] h-screen w-64 bg-white border-l border-gray-100 shadow-xl transition-transform duration-300 md:translate-x-0",
+                    "fixed top-0 right-0 z-[120] h-screen w-64 bg-white border-l border-gray-100 shadow-xl transition-transform duration-300 md:translate-x-0",
                     !isSidebarOpen && "translate-x-full"
                 )}
             >

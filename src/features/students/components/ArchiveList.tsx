@@ -134,110 +134,111 @@ export default function ArchiveList() {
     }
 
     return (
-        <div className="space-y-6 pb-24 p-4 md:p-6 text-right">
-            {/* رأس الصفحة */}
-            <div className="flex items-center justify-between pt-2 gap-4">
-                <div className="flex items-center gap-2">
-                    <Link
-                        href="/students"
-                        className="w-12 h-12 bg-blue-50 rounded-[20px] border border-blue-100 flex items-center justify-center text-blue-600 hover:bg-blue-100 active:scale-95 transition-all shrink-0"
-                        title="قائمة الطلاب الحاليين"
-                    >
-                        <User size={22} />
-                    </Link>
-                    <button
-                        onClick={toggleSidebar}
-                        className="md:hidden w-12 h-12 bg-white rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
-                    >
-                        <Menu size={22} />
-                    </button>
-                </div>
+        <div className="pb-24 transition-all duration-500">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
+                <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
+                    <div className="flex items-center gap-2 relative z-50">
+                        <Link
+                            href="/students"
+                            className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-50 rounded-[18px] sm:rounded-[20px] border border-blue-100 flex items-center justify-center text-blue-600 hover:bg-blue-100 active:scale-95 transition-all shrink-0"
+                            title="قائمة الطلاب الحاليين"
+                        >
+                            <User size={22} />
+                        </Link>
+                        <button
+                            onClick={toggleSidebar}
+                            className="md:hidden w-11 h-11 bg-white rounded-[18px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
+                        >
+                            <Menu size={22} />
+                        </button>
+                    </div>
 
-                {!isSearchOpen && (
-                    <h1 className="text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2">
-                        أرشيف الطلاب ({archivedStudents?.length || 0})
-                    </h1>
-                )}
-
-                <div className={cn("flex items-center gap-2 transition-all duration-300", isSearchOpen ? "flex-1" : "")}>
-                    {isSearchOpen ? (
-                        <div className="relative flex-1 animate-in slide-in-from-right-4 duration-300">
-                            <input
-                                autoFocus
-                                type="text"
-                                placeholder="ابحث في الأرشيف..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full h-12 bg-gray-50 border border-blue-100 rounded-[20px] px-10 text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
-                            />
-                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
-                            <button
-                                onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setIsSearchOpen(true)}
-                                className="w-12 h-12 bg-gray-50 rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
-                            >
-                                <Search size={22} />
-                            </button>
-                            <div className="relative">
-                                {isFilterOpen && (
-                                    <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
-                                )}
-                                <button
-                                    onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                    className={cn(
-                                        "w-12 h-12 rounded-[20px] border flex items-center justify-center transition-all active:scale-95 relative z-50",
-                                        isFilterOpen || filter !== 'الكل' ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
-                                    )}
-                                >
-                                    <SlidersHorizontal size={22} />
-                                </button>
-                                {isFilterOpen && (
-                                    <div className="absolute top-[110%] left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[180px] animate-in fade-in zoom-in-95 duration-200">
-                                        <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-50 mb-1">الحالة العامة</div>
-                                        <button
-                                            onClick={() => { setFilter('الكل'); setIsFilterOpen(false); }}
-                                            className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1", filter === 'الكل' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
-                                        >
-                                            الكل
-                                        </button>
-                                        <button
-                                            onClick={() => { setFilter('indebted'); setIsFilterOpen(false); }}
-                                            className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between", filter === 'indebted' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50")}
-                                        >
-                                            المدينين فقط
-                                            <AlertCircle size={14} className={filter === 'indebted' ? "opacity-100" : "opacity-40"} />
-                                        </button>
-
-                                        <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider border-y border-gray-50 my-1">المجموعات</div>
-                                        <div className="max-h-48 overflow-y-auto pr-1">
-                                            {groups?.map((group) => (
-                                                <button
-                                                    key={group.id}
-                                                    onClick={() => { setFilter(group.id); setIsFilterOpen(false); }}
-                                                    className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors", filter === group.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
-                                                >
-                                                    {group.name}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                    {!isSearchOpen && (
+                        <h1 className="text-lg sm:text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
+                            أرشيف الطلاب <span className="text-blue-500 font-black">({archivedStudents?.length || 0})</span>
+                        </h1>
                     )}
+
+                    <div className={cn("flex items-center gap-2 transition-all duration-300", isSearchOpen ? "flex-1" : "")}>
+                        {isSearchOpen ? (
+                            <div className="relative flex-1 animate-in slide-in-from-right-4 duration-300">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="ابحث في الأرشيف..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full h-11 sm:h-12 bg-gray-50 border border-blue-100 rounded-[18px] sm:rounded-[20px] px-10 text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                                />
+                                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
+                                <button
+                                    onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
+                                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setIsSearchOpen(true)}
+                                    className="w-11 h-11 sm:w-12 sm:h-12 bg-gray-50 rounded-[18px] sm:rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
+                                >
+                                    <Search size={22} />
+                                </button>
+                                <div className="relative">
+                                    {isFilterOpen && (
+                                        <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
+                                    )}
+                                    <button
+                                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                        className={cn(
+                                            "w-11 h-11 sm:w-12 sm:h-12 rounded-[18px] sm:rounded-[20px] border flex items-center justify-center transition-all active:scale-95 relative z-50",
+                                            isFilterOpen || filter !== 'الكل' ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
+                                        )}
+                                    >
+                                        <SlidersHorizontal size={22} />
+                                    </button>
+                                    {isFilterOpen && (
+                                        <div className="absolute top-[115%] left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[170px] animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-50 mb-1">الحالة العامة</div>
+                                            <button
+                                                onClick={() => { setFilter('الكل'); setIsFilterOpen(false); }}
+                                                className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1", filter === 'الكل' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
+                                            >
+                                                الكل
+                                            </button>
+                                            <button
+                                                onClick={() => { setFilter('indebted'); setIsFilterOpen(false); }}
+                                                className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between", filter === 'indebted' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50")}
+                                            >
+                                                المدينين فقط
+                                                <AlertCircle size={14} className={filter === 'indebted' ? "opacity-100" : "opacity-40"} />
+                                            </button>
+
+                                            <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider border-y border-gray-50 my-1">المجموعات</div>
+                                            <div className="max-h-48 overflow-y-auto pr-1">
+                                                {groups?.map((group) => (
+                                                    <button
+                                                        key={group.id}
+                                                        onClick={() => { setFilter(group.id); setIsFilterOpen(false); }}
+                                                        className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors", filter === group.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
+                                                    >
+                                                        {group.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* شبكة الطلاب */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-3 sm:px-6 mt-4">
                 {archivedStudents?.length === 0 ? (
                     <div className="col-span-full py-20 text-center space-y-3">
                         <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mx-auto">

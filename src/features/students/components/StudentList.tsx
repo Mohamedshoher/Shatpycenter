@@ -202,14 +202,14 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     }
 
     return (
-        <div className="space-y-4 md:space-y-6 pb-24 p-3 md:p-6 transition-all duration-500">
+        <div className="pb-24 transition-all duration-500">
             {/* Sticky Header */}
-            <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl -mx-3 px-3 py-4 border-b border-gray-100 mb-2 shadow-sm">
-                <div className="relative flex items-center justify-between gap-4">
+            <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
+                <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
                     <div className="relative z-50 flex items-center gap-2">
                         <button
                             onClick={() => setIsAddModalOpen(true)}
-                            className="w-12 h-12 bg-blue-600 rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-transform shrink-0"
+                            className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-600 rounded-[18px] sm:rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-transform shrink-0"
                             title="إضافة طالب جديد"
                         >
                             <UserPlus size={22} />
@@ -217,15 +217,15 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
 
                         <button
                             onClick={toggleSidebar}
-                            className="md:hidden w-12 h-12 bg-white rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
+                            className="md:hidden w-11 h-11 bg-white rounded-[18px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
                         >
                             <Menu size={22} />
                         </button>
                     </div>
 
                     {!isSearchOpen && (
-                        <h1 className="text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
-                            {customTitle || 'الطلاب'} ({filteredStudents?.length || 0})
+                        <h1 className="text-lg sm:text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
+                            {customTitle || 'الطلاب'} <span className="text-blue-500 font-black">({filteredStudents?.length || 0})</span>
                         </h1>
                     )}
 
@@ -241,12 +241,12 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     placeholder="ابحث باسم الطالب..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full h-12 bg-gray-50 border border-blue-100 rounded-[20px] px-10 text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                                    className="w-full h-11 sm:h-12 bg-gray-50 border border-blue-100 rounded-[18px] sm:rounded-[20px] px-10 text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
                                 />
-                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
+                                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
                                 <button
                                     onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
                                 >
                                     <X size={18} />
                                 </button>
@@ -255,7 +255,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setIsSearchOpen(true)}
-                                    className="w-12 h-12 bg-gray-50 rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
+                                    className="w-11 h-11 sm:w-12 sm:h-12 bg-gray-50 rounded-[18px] sm:rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
                                 >
                                     <Search size={22} />
                                 </button>
@@ -267,7 +267,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                         <button
                                             onClick={() => setIsFilterOpen(!isFilterOpen)}
                                             className={cn(
-                                                "w-12 h-12 rounded-[20px] border flex items-center justify-center transition-all active:scale-95 relative z-50",
+                                                "w-11 h-11 sm:w-12 sm:h-12 rounded-[18px] sm:rounded-[20px] border flex items-center justify-center transition-all active:scale-95 relative z-50",
                                                 isFilterOpen || filter !== 'الكل' ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
                                             )}
                                         >
@@ -275,11 +275,11 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                         </button>
 
                                         {isFilterOpen && (
-                                            <div className="absolute top-[110%] left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[150px] animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="absolute top-[115%] left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[160px] animate-in fade-in zoom-in-95 duration-200">
                                                 <button
                                                     onClick={() => { setFilter('الكل'); setIsFilterOpen(false); }}
                                                     className={cn(
-                                                        "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
                                                         filter === 'الكل' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
                                                     )}
                                                 >
@@ -290,7 +290,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                         key={group.id}
                                                         onClick={() => { setFilter(group.id); setIsFilterOpen(false); }}
                                                         className={cn(
-                                                            "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors",
+                                                            "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors",
                                                             filter === group.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
                                                         )}
                                                     >
@@ -307,7 +307,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-3 sm:px-6 mt-4">
                 {filteredStudents?.map((student, index) => (
                     <div
                         key={student.id}
@@ -324,8 +324,13 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                         {index + 1}
                                     </span>
                                 </div>
-                                <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 overflow-hidden">
-                                    <h3 className="font-bold text-gray-900 text-sm sm:text-base md:text-lg leading-tight truncate whitespace-nowrap">
+                                <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
+                                    <h3 className={cn(
+                                        "font-bold text-gray-900 leading-tight truncate whitespace-nowrap transition-all",
+                                        student.fullName.length > 25 ? "text-sm sm:text-base" :
+                                            student.fullName.length > 18 ? "text-base sm:text-lg" :
+                                                "text-xl sm:text-2xl"
+                                    )}>
                                         {student.fullName}
                                     </h3>
                                     <span className="text-[10px] sm:text-xs text-gray-400 font-medium shrink-0">
