@@ -284,40 +284,39 @@ export default function AttendanceReportPage() {
             {/* Sticky Header */}
             <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl border-b border-gray-100 shadow-sm px-4 py-2">
                 <div className="max-w-5xl mx-auto">
-                    {/* السطر الأول: التواريخ والإحصائيات */}
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex bg-gray-200/50 p-1 rounded-[14px] shrink-0">
-                            {['before', 'yesterday', 'today'].map((mode) => (
-                                <button
-                                    key={mode}
-                                    onClick={() => setSelectedDateMode(mode as any)}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-[10px] text-[10px] font-black transition-all",
-                                        selectedDateMode === mode ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                                    )}
-                                >
-                                    {mode === 'today' ? 'اليوم' : mode === 'yesterday' ? 'أمس' : 'أول أمس'}
-                                </button>
-                            ))}
+                    <div className="flex items-center justify-between w-full">
+                        <div className="relative shrink-0">
+                            <select
+                                value={selectedDateMode}
+                                onChange={(e) => setSelectedDateMode(e.target.value as any)}
+                                className="appearance-none bg-white border border-gray-100 pl-8 pr-3 py-1.5 rounded-[12px] text-[10px] font-black text-gray-600 focus:outline-none shadow-sm cursor-pointer min-w-[90px]"
+                            >
+                                <option value="today">اليوم</option>
+                                <option value="yesterday">أمس</option>
+                                <option value="before">أول أمس</option>
+                            </select>
+                            <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <div className="bg-green-50/50 border border-green-100 rounded-[14px] py-1.5 px-3 flex items-center gap-2">
-                                <span className="text-[10px] font-black text-green-700">حاضر</span>
-                                <span className="text-xl font-black text-green-600 font-sans">{dailyStats.present}</span>
+                        <div className="flex-1" /> {/* مسافة فاصلة */}
+
+                        <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                            <div className="bg-green-50/50 border border-green-100 rounded-[12px] py-1 px-2.5 flex items-center gap-1.5">
+                                <span className="text-[9px] font-black text-green-700">حاضر</span>
+                                <span className="text-lg font-black text-green-600 font-sans leading-none">{dailyStats.present}</span>
                             </div>
                             <button
                                 onClick={() => setShowChart(!showChart)}
                                 className={cn(
-                                    "border rounded-[14px] py-1.5 px-3 flex items-center gap-2 transition-all active:scale-95 shadow-sm",
+                                    "border rounded-[12px] py-1 px-2.5 flex items-center gap-1.5 transition-all active:scale-95 shadow-sm",
                                     showChart ? "bg-red-500 border-red-600 text-white" : "bg-red-50/50 border-red-100 text-red-700"
                                 )}
                             >
                                 <div className="flex flex-col items-end">
-                                    <span className={cn("text-[9px] font-black leading-tight", showChart ? "text-red-100" : "text-red-700")}>غائب</span>
-                                    <span className={cn("text-xl font-black font-sans leading-none", showChart ? "text-white" : "text-red-500")}>{dailyStats.absent}</span>
+                                    <span className={cn("text-[8px] font-black leading-tight", showChart ? "text-red-100" : "text-red-700")}>غائب</span>
+                                    <span className={cn("text-lg font-black font-sans leading-none", showChart ? "text-white" : "text-red-500")}>{dailyStats.absent}</span>
                                 </div>
-                                <BarChart2 size={20} className={showChart ? "text-white" : "text-red-400"} />
+                                <BarChart2 size={16} className={showChart ? "text-white" : "text-red-400"} />
                             </button>
                         </div>
                     </div>
@@ -326,150 +325,53 @@ export default function AttendanceReportPage() {
 
             <main className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
                 {/* السطر الثاني: الفلاتر والعدد الإجمالي (أصبح الآن جزءاً من محتوى الصفحة) */}
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                <div className="flex items-center gap-1.5 pb-1">
                     {/* اختيار المجموعة */}
-                    <div className="relative shrink-0">
+                    <div className="relative shrink min-w-0">
                         <select
                             value={selectedGroupId}
                             onChange={(e) => setSelectedGroupId(e.target.value)}
-                            className="appearance-none bg-white border border-gray-100 px-8 py-2.5 pr-3 rounded-[16px] text-xs font-bold text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 min-w-[130px] shadow-sm cursor-pointer"
+                            className="appearance-none bg-white border border-gray-100 px-6 py-2.5 pr-2 rounded-[16px] text-[10px] font-black text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 w-full truncate shadow-sm cursor-pointer"
                         >
-                            <option value="all">كل المجموعات</option>
+                            <option value="all">الكل</option>
                             {filteredGroupsList?.map(g => (
                                 <option key={g.id} value={g.id}>{g.name}</option>
                             ))}
                         </select>
-                        <ChevronDown size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <ChevronDown size={12} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
 
                     {/* غياب متصل */}
-                    <div className="relative flex items-center bg-white border border-gray-100 px-2 py-1 rounded-[16px] gap-1.5 shadow-sm shrink-0">
+                    <div className="relative flex items-center bg-gray-100/50 rounded-[16px] p-0.5 border border-gray-100 shadow-sm shrink-0">
                         <input
                             type="number"
                             min="0"
                             placeholder="0"
                             value={continuousAbsenceLimit}
                             onChange={(e) => setContinuousAbsenceLimit(e.target.value.replace(/\D/g, ''))}
-                            className="w-9 h-8 bg-gray-50 rounded-[10px] text-center font-black text-blue-600 focus:outline-none border-none text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-8 h-8 bg-white rounded-[12px] text-center font-black text-blue-600 focus:outline-none border-none text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm"
                         />
-                        <span className="text-[10px] font-black text-gray-400 whitespace-nowrap ml-1">متصل</span>
+                        <span className="text-[8px] font-black text-blue-800/60 px-1.5 uppercase">متصل</span>
                     </div>
 
                     {/* غياب كلي */}
-                    <div className="relative flex items-center bg-white border border-gray-100 px-2 py-1 rounded-[16px] gap-1.5 shadow-sm shrink-0">
+                    <div className="relative flex items-center bg-gray-100/50 rounded-[16px] p-0.5 border border-gray-100 shadow-sm shrink-0">
                         <input
                             type="number"
                             min="0"
                             placeholder="0"
                             value={totalAbsenceLimit}
                             onChange={(e) => setTotalAbsenceLimit(e.target.value.replace(/\D/g, ''))}
-                            className="w-9 h-8 bg-gray-50 rounded-[10px] text-center font-black text-amber-600 focus:outline-none border-none text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-8 h-8 bg-white rounded-[12px] text-center font-black text-amber-600 focus:outline-none border-none text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm"
                         />
-                        <span className="text-[10px] font-black text-gray-400 whitespace-nowrap ml-1">فأكثر</span>
+                        <span className="text-[8px] font-black text-amber-800/60 px-1.5 uppercase">فأكثر</span>
                     </div>
 
-                    {/* المساحة الفاصلة والعدد */}
-                    <div className="flex-1" />
-                    <div className="w-11 h-11 bg-white border border-blue-100 rounded-[16px] flex items-center justify-center shadow-sm shrink-0">
-                        <span className="text-lg font-black text-blue-600 font-sans">{filteredStudents.length}</span>
+                    {/* العدد الإجمالي */}
+                    <div className="w-9 h-9 bg-blue-600 rounded-[16px] flex items-center justify-center shadow-lg shadow-blue-200 shrink-0 mr-auto">
+                        <span className="text-sm font-black text-white font-sans">{filteredStudents.length}</span>
                     </div>
                 </div>
-
-                {/* نافذة الرسم البياني المنبثقة */}
-                <AnimatePresence>
-                    {showChart && absentsByGroup.length > 0 && (
-                        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setShowChart(false)}
-                                className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm"
-                            />
-                            <motion.div
-                                initial={{ scale: 0.95, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.95, opacity: 0 }}
-                                className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl relative z-10 overflow-hidden border border-white mx-auto"
-                            >
-                                {/* Header */}
-                                <div className="bg-red-500 p-6 flex items-center justify-between text-white">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                                            <BarChart2 size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-black text-xl">توزيع الغياب</h3>
-                                            <p className="text-red-100 text-[10px] font-bold">بناءً على المجموعات لـ {getDateStr(selectedDateMode)}</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowChart(false)}
-                                        className="w-10 h-10 bg-black/10 rounded-full flex items-center justify-center hover:bg-black/20 transition-all active:scale-90"
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                </div>
-
-                                {/* Content */}
-                                <div className="p-6 space-y-6">
-                                    <div className="h-[250px] w-full" dir="ltr">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={absentsByGroup} layout="vertical" margin={{ left: 10, right: 30, top: 0, bottom: 0 }}>
-                                                <XAxis type="number" hide />
-                                                <YAxis
-                                                    dataKey="name"
-                                                    type="category"
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    width={90}
-                                                    tick={{ fontSize: 10, fontWeight: 'bold', fill: '#64748b' }}
-                                                />
-                                                <Tooltip
-                                                    cursor={{ fill: 'transparent' }}
-                                                    content={({ active, payload }) => {
-                                                        if (active && payload && payload.length) {
-                                                            return (
-                                                                <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-xl">
-                                                                    {payload[0].value} طالب غائب
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    }}
-                                                />
-                                                <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={24}>
-                                                    {absentsByGroup.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} />
-                                                    ))}
-                                                    <LabelList dataKey="count" position="right" style={{ fontSize: 12, fontWeight: '900', fill: '#ef4444' }} />
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {absentsByGroup.slice(0, 4).map((item, idx) => (
-                                            <div key={idx} className="bg-red-50/30 rounded-2xl p-3 border border-red-100/30 flex items-center justify-between">
-                                                <span className="text-[10px] font-black text-gray-500 truncate ml-2">{item.name}</span>
-                                                <span className="w-7 h-7 bg-red-500 text-white rounded-lg flex items-center justify-center text-[11px] font-black">{item.count}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="p-4 bg-gray-50/50 border-t border-gray-100 flex justify-center">
-                                    <Button
-                                        onClick={() => setShowChart(false)}
-                                        className="bg-gray-900 text-white hover:bg-black px-12 rounded-2xl font-black h-12 shadow-lg shadow-gray-200"
-                                    >
-                                        فهمت
-                                    </Button>
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
 
 
 
@@ -682,6 +584,6 @@ export default function AttendanceReportPage() {
                 onClose={() => setSelectedStudentForModal(null)}
                 initialTab="notes"
             />
-        </div>
+        </div >
     );
 }
