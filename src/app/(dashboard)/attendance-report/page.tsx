@@ -480,52 +480,8 @@ export default function AttendanceReportPage() {
                                     </div>
                                 </div>
 
-                                {/* السطر الثالث: أزرار التحضير السريع والملحوظة */}
+                                {/* السطر الثالث: الملحوظة */}
                                 <div className="flex items-center gap-2">
-                                    {/* أزرار التحضير */}
-                                    <div className="flex bg-gray-100 p-1 rounded-xl shrink-0">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                recordAttendance(student.id, 'present');
-                                            }}
-                                            disabled={attendanceLoading[student.id]}
-                                            className={cn(
-                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1",
-                                                (recordedAttendance[student.id] === 'present' || student.currentStatus === 'present')
-                                                    ? "bg-green-500 text-white shadow-sm"
-                                                    : "text-gray-400 hover:text-green-600"
-                                            )}
-                                        >
-                                            {attendanceLoading[student.id] ? (
-                                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                            ) : (recordedAttendance[student.id] === 'present' || student.currentStatus === 'present') ? (
-                                                <Check size={12} strokeWidth={3} />
-                                            ) : null}
-                                            حاضر
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                recordAttendance(student.id, 'absent');
-                                            }}
-                                            disabled={attendanceLoading[student.id]}
-                                            className={cn(
-                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1",
-                                                (recordedAttendance[student.id] === 'absent' || student.currentStatus === 'absent')
-                                                    ? "bg-red-500 text-white shadow-sm"
-                                                    : "text-gray-400 hover:text-red-600"
-                                            )}
-                                        >
-                                            {attendanceLoading[student.id] ? (
-                                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                            ) : (recordedAttendance[student.id] === 'absent' || student.currentStatus === 'absent') ? (
-                                                <X size={12} strokeWidth={3} />
-                                            ) : null}
-                                            غائب
-                                        </button>
-                                    </div>
-
                                     {/* نص الملحوظة */}
                                     <div className="bg-gray-50/60 rounded-xl p-2 border border-gray-100 text-right flex-1 group-hover:bg-blue-50/20 transition-colors relative min-h-[38px] flex items-center">
                                         {student.lastNoteDate && (
