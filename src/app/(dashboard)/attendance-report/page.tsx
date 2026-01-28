@@ -175,6 +175,9 @@ export default function AttendanceReportPage() {
     const filteredStudents = processedStudents.filter(s => {
         const matchesGroup = selectedGroupId === 'all' || s.groupId === selectedGroupId;
 
+        // نظهر فقط الطلاب الغائبين في اليوم المحدد
+        const isAbsent = s.currentStatus === 'absent';
+
         const contLimit = Number(continuousAbsenceLimit);
         const totLimit = Number(totalAbsenceLimit);
 
@@ -182,15 +185,15 @@ export default function AttendanceReportPage() {
         const matchesContinuous = contLimit > 0 ? s.continuousAbsences >= contLimit : false;
         const matchesTotal = totLimit > 0 ? s.totalAbsences >= totLimit : false;
 
-        // إذا لم يتم إدخال أي أرقام، نظهر كل طلاب المجموعة المختارة
-        if (!contLimit && !totLimit) return matchesGroup;
+        // إذا لم يتم إدخال أي أرقام، نظهر كل طلاب المجموعة المختارة (شرط أن يكون غائباً)
+        if (!contLimit && !totLimit) return matchesGroup && isAbsent;
 
         // إذا تم إدخال رقم في خانة واحدة، نظهر ما يطابق هذا الشرط فقط
-        if (contLimit && !totLimit) return matchesGroup && matchesContinuous;
-        if (!contLimit && totLimit) return matchesGroup && matchesTotal;
+        if (contLimit && !totLimit) return matchesGroup && matchesContinuous && isAbsent;
+        if (!contLimit && totLimit) return matchesGroup && matchesTotal && isAbsent;
 
         // إذا تم إدخال أرقام في الخانتين، نظهر من ينطبق عليه أي من الشرطين
-        return matchesGroup && (matchesContinuous || matchesTotal);
+        return matchesGroup && (matchesContinuous || matchesTotal) && isAbsent;
     }).sort((a, b) => b.totalAbsences - a.totalAbsences);
 
     // دالة لجلب اسم الشهر الحالي بالعربية
@@ -301,17 +304,34 @@ export default function AttendanceReportPage() {
             <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl border-b border-gray-100 shadow-sm px-4 py-2">
                 <div className="max-w-5xl mx-auto">
                     <div className="flex items-center justify-between w-full">
-                        <div className="relative shrink-0">
-                            <select
-                                value={selectedDateMode}
-                                onChange={(e) => setSelectedDateMode(e.target.value as any)}
-                                className="appearance-none bg-white border border-gray-100 pl-8 pr-3 py-1.5 rounded-[12px] text-[10px] font-black text-gray-600 focus:outline-none shadow-sm cursor-pointer min-w-[90px]"
+                        <div className="flex bg-white p-1 rounded-[14px] border border-gray-100 shadow-sm h-fit">
+                            <button
+                                onClick={() => setSelectedDateMode('today')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all",
+                                    selectedDateMode === 'today' ? "bg-blue-50 text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                                )}
                             >
-                                <option value="today">اليوم</option>
-                                <option value="yesterday">أمس</option>
-                                <option value="before">أول أمس</option>
-                            </select>
-                            <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                اليوم
+                            </button>
+                            <button
+                                onClick={() => setSelectedDateMode('yesterday')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all",
+                                    selectedDateMode === 'yesterday' ? "bg-blue-50 text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                                )}
+                            >
+                                أمس
+                            </button>
+                            <button
+                                onClick={() => setSelectedDateMode('before')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all",
+                                    selectedDateMode === 'before' ? "bg-blue-50 text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                                )}
+                            >
+                                أول أمس
+                            </button>
                         </div>
 
                         <div className="flex-1" /> {/* مسافة فاصلة */}

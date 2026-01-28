@@ -333,7 +333,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                     أرقام ناقصة
                                                 </button>
                                                 <div className="h-px bg-gray-100 my-1" />
-                                                {useMemo(() => myGroups.map((group) => (
+                                                {myGroups.map((group) => (
                                                     <button
                                                         key={group.id}
                                                         onClick={() => { setFilter(group.id); setIsFilterOpen(false); }}
@@ -344,7 +344,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                     >
                                                         {group.name}
                                                     </button>
-                                                )), [myGroups, filter])}
+                                                ))}
                                             </div>
                                         )}
                                     </div>
