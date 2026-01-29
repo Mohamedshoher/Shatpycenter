@@ -648,9 +648,9 @@ export default function TeacherDetailModal({
 
     // تعريف التبويبات الأساسية للنافذة
     const tabs = [
-        { id: 'payroll', label: 'الراتب والمحاسبة', icon: CreditCard },
-        { id: 'attendance', label: 'سجل الحضور', icon: Calendar },
-        { id: 'collection', label: 'سجل التحصيل', icon: CircleDollarSign },
+        { id: 'payroll', label: 'الراتب', icon: CreditCard },
+        { id: 'attendance', label: 'الحضور', icon: Calendar },
+        { id: 'collection', label: 'التحصيل', icon: CircleDollarSign },
     ];
 
 
