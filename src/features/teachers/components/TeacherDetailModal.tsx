@@ -18,7 +18,9 @@ import {
     Coins,
     CheckCircle2,
     AlertCircle,
-    Loader
+    Loader,
+    UserX,
+    Gift
 } from 'lucide-react';
 import { Teacher } from '@/types'; // استيراد نوع بيانات المعلم
 import { useState, useEffect } from 'react'; // هوكس الحالة والتأثيرات
@@ -61,6 +63,13 @@ export default function TeacherDetailModal({
     const { data: students } = useStudents();
     const { data: groups } = useGroups();
     const { deductions, loading: deductionsLoading, loadDeductions, applyDeduction } = useTeacherDeductions(teacher?.id);
+
+    // دالة لتحويل الأرقام العربية إلى إنجليزية
+    const arabicToEnglishNumber = (str: string): number => {
+        const arabicNumerals = '٠١٢٣٤٥٦٧٨٩';
+        const converted = String(str).replace(/[٠-٩]/g, d => arabicNumerals.indexOf(d).toString());
+        return parseInt(converted.replace(/[^0-9]/g, '')) || 0;
+    };
 
     // دالة لجلب اسم الشهر والسنة بشكل ديناميكي بناءً على تاريخ محدد
     const getMonthLabel = (offset: number) => {
@@ -153,6 +162,7 @@ export default function TeacherDetailModal({
 
     // --- منطق "تحصيل المدير من طلاب المدرس" ---
     const [showManagerCollectedDetails, setShowManagerCollectedDetails] = useState(false);
+    const [showDeficitDetails, setShowDeficitDetails] = useState(false);
 
     const managerCollectedPayments = (() => {
         if (!teacher || !groups || !students || !allFees) return [];
@@ -196,6 +206,120 @@ export default function TeacherDetailModal({
     }));
 
     const totalHandedOver = handovers.reduce((sum, h) => sum + Number(h.amount), 0);
+
+    // --- جلب الإعفاءات من قاعدة البيانات ---
+    const { data: exemptions = [] } = useQuery({
+        queryKey: ['free_exemptions', selectedMonthRaw],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('free_exemptions')
+                .select('*')
+                .eq('month', selectedMonthRaw);
+            if (error) {
+                console.warn('جدول free_exemptions غير موجود أو خطأ:', error.message);
+                return [];
+            }
+            return data || [];
+        },
+        enabled: isOpen
+    });
+
+    // --- حساب الطلاب المدينين (الذين لم يدفعوا أو عليهم مبالغ متبقية) ---
+    const unpaidStudents = (() => {
+        if (!teacher || !groups || !students || !allFees) return [];
+        const teacherGroupIds = groups
+            .filter(g => g.teacherId === teacher.id)
+            .map(g => g.id);
+        const teacherStudents = students
+            .filter(s => s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived');
+
+        const exemptedStudentIds = exemptions.map((e: any) => e.student_id);
+
+        return teacherStudents.map(student => {
+            const studentFees = allFees.filter(f => f.studentId === student.id);
+            const totalPaidByStudent = studentFees.reduce((sum, f) => sum + (Number(f.amount.replace(/[^0-9.]/g, '')) || 0), 0);
+            const expectedAmount = Number(student.monthlyAmount) || 0;
+            const remaining = expectedAmount - totalPaidByStudent;
+            const isExempted = exemptedStudentIds.includes(student.id);
+            const groupName = groups.find(g => g.id === student.groupId)?.name || '-';
+
+            return {
+                id: student.id,
+                name: student.fullName,
+                groupName,
+                expectedAmount,
+                paidAmount: totalPaidByStudent,
+                remaining: Math.max(0, remaining),
+                isExempted
+            };
+        }).filter(s => s.remaining > 0 || s.isExempted);
+    })();
+
+    // --- دالة العفو عن طالب ---
+    const handleExemptStudent = async (studentId: string, studentName: string, amount: number) => {
+        if (!teacher || !confirm(`هل تريد العفو عن ${studentName} من المبلغ المتبقي (${amount} ج.م)؟`)) return;
+
+        try {
+            const { error } = await supabase
+                .from('free_exemptions')
+                .insert([{
+                    student_id: studentId,
+                    student_name: studentName,
+                    teacher_id: teacher.id,
+                    month: selectedMonthRaw,
+                    amount: amount,
+                    exempted_by: user?.displayName || 'المدير',
+                    created_at: new Date().toISOString()
+                }]);
+
+            if (error) {
+                console.error('خطأ في حفظ الإعفاء:', error);
+                // إذا كان الجدول غير موجود، نعرض رسالة توضيحية
+                if (error.code === '42P01' || error.message?.includes('does not exist')) {
+                    alert('⚠️ جدول free_exemptions غير موجود!\n\nيرجى إنشاء الجدول في Supabase SQL Editor:\n\nCREATE TABLE free_exemptions (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  student_id UUID NOT NULL,\n  student_name TEXT NOT NULL,\n  teacher_id UUID NOT NULL,\n  month VARCHAR(7) NOT NULL,\n  amount DECIMAL(10,2) NOT NULL,\n  exempted_by TEXT NOT NULL,\n  created_at TIMESTAMP DEFAULT NOW(),\n  UNIQUE(student_id, month)\n);');
+                } else {
+                    alert('حدث خطأ أثناء حفظ الإعفاء: ' + (error.message || 'خطأ غير معروف'));
+                }
+                return;
+            }
+
+            alert(`✅ تم العفو عن ${studentName} بنجاح`);
+            queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
+        } catch (err) {
+            console.error('خطأ غير متوقع:', err);
+        }
+    };
+
+    // --- دالة إلغاء العفو ---
+    const handleRemoveExemption = async (studentId: string, studentName: string) => {
+        if (!confirm(`هل تريد إلغاء العفو عن ${studentName}؟`)) return;
+
+        try {
+            const { error } = await supabase
+                .from('free_exemptions')
+                .delete()
+                .eq('student_id', studentId)
+                .eq('month', selectedMonthRaw);
+
+            if (error) {
+                console.error('خطأ في إلغاء الإعفاء:', error);
+                return;
+            }
+
+            alert(`تم إلغاء العفو عن ${studentName}`);
+            queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
+        } catch (err) {
+            console.error('خطأ غير متوقع:', err);
+        }
+    };
+
+    // حساب العجز الحقيقي مع استثناء المعفيين
+    const realDeficit = (() => {
+        const totalUnpaid = unpaidStudents
+            .filter(s => !s.isExempted)
+            .reduce((sum, s) => sum + s.remaining, 0);
+        return totalUnpaid;
+    })();
 
 
 
@@ -650,10 +774,18 @@ export default function TeacherDetailModal({
                                 </div>
                             </div>
 
-                            <div className="bg-gradient-to-br from-amber-50 to-white p-4 md:p-6 rounded-[32px] border border-amber-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
+                            <div
+                                onClick={() => setShowDeficitDetails(true)}
+                                className="bg-gradient-to-br from-amber-50 to-white p-4 md:p-6 rounded-[32px] border border-amber-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform cursor-pointer hover:border-amber-300 group"
+                            >
                                 <p className="text-[10px] md:text-xs font-black text-amber-500 mb-2 uppercase tracking-wide">عجز المجموعة الحقيقي</p>
-                                <p className="text-xl md:text-3xl font-black text-amber-600 font-sans">{Math.max(0, expectedExpenses - (totalCollected + totalCollectedByManager)).toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
-                                <span className="mt-3 text-[9px] font-bold text-amber-500 italic">مبالغ لم تحصل بعد من الطلاب</span>
+                                <p className="text-xl md:text-3xl font-black text-amber-600 font-sans">{realDeficit.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
+                                <div className="mt-3 flex flex-col items-center gap-1">
+                                    <span className="text-[9px] font-bold text-amber-500">{unpaidStudents.filter(s => !s.isExempted).length} طالب لم يدفع بعد</span>
+                                    <button className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-[9px] font-black group-hover:bg-amber-500 group-hover:text-white transition-all">
+                                        عرض التفاصيل
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -1297,7 +1429,7 @@ export default function TeacherDetailModal({
                                             </div>
                                             <div className="text-right">
                                                 <h3 className="text-xl font-bold text-gray-900">تفاصيل ما حصله المدرس</h3>
-                                                <p className="text-xs text-gray-400 font-bold">إجمالي: {totalCollected.toLocaleString()} ج.م</p>
+                                                <p className="text-xs text-gray-400 font-bold">إجمالي: {totalCollected.toLocaleString()} ج.م • <span className="text-blue-500">{collectedPayments.length} وصل/سند</span></p>
                                             </div>
                                         </div>
                                         <button
@@ -1319,12 +1451,12 @@ export default function TeacherDetailModal({
                                                     );
                                                 }
 
-                                                const sorted = [...collectedPayments].sort((a, b) => (parseInt(a.id) || 0) - (parseInt(b.id) || 0));
+                                                const sorted = [...collectedPayments].sort((a, b) => arabicToEnglishNumber(a.id) - arabicToEnglishNumber(b.id));
                                                 const cards: React.ReactNode[] = [];
                                                 let lastId = -1;
 
                                                 sorted.forEach((payment, index) => {
-                                                    const currentId = parseInt(payment.id);
+                                                    const currentId = arabicToEnglishNumber(payment.id);
 
                                                     if (lastId !== -1 && currentId > lastId + 1) {
                                                         const missingCount = currentId - lastId - 1;
@@ -1411,12 +1543,12 @@ export default function TeacherDetailModal({
                                                     );
                                                 }
 
-                                                const sorted = [...managerCollectedPayments].sort((a, b) => (parseInt(a.id) || 0) - (parseInt(b.id) || 0));
+                                                const sorted = [...managerCollectedPayments].sort((a, b) => arabicToEnglishNumber(a.id) - arabicToEnglishNumber(b.id));
                                                 const cards: React.ReactNode[] = [];
                                                 let lastId = -1;
 
                                                 sorted.forEach((payment, index) => {
-                                                    const currentId = parseInt(payment.id);
+                                                    const currentId = arabicToEnglishNumber(payment.id);
 
                                                     if (lastId !== -1 && currentId > lastId + 1) {
                                                         const missingCount = currentId - lastId - 1;
@@ -1461,6 +1593,153 @@ export default function TeacherDetailModal({
                                                 return cards;
                                             })()}
                                         </div>
+                                    </div>
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
+
+                    {/* نافذة تفاصيل عجز المجموعة الحقيقي - الطلاب المدينين */}
+                    <AnimatePresence>
+                        {showDeficitDetails && (
+                            <>
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 z-[300] bg-slate-900/60 backdrop-blur-sm"
+                                    onClick={() => setShowDeficitDetails(false)}
+                                />
+                                <motion.div
+                                    initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 50, scale: 0.95 }}
+                                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-[600px] max-h-[85vh] bg-white rounded-[40px] shadow-2xl border border-amber-100 z-[301] flex flex-col overflow-hidden"
+                                >
+                                    {/* رأس النافذة */}
+                                    <div className="px-6 py-5 border-b border-amber-50 bg-gradient-to-br from-amber-50 to-white flex flex-row-reverse items-center justify-between shrink-0">
+                                        <div className="text-right">
+                                            <h3 className="text-lg font-black text-amber-800">تفاصيل عجز المجموعة</h3>
+                                            <p className="text-xs font-bold text-amber-600/70 mt-1">الطلاب الذين لم يسددوا رسوم الشهر</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowDeficitDetails(false)}
+                                            className="w-10 h-10 bg-amber-100/50 hover:bg-amber-200 rounded-2xl flex items-center justify-center transition-all"
+                                        >
+                                            <X size={18} className="text-amber-700" />
+                                        </button>
+                                    </div>
+
+                                    {/* ملخص سريع */}
+                                    <div className="px-6 py-4 bg-amber-50/30 border-b border-amber-100/50 shrink-0">
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="bg-white rounded-2xl p-3 text-center border border-amber-100">
+                                                <p className="text-[9px] font-bold text-amber-500">إجمالي العجز</p>
+                                                <p className="text-lg font-black text-amber-700 font-sans">{realDeficit.toLocaleString()}</p>
+                                            </div>
+                                            <div className="bg-white rounded-2xl p-3 text-center border border-red-100">
+                                                <p className="text-[9px] font-bold text-red-500">لم يدفعوا</p>
+                                                <p className="text-lg font-black text-red-600 font-sans">{unpaidStudents.filter(s => !s.isExempted).length}</p>
+                                            </div>
+                                            <div className="bg-white rounded-2xl p-3 text-center border border-green-100">
+                                                <p className="text-[9px] font-bold text-green-500">معفيين</p>
+                                                <p className="text-lg font-black text-green-600 font-sans">{unpaidStudents.filter(s => s.isExempted).length}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* قائمة الطلاب */}
+                                    <div className="flex-1 overflow-y-auto no-scrollbar p-4">
+                                        <div className="space-y-3">
+                                            {unpaidStudents.length === 0 ? (
+                                                <div className="py-16 text-center text-gray-400 text-sm font-bold bg-white rounded-[32px] border-2 border-dashed border-gray-100">
+                                                    <CheckCircle2 size={40} className="mx-auto mb-3 text-green-400" />
+                                                    جميع الطلاب قاموا بالدفع! 🎉
+                                                </div>
+                                            ) : (
+                                                unpaidStudents.map((student, index) => (
+                                                    <div
+                                                        key={student.id}
+                                                        className={cn(
+                                                            "bg-white rounded-2xl p-4 border shadow-sm transition-all",
+                                                            student.isExempted
+                                                                ? "border-green-200 bg-green-50/30"
+                                                                : "border-amber-100 hover:border-amber-200"
+                                                        )}
+                                                    >
+                                                        <div className="flex flex-row-reverse items-start justify-between gap-3">
+                                                            {/* معلومات الطالب */}
+                                                            <div className="flex flex-row-reverse items-center gap-3 flex-1">
+                                                                <div className={cn(
+                                                                    "w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm font-sans shrink-0",
+                                                                    student.isExempted
+                                                                        ? "bg-green-100 text-green-600"
+                                                                        : "bg-amber-100 text-amber-600"
+                                                                )}>
+                                                                    {student.isExempted ? <Gift size={18} /> : index + 1}
+                                                                </div>
+                                                                <div className="text-right flex-1 min-w-0">
+                                                                    <h4 className="font-bold text-gray-900 truncate">{student.name}</h4>
+                                                                    <div className="flex flex-row-reverse items-center gap-2 mt-1 flex-wrap">
+                                                                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold">{student.groupName}</span>
+                                                                        {student.isExempted && (
+                                                                            <span className="text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-md font-bold">تم العفو</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* تفاصيل المبالغ */}
+                                                            <div className="text-left shrink-0">
+                                                                <div className="text-[9px] font-bold text-gray-400 mb-1">المتبقي</div>
+                                                                <p className={cn(
+                                                                    "text-lg font-black font-sans",
+                                                                    student.isExempted ? "text-green-600 line-through" : "text-red-600"
+                                                                )}>
+                                                                    {student.remaining.toLocaleString()} <span className="text-[9px]">ج.م</span>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* تفاصيل الدفع */}
+                                                        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-row-reverse items-center justify-between gap-2">
+                                                            <div className="flex flex-row-reverse items-center gap-3 text-[10px] font-bold">
+                                                                <span className="text-gray-400">المطلوب: <span className="text-gray-600 font-sans">{student.expectedAmount}</span></span>
+                                                                <span className="text-gray-400">المدفوع: <span className="text-green-600 font-sans">{student.paidAmount}</span></span>
+                                                            </div>
+
+                                                            {/* زر العفو أو إلغاء العفو */}
+                                                            {isDirector && (
+                                                                student.isExempted ? (
+                                                                    <button
+                                                                        onClick={() => handleRemoveExemption(student.id, student.name)}
+                                                                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold hover:bg-red-500 hover:text-white transition-all flex items-center gap-1"
+                                                                    >
+                                                                        <UserX size={12} />
+                                                                        إلغاء العفو
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => handleExemptStudent(student.id, student.name, student.remaining)}
+                                                                        className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-bold hover:bg-amber-500 hover:text-white transition-all flex items-center gap-1"
+                                                                    >
+                                                                        <Gift size={12} />
+                                                                        العفو عن المبلغ
+                                                                    </button>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* ذيل النافذة */}
+                                    <div className="px-6 py-4 border-t border-amber-100 bg-amber-50/30 shrink-0">
+                                        <p className="text-[10px] font-bold text-amber-600/70 text-center">
+                                            💡 العفو عن طالب يعني إزالته من قائمة الديون لهذا الشهر فقط
+                                        </p>
                                     </div>
                                 </motion.div>
                             </>
