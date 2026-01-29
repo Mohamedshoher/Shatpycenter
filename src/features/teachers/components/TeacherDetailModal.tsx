@@ -910,7 +910,7 @@ export default function TeacherDetailModal({
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
                                 <div className="text-right">
-                                    <p className="text-xs font-bold text-gray-400 mb-1">صافي أيام الغياب</p>
+                                    <p className="text-xs font-bold text-gray-400 mb-1">  الغياب</p>
                                     <p className="text-2xl font-black text-red-600 font-sans">{totalAbsenceDays} يوم</p>
                                 </div>
                                 <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-500">
@@ -919,7 +919,7 @@ export default function TeacherDetailModal({
                             </div>
                             <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
                                 <div className="text-right">
-                                    <p className="text-xs font-bold text-gray-400 mb-1">إجمالي المكافآت</p>
+                                    <p className="text-xs font-bold text-gray-400 mb-1"> المكافآت</p>
                                     <p className="text-2xl font-black text-green-600 font-sans">{totalRewardDays} يوم</p>
                                 </div>
                                 <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-500">
@@ -1217,7 +1217,7 @@ export default function TeacherDetailModal({
 
                             <div className="flex flex-row-reverse items-start justify-between relative z-10">
                                 <div className="text-right">
-                                    <h3 className="text-xl md:text-2xl font-black text-gray-900 leading-tight">حساب الراتب والمستحقات</h3>
+                                    <h3 className="text-xl md:text-2xl font-black text-gray-900 leading-tight"> الراتب </h3>
                                     <p className="text-gray-400 font-bold text-xs md:text-sm">شهر {selectedMonth}</p>
                                 </div>
                                 <div className="bg-orange-50 px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-orange-100 flex items-center gap-2 text-[8px] md:text-[10px] font-black text-orange-600">
