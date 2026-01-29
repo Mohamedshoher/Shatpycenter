@@ -67,12 +67,17 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         // Fetch teacher credentials
         const { data: teacher, error } = await supabase
             .from('teachers')
-            .select('id, full_name, password')
+            .select('id, full_name, password, status')
             .eq('id', searchId)
             .single();
 
         if (error || !teacher) {
             throw new Error("المعلم غير موجود في قاعدة البيانات");
+        }
+
+        // Check Account Status
+        if (teacher.status === 'inactive') {
+            throw new Error("نأسف لم تعد عضو في المركز");
         }
 
         // Check password (Plain text comparison as per current implementation)
