@@ -25,23 +25,16 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         phone = identifier;
     }
 
-    // التحقق من كلمة مرور المدير الخاصة
+    // Verify Director Password
     if (role === 'director' && password !== '446699') {
         throw new Error("كلمة مرور المدير غير صحيحة");
     }
 
-    // للمدرسين نقبل 123456 أو أي كلمة تنتهي بـ 123
-    if (role === 'teacher') {
-        if (!password.endsWith('123') && password !== '123456') {
-            throw new Error("كلمة المرور غير صحيحة (استخدم 123456 للتجربة)");
-        }
-    }
-
     let displayName = role === 'director' ? 'المدير العام' : role === 'supervisor' ? 'المشرف التربوي' : role === 'parent' ? (phone || 'ولي أمر') : 'معلم المجموعة';
 
-    // لأولياء الأمور: التأكد من وجود الرقم وكلمة المرور هي آخر 6 أرقام
+    // Verify Parent Login
     if (role === 'parent' && phone) {
-        // البحث عن الرقم كما هو، أو مع إضافة 02 في بدايته إذا لم تكن موجودة
+        // Search for phone with or without 02 prefix
         const { data: students, error } = await supabase
             .from('students')
             .select('parent_phone')
@@ -64,34 +57,33 @@ export const loginWithRole = async (identifier: string, password: string): Promi
             throw new Error(`كلمة المرور غير صحيحة. يرجى استخدام آخر 6 أرقام من رقم هاتفك المسجل.`);
         }
 
-        // استخدام الرقم الرسمي من قاعدة البيانات
         displayName = dbPhone;
     }
 
+    // Verify Teacher Password (Database Check)
     if (role === 'teacher') {
         const searchId = teacherId || identifier.replace('teacher-', '');
 
-        // محاولة البحث بالمعرف أولاً (UUID)
-        let { data: teacher } = await supabase
+        // Fetch teacher credentials
+        const { data: teacher, error } = await supabase
             .from('teachers')
-            .select('id, full_name')
+            .select('id, full_name, password')
             .eq('id', searchId)
-            .maybeSingle();
+            .single();
 
-        // إذا لم يعثر عليه بالمعرف، نجرب الاسم أو الهاتف
-        if (!teacher) {
-            const { data: teacherByName } = await supabase
-                .from('teachers')
-                .select('id, full_name')
-                .or(`full_name.eq."${identifier}",phone.eq."${identifier}"`)
-                .maybeSingle();
-            teacher = teacherByName;
+        if (error || !teacher) {
+            throw new Error("المعلم غير موجود في قاعدة البيانات");
         }
 
-        if (teacher) {
-            teacherId = teacher.id;
-            displayName = teacher.full_name;
+        // Check password (Plain text comparison as per current implementation)
+        // Note: For production, we should hash passwords.
+        if (teacher.password && teacher.password !== password) {
+            throw new Error("كلمة المرور غير صحيحة");
         }
+
+        // Update variables with real data
+        teacherId = teacher.id;
+        displayName = teacher.full_name;
     }
 
     return {

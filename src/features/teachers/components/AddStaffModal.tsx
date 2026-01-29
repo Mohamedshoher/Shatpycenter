@@ -12,7 +12,8 @@ import {
     Coins,
     Handshake,
     Loader2,
-    CheckCircle2
+    CheckCircle2,
+    AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -39,6 +40,8 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
         status: (initialTeacher?.status as any) || 'active' as 'active' | 'inactive',
         responsibleSections: (initialTeacher as any)?.responsibleSections || ['قرآن'] as string[],
     });
+
+    const [error, setError] = useState<string | null>(null);
 
     // Update form when initialTeacher changes
     useEffect(() => {
@@ -69,6 +72,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
 
     const mutation = useMutation({
         mutationFn: async (data: any) => {
+            setError(null); // Clear previous errors
             if (initialTeacher) {
                 await updateTeacher(initialTeacher.id, data);
                 return;
@@ -93,6 +97,10 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                 });
             }
         },
+        onError: (err: any) => {
+            console.error("Mutation failed:", err);
+            setError(err.message || "حدث خطأ أثناء الحفظ");
+        }
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -104,6 +112,14 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="إضافة موظف جديد">
             <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Error Alert */}
+                {error && (
+                    <div className="bg-red-50 text-red-600 p-4 rounded-[18px] border border-red-100 flex items-center gap-2 text-sm font-bold animate-in fade-in slide-in-from-top-2">
+                        <AlertCircle size={18} />
+                        <span>{error}</span>
+                    </div>
+                )}
+
                 {/* Role Toggle */}
                 <div className="bg-gray-50/50 p-1 rounded-[20px] flex gap-1 border border-gray-100">
                     <button
