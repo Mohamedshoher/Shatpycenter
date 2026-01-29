@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLogin } from '../hooks/useLogin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,12 @@ export default function LoginForm() {
         if (savedPass) setPassword(savedPass);
     }, []);
 
-    const activeTeachers = teachers?.filter(t => t.status === 'active') || [];
+    // تصفية وترتيب المعلمين أبجدياً
+    const activeTeachers = useMemo(() => {
+        return (teachers || [])
+            .filter(t => t.status === 'active')
+            .sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
+    }, [teachers]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
