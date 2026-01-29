@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useLogin } from '../hooks/useLogin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ export default function LoginForm() {
     const { login, loading, error } = useLogin();
     const { data: teachers } = useTeachers();
 
-    const [mainTab, setMainTab] = useState<MainTab>('admin');
+    const [mainTab, setMainTab] = useState<MainTab>('parent');
     const [roleTab, setRoleTab] = useState<RoleTab>('director');
     const [password, setPassword] = useState('');
     const [selectedTeacherId, setSelectedTeacherId] = useState('');
@@ -30,19 +30,13 @@ export default function LoginForm() {
         const savedPhone = localStorage.getItem('shatibi_parent_phone');
         const savedPass = localStorage.getItem('shatibi_last_pass');
 
-        if (savedMainTab) setMainTab(savedMainTab);
         if (savedRoleTab) setRoleTab(savedRoleTab);
         if (savedTeacherId) setSelectedTeacherId(savedTeacherId);
         if (savedPhone) setPhone(savedPhone);
         if (savedPass) setPassword(savedPass);
     }, []);
 
-    // تصفية وترتيب المعلمين أبجدياً
-    const activeTeachers = useMemo(() => {
-        return (teachers || [])
-            .filter(t => t.status === 'active')
-            .sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
-    }, [teachers]);
+    const activeTeachers = (teachers?.filter(t => t.status === 'active') || []).sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,7 +63,7 @@ export default function LoginForm() {
     };
 
     return (
-        <div className="w-full max-w-[450px] flex flex-col items-center">
+        <div className="w-full max-w-[450px] flex flex-col items-center scale-[0.85] sm:scale-100 md:scale-100 origin-top transition-transform duration-300">
             {/* Logo Section */}
             <div className="text-center mb-10">
                 <h1 className="text-5xl font-bold text-white mb-2 tracking-tight">مركز الشاطبي</h1>
@@ -82,15 +76,6 @@ export default function LoginForm() {
                 {/* Top Toggle Tabs (الإدارة / ولي الأمر) */}
                 <div className="flex bg-[#ecedef] p-1.5 rounded-[20px] mb-8">
                     <button
-                        onClick={() => setMainTab('admin')}
-                        className={cn(
-                            "flex-1 py-3 rounded-[18px] text-lg font-bold transition-all duration-300",
-                            mainTab === 'admin' ? "bg-[#3366ff] text-white shadow-lg" : "text-[#7b809a]"
-                        )}
-                    >
-                        الإدارة
-                    </button>
-                    <button
                         onClick={() => setMainTab('parent')}
                         className={cn(
                             "flex-1 py-3 rounded-[18px] text-lg font-bold transition-all duration-300",
@@ -98,6 +83,15 @@ export default function LoginForm() {
                         )}
                     >
                         ولي الأمر
+                    </button>
+                    <button
+                        onClick={() => setMainTab('admin')}
+                        className={cn(
+                            "flex-1 py-3 rounded-[18px] text-lg font-bold transition-all duration-300",
+                            mainTab === 'admin' ? "bg-[#3366ff] text-white shadow-lg" : "text-[#7b809a]"
+                        )}
+                    >
+                        الإدارة
                     </button>
                 </div>
 
@@ -182,6 +176,7 @@ export default function LoginForm() {
                                     <div className="relative">
                                         <Input
                                             type="password"
+                                            inputMode="numeric"
                                             placeholder="••••••••"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
@@ -267,6 +262,7 @@ export default function LoginForm() {
                                     <div className="relative">
                                         <Input
                                             type="password"
+                                            inputMode="numeric"
                                             placeholder="••••••"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}

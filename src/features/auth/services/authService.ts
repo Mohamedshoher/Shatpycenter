@@ -26,7 +26,7 @@ export const loginWithRole = async (identifier: string, password: string): Promi
     }
 
     // Verify Director Password
-    if (role === 'director' && password !== '446699') {
+    if (role === 'director' && password !== '996644') {
         throw new Error("كلمة مرور المدير غير صحيحة");
     }
 
@@ -67,17 +67,12 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         // Fetch teacher credentials
         const { data: teacher, error } = await supabase
             .from('teachers')
-            .select('id, full_name, password, status')
+            .select('id, full_name, password')
             .eq('id', searchId)
             .single();
 
         if (error || !teacher) {
             throw new Error("المعلم غير موجود في قاعدة البيانات");
-        }
-
-        // Check Account Status
-        if (teacher.status === 'inactive') {
-            throw new Error("نأسف لم تعد عضو في المركز");
         }
 
         // Check password (Plain text comparison as per current implementation)
