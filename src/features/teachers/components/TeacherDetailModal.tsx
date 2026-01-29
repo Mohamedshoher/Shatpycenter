@@ -20,7 +20,9 @@ import {
     AlertCircle,
     Loader,
     UserX,
-    Gift
+    Gift,
+    ChevronRight,
+    ChevronLeft
 } from 'lucide-react';
 import { Teacher } from '@/types'; // استيراد نوع بيانات المعلم
 import { useState, useEffect } from 'react'; // هوكس الحالة والتأثيرات
@@ -660,34 +662,43 @@ export default function TeacherDetailModal({
                 return (
                     <div className="space-y-6">
                         {/* اختيار الشهر */}
-                        <div className="flex flex-row-reverse items-center justify-between bg-white p-4 rounded-3xl border border-gray-100 shadow-sm gap-4">
-                            <div className="flex flex-row-reverse items-center gap-2 w-full">
-                                <button
-                                    onClick={() => updateMonth(-1)}
-                                    className="px-4 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0"
-                                >
-                                    الشهر السابق
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        const today = new Date();
-                                        const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-                                        updateMonth(monthStr);
-                                    }}
-                                    className="px-4 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0"
-                                >
-                                    الشهر الحالي
-                                </button>
-                                <div className="bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 text-sm font-bold flex items-center gap-2 text-gray-700 flex-1 justify-end">
+                        {/* اختيار الشهر - تصميم متجاوب للموبايل */}
+                        <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
+                            {/* زر السابق (يمين) */}
+                            <button
+                                onClick={() => updateMonth(-1)}
+                                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
+                            >
+                                <ChevronRight size={16} />
+                                <span className="hidden md:inline">الشهر السابق</span>
+                            </button>
+
+                            {/* عرض الشهر (منتصف) */}
+                            <div className="flex-1 flex justify-center w-full min-w-0 mx-1">
+                                <div className="bg-gray-50 px-3 md:px-6 py-2 rounded-xl border border-gray-100 text-xs md:text-sm font-bold flex items-center justify-center gap-2 text-gray-700 relative w-full md:w-auto max-w-[200px]">
+                                    <span className="truncate" dir="ltr">{selectedMonthRaw}</span>
+                                    <Calendar size={16} className="text-teal-500 shrink-0" />
                                     <input
                                         type="month"
-                                        className="bg-transparent outline-none text-right font-sans w-full"
+                                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                                         value={selectedMonthRaw}
                                         onChange={(e) => updateMonth(e.target.value)}
                                     />
-                                    <Calendar size={16} className="text-teal-500" />
                                 </div>
                             </div>
+
+                            {/* زر الحالي (يسار) */}
+                            <button
+                                onClick={() => {
+                                    const today = new Date();
+                                    const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                                    updateMonth(monthStr);
+                                }}
+                                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
+                            >
+                                <span className="hidden md:inline">الشهر الحالي</span>
+                                <ChevronLeft size={16} />
+                            </button>
                         </div>
 
                         {/* نموذج إضافة تحصيل جديد - مخفي للمدرس */}
@@ -856,34 +867,43 @@ export default function TeacherDetailModal({
                 return (
                     <div className="space-y-6">
                         {/* شريط اختيار الشهر والملخص */}
-                        <div className="flex flex-row-reverse items-center justify-between bg-white p-4 rounded-3xl border border-gray-100 shadow-sm gap-4">
-                            <div className="flex flex-row-reverse items-center gap-2 w-full">
-                                <button
-                                    onClick={() => updateMonth(-1)}
-                                    className="px-4 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0"
-                                >
-                                    الشهر السابق
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        const today = new Date();
-                                        const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-                                        updateMonth(monthStr);
-                                    }}
-                                    className="px-4 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0"
-                                >
-                                    الشهر الحالي
-                                </button>
-                                <div className="bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 text-sm font-bold flex items-center gap-2 text-gray-700 flex-1 justify-end">
+                        {/* شريط اختيار الشهر والملخص - تصميم متجاوب */}
+                        <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
+                            {/* زر السابق */}
+                            <button
+                                onClick={() => updateMonth(-1)}
+                                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
+                            >
+                                <ChevronRight size={16} />
+                                <span className="hidden md:inline">الشهر السابق</span>
+                            </button>
+
+                            {/* الشهر */}
+                            <div className="flex-1 flex justify-center w-full min-w-0 mx-1">
+                                <div className="bg-gray-50 px-3 md:px-6 py-2 rounded-xl border border-gray-100 text-xs md:text-sm font-bold flex items-center justify-center gap-2 text-gray-700 relative w-full md:w-auto max-w-[200px]">
+                                    <span className="truncate" dir="ltr">{selectedMonthRaw}</span>
+                                    <Calendar size={16} className="text-gray-400 shrink-0" />
                                     <input
                                         type="month"
-                                        className="bg-transparent outline-none text-right font-sans w-full"
+                                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                                         value={selectedMonthRaw}
                                         onChange={(e) => updateMonth(e.target.value)}
                                     />
-                                    <Calendar size={16} className="text-gray-400" />
                                 </div>
                             </div>
+
+                            {/* زر الحالي */}
+                            <button
+                                onClick={() => {
+                                    const today = new Date();
+                                    const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                                    updateMonth(monthStr);
+                                }}
+                                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
+                            >
+                                <span className="hidden md:inline">الشهر الحالي</span>
+                                <ChevronLeft size={16} />
+                            </button>
                         </div>
 
                         {/* كروت ملخص الحضور (الغياب والمكافآت) */}
@@ -1151,34 +1171,43 @@ export default function TeacherDetailModal({
                 return (
                     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
                         {/* اختيار الشهر في تبويب الراتب */}
-                        <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-gray-100 shadow-sm">
-                            <div className="flex flex-row-reverse items-center gap-2 w-full">
-                                <button
-                                    onClick={() => updateMonth(-1)}
-                                    className="px-4 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0"
-                                >
-                                    الشهر السابق
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        const today = new Date();
-                                        const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-                                        updateMonth(monthStr);
-                                    }}
-                                    className="px-4 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0"
-                                >
-                                    الشهر الحالي
-                                </button>
-                                <div className="bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 text-sm font-bold flex items-center gap-2 text-gray-700 flex-1 justify-end">
+                        {/* اختيار الشهر في تبويب الراتب - متجاوب */}
+                        <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
+                            {/* زر السابق */}
+                            <button
+                                onClick={() => updateMonth(-1)}
+                                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
+                            >
+                                <ChevronRight size={16} />
+                                <span className="hidden md:inline">الشهر السابق</span>
+                            </button>
+
+                            {/* الشهر */}
+                            <div className="flex-1 flex justify-center w-full min-w-0 mx-1">
+                                <div className="bg-gray-50 px-3 md:px-6 py-2 rounded-xl border border-gray-100 text-xs md:text-sm font-bold flex items-center justify-center gap-2 text-gray-700 relative w-full md:w-auto max-w-[200px]">
+                                    <span className="truncate" dir="ltr">{selectedMonthRaw}</span>
+                                    <Calendar size={14} className="md:w-4 md:h-4 text-gray-400 shrink-0" />
                                     <input
                                         type="month"
-                                        className="bg-transparent outline-none text-right font-sans w-full"
+                                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                                         value={selectedMonthRaw}
                                         onChange={(e) => updateMonth(e.target.value)}
                                     />
-                                    <Calendar size={14} className="md:w-4 md:h-4" />
                                 </div>
                             </div>
+
+                            {/* زر الحالي */}
+                            <button
+                                onClick={() => {
+                                    const today = new Date();
+                                    const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                                    updateMonth(monthStr);
+                                }}
+                                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
+                            >
+                                <span className="hidden md:inline">الشهر الحالي</span>
+                                <ChevronLeft size={16} />
+                            </button>
                         </div>
 
                         {/* بطاقة الراتب والمستحقات (كرت المحاسبة الرئيسي) */}

@@ -205,6 +205,19 @@ export default function FinancePage() {
         setSelectedMonth(`${nextYear}-${String(nextMonth).padStart(2, '0')}`);
     };
 
+    const visibleTransactions = useMemo(() => {
+        return filteredTransactions.filter(tr => {
+            if (activeTab === 'expenses') return tr.type === 'expense';
+            // Income
+            if (tr.type !== 'income') return false;
+
+            // Filter out teacher-collected fees (keep strictly manual/manager collections)
+            if (tr.category === 'fees' && tr.performedBy !== user?.uid) return false;
+
+            return true;
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [filteredTransactions, activeTab, user?.uid]);
+
     return (
         <div className="pb-32 transition-all duration-500 bg-gray-50/50 min-h-screen">
             {/* Delete Confirm Modal */}
@@ -412,69 +425,64 @@ export default function FinancePage() {
 
                             {/* Detailed List */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                                {filteredTransactions
-                                    .filter(tr => tr.type === (activeTab === 'income' ? 'income' : 'expense'))
-                                    .length > 0 ? (
-                                    filteredTransactions
-                                        .filter(tr => tr.type === (activeTab === 'income' ? 'income' : 'expense'))
-                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                        .map((tr) => (
-                                            <div
-                                                key={tr.id}
-                                                className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-4 hover:shadow-xl hover:shadow-blue-500/5 transition-all group relative overflow-hidden h-full"
-                                            >
-                                                {/* Line 1: Title & Icon */}
-                                                <div className="flex justify-between items-start gap-4">
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="font-bold text-gray-900 text-sm leading-relaxed" dir="rtl">
-                                                            {tr.title}
-                                                        </h4>
-                                                    </div>
-                                                    <div className={cn(
-                                                        "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
-                                                        activeTab === 'income' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                    )}>
-                                                        {activeTab === 'income' ? <ArrowUpCircle size={22} /> : <ArrowDownCircle size={22} />}
-                                                    </div>
+                                {visibleTransactions.length > 0 ? (
+                                    visibleTransactions.map((tr) => (
+                                        <div
+                                            key={tr.id}
+                                            className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-4 hover:shadow-xl hover:shadow-blue-500/5 transition-all group relative overflow-hidden h-full"
+                                        >
+                                            {/* Line 1: Title & Icon */}
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-bold text-gray-900 text-sm leading-relaxed" dir="rtl">
+                                                        {tr.title}
+                                                    </h4>
                                                 </div>
-
-                                                {/* Line 2: Amount & Date */}
-                                                <div className="flex justify-between items-center bg-gray-50/50 p-3 rounded-2xl">
-                                                    <div className={cn(
-                                                        "text-base font-black font-sans tracking-tight",
-                                                        activeTab === 'income' ? "text-green-600" : "text-red-600"
-                                                    )}>
-                                                        {activeTab === 'income' ? '+' : '-'}{tr.amount.toLocaleString()} <span className="text-[10px]">ج.م</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-gray-400">
-                                                        <span className="text-[10px] font-bold">
-                                                            {new Date(tr.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })}
-                                                        </span>
-                                                        <Calendar size={12} />
-                                                    </div>
-                                                </div>
-
-                                                {/* Line 3: Category & Delete */}
-                                                <div className="flex justify-between items-center mt-auto pt-1">
-                                                    <button
-                                                        onClick={() => handleDeleteClick(tr.id)}
-                                                        className="w-10 h-10 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-all shadow-sm active:scale-90"
-                                                        title="حذف"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-
-                                                    <div className="text-right">
-                                                        <span className="text-[10px] font-black text-gray-500 bg-gray-100/50 px-4 py-1.5 rounded-xl border border-gray-100/50">
-                                                            {tr.category === 'fees' ? 'رسوم واشتراكات' :
-                                                                tr.category === 'salary' ? 'رواتب' :
-                                                                    tr.category === 'donation' ? 'تبرعات' :
-                                                                        tr.category === 'utilities' ? 'مرافق' : tr.category}
-                                                        </span>
-                                                    </div>
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
+                                                    activeTab === 'income' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                )}>
+                                                    {activeTab === 'income' ? <ArrowUpCircle size={22} /> : <ArrowDownCircle size={22} />}
                                                 </div>
                                             </div>
-                                        ))
+
+                                            {/* Line 2: Amount & Date */}
+                                            <div className="flex justify-between items-center bg-gray-50/50 p-3 rounded-2xl">
+                                                <div className={cn(
+                                                    "text-base font-black font-sans tracking-tight",
+                                                    activeTab === 'income' ? "text-green-600" : "text-red-600"
+                                                )}>
+                                                    {activeTab === 'income' ? '+' : '-'}{tr.amount.toLocaleString()} <span className="text-[10px]">ج.م</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-gray-400">
+                                                    <span className="text-[10px] font-bold">
+                                                        {new Date(tr.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })}
+                                                    </span>
+                                                    <Calendar size={12} />
+                                                </div>
+                                            </div>
+
+                                            {/* Line 3: Category & Delete */}
+                                            <div className="flex justify-between items-center mt-auto pt-1">
+                                                <button
+                                                    onClick={() => handleDeleteClick(tr.id)}
+                                                    className="w-10 h-10 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-all shadow-sm active:scale-90"
+                                                    title="حذف"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+
+                                                <div className="text-right">
+                                                    <span className="text-[10px] font-black text-gray-500 bg-gray-100/50 px-4 py-1.5 rounded-xl border border-gray-100/50">
+                                                        {tr.category === 'fees' ? 'رسوم واشتراكات' :
+                                                            tr.category === 'salary' ? 'رواتب' :
+                                                                tr.category === 'donation' ? 'تبرعات' :
+                                                                    tr.category === 'utilities' ? 'مرافق' : tr.category}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
                                 ) : (
                                     <div className="col-span-full py-20 text-center space-y-3 bg-white rounded-[40px] border border-gray-100 border-dashed">
                                         <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mx-auto">
