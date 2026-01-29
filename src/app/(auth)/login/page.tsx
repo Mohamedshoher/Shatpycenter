@@ -2,7 +2,7 @@ import LoginForm from '@/features/auth/components/LoginForm';
 
 export default function LoginPage() {
     return (
-        <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#0a192f]">
+        <div className="relative h-[100dvh] w-full flex items-center justify-center overflow-hidden bg-[#0a192f]">
             {/* Dark Gradient Overlay - Matches the image style */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#1a2c4e] via-[#0a192f] to-[#040c18] z-0" />
 
