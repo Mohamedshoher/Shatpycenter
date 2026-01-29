@@ -111,28 +111,12 @@ export default function DashboardOverview() {
             link: '/students'
         },
         {
-            title: 'طلبات الإجازة',
-            value: pendingLeaves.length.toString(),
-            icon: CalendarDays,
-            color: 'bg-orange-500',
-            roles: ['director', 'supervisor'],
-            onClick: () => setIsLeaveModalOpen(true)
-        },
-        {
             title: 'الحضور اليوم',
             value: myAttendanceCount.toString(),
             icon: CalendarCheck,
             color: 'bg-green-500',
             roles: ['director', 'supervisor', 'teacher'],
             link: '/attendance-report'
-        },
-        {
-            title: 'إيرادات الشهر',
-            value: monthlyIncome.toLocaleString(),
-            icon: CreditCard,
-            color: 'bg-purple-500',
-            roles: ['director', 'supervisor'],
-            link: '/finance'
         },
         {
             title: user?.role === 'teacher' ? 'مجموعاتي' : 'المجموعات',
@@ -158,6 +142,15 @@ export default function DashboardOverview() {
             roles: ['director', 'supervisor'],
             onClick: () => handleSyncParents()
         },
+                {
+            title: 'طلبات الإجازة',
+            value: pendingLeaves.length.toString(),
+            icon: CalendarDays,
+            color: 'bg-orange-500',
+            roles: ['director', 'supervisor'],
+            onClick: () => setIsLeaveModalOpen(true)
+        },
+
     ].filter(s => s.roles.includes(user?.role || ''));
 
     const isLoading = loadingStudents || loadingGroups || (loadingFinance && (user?.role === 'director' || user?.role === 'supervisor'));
@@ -235,7 +228,7 @@ export default function DashboardOverview() {
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2 md:gap-2">
                                 {[
                                     { tag: 'حضور', text: `تم تسجيل حضور ${todayAttendance.length} طالباً اليوم حتى الآن`, time: 'اليوم', icon: CalendarCheck, color: 'text-orange-500', bg: 'bg-orange-50', roles: ['director', 'supervisor', 'teacher'] },
                                     { tag: 'طلاب', text: `تم تسجيل ${students.length} طالباً في النظام`, time: 'محدث', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50', roles: ['director', 'supervisor'] },
