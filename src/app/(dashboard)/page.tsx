@@ -134,6 +134,7 @@ export default function DashboardOverview() {
             roles: ['director', 'supervisor'],
             link: '/students/pending'
         },
+
         {
             title: 'تحديث الحسابات',
             value: students.filter(s => (s.parentPhone || '').replace(/[^0-9]/g, '').length >= 11).length.toString(),
@@ -142,7 +143,7 @@ export default function DashboardOverview() {
             roles: ['director', 'supervisor'],
             onClick: () => handleSyncParents()
         },
-                {
+        {
             title: 'طلبات الإجازة',
             value: pendingLeaves.length.toString(),
             icon: CalendarDays,

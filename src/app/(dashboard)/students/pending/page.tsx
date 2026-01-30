@@ -233,6 +233,24 @@ export default function PendingStudentsPage() {
                                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
                                 />
                             </div>
+                            <div className="flex items-center justify-between bg-orange-50/50 border border-orange-100 p-3 rounded-xl">
+                                <label className="text-sm font-bold text-gray-700">هل الطالب يتيم؟</label>
+                                <input
+                                    type="checkbox"
+                                    checked={editingStudent.isOrphan || false}
+                                    onChange={(e) => setEditingStudent({ ...editingStudent, isOrphan: e.target.checked })}
+                                    className="w-5 h-5 rounded-md border-gray-300 text-purple-600 focus:ring-purple-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">تاريخ الالتحاق</label>
+                                <input
+                                    type="date"
+                                    value={editingStudent.enrollmentDate || ''}
+                                    onChange={(e) => setEditingStudent({ ...editingStudent, enrollmentDate: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
+                                />
+                            </div>
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2">الرسوم الشهرية</label>
                                 <input
@@ -290,52 +308,55 @@ export default function PendingStudentsPage() {
                             </button>
                         </div>
                     </motion.div>
-                </div>
-            )}
+                </div >
+            )
+            }
 
             {/* Reject Modal */}
-            {showRejectModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRejectModal(null)}>
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h2 className="text-2xl font-black text-red-600 mb-4">رفض الطالب</h2>
-                        <p className="text-gray-600 mb-4">
-                            هل أنت متأكد من رفض طلب <span className="font-bold">{showRejectModal.fullName}</span>؟
-                        </p>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">سبب الرفض</label>
-                            <textarea
-                                value={rejectReason}
-                                onChange={(e) => setRejectReason(e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-500 outline-none"
-                                rows={3}
-                                placeholder="يرجى توضيح سبب الرفض..."
-                            />
-                        </div>
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={confirmReject}
-                                className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors"
-                            >
-                                تأكيد الرفض
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowRejectModal(null);
-                                    setRejectReason('');
-                                }}
-                                className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-                            >
-                                إلغاء
-                            </button>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </div>
+            {
+                showRejectModal && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRejectModal(null)}>
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h2 className="text-2xl font-black text-red-600 mb-4">رفض الطالب</h2>
+                            <p className="text-gray-600 mb-4">
+                                هل أنت متأكد من رفض طلب <span className="font-bold">{showRejectModal.fullName}</span>؟
+                            </p>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">سبب الرفض</label>
+                                <textarea
+                                    value={rejectReason}
+                                    onChange={(e) => setRejectReason(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-500 outline-none"
+                                    rows={3}
+                                    placeholder="يرجى توضيح سبب الرفض..."
+                                />
+                            </div>
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={confirmReject}
+                                    className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors"
+                                >
+                                    تأكيد الرفض
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowRejectModal(null);
+                                        setRejectReason('');
+                                    }}
+                                    className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                >
+                                    إلغاء
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )
+            }
+        </div >
     );
 }

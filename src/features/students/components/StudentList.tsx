@@ -134,7 +134,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 matchesFilter = student.groupId === filter;
             }
 
-            const isActive = student.status !== 'archived';
+            const isActive = student.status === 'active';
             return matchesSearch && matchesFilter && isActive;
         })?.sort((a, b) => {
             const groupA = getGroupName(a.groupId);
