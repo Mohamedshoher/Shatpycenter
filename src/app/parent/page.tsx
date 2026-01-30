@@ -25,19 +25,46 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { PresenceTracker } from "@/components/PresenceTracker";
+import { useChatStore } from "@/store/useChatStore";
+import { playNotificationSound } from "@/lib/notificationSound";
+import { chatService } from "@/features/chat/services/chatService";
+import { useEffect, useRef } from "react";
 
 export default function ParentDashboard() {
     const { user, setUser } = useAuthStore();
     const router = useRouter();
     const { data: students, isLoading } = useStudents();
     const { data: groups } = useGroups();
+    const { unreadCount, setConversations } = useChatStore();
     const [selectedKidForLeave, setSelectedKidForLeave] = useState<any>(null);
     const [selectedKidForDetail, setSelectedKidForDetail] = useState<any>(null);
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [showPulse, setShowPulse] = useState(false);
+    const prevUnreadCount = useRef(0);
     const { data: teachers } = useTeachers();
 
     const parentPhone = user?.displayName || "";
     const myKids = students?.filter(s => s.parentPhone === parentPhone) || [];
+
+    // ✨ الاستماع للمحادثات وتحديث العداد
+    useEffect(() => {
+        if (!user?.uid) return;
+        const userId = user.uid.replace('mock-', '');
+        const unsubscribe = chatService.subscribeToConversations(userId, (conversations) => {
+            setConversations(conversations);
+        });
+        return () => unsubscribe();
+    }, [user?.uid, setConversations]);
+
+    // ✨ تشغيل الصوت والتأثير عند وصول رسالة جديدة
+    useEffect(() => {
+        if (unreadCount > prevUnreadCount.current && prevUnreadCount.current >= 0) {
+            playNotificationSound();
+            setShowPulse(true);
+            setTimeout(() => setShowPulse(false), 2000);
+        }
+        prevUnreadCount.current = unreadCount;
+    }, [unreadCount]);
 
     // تصفية جهات الاتصال المسموح بالتواصل معها (المدير والمشرف ومدرسي الأبناء فقط)
     const allowedContacts = teachers?.filter(t => {
@@ -97,10 +124,18 @@ export default function ParentDashboard() {
                     <div className="flex items-center gap-2 shrink-0">
                         <button
                             onClick={() => setIsChatOpen(true)}
-                            className="relative flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-indigo-600 hover:text-white transition-all active:scale-95"
+                            className={cn(
+                                "relative flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-indigo-600 hover:text-white transition-all active:scale-95",
+                                showPulse && "animate-bounce"
+                            )}
                         >
                             <MessageCircle size={16} />
                             <span className="hidden sm:inline">المراسلة</span>
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white animate-pulse">
+                                    {unreadCount > 9 ? '+9' : unreadCount}
+                                </span>
+                            )}
                         </button>
                         <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-blue-600 hover:text-white transition-all active:scale-95">
                             <Home size={16} />
@@ -202,10 +237,20 @@ export default function ParentDashboard() {
             {/* زر المراسلة الداخلية العائم */}
             <button
                 onClick={() => setIsChatOpen(true)}
-                className="fixed bottom-10 left-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-all hover:bg-indigo-700 hover:rotate-12"
+                className={cn(
+                    "fixed bottom-10 left-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-all hover:bg-indigo-700 hover:rotate-12",
+                    showPulse && "animate-bounce shadow-indigo-500/50"
+                )}
                 title="المراسلة الداخلية"
             >
-                <MessageCircle size={32} />
+                <div className="relative">
+                    <MessageCircle size={32} />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white text-xs flex items-center justify-center rounded-full border-2 border-white font-black shadow-lg">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                    )}
+                </div>
             </button>
         </div>
     );
