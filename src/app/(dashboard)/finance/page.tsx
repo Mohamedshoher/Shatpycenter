@@ -17,13 +17,21 @@ import AddTransactionModal from '@/features/finance/components/AddTransactionMod
 import DeleteConfirmModal from '@/features/finance/components/DeleteConfirmModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTransactionsByMonth, deleteTransaction } from '@/features/finance/services/financeService';
+import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { TransactionData } from '@/features/finance/components/AddTransactionModal';
-import type { FinancialTransaction } from '@/types';
+import type { FinancialTransaction, Teacher } from '@/types';
+import { useTeachers } from '@/features/teachers/hooks/useTeachers';
+import { useStudents } from '@/features/students/hooks/useStudents';
+import { useGroups } from '@/features/groups/hooks/useGroups';
+import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
+import TeacherCollectionsModal from '@/features/finance/components/TeacherCollectionsModal';
+import TeacherDetailModal from '@/features/teachers/components/TeacherDetailModal';
 
 interface Transaction extends TransactionData {
     id: string;
     performedBy?: string;
+    relatedUserId?: string;
 }
 
 export default function FinancePage() {
@@ -35,7 +43,15 @@ export default function FinancePage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+    const [isCollectionsModalOpen, setIsCollectionsModalOpen] = useState(false);
+    const [selectedTeacherForDetail, setSelectedTeacherForDetail] = useState<Teacher | null>(null);
+    const [isTeacherDetailOpen, setIsTeacherDetailOpen] = useState(false);
     const queryClient = useQueryClient();
+    const { data: teachers = [] } = useTeachers();
+    const { data: students = [] } = useStudents();
+    const { data: groups = [] } = useGroups();
+
+    const { attendance: detailAttendance, updateAttendance: detailUpdateAttendance } = useTeacherAttendance(selectedTeacherForDetail?.id, selectedMonth);
 
     // تعيين الشهر الحالي على جانب العميل فقط
     useEffect(() => {
@@ -55,6 +71,16 @@ export default function FinancePage() {
         enabled: isClient && !!selectedMonth
     });
 
+    // جلب الرسوم من جدول fees لضمان المطابقة مع تفاصيل المدرس
+    const { data: allFees = [] } = useQuery({
+        queryKey: ['all-fees', selectedMonth],
+        queryFn: async () => {
+            if (!isClient) return [];
+            return await getFeesByMonth(selectedMonth);
+        },
+        enabled: isClient && !!selectedMonth
+    });
+
     // تحويل البيانات من قاعدة البيانات إلى صيغة المكون
     const transactions: Transaction[] = useMemo(() => {
         return dbTransactions.map(tr => ({
@@ -65,7 +91,8 @@ export default function FinancePage() {
             amount: tr.amount,
             date: tr.date,
             notes: '',
-            performedBy: tr.performedBy
+            performedBy: tr.performedBy,
+            relatedUserId: tr.relatedUserId
         }));
     }, [dbTransactions]);
 
@@ -75,45 +102,112 @@ export default function FinancePage() {
     }, [transactions, selectedMonth]);
 
     // حساب الإجماليات
-    const { teacherFees, feesByManager, fromTeachers, otherIncome, totalReceived, totalExpenses, balance } = useMemo(() => {
+    const { teacherFees, feesByManager, fromTeachers, otherIncome, totalReceived, totalExpenses, balance, teacherCollections } = useMemo(() => {
         const incomeTransactions = filteredTransactions.filter(tr => tr.type === 'income');
         const expenseTransactions = filteredTransactions.filter(tr => tr.type === 'expense');
 
-        // 1. ما حصله المدرسون (رسوم طلاب مسجلة بواسطة غير المدير)
-        const feesByTeachers = incomeTransactions
-            .filter(tr => tr.category === 'fees' && tr.performedBy !== user?.uid)
+        // دالة لتوحيد الحروف العربية للمقارنة العميقة
+        const normalize = (s: string) => {
+            if (!s) return '';
+            return s
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/[ءئؤ]/g, '')
+                .replace(/[ًٌٍَُِّ]/g, '') // حذف التشكيل
+                .replace(/\s+/g, '')
+                .trim();
+        };
+
+        const collectionsByTeacher: Record<string, { amount: number; count: number; teacher?: Teacher }> = {};
+
+        // 1. تهيئة القائمة بكل المدرسين النشطين
+        teachers.forEach(t => {
+            if (t.status === 'active' || !t.status) {
+                collectionsByTeacher[t.id] = { amount: 0, count: 0, teacher: t };
+            }
+        });
+
+        // 2. تجميع التحصيل من جدول الرسوم (fees) لضمان الدقة
+        allFees.forEach(fee => {
+            const student = students.find(s => s.id === fee.studentId);
+            // ملاحظة: حتى لو الطالب غير موجود حالياً (محذوف)، نحاول احتساب مبلغه إذا كان بيانات المدرس واضحة
+
+            // البحث عن المدرس الذي قام بالتحصيل بناءً على حقل createdBy
+            // هذا يضمن بقاء المبلغ مع المدرس حتى لو انتقل الطالب لمجموعة أخرى
+            const matchedTeacher = teachers.find(t =>
+                fee.createdBy === t.fullName ||
+                fee.createdBy === t.phone ||
+                (fee.createdBy && normalize(fee.createdBy) === normalize(t.fullName))
+            );
+
+            if (matchedTeacher) {
+                if (!collectionsByTeacher[matchedTeacher.id]) {
+                    collectionsByTeacher[matchedTeacher.id] = { amount: 0, count: 0, teacher: matchedTeacher };
+                }
+                const amt = Number(fee.amount.toString().replace(/[^0-9.]/g, '')) || 0;
+                collectionsByTeacher[matchedTeacher.id].amount += amt;
+                collectionsByTeacher[matchedTeacher.id].count += 1;
+            } else if (student) {
+                // محاولة أخيرة: إذا لم نجد اسم المدرس في الحقل، نعتمد على المدرس الحالي للمجموعة (فقط إذا كان الطالب موجوداً)
+                const group = groups.find(g => g.id === student.groupId);
+                if (group && group.teacherId) {
+                    const groupTeacher = teachers.find(t => t.id === group.teacherId);
+                    if (groupTeacher) {
+                        // هنا لا نضيفه لمجموعة المدرس إلا لو كان الحقل createdBy فارغاً أو غير واضح
+                        // لتجنب الازدواجية، نكتفي بالمطابقة أعلاه حالياً
+                    }
+                }
+            }
+        });
+
+        // 3. حساب مبالغ المدير من incomeTransactions (financial_transactions)
+        // نستبعد مبالغ المدرسين التي تم حسابها بدقة من جدول الرسوم
+        const teacherCollections = Object.entries(collectionsByTeacher)
+            .map(([id, data]) => ({
+                teacherId: id,
+                teacherName: data.teacher?.fullName || id,
+                amount: data.amount,
+                transactionCount: data.count,
+                teacher: data.teacher
+            }))
+            .sort((a, b) => b.amount - a.amount);
+
+        const totalFeesByTeachers = teacherCollections.reduce((sum, c) => sum + c.amount, 0);
+
+        // حساب ما وصل للمدير فعلاً (رسوم مباشرة أو توريد من مدرسين)
+        const totalFeesByManagerDirect = incomeTransactions
+            .filter(tr => {
+                if (tr.category !== 'fees') return false;
+                const performerId = tr.performedBy?.replace('mock-', '');
+                // إذا كان المنفذ هو أحد المدرسين، فهي "تحصيل مدرس" وليست "رسوم مباشرة للمدير"
+                const isByTeacher = Object.keys(collectionsByTeacher).some(tid => tid === performerId || tid === tr.performedBy);
+                return !isByTeacher;
+            })
             .reduce((sum, tr) => sum + tr.amount, 0);
 
-        // 2. ما حصله المدير (رسوم طلاب مسجلة بواسطته مباشرة)
-        const feesByManager = incomeTransactions
-            .filter(tr => tr.category === 'fees' && tr.performedBy === user?.uid)
-            .reduce((sum, tr) => sum + tr.amount, 0);
-
-        // 3. المبالغ المستلمة من المدرسين (كاش يدوي)
-        const fromTeachers = incomeTransactions
+        const totalFromTeachers = incomeTransactions
             .filter(tr => tr.category === 'تحصيل من مدرس')
             .reduce((sum, tr) => sum + tr.amount, 0);
 
-        // 4. إيرادات أخرى (تبرعات، أخرى)
-        const otherIncome = incomeTransactions
+        const totalOtherIncome = incomeTransactions
             .filter(tr => tr.category === 'donation' || tr.category === 'other')
             .reduce((sum, tr) => sum + tr.amount, 0);
 
-        // إجمالي المستلم الفعلي (عند المدير)
-        const managerTotal = feesByManager + fromTeachers + otherIncome;
-
+        const managerTotal = totalFeesByManagerDirect + totalFromTeachers;
         const totalExp = expenseTransactions.reduce((sum, tr) => sum + tr.amount, 0);
 
         return {
-            teacherFees: feesByTeachers,
-            feesByManager,
-            fromTeachers,
-            otherIncome,
+            teacherFees: totalFeesByTeachers,
+            feesByManager: totalFeesByManagerDirect,
+            fromTeachers: totalFromTeachers,
+            otherIncome: totalOtherIncome,
             totalReceived: managerTotal,
             totalExpenses: totalExp,
-            balance: managerTotal - totalExp
+            balance: managerTotal - totalExp,
+            teacherCollections
         };
-    }, [filteredTransactions, user?.uid]);
+    }, [filteredTransactions, teachers, students, groups, allFees]);
 
     // تصنيفات الإنفاق
     const expenseBreakdown = useMemo(() => {
@@ -121,7 +215,8 @@ export default function FinancePage() {
         filteredTransactions
             .filter(tr => tr.type === 'expense')
             .forEach(tr => {
-                breakdown[tr.category] = (breakdown[tr.category] || 0) + tr.amount;
+                const category = tr.category || 'other';
+                breakdown[category] = (breakdown[category] || 0) + tr.amount;
             });
         return breakdown;
     }, [filteredTransactions]);
@@ -132,7 +227,8 @@ export default function FinancePage() {
         filteredTransactions
             .filter(tr => tr.type === 'income')
             .forEach(tr => {
-                breakdown[tr.category] = (breakdown[tr.category] || 0) + tr.amount;
+                const category = tr.category || 'other';
+                breakdown[category] = (breakdown[category] || 0) + tr.amount;
             });
         return breakdown;
     }, [filteredTransactions]);
@@ -233,6 +329,30 @@ export default function FinancePage() {
             />
 
             {/* Modal */}
+            {/* Teacher Collections Breakdown Modal */}
+            <TeacherCollectionsModal
+                isOpen={isCollectionsModalOpen}
+                onClose={() => setIsCollectionsModalOpen(false)}
+                collections={teacherCollections}
+                monthName={months.find(m => m.value === selectedMonth)?.label || ''}
+                onTeacherClick={(teacher) => {
+                    setSelectedTeacherForDetail(teacher);
+                    setIsTeacherDetailOpen(true);
+                }}
+            />
+
+            {/* Teacher Detail Modal */}
+            <TeacherDetailModal
+                teacher={selectedTeacherForDetail}
+                isOpen={isTeacherDetailOpen}
+                onClose={() => setIsTeacherDetailOpen(false)}
+                attendanceData={detailAttendance as any}
+                onAttendanceChange={(day, status) => detailUpdateAttendance({
+                    date: `${selectedMonth}-${String(day).padStart(2, '0')}`,
+                    status
+                })}
+            />
+
             <AddTransactionModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -316,7 +436,10 @@ export default function FinancePage() {
                         {/* Summary Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {/* Teacher Collections */}
-                            <div className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-3 relative overflow-hidden group">
+                            <div
+                                onClick={() => setIsCollectionsModalOpen(true)}
+                                className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-3 relative overflow-hidden group cursor-pointer hover:border-purple-200 hover:shadow-lg transition-all"
+                            >
                                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110" />
                                 <div className="flex items-center justify-between relative z-10">
                                     <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
@@ -356,8 +479,8 @@ export default function FinancePage() {
                                             <span className="text-gray-400">تحصيل مدرسين:</span>
                                             <span className="text-blue-500">{fromTeachers.toLocaleString()} ج.م</span>
                                         </div>
-                                        <div className="flex justify-between items-center text-[9px] font-bold">
-                                            <span className="text-gray-400">إيرادات أخرى:</span>
+                                        <div className="flex justify-between items-center text-[9px] font-bold opacity-60">
+                                            <span className="text-gray-400">إيرادات أخرى (خارج الصندوق):</span>
                                             <span className="text-purple-500">{otherIncome.toLocaleString()} ج.م</span>
                                         </div>
                                     </div>

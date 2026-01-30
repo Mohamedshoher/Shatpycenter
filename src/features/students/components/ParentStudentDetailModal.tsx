@@ -286,10 +286,10 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
                     <div className="flex justify-between items-start relative z-10">
                         <div className="flex items-center gap-4 sm:gap-6 min-w-0">
                             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-600 rounded-[28px] sm:rounded-[32px] flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 shrink-0">
-                                <User size={student.fullName.length > 20 ? 32 : 40} />
+                                <User size={32} />
                             </div>
                             <div className="min-w-0 flex-1 space-y-1.5">
-                                <h2 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight truncate" title={student.fullName}>
+                                <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight truncate" title={student.fullName}>
                                     {student.fullName}
                                 </h2>
                                 <div className="flex flex-wrap items-center gap-2">

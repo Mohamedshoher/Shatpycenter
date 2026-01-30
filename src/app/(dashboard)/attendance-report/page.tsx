@@ -480,7 +480,7 @@ export default function AttendanceReportPage() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        window.open(`https://wa.me/2${student.parentPhone}`, '_blank');
+                                                        window.open(`https://wa.me/${student.parentPhone}`, '_blank');
                                                     }}
                                                     className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-xl transition-all"
                                                 >

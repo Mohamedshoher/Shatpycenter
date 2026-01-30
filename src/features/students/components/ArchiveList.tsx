@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Student } from '@/types';
 import StudentDetailModal from './StudentDetailModal';
+import EditStudentModal from './EditStudentModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
@@ -34,6 +35,8 @@ export default function ArchiveList() {
     const router = useRouter();
 
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
     const [filter, setFilter] = useState('الكل');
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -394,11 +397,25 @@ export default function ArchiveList() {
                 )}
             </AnimatePresence>
 
+            <EditStudentModal
+                student={studentToEdit}
+                isOpen={isEditModalOpen}
+                onClose={() => {
+                    setIsEditModalOpen(false);
+                    setStudentToEdit(null);
+                }}
+            />
+
             <StudentDetailModal
                 student={selectedStudent}
                 isOpen={!!selectedStudent}
                 onClose={() => setSelectedStudent(null)}
                 initialTab="attendance"
+                onEdit={(s) => {
+                    setSelectedStudent(null);
+                    setStudentToEdit(s);
+                    setIsEditModalOpen(true);
+                }}
             />
         </div>
     );

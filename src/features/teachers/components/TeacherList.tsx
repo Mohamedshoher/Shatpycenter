@@ -80,6 +80,9 @@ export default function TeacherList() {
         });
     };
 
+    // دالة توحيد الحروف العربية
+    const normalize = (s: string) => s?.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/\s+/g, '').trim() || '';
+
     // تصفية المعلمين بناءً على البحث والفلتر
     const filteredTeachers = teachers?.filter(teacher => {
         // إذا كان مدرساً، يظهر له صفحته فقط
@@ -87,11 +90,13 @@ export default function TeacherList() {
             return teacher.id === user.teacherId;
         }
 
-        const matchesSearch = teacher.fullName.toLowerCase().startsWith(searchTerm.toLowerCase());
+        const normSearch = normalize(searchTerm);
+        const normFullName = normalize(teacher.fullName);
+        const matchesSearch = normFullName.includes(normSearch);
 
         // فلتر الحالة
         const matchesStatus = filter === 'الكل' ||
-            (filter === 'نشط' && teacher.status === 'active') ||
+            (filter === 'نشط' && (teacher.status === 'active' || !teacher.status)) ||
             (filter === 'غير نشط' && teacher.status === 'inactive');
 
         // فلتر الأقسام

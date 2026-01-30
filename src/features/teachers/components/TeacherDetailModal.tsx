@@ -131,23 +131,48 @@ export default function TeacherDetailModal({
     // --- منطق "ما حصله المدرس" ---
     const [showCollectedDetails, setShowCollectedDetails] = useState(false);
 
+    const normalize = (s: string) => {
+        if (!s) return '';
+        return s
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي')
+            .replace(/[ءئؤ]/g, '')
+            .replace(/[ًٌٍَُِّ]/g, '')
+            .replace(/\s+/g, '')
+            .trim();
+    };
+
     const collectedPayments = (() => {
         if (!teacher || !groups || !students || !allFees) return [];
         const teacherGroupIds = groups
             .filter(g => g.teacherId === teacher.id)
             .map(g => g.id);
-        const teacherStudentIds = students
-            .filter(s => s.groupId && teacherGroupIds.includes(s.groupId))
-            .map(s => s.id);
 
         return allFees
             .filter(f => {
-                const isTeacherStudent = teacherStudentIds.includes(f.studentId);
-                const isCollectedByTeacher = f.createdBy === teacher.fullName || f.createdBy === teacher.phone;
-                return isTeacherStudent && isCollectedByTeacher;
+                // المطابقة بناءً على من قام بالعملية (createdBy) لضمان الدقة حتى لو انتقل الطالب
+                const isCollectedByTeacher = f.createdBy === teacher.fullName ||
+                    f.createdBy === teacher.phone ||
+                    (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
+
+                // أو إذا كان الطالب حالياً في مجموعة المدرس ولم يحدد من قام بالتحصيل (خيار احتياطي)
+                const student = students.find(s => s.id === f.studentId);
+                const isCurrentlyInGroup = student && student.groupId && teacherGroupIds.includes(student.groupId);
+                const isUnclear = !f.createdBy || f.createdBy === 'غير معروف';
+
+                return isCollectedByTeacher || (isCurrentlyInGroup && isUnclear);
             })
             .map(f => {
                 const student = students.find(s => s.id === f.studentId);
+                const isCurrentTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+
+                let transferStatus = '';
+                if (student) {
+                    if (student.status === 'archived') transferStatus = 'أرشف';
+                    else if (!isCurrentTeacherStudent) transferStatus = 'نقل';
+                }
+
                 return {
                     id: f.receipt,
                     studentId: f.studentId,
@@ -155,6 +180,7 @@ export default function TeacherDetailModal({
                     amount: Number(f.amount.replace(/[^0-9.]/g, '')) || 0,
                     date: f.date,
                     status: student?.status === 'archived' ? 'archived' : 'active',
+                    transferStatus,
                     groupName: groups.find(g => g.id === student?.groupId)?.name || '-'
                 };
             });
@@ -1513,8 +1539,18 @@ export default function TeacherDetailModal({
                                                                     #{payment.id}
                                                                 </div>
                                                                 <div className="text-right">
-                                                                    <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{payment.studentName}</h4>
-                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                    <div className="flex items-center gap-2 justify-end">
+                                                                        {payment.transferStatus && (
+                                                                            <span className={cn(
+                                                                                "text-[9px] px-1.5 py-0.5 rounded-md font-black shrink-0",
+                                                                                payment.transferStatus === 'أرشف' ? "bg-gray-100 text-gray-500" : "bg-amber-50 text-amber-600 border border-amber-100"
+                                                                            )}>
+                                                                                {payment.transferStatus}
+                                                                            </span>
+                                                                        )}
+                                                                        <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{payment.studentName}</h4>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 mt-1 justify-end">
                                                                         <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-bold">{payment.groupName}</span>
                                                                         <span className="text-[10px] text-gray-400 font-bold font-sans" dir="ltr">{payment.date}</span>
                                                                     </div>

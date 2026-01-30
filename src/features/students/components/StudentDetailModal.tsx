@@ -35,9 +35,10 @@ interface StudentDetailModalProps {
     onClose: () => void;
     initialTab?: string;
     currentAttendance?: 'present' | 'absent' | null;
+    onEdit?: (student: Student) => void;
 }
 
-export default function StudentDetailModal({ student: initialStudent, isOpen, onClose, initialTab = 'attendance', currentAttendance }: StudentDetailModalProps) {
+export default function StudentDetailModal({ student: initialStudent, isOpen, onClose, initialTab = 'attendance', currentAttendance, onEdit }: StudentDetailModalProps) {
     const { user } = useAuthStore();
     const { data: groups = [] } = useGroups();
     const isDirector = user?.role === 'director';
@@ -1058,6 +1059,13 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                                                     title={isArchived ? "استعادة" : "أرشفة"}
                                                 >
                                                     {isArchived ? <RotateCcw size={16} /> : <Archive size={16} />}
+                                                </button>
+                                                <button
+                                                    onClick={() => onEdit?.(student)}
+                                                    className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors"
+                                                    title="تعديل البيانات"
+                                                >
+                                                    <Edit3 size={16} />
                                                 </button>
                                                 <button
                                                     onClick={handleWhatsApp}

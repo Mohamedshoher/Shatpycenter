@@ -373,12 +373,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     </span>
                                 </div>
                                 <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
-                                    <h3 className={cn(
-                                        "font-bold text-gray-900 leading-tight truncate whitespace-nowrap transition-all",
-                                        student.fullName.length > 25 ? "text-sm sm:text-base" :
-                                            student.fullName.length > 18 ? "text-base sm:text-lg" :
-                                                "text-xl sm:text-2xl"
-                                    )}>
+                                    <h3 className="font-bold text-gray-900 leading-tight truncate whitespace-nowrap text-lg">
                                         {student.fullName}
                                     </h3>
                                     <span className="text-[10px] sm:text-xs text-gray-400 font-medium shrink-0">
@@ -459,6 +454,11 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 onClose={() => setSelectedStudent(null)}
                 initialTab={selectedTab}
                 currentAttendance={selectedStudent ? attendanceState[selectedStudent.id] : undefined}
+                onEdit={(s) => {
+                    setSelectedStudent(null);
+                    setStudentToEdit(s);
+                    setIsEditModalOpen(true);
+                }}
             />
         </div >
     );
