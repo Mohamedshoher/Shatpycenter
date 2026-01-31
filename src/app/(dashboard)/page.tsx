@@ -233,7 +233,6 @@ export default function DashboardOverview() {
                                 {[
                                     { tag: 'حضور', text: `تم تسجيل حضور ${todayAttendance.length} طالباً اليوم حتى الآن`, time: 'اليوم', icon: CalendarCheck, color: 'text-orange-500', bg: 'bg-orange-50', roles: ['director', 'supervisor', 'teacher'] },
                                     { tag: 'طلاب', text: `تم تسجيل ${students.length} طالباً في النظام`, time: 'محدث', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50', roles: ['director', 'supervisor'] },
-                                    { tag: 'مالية', text: `إجمالي إيرادات النقدية لهذا الشهر: ${monthlyIncome.toLocaleString()} ج.م`, time: 'هذا الشهر', icon: CreditCard, color: 'text-purple-500', bg: 'bg-purple-50', roles: ['director'] },
                                 ]
                                     .filter(item => item.roles.includes(user?.role || ''))
                                     .map((item, idx) => (
