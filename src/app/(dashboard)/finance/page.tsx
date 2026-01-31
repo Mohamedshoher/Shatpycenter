@@ -7,10 +7,11 @@ import {
     ArrowDownCircle,
     Wallet,
     Plus,
+    CheckCircle2,
+    Gift,
     ChevronDown,
     Calendar,
     Trash2,
-    Loader,
     AlertCircle,
     X
 } from 'lucide-react';
@@ -57,6 +58,7 @@ export default function FinancePage() {
     const [deficitOnlyModal, setDeficitOnlyModal] = useState(false);
     const [expectedOnlyModal, setExpectedOnlyModal] = useState(false);
     const [isReceivedDetailsOpen, setIsReceivedDetailsOpen] = useState(false);
+    const [isExemptionsModalOpen, setIsExemptionsModalOpen] = useState(false);
 
     // جلب الإعفاءات
     const { data: exemptions = [] } = useQuery({
@@ -132,7 +134,8 @@ export default function FinancePage() {
         balance,
         teacherCollections,
         totalGlobalDeficit,
-        totalGlobalExpected
+        totalGlobalExpected,
+        totalGlobalExempted
     } = useMemo(() => {
         const incomeTransactions = filteredTransactions.filter(tr => tr.type === 'income');
         const expenseTransactions = filteredTransactions.filter(tr => tr.type === 'expense');
@@ -278,7 +281,8 @@ export default function FinancePage() {
             balance: managerTotal - totalExp,
             teacherCollections: collectionsWithDeficit,
             totalGlobalDeficit,
-            totalGlobalExpected
+            totalGlobalExpected,
+            totalGlobalExempted: exemptions.reduce((sum, e: any) => sum + (Number(e.amount) || 0), 0)
         };
     }, [filteredTransactions, teachers, students, groups, allFees, user?.displayName, exemptions]);
 
@@ -516,6 +520,99 @@ export default function FinancePage() {
                 )}
             </AnimatePresence>
 
+            {/* Exemptions Details Modal */}
+            <AnimatePresence>
+                {isExemptionsModalOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
+                            onClick={() => setIsExemptionsModalOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20"
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600">
+                                        <Gift size={24} />
+                                    </div>
+                                    <div className="text-right">
+                                        <h3 className="text-xl font-black text-gray-900">تفاصيل الإعفاءات المالية</h3>
+                                        <p className="text-xs font-bold text-gray-400 mt-0.5">لشهر {months.find(m => m.value === selectedMonth)?.label}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsExemptionsModalOpen(false)}
+                                    className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
+                                {exemptions.length === 0 ? (
+                                    <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                                        لا توجد إعفاءات مسجلة لهذا الشهر.
+                                    </div>
+                                ) : (
+                                    exemptions.map((ex: any) => {
+                                        const teacher = teachers.find(t => t.id === ex.teacher_id);
+                                        const student = students.find(s => s.id === ex.student_id);
+                                        const isFullyExempted = ex.amount >= (Number(student?.monthlyAmount) || 0);
+
+                                        return (
+                                            <div key={ex.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-teal-200 transition-all group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={cn(
+                                                        "w-12 h-12 rounded-xl flex items-center justify-center font-black text-xs border transition-colors",
+                                                        isFullyExempted ? "bg-teal-50 text-teal-600 border-teal-100" : "bg-blue-50 text-blue-600 border-blue-100"
+                                                    )}>
+                                                        {isFullyExempted ? "كلي" : "جزئي"}
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <h4 className="font-black text-gray-900 group-hover:text-teal-600 transition-colors">
+                                                            {ex.student_name}
+                                                        </h4>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className="text-[10px] bg-gray-50 text-gray-400 px-2 py-0.5 rounded-md font-bold">المعلم: {teacher?.fullName || 'غير معروف'}</span>
+                                                            <span className="text-[10px] text-gray-300 font-bold font-sans" dir="ltr">{new Date(ex.created_at).toLocaleDateString('ar-EG')}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-left font-sans">
+                                                    <p className="text-lg font-black text-teal-600">{Number(ex.amount).toLocaleString()} <span className="text-[10px] font-bold">ج.م</span></p>
+                                                    <p className="text-[9px] font-bold text-gray-300 text-right">بواسطة: {ex.exempted_by}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-2xl font-black text-teal-600 font-sans">
+                                        {totalGlobalExempted.toLocaleString()} <span className="text-sm">ج.م</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-bold text-gray-400">إجمالي المبلغ المعفي عنه</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* Sticky Header */}
             <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 relative">
@@ -591,7 +688,7 @@ export default function FinancePage() {
                 ) : (
                     <>
                         {/* Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
                             {/* Global Expected Revenue */}
                             <div
                                 onClick={() => {
@@ -673,6 +770,25 @@ export default function FinancePage() {
                                         <p className="text-[10px] font-bold text-gray-400">إجمالي العجز</p>
                                         <h3 className="text-xl font-black text-amber-600 font-sans tracking-tight">
                                             {totalGlobalDeficit.toLocaleString()} <span className="text-[10px]">ج.م</span>
+                                        </h3>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Global Exempted Amount */}
+                            <div
+                                onClick={() => setIsExemptionsModalOpen(true)}
+                                className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-3 relative overflow-hidden group cursor-pointer hover:border-teal-200 hover:shadow-lg transition-all min-h-[140px]"
+                            >
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110" />
+                                <div className="flex flex-col h-full justify-between relative z-10">
+                                    <div className="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center">
+                                        <Gift size={20} />
+                                    </div>
+                                    <div className="text-right pt-2">
+                                        <p className="text-[10px] font-bold text-gray-400">إجمالي المعفي عنه</p>
+                                        <h3 className="text-xl font-black text-teal-600 font-sans tracking-tight">
+                                            {totalGlobalExempted.toLocaleString()} <span className="text-[10px]">ج.م</span>
                                         </h3>
                                     </div>
                                 </div>
