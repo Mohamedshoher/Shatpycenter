@@ -151,20 +151,23 @@ export default function TeacherDetailModal({
 
         return allFees
             .filter(f => {
+                const student = students.find(s => s.id === f.studentId);
+                const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+
                 // المطابقة بناءً على من قام بالعملية (createdBy) لضمان الدقة حتى لو انتقل الطالب
                 const isCollectedByTeacher = f.createdBy === teacher.fullName ||
                     f.createdBy === teacher.phone ||
                     (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
 
                 // أو إذا كان الطالب حالياً في مجموعة المدرس ولم يحدد من قام بالتحصيل (خيار احتياطي)
-                const student = students.find(s => s.id === f.studentId);
-                const isCurrentlyInGroup = student && student.groupId && teacherGroupIds.includes(student.groupId);
                 const isUnclear = !f.createdBy || f.createdBy === 'غير معروف';
 
-                return isCollectedByTeacher || (isCurrentlyInGroup && isUnclear);
+                // نعتبر التحصيل للمدرس إذا قام به بنفسه أو إذا كان القائم بالتحصيل غير معروف والطالب في مجموعته
+                return isCollectedByTeacher || (isTeacherStudent && isUnclear);
             })
             .map(f => {
                 const student = students.find(s => s.id === f.studentId);
+                const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
                 const isCurrentTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
 
                 let transferStatus = '';
@@ -204,8 +207,15 @@ export default function TeacherDetailModal({
         return allFees
             .filter(f => {
                 const isTeacherStudent = teacherStudentIds.includes(f.studentId);
-                const isCollectedByTeacher = f.createdBy === teacher.fullName || f.createdBy === teacher.phone;
-                return isTeacherStudent && !isCollectedByTeacher;
+                const isCollectedByTeacher = f.createdBy === teacher.fullName ||
+                    f.createdBy === teacher.phone ||
+                    (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
+
+                const isUnclear = !f.createdBy || f.createdBy === 'غير معروف';
+
+                // المدير هو من حصل من طلاب المدرس، بشرط ألا يكون المدرس هو القائم بالتحصيل، وألا يكون القائم بالتحصيل مجهولاً
+                // (لأن المجهول ننسبه للمدرس افتراضياً في مجموعته)
+                return isTeacherStudent && !isCollectedByTeacher && !isUnclear;
             })
             .map(f => {
                 const student = students.find(s => s.id === f.studentId);
