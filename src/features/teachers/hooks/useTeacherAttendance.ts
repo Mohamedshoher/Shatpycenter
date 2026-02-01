@@ -23,6 +23,7 @@ export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
         attendance: attendanceQuery.data || {},
         loading: attendanceQuery.isLoading,
         updateAttendance: updateAttendanceMutation.mutate,
+        updateAttendanceAsync: updateAttendanceMutation.mutateAsync,
     };
 };
 

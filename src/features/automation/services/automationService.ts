@@ -387,22 +387,17 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
             .eq('date', targetDateStr)
             .maybeSingle();
 
-        if (existingDeduction) {
-            console.log(`   - يوجد خصم مالي مسجل في جدول الخصومات. تجاوز.`);
-            continue;
-        }
-
         // 3. الفحص الفعلي: هل قام بتحضير طلابه في ذلك اليوم؟
-        const { data: groups } = await supabase.from('groups').select('id').eq('teacher_id', teacher.id);
+        const { data: groups } = await supabase.from('groups').select('id, name').eq('teacher_id', teacher.id);
         if (!groups || groups.length === 0) {
-            console.log(`   - لا توجد مجموعات لهذا المعلم. تجاوز.`);
+            console.log(`   - ⚠️ تجاوز: لا توجد مجموعات مسجلة لهذا المعلم. قد يكون معلم احتياط أو لم تكتمل بياناته.`);
             continue;
         }
 
         const groupIds = groups.map(g => g.id);
         const { data: students } = await supabase.from('students').select('id').in('group_id', groupIds);
         if (!students || students.length === 0) {
-            console.log(`   - لا يوجد طلاب في مجموعات المعلم. تجاوز.`);
+            console.log(`   - ⚠️ تجاوز: المعلم لديه مجموعات (${groups.length}) ولكنها فارغة من الطلاب حالياً.`);
             continue;
         }
 
@@ -416,66 +411,72 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
 
         // إذا **لم** نجد أي سجل حضور للطلاب => المعلم لم يسلم التقرير
         if (!attendance || attendance.length === 0) {
-            console.log(`   - ❌ مخالفة! لم يسجل حضور للطلاب. جاري تطبيق الخصم...`);
+            console.log(`   - ❌ مخالفة مؤكدة! لم يسجل حضور للطلاب ليوم ${targetDateStr}.`);
 
             const deductionAmount = rule.condition.deductionAmount || 0.25;
             const dbReason = 'خصم ربع يوم لعدم تسليم التقرير اليومي';
             const chatDetail = `خصم ربع يوم لعدم تسليم التقرير اليومي ليوم ${dayName} الموافق ${targetDateStr}`;
 
-            // أ. تسجيل/تحديث الخصم في جدول حضور المعلمين
+            // أ. تحديث سجل الحضور في التقويم (إذا لم يكن غائباً بالفعل)
             if (existingAttendance) {
-                // تحديث الحالة من "حاضر" إلى "خصم"
-                await supabase
-                    .from('teacher_attendance')
-                    .update({
-                        status: 'quarter',
-                        notes: 'أتمتة: تم تغيير الحالة لعدم تسليم التقرير رغم التحضير اليدوي'
-                    })
-                    .eq('id', existingAttendance.id);
+                if (existingAttendance.status !== 'absent' && existingAttendance.status !== 'quarter') {
+                    await supabase
+                        .from('teacher_attendance')
+                        .update({
+                            status: 'quarter',
+                            notes: 'أتمتة: تم تغيير الحالة لعدم تسليم التقرير اليومي'
+                        })
+                        .eq('id', existingAttendance.id);
+                    console.log(`   -> تم تحديث التقويم لـ ${teacher.full_name}.`);
+                }
             } else {
-                // إنشاء سجل جديد
                 await supabase
                     .from('teacher_attendance')
                     .insert([{
                         teacher_id: teacher.id,
                         date: targetDateStr,
                         status: 'quarter',
-                        notes: 'أتمتة: خصم تلقائي لعدم العمل (فحص الأمس)'
+                        notes: 'أتمتة: خصم تلقائي لعدم تسليم التقرير'
                     }]);
+                console.log(`   -> تم إنشاء سجل حضور جديد لـ ${teacher.full_name}.`);
             }
 
-            // ب. تنفيذ الخصم المالي
+            // إذا كان هناك خصم مالي مسجل مسبقاً، نتوقف هنا حتى لا نكرر الخصم المالي
+            if (existingDeduction) {
+                console.log(`   - ℹ️ الملاحظة: الخصم المالي مسجل مسبقاً لهذا التاريخ. تم تحديث التقويم فقط.`);
+                continue;
+            }
+
+            // ب. تنفيذ الخصم المالي وإضافة السجل العام
             const result = await executeDeduction(
                 teacher.id,
                 teacher.full_name,
                 deductionAmount,
-                dbReason, // النص المسجل كما طلبه المستخدم
+                dbReason,
                 rule.id
             );
             logsCreated.push(...result.logs);
 
             // جـ. إرسال رسالة شات
             try {
-                if (teacher.id) {
-                    const conversation = await chatService.getOrCreateConversation(
-                        [senderId, teacher.id],
-                        [senderName, teacher.full_name],
-                        'director-teacher'
-                    );
+                const conversation = await chatService.getOrCreateConversation(
+                    [senderId, teacher.id],
+                    [senderName, teacher.full_name],
+                    'director-teacher'
+                );
 
-                    await chatService.sendMessage(
-                        conversation.id,
-                        senderId,
-                        senderName,
-                        'director',
-                        `⚠️ تنبيه إداري:\n\n${chatDetail}.\nيرجى الالتزام بتسجيل الحضور اليومي للطلاب.`
-                    );
-                }
+                await chatService.sendMessage(
+                    conversation.id,
+                    senderId,
+                    senderName,
+                    'director',
+                    `⚠️ تنبيه آلي:\n\n${chatDetail}.\nيرجى تسليم التقرير اليومي بانتظام لتجنب الخصومات.`
+                );
             } catch (msgError) {
-                console.error(`فشل إرسال رسالة للمعلم ${teacher.full_name}`, msgError);
+                console.error(`Error sending message to ${teacher.full_name}:`, msgError);
             }
         } else {
-            console.log(`   - ✅ سليم. تم العثور على ${attendance.length} سجل حضور للطلاب.`);
+            console.log(`   - ✅ سليم: المعلم سلم تقريره (تم العثور على سجلات حضور للطلاب).`);
         }
     }
 

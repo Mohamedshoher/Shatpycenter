@@ -29,7 +29,9 @@ export const getTeacherAttendance = async (teacherId: string, monthKey: string):
 
         const attendanceMap: Record<string, TeacherAttendanceStatus> = {};
         data?.forEach(row => {
-            const day = new Date(row.date).getDate();
+            // استخدام تقسيم السلسلة بدلاً من new Date لتجنب مشاكل المناطق الزمنية
+            const dateParts = row.date.split('-');
+            const day = parseInt(dateParts[2], 10);
             attendanceMap[day] = row.status as TeacherAttendanceStatus;
         });
 
@@ -59,7 +61,9 @@ export const getAllTeachersAttendance = async (monthKey: string): Promise<Record
         const fullMap: Record<string, Record<string, TeacherAttendanceStatus>> = {};
         data?.forEach(row => {
             if (!fullMap[row.teacher_id]) fullMap[row.teacher_id] = {};
-            const day = new Date(row.date).getDate();
+            // استخدام تقسيم السلسلة بدلاً من new Date لتجنب مشاكل المناطق الزمنية
+            const dateParts = row.date.split('-');
+            const day = parseInt(dateParts[2], 10);
             fullMap[row.teacher_id][day] = row.status as TeacherAttendanceStatus;
         });
 
@@ -72,18 +76,42 @@ export const getAllTeachersAttendance = async (monthKey: string): Promise<Record
 
 export const updateTeacherAttendance = async (teacherId: string, date: string, status: TeacherAttendanceStatus, notes?: string): Promise<void> => {
     try {
+        console.log(`Attempting to update attendance for teacher ${teacherId} on date ${date} with status ${status}`);
+
+        // حذف السجل القديم أولاً
+        await supabase
+            .from('teacher_attendance')
+            .delete()
+            .eq('teacher_id', teacherId)
+            .eq('date', date);
+
+        // إدراج السجل الجديد
         const { error } = await supabase
             .from('teacher_attendance')
-            .upsert({
+            .insert({
                 teacher_id: teacherId,
                 date: date,
                 status: status,
-                notes: notes
-            }, { onConflict: 'teacher_id,date' });
+                notes: notes || null
+            });
 
-        if (error) throw error;
-    } catch (error) {
-        console.error("Error updating teacher attendance:", error);
+        if (error) {
+            console.error("Supabase insert error details:", {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                data: { teacherId, date, status }
+            });
+            throw error;
+        }
+        console.log("Attendance updated successfully");
+    } catch (error: any) {
+        console.error("Error updating teacher attendance:", {
+            message: error?.message,
+            fullError: error
+        });
         throw error;
     }
 };
+

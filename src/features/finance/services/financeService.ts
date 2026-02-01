@@ -177,7 +177,7 @@ export const getTeacherSalaryPayments = async (
 
         // تحويل teacherId إلى string إذا كان uuid
         const userIdStr = String(teacherId).trim();
-        
+
         const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
         const nextMonth = month === 12 ? 1 : month + 1;
         const nextYear = month === 12 ? year + 1 : year;

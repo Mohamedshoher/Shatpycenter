@@ -34,8 +34,6 @@ interface TeacherDetailModalProps {
     teacher: Teacher | null; // بيانات المعلم المختار
     isOpen: boolean; // حالة فتح النافذة
     onClose: () => void; // وظيفة الإغلاق
-    attendanceData: Record<number, 'present' | 'absent' | 'quarter' | 'half' | 'quarter_reward' | 'half_reward'>; // بيانات الحضور
-    onAttendanceChange: (day: number, status: 'present' | 'absent' | 'quarter' | 'half' | 'quarter_reward' | 'half_reward') => void; // وظيفة تحديث الحضور
     onEdit?: (teacher: Teacher) => void; // وظيفة التعديل
     onDelete?: (teacher: Teacher) => void; // وظيفة الحذف
 }
@@ -44,6 +42,7 @@ import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeductions';
+import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
 import { DeductionsList } from '@/features/teachers/components/DeductionsList';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
@@ -56,8 +55,6 @@ export default function TeacherDetailModal({
     teacher,
     isOpen,
     onClose,
-    attendanceData,
-    onAttendanceChange,
     onEdit,
     onDelete
 }: TeacherDetailModalProps) {
@@ -90,6 +87,9 @@ export default function TeacherDetailModal({
     const [selectedMonth, setSelectedMonth] = useState(currentMonthLabel); // الشهر المختار للعرض
     const today = new Date();
     const [selectedMonthRaw, setSelectedMonthRaw] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`); // القيمة الخام للمدخل (YYYY-MM)
+
+    // جلب بيانات الحضور للشهر المختار
+    const { attendance: attendanceData, updateAttendanceAsync } = useTeacherAttendance(teacher?.id, selectedMonthRaw);
 
     // --- جلب البيانات الفعلية من Supabase ---
     const { data: allFees = [] } = useQuery({
@@ -371,10 +371,11 @@ export default function TeacherDetailModal({
         let newDate: Date;
         if (typeof offsetOrValue === 'number') {
             const [year, month] = selectedMonthRaw.split('-');
-            newDate = new Date(parseInt(year), parseInt(month) - 1 + offsetOrValue);
+            // نستخدم اليوم الأول من الشهر دائماً لتجنب تخطي الأشهر عند الانتقال من شهر فيه 31 يوماً
+            newDate = new Date(parseInt(year), parseInt(month) - 1 + offsetOrValue, 1);
         } else {
             const [year, month] = offsetOrValue.split('-');
-            newDate = new Date(parseInt(year), parseInt(month) - 1);
+            newDate = new Date(parseInt(year), parseInt(month) - 1, 1);
         }
 
         const yearStr = newDate.getFullYear();
@@ -383,6 +384,9 @@ export default function TeacherDetailModal({
 
         setSelectedMonthRaw(rawValue);
         setSelectedMonth(new Intl.DateTimeFormat('ar-EG', { month: 'long', year: 'numeric' }).format(newDate));
+
+        // إغلاق أي قائمة تعديل مفتوحة عند تغيير الشهر لتجنب محاولة حفظ يوم غير موجود
+        setActiveDayMenu(null);
     };
 
     // حساب إجمالي "المسلم للمدير" من سجل عمليات التسليم للشهر المختار
@@ -431,9 +435,8 @@ export default function TeacherDetailModal({
     const currentDate = new Date();
     const currentMonthRaw = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
     const isCurrentMonthSelected = selectedMonthRaw === currentMonthRaw;
-    const currentAttendance = isCurrentMonthSelected ? attendanceData : {};
 
-    const autoDeductions = Object.values(currentAttendance).reduce((acc, status) => {
+    const autoDeductions = Object.values(isCurrentMonthSelected ? attendanceData : {}).reduce((acc: number, status: any) => {
         if (status === 'absent') return acc + dailyRate;
         if (status === 'half') return acc + (dailyRate * 0.5);
         if (status === 'quarter') return acc + (dailyRate * 0.25);
@@ -441,7 +444,7 @@ export default function TeacherDetailModal({
     }, 0);
 
     // حساب المكافآت التلقائية بناءً على سجل الحضور
-    const autoRewards = Object.values(currentAttendance).reduce((acc, status) => {
+    const autoRewards = Object.values(isCurrentMonthSelected ? attendanceData : {}).reduce((acc: number, status: any) => {
         if (status === 'half_reward') return acc + (dailyRate * 0.5);
         if (status === 'quarter_reward') return acc + (dailyRate * 0.25);
         return acc;
@@ -454,7 +457,7 @@ export default function TeacherDetailModal({
             const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
             return dMonthRaw === selectedMonthRaw && d.reason.startsWith('مكافأة:');
         })
-        .reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+        .reduce((acc: number, curr) => acc + Math.abs(curr.amount), 0);
 
     // حساب إجمالي الخصومات اليدوية من قاعدة البيانات (للشهر المختار)
     const manualDeductionsTotal = deductions
@@ -463,11 +466,11 @@ export default function TeacherDetailModal({
             const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
             return dMonthRaw === selectedMonthRaw && !d.reason.startsWith('مكافأة:');
         })
-        .reduce((acc, curr) => acc + curr.amount, 0);
+        .reduce((acc: number, curr) => acc + curr.amount, 0);
 
     // حساب إجمالي المبالغ التي تم صرفها بالفعل للمعلم (للشهر المختار حصراً)
     const totalPaid = paymentsHistory
-        .reduce((acc, curr) => acc + Number(curr.amount), 0);
+        .reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
 
     // الحسبة النهائية: (الراتب + المكافآت) - الخصومات = صافي المستحق
     const totalEntitlement = Math.round((basicSalary + autoRewards + manualRewardsTotal - autoDeductions - manualDeductionsTotal) * 100) / 100;
@@ -640,46 +643,68 @@ export default function TeacherDetailModal({
     };
 
     // وظيفة حفظ تعديلات الانضباط أو المكافأة ليوم معين في التقويم
-    const handleAddDiscipline = () => {
-        let finalStatus: any = 'present';
-        if (tempStatus === 'present') finalStatus = 'present';
-        else if (tempStatus === 'absent') finalStatus = 'absent';
-        else if (tempStatus === 'discipline') {
-            finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half' : 'quarter';
-        } else if (tempStatus === 'reward') {
-            finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half_reward' : 'quarter_reward';
-        }
+    const handleAddDiscipline = async () => {
+        if (!activeDayMenu || !teacher) return;
 
-        onAttendanceChange(activeDayMenu!, finalStatus);
+        try {
+            // التحقق من صحة التاريخ قبل الحفظ
+            const [year, month] = selectedMonthRaw.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
 
-        // إرسال إشعار فوري للمعلم في حالة الخصم أو المكافأة عبر التقويم
-        if (tempStatus === 'discipline' || tempStatus === 'reward') {
-            try {
-                const numericAmount = tempAmount === 'day' ? 1 : tempAmount === 'half' ? 0.5 : 0.25;
-                const specificDate = `${selectedMonthRaw}-${String(activeDayMenu!).padStart(2, '0')}`;
-                const note = tempReason ? `${tempReason} (بتاريخ ${specificDate})` : `إجراء إداري لليوم الموافق ${specificDate}`;
-
-                automationService.sendManualNotification(
-                    teacher!.id,
-                    teacher!.fullName,
-                    numericAmount,
-                    tempStatus === 'reward' ? 'reward' : 'deduction',
-                    note,
-                    { uid: user?.uid || 'director', displayName: user?.displayName || 'المدير العام' }
-                ).catch(err => console.error("Calendar notification failed", err));
-            } catch (notifyError) {
-                console.error("Failed to notify teacher from calendar:", notifyError);
+            if (activeDayMenu > daysInMonth) {
+                alert(`اليوم ${activeDayMenu} غير موجود في الشهر المختار. يرجى تحديث الصفحة.`);
+                setActiveDayMenu(null);
+                return;
             }
-        }
 
-        if (tempReason) {
-            setDayDetails(prev => ({
-                ...prev,
-                [activeDayMenu!]: { reason: tempReason, type: tempStatus }
-            }));
+            let finalStatus: any = 'present';
+            if (tempStatus === 'present') finalStatus = 'present';
+            else if (tempStatus === 'absent') finalStatus = 'absent';
+            else if (tempStatus === 'discipline') {
+                finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half' : 'quarter';
+            } else if (tempStatus === 'reward') {
+                finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half_reward' : 'quarter_reward';
+            }
+
+            // تنفيذ التغيير في قاعدة البيانات
+            const date = `${selectedMonthRaw}-${String(activeDayMenu).padStart(2, '0')}`;
+            await updateAttendanceAsync({ date, status: finalStatus });
+
+            // إرسال إشعار فوري للمعلم في حالة الخصم أو المكافأة عبر التقويم
+            if (tempStatus === 'discipline' || tempStatus === 'reward') {
+                try {
+                    const numericAmount = tempAmount === 'day' ? 1 : tempAmount === 'half' ? 0.5 : 0.25;
+                    const specificDate = `${selectedMonthRaw}-${String(activeDayMenu).padStart(2, '0')}`;
+                    const note = tempReason ? `${tempReason} (بتاريخ ${specificDate})` : `إجراء إداري لليوم الموافق ${specificDate}`;
+
+                    automationService.sendManualNotification(
+                        teacher.id,
+                        teacher.fullName,
+                        numericAmount,
+                        tempStatus === 'reward' ? 'reward' : 'deduction',
+                        note,
+                        { uid: user?.uid || 'director', displayName: user?.displayName || 'المدير العام' }
+                    ).catch(err => console.error("Calendar notification failed", err));
+                } catch (notifyError) {
+                    console.error("Failed to notify teacher from calendar:", notifyError);
+                }
+            }
+
+            if (tempReason) {
+                setDayDetails(prev => ({
+                    ...prev,
+                    [activeDayMenu]: { reason: tempReason, type: tempStatus }
+                }));
+            }
+
+            // نجاح العملية - إغلاق القائمة
+            setActiveDayMenu(null);
+            setTempReason('');
+        } catch (error: any) {
+            console.error("Error in handleAddDiscipline:", error);
+            const errorMsg = error?.message || error?.toString() || "خطأ غير معروف";
+            alert(`حدث خطأ أثناء حفظ التعديلات:\n${errorMsg}\n\nيرجى المحاولة مرة أخرى.`);
         }
-        setActiveDayMenu(null);
-        setTempReason('');
     };
 
     // تعريف التبويبات الأساسية للنافذة
@@ -885,14 +910,14 @@ export default function TeacherDetailModal({
                 );
             case 'attendance': // --- تبويب سجل الحضور والغياب ---
                 // حسابات إحصائية سريعة لأيام الغياب والمكافآت
-                const totalAbsenceDays = Object.values(attendanceData).reduce((acc, status) => {
+                const totalAbsenceDays = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
                     if (status === 'absent') return acc + 1;
                     if (status === 'half') return acc + 0.5;
                     if (status === 'quarter') return acc + 0.25;
                     return acc;
                 }, 0);
 
-                const totalRewardDays = Object.values(attendanceData).reduce((acc, status) => {
+                const totalRewardDays = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
                     if (status === 'half_reward') return acc + 0.5;
                     if (status === 'quarter_reward') return acc + 0.25;
                     return acc;
@@ -947,7 +972,7 @@ export default function TeacherDetailModal({
                             <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
                                 <div className="text-right">
                                     <p className="text-xs font-bold text-gray-400 mb-1">  الغياب</p>
-                                    <p className="text-2xl font-black text-red-600 font-sans">{totalAbsenceDays} يوم</p>
+                                    <p className="text-2xl font-black text-red-600 font-sans">{Number(totalAbsenceDays)} يوم</p>
                                 </div>
                                 <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-500">
                                     <Calendar size={24} />
@@ -956,7 +981,7 @@ export default function TeacherDetailModal({
                             <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
                                 <div className="text-right">
                                     <p className="text-xs font-bold text-gray-400 mb-1"> المكافآت</p>
-                                    <p className="text-2xl font-black text-green-600 font-sans">{totalRewardDays} يوم</p>
+                                    <p className="text-2xl font-black text-green-600 font-sans">{Number(totalRewardDays)} يوم</p>
                                 </div>
                                 <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-500">
                                     <Calendar size={24} />
@@ -1001,7 +1026,7 @@ export default function TeacherDetailModal({
 
                                     return Array.from({ length: daysInMonth }).map((_, i) => {
                                         const day = i + 1;
-                                        const rawStatus = currentAttendance[day];
+                                        const rawStatus = (attendanceData as any)[String(day)];
 
                                         const isFuture = isCurrentMonth ? day > todayDay : (year > now.getFullYear() || (year === now.getFullYear() && month > (now.getMonth() + 1)));
                                         const isToday = isCurrentMonth && day === todayDay;
@@ -1154,7 +1179,7 @@ export default function TeacherDetailModal({
                                             return <div className="col-span-full py-8 text-center text-gray-400 text-sm font-bold bg-white rounded-3xl border border-gray-100 md:col-span-2">لا توجد سجلات انضباط أو خصومات لهذا الشهر</div>
                                         }
 
-                                        return records.map(([day, status]) => {
+                                        return records.map(([day, status]: [string, any]) => {
                                             const d = Number(day);
                                             const weekDayIdx = (d - 1 + startOffset) % 7;
                                             const amount = status === 'absent' ? dailyRate :
@@ -1184,7 +1209,10 @@ export default function TeacherDetailModal({
 
                                                     {!isTeacher && (
                                                         <button
-                                                            onClick={() => onAttendanceChange(Number(day), 'present')}
+                                                            onClick={async () => {
+                                                                const date = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
+                                                                await updateAttendanceAsync({ date, status: 'present' });
+                                                            }}
                                                             className="w-full py-2 mt-1 bg-red-50 text-red-500 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
                                                         >
                                                             <Trash2 size={14} />

@@ -46,7 +46,7 @@ export default function TeacherList() {
     const [selectedMonthRaw, setSelectedMonthRaw] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
     const { data: allTeachersAttendanceMap = {} } = useAllTeachersAttendance(selectedMonthRaw);
 
-    const { updateAttendance } = useTeacherAttendance(selectedTeacher?.id, selectedMonthRaw);
+    const { updateAttendance, updateAttendanceAsync } = useTeacherAttendance(selectedTeacher?.id, selectedMonthRaw);
 
     const deleteMutation = useMutation({
         mutationFn: (id: string) => deleteTeacher(id),
@@ -330,10 +330,18 @@ export default function TeacherList() {
                 isOpen={isDetailOpen}
                 onClose={() => setIsDetailOpen(false)}
                 attendanceData={selectedTeacher ? allTeachersAttendanceMap[selectedTeacher.id] || {} : {}}
-                onAttendanceChange={(day, status) => {
+                onAttendanceChange={async (day, status, monthRaw) => {
                     if (selectedTeacher) {
-                        const date = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
-                        updateAttendance({ date, status });
+                        const date = `${monthRaw}-${String(day).padStart(2, '0')}`;
+                        try {
+                            await updateAttendanceAsync({ date, status });
+                            // إعادة جلب البيانات لضمان تحديث التقويم
+                            queryClient.invalidateQueries({ queryKey: ['all-teachers-attendance', monthRaw] });
+                            queryClient.invalidateQueries({ queryKey: ['teacher-attendance', selectedTeacher.id, monthRaw] });
+                        } catch (error) {
+                            console.error("Failed to update attendance:", error);
+                            alert("فشل تحديث الحضور. يرجى المحاولة مرة أخرى.");
+                        }
                     }
                 }}
                 onEdit={handleEdit}
