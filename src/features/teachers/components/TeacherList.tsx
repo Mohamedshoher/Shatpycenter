@@ -329,21 +329,6 @@ export default function TeacherList() {
                 teacher={selectedTeacher}
                 isOpen={isDetailOpen}
                 onClose={() => setIsDetailOpen(false)}
-                attendanceData={selectedTeacher ? allTeachersAttendanceMap[selectedTeacher.id] || {} : {}}
-                onAttendanceChange={async (day, status, monthRaw) => {
-                    if (selectedTeacher) {
-                        const date = `${monthRaw}-${String(day).padStart(2, '0')}`;
-                        try {
-                            await updateAttendanceAsync({ date, status });
-                            // إعادة جلب البيانات لضمان تحديث التقويم
-                            queryClient.invalidateQueries({ queryKey: ['all-teachers-attendance', monthRaw] });
-                            queryClient.invalidateQueries({ queryKey: ['teacher-attendance', selectedTeacher.id, monthRaw] });
-                        } catch (error) {
-                            console.error("Failed to update attendance:", error);
-                            alert("فشل تحديث الحضور. يرجى المحاولة مرة أخرى.");
-                        }
-                    }
-                }}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
             />
