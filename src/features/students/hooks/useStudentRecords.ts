@@ -124,6 +124,7 @@ export const useStudentRecords = (studentId: string) => {
             import("../services/recordsService").then(m => m.addStudentNote({ studentId, ...note })),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notes', studentId] });
+            queryClient.invalidateQueries({ queryKey: ['student-notes-details'] });
         }
     });
 
@@ -131,6 +132,7 @@ export const useStudentRecords = (studentId: string) => {
         mutationFn: (id: string) => import("../services/recordsService").then(m => m.deleteStudentNote(id)),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notes', studentId] });
+            queryClient.invalidateQueries({ queryKey: ['student-notes-details'] });
         }
     });
 

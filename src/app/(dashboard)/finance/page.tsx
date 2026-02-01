@@ -310,11 +310,6 @@ export default function FinancePage() {
                 teacher={selectedTeacherForDetail}
                 isOpen={isTeacherDetailOpen}
                 onClose={() => setIsTeacherDetailOpen(false)}
-                attendanceData={detailAttendance as any}
-                onAttendanceChange={(day, status) => detailUpdateAttendance({
-                    date: `${selectedMonth}-${String(day).padStart(2, '0')}`,
-                    status
-                })}
             />
 
             <AddTransactionModal

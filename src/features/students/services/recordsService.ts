@@ -622,3 +622,65 @@ export const getLatestNotes = async () => {
         return {};
     }
 };
+
+export const getAllStudentNotesWithDetails = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('student_notes')
+            .select(`
+                id,
+                content,
+                created_by,
+                student_id,
+                is_read,
+                students!inner (
+                    id,
+                    full_name,
+                    group_id,
+                    status,
+                    groups (
+                        id,
+                        name,
+                        teacher_id,
+                        teachers (
+                            id,
+                            full_name
+                        )
+                    )
+                )
+            `)
+            .eq('students.status', 'active')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return (data || []).map((n: any) => ({
+            id: n.id,
+            content: n.content,
+            createdAt: n.created_at,
+            createdBy: n.created_by,
+            studentId: n.student_id,
+            studentName: n.students?.full_name || 'غير معروف',
+            groupName: n.students?.groups?.name || 'بدون مجموعة',
+            teacherName: n.students?.groups?.teachers?.full_name || 'غير معروف',
+            isRead: n.is_read || false
+        }));
+    } catch (error: any) {
+        console.error("Error fetching all student notes with details:", error?.message || error);
+        return [];
+    }
+};
+
+export const markNoteAsRead = async (id: string, isRead: boolean = true) => {
+    try {
+        const { error } = await supabase
+            .from('student_notes')
+            .update({ is_read: isRead })
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (error: any) {
+        console.error("Error marking note as read:", error?.message || error);
+        throw error;
+    }
+};

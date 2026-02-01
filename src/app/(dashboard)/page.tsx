@@ -15,7 +15,8 @@ import {
     CalendarDays,
     Check,
     X as CloseIcon,
-    Calendar
+    Calendar,
+    MessageSquare
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,7 +25,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getStudents } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { getTransactionsByMonth } from '@/features/finance/services/financeService';
-import { getLeaveRequests, updateLeaveRequest, LeaveRequest } from '@/features/students/services/recordsService';
+import { getLeaveRequests, updateLeaveRequest, LeaveRequest, getAllStudentNotesWithDetails, deleteStudentNote, markNoteAsRead } from '@/features/students/services/recordsService';
+import { useStudents } from '@/features/students/hooks/useStudents';
+import StudentNotesModal from '@/features/finance/components/StudentNotesModal';
 import { supabase } from '@/lib/supabase';
 import { Student, Group, FinancialTransaction } from '@/types';
 import { useRouter } from 'next/navigation';
@@ -38,7 +41,9 @@ export default function DashboardOverview() {
     const currentYear = today.getFullYear();
     const [isSyncing, setIsSyncing] = useState(false);
     const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+    const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
     const queryClient = useQueryClient();
+    const { archiveStudent } = useStudents();
 
     // إعادة توجيه المستخدمين بعيداً عن الصفحة الرئيسية حسب الدور
     useEffect(() => {
@@ -101,6 +106,12 @@ export default function DashboardOverview() {
 
     const pendingLeaves = leaveRequests.filter(r => r.status === 'pending');
 
+    const { data: studentNotes = [] } = useQuery({
+        queryKey: ['student-notes-details'],
+        queryFn: getAllStudentNotesWithDetails,
+        enabled: user?.role === 'director' || user?.role === 'supervisor'
+    });
+
     const stats = [
         {
             title: user?.role === 'teacher' ? 'طلابي' : 'إجمالي الطلاب',
@@ -150,6 +161,14 @@ export default function DashboardOverview() {
             color: 'bg-orange-500',
             roles: ['director', 'supervisor'],
             onClick: () => setIsLeaveModalOpen(true)
+        },
+        {
+            title: 'ملحوظات الطلاب',
+            value: studentNotes.filter(n => !n.isRead).length.toString(),
+            icon: MessageSquare,
+            color: 'bg-blue-600',
+            roles: ['director', 'supervisor'],
+            onClick: () => setIsNotesModalOpen(true)
         },
 
     ].filter(s => s.roles.includes(user?.role || ''));
@@ -334,6 +353,29 @@ export default function DashboardOverview() {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* نافذة ملحوظات الطلاب */}
+            <StudentNotesModal
+                isOpen={isNotesModalOpen}
+                onClose={() => setIsNotesModalOpen(false)}
+                notes={studentNotes}
+                onArchiveStudent={async (id) => {
+                    if (confirm("هل أنت متأكد من أرشفة هذا الطالب؟")) {
+                        await archiveStudent(id);
+                        queryClient.invalidateQueries({ queryKey: ['student-notes-details'] });
+                    }
+                }}
+                onDeleteNote={async (id) => {
+                    if (confirm("هل أنت متأكد من حذف هذه الملحوظة؟")) {
+                        await deleteStudentNote(id);
+                        queryClient.invalidateQueries({ queryKey: ['student-notes-details'] });
+                    }
+                }}
+                onToggleRead={async (id, currentStatus) => {
+                    await markNoteAsRead(id, !currentStatus);
+                    queryClient.invalidateQueries({ queryKey: ['student-notes-details'] });
+                }}
+            />
         </div>
     );
 }
