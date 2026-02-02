@@ -9,6 +9,7 @@ import Modal from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Trash2, User, Save, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface ManageGroupsModalProps {
     isOpen: boolean;
@@ -24,11 +25,21 @@ export default function ManageGroupsModal({ isOpen, onClose }: ManageGroupsModal
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editTeacherId, setEditTeacherId] = useState('');
 
-    // تحسين بيانات المجموعات
+    // تحسين وتصنيف بيانات المجموعات
     const enhancedGroups = useMemo(() => {
         if (!groups) return [];
 
-        return groups.map(group => {
+        const user = useAuthStore.getState().user;
+        let filtered = groups;
+
+        if (user?.role === 'supervisor') {
+            const sections = user.responsibleSections || [];
+            if (sections.length > 0) {
+                filtered = groups.filter(group => sections.some(section => group.name.includes(section)));
+            }
+        }
+
+        return filtered.map(group => {
             const teacher = teachers?.find(t => t.id === group.teacherId);
             const studentCount = students?.filter(s => s.groupId === group.id && s.status === 'active').length || 0;
 

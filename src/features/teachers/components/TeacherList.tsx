@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTeachers } from '../hooks/useTeachers';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { deleteTeacher } from '../services/teacherService'; // Assuming this service exists
 import {
@@ -29,6 +30,7 @@ export default function TeacherList() {
     const { data: teachers, isLoading } = useTeachers();
     const { toggleSidebar } = useUIStore();
     const { user } = useAuthStore();
+    const { data: groups } = useGroups();
 
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
@@ -90,6 +92,22 @@ export default function TeacherList() {
             return teacher.id === user.teacherId;
         }
 
+        // إذا كان مشرفاً، يرى نفسه والمدرسين الذين يشرف عليهم في أقسامه
+        if (user?.role === 'supervisor') {
+            const sections = user.responsibleSections || [];
+            if (teacher.id === user.teacherId) return true; // يرى نفسه
+
+            // جلب المجموعات التابعة لأقسام المشرف
+            const supervisedGroups = groups?.filter(g =>
+                sections.some(section => g.name.includes(section))
+            ) || [];
+
+            // المدرسون المشرف عليهم هم من يدرسون هذه المجموعات
+            const supervisedTeacherIds = new Set(supervisedGroups.map(g => g.teacherId).filter(Boolean));
+
+            if (!supervisedTeacherIds.has(teacher.id)) return false;
+        }
+
         const normSearch = normalize(searchTerm);
         const normFullName = normalize(teacher.fullName);
         const matchesSearch = normFullName.includes(normSearch);
@@ -122,7 +140,7 @@ export default function TeacherList() {
             <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
                 <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
                     <div className="flex items-center gap-2 relative z-50">
-                        {user?.role !== 'teacher' && (
+                        {user?.role === 'director' && (
                             <button
                                 onClick={() => setIsAddModalOpen(true)}
                                 className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-600 rounded-[18px] sm:rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-all shrink-0 cursor-pointer"
@@ -283,43 +301,51 @@ export default function TeacherList() {
 
                         {/* Bottom Section: Attendance Status (View only for Teacher) */}
                         <div className="flex items-center gap-2 pt-2 border-t border-gray-50" onClick={(e) => e.stopPropagation()}>
-                            {user?.role !== 'teacher' ? (
-                                <>
-                                    <button
-                                        onClick={() => handleQuickAttendance(teacher.id, 'present')}
-                                        className={cn(
-                                            "flex-1 h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all",
-                                            (allTeachersAttendanceMap[teacher.id]?.[new Date().getDate()] || 'present') === 'present'
-                                                ? "bg-green-600 text-white shadow-lg shadow-green-600/20"
-                                                : "bg-green-50 text-green-800 hover:bg-green-100"
-                                        )}
-                                    >
-                                        <CheckCircle2 size={14} />
-                                        حاضر
-                                    </button>
-                                    <button
-                                        onClick={() => handleQuickAttendance(teacher.id, 'absent')}
-                                        className={cn(
-                                            "flex-1 h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all",
-                                            allTeachersAttendanceMap[teacher.id]?.[new Date().getDate()] === 'absent'
-                                                ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
-                                                : "bg-white border border-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-100"
-                                        )}
-                                    >
-                                        <XCircle size={14} />
-                                        غائب
-                                    </button>
-                                </>
-                            ) : (
-                                <div className={cn(
-                                    "flex-1 h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-2",
-                                    (allTeachersAttendanceMap[teacher.id]?.[new Date().getDate()] || 'present') === 'present'
-                                        ? "bg-green-50 text-green-700"
-                                        : "bg-red-50 text-red-700"
-                                )}>
-                                    {(allTeachersAttendanceMap[teacher.id]?.[new Date().getDate()] || 'present') === 'present' ? 'حالة اليوم: حاضر' : 'حالة اليوم: غائب'}
-                                </div>
-                            )}
+                            {(() => {
+                                const todayDay = new Date().getDate();
+                                const status = allTeachersAttendanceMap[teacher.id]?.[todayDay];
+                                const isAbsent = status === 'absent';
+
+                                if (user?.role !== 'teacher') {
+                                    return (
+                                        <>
+                                            <button
+                                                onClick={() => handleQuickAttendance(teacher.id, 'present')}
+                                                className={cn(
+                                                    "flex-1 h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all",
+                                                    !isAbsent
+                                                        ? "bg-green-600 text-white shadow-lg shadow-green-600/20"
+                                                        : "bg-green-50 text-green-800 hover:bg-green-100"
+                                                )}
+                                            >
+                                                <CheckCircle2 size={14} />
+                                                حاضر
+                                            </button>
+                                            <button
+                                                onClick={() => handleQuickAttendance(teacher.id, 'absent')}
+                                                className={cn(
+                                                    "flex-1 h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all",
+                                                    isAbsent
+                                                        ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                                                        : "bg-white border border-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-100"
+                                                )}
+                                            >
+                                                <XCircle size={14} />
+                                                غائب
+                                            </button>
+                                        </>
+                                    );
+                                } else {
+                                    return (
+                                        <div className={cn(
+                                            "flex-1 h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-2",
+                                            isAbsent ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
+                                        )}>
+                                            {isAbsent ? 'حالة اليوم: غائب' : 'حالة اليوم: حاضر'}
+                                        </div>
+                                    );
+                                }
+                            })()}
                         </div>
                     </div>
                 ))}

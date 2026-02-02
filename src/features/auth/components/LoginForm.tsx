@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useLogin } from '../hooks/useLogin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Building2, UserCircle, Users, GraduationCap, Phone, Lock, Briefcase, UserCheck } from 'lucide-react';
+import { Loader2, UserCircle, Users, GraduationCap, Phone, Lock, Briefcase, UserCheck } from 'lucide-react';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,13 +30,12 @@ export default function LoginForm() {
         const savedPhone = localStorage.getItem('shatibi_parent_phone');
         const savedPass = localStorage.getItem('shatibi_last_pass');
 
+        if (savedMainTab) setMainTab(savedMainTab);
         if (savedRoleTab) setRoleTab(savedRoleTab);
         if (savedTeacherId) setSelectedTeacherId(savedTeacherId);
         if (savedPhone) setPhone(savedPhone);
         if (savedPass) setPassword(savedPass);
     }, []);
-
-    const activeTeachers = (teachers?.filter(t => t.status === 'active') || []).sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,9 +51,9 @@ export default function LoginForm() {
             localStorage.setItem('shatibi_parent_phone', phone);
         } else {
             localStorage.setItem('shatibi_last_role_tab', roleTab);
-            if (roleTab === 'teacher') {
+            if (roleTab === 'teacher' || roleTab === 'supervisor') {
                 if (!selectedTeacherId) return;
-                loginIdentifier = `teacher-${selectedTeacherId}`;
+                loginIdentifier = `${roleTab}-${selectedTeacherId}`;
                 localStorage.setItem('shatibi_last_teacher_id', selectedTeacherId);
             }
         }
@@ -67,7 +66,7 @@ export default function LoginForm() {
             {/* Logo Section */}
             <div className="text-center mb-6 md:mb-10">
                 <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">مركز الشاطبي</h1>
-                <p className="text-blue-200/60 text-base md:text-lg">للقرآن وعلومه   </p>
+                <p className="text-blue-200/60 text-base md:text-lg">للقرآن وعلومه</p>
             </div>
 
             {/* Main Login Card */}
@@ -149,11 +148,13 @@ export default function LoginForm() {
                                 </div>
                             </div>
 
-                            {/* Form */}
+                            {/* Admin/Staff Form */}
                             <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-                                {roleTab === 'teacher' && (
+                                {(roleTab === 'teacher' || roleTab === 'supervisor') && (
                                     <div className="space-y-2">
-                                        <label className="text-xs md:text-sm font-bold text-[#344767] pr-2">اسم المدرس</label>
+                                        <label className="text-xs md:text-sm font-bold text-[#344767] pr-2">
+                                            {roleTab === 'teacher' ? 'اسم المدرس' : 'اسم المشرف'}
+                                        </label>
                                         <div className="relative">
                                             <select
                                                 value={selectedTeacherId}
@@ -161,8 +162,8 @@ export default function LoginForm() {
                                                 className="w-full h-12 md:h-14 pr-12 pl-4 rounded-2xl bg-white border border-gray-100 shadow-sm focus:ring-2 focus:ring-teal-500/20 outline-none appearance-none font-bold text-gray-700 text-sm md:text-base"
                                                 required
                                             >
-                                                <option value="">-- اختر اسم المدرس --</option>
-                                                {activeTeachers.map(t => (
+                                                <option value="">-- اختر الاسم من القائمة --</option>
+                                                {teachers?.filter(t => t.status === 'active' && t.role === roleTab).sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar')).map(t => (
                                                     <option key={t.id} value={t.id}>{t.fullName}</option>
                                                 ))}
                                             </select>

@@ -10,12 +10,16 @@ export const loginWithRole = async (identifier: string, password: string): Promi
     let role: UserRole = 'teacher';
     let teacherId: string | undefined;
     let phone: string | undefined;
+    let responsibleSections: string[] = [];
 
     if (identifier === 'director') role = 'director';
     else if (identifier === 'supervisor') role = 'supervisor';
     else if (identifier.startsWith('teacher-')) {
         role = 'teacher';
         teacherId = identifier.replace('teacher-', '');
+    } else if (identifier.startsWith('supervisor-')) {
+        role = 'supervisor';
+        teacherId = identifier.replace('supervisor-', '');
     } else if (identifier.startsWith('parent-')) {
         role = 'parent';
         phone = identifier.replace('parent-', '');
@@ -30,7 +34,7 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         throw new Error("كلمة مرور المدير غير صحيحة");
     }
 
-    let displayName = role === 'director' ? 'المدير العام' : role === 'supervisor' ? 'المشرف التربوي' : role === 'parent' ? (phone || 'ولي أمر') : 'معلم المجموعة';
+    let displayName = role === 'director' ? 'المدير العام' : role === 'supervisor' ? 'المشراف التربوي' : role === 'parent' ? (phone || 'ولي أمر') : 'معلم المجموعة';
 
     // Verify Parent Login
     if (role === 'parent' && phone) {
@@ -60,23 +64,22 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         displayName = dbPhone;
     }
 
-    // Verify Teacher Password (Database Check)
-    if (role === 'teacher') {
-        const searchId = teacherId || identifier.replace('teacher-', '');
+    // Verify Teacher/Supervisor Password (Database Check)
+    if (role === 'teacher' || role === 'supervisor') {
+        const searchId = teacherId || identifier.replace(`${role}-`, '');
 
-        // Fetch teacher credentials
+        // Fetch teacher/supervisor credentials
         const { data: teacher, error } = await supabase
             .from('teachers')
-            .select('id, full_name, password')
+            .select('id, full_name, password, role, responsible_sections')
             .eq('id', searchId)
             .single();
 
         if (error || !teacher) {
-            throw new Error("المعلم غير موجود في قاعدة البيانات");
+            throw new Error(`${role === 'teacher' ? 'المعلم' : 'المشرف'} غير موجود في قاعدة البيانات`);
         }
 
         // Check password (Plain text comparison as per current implementation)
-        // Note: For production, we should hash passwords.
         if (teacher.password && teacher.password !== password) {
             throw new Error("كلمة المرور غير صحيحة");
         }
@@ -84,14 +87,16 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         // Update variables with real data
         teacherId = teacher.id;
         displayName = teacher.full_name;
+        responsibleSections = teacher.responsible_sections || [];
     }
 
     return {
-        uid: `mock-${teacherId || identifier}`, // نستخدم المعرف الحقيقي (UUID) لضمان مطابقة المحادثات
+        uid: `mock-${teacherId || identifier}`,
         email: `${identifier}@shatibi.center`,
         displayName,
         role,
         teacherId,
+        responsibleSections,
         createdAt: Date.now(),
         lastLogin: Date.now(),
     };
@@ -99,8 +104,6 @@ export const loginWithRole = async (identifier: string, password: string): Promi
 
 export const logout = async () => {
     await delay(300);
-    // Supabase signout if we were using real auth
-    // await supabase.auth.signOut();
 };
 
 export const registerRoleAccount = async (role: string, password: string, displayName: string): Promise<User> => {
@@ -126,4 +129,3 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
         lastLogin: Date.now()
     };
 };
-

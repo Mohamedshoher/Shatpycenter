@@ -58,6 +58,10 @@ export default function AttendanceReportPage() {
     // تصفية المجموعات للمدرس
     const filteredGroupsList = groups?.filter(g => {
         if (user?.role === 'teacher') return g.teacherId === user.teacherId;
+        if (user?.role === 'supervisor') {
+            const sections = user.responsibleSections || [];
+            return sections.some(section => g.name.includes(section));
+        }
         return true;
     }) || [];
     const assignedGroupIds = filteredGroupsList.map(g => g.id);
@@ -139,7 +143,7 @@ export default function AttendanceReportPage() {
     const processedStudents = useMemo(() => {
         return (students || [])
             .filter(s => {
-                if (user?.role === 'teacher') {
+                if (user?.role === 'teacher' || user?.role === 'supervisor') {
                     return s.groupId && assignedGroupIds.includes(s.groupId);
                 }
                 return s.status === 'active';

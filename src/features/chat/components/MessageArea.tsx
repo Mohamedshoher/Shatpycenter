@@ -189,8 +189,14 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         ) : (
           messages.map((message, index) => {
             const isCurrentUser = cleanId(message.senderId) === cleanedCurrentUserId;
-            const isSystemAlert = message.content.includes('⚠️ تنبيه إداري');
-            const isRewardAlert = message.content.includes('🌟 مكافأة إدارية');
+            const isSystemAlert = message.content.includes('⚠️') ||
+              message.content.includes('تنبيه إداري') ||
+              message.content.includes('أتمتة') ||
+              message.content.includes('خصم') ||
+              message.content.includes('غياب');
+            const isRewardAlert = message.content.includes('🌟') ||
+              message.content.includes('مكافأة') ||
+              message.content.includes('تميز');
 
             // حساب ما إذا كانت الرسالة في يوم جديد لإرسال فاصل
             const showDateSeparator = index === 0 || !isSameDay(new Date(message.timestamp), new Date(messages[index - 1].timestamp));
@@ -221,7 +227,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                           ? "bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-tr-none rounded-tl-none ring-2 ring-emerald-100"
                           : isCurrentUser
                             ? "bg-blue-600 text-white rounded-tr-none"
-                            : "bg-gray-100 text-gray-900 rounded-tl-none",
+                            : "bg-blue-50 text-blue-900 border border-blue-100 rounded-tl-none",
                       message.isPinned && "ring-2 ring-blue-400 ring-offset-2"
                     )}
                   >
@@ -232,7 +238,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                       )}>
                         <AlertTriangle size={16} fill="currentColor" className={isSystemAlert ? "text-red-100" : "text-emerald-100"} />
                         <span className={cn("text-xs font-black", isSystemAlert ? "text-red-700" : "text-emerald-700")}>
-                          {isSystemAlert ? 'تنبيه إداري' : 'مكافأة تشجيعية'}
+                          {isSystemAlert ? 'إشعار إداري / أتمتة' : 'مكافأة / تميز'}
                         </span>
                       </div>
                     )}

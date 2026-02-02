@@ -101,6 +101,14 @@ export default function ChatPage() {
       return isSearchMatch && isNotMe;
     });
 
+    // إذا كان مشرفاً، يرى فقط المدرسين الذين في أقسامه
+    if (user?.role === 'supervisor') {
+      const sections = user.responsibleSections || [];
+      const supervisedGroups = groupsList.filter(g => sections.some(s => g.name.includes(s)));
+      const supervisedTeacherIds = new Set(supervisedGroups.map(g => g.teacherId).filter(Boolean));
+      list = list.filter(t => supervisedTeacherIds.has(t.id));
+    }
+
     if (user?.role === 'teacher') {
       const directorContact = {
         id: 'director',
@@ -122,12 +130,16 @@ export default function ChatPage() {
     const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
     const currentTeacherId = cleanId(user?.teacherId || user?.uid || '');
 
-    // 1. تحديد مجموعات هذا المدرس
-    const myGroups = groupsList.filter(g => cleanId(g.teacherId || '') === currentTeacherId);
+    // 1. تحديد المجموعات التي يراها (مجموعاته إذا كان مدرساً، أو مجموعات أقسامه إذا كان مشرفاً)
+    const myGroups = (user?.role === 'teacher')
+      ? groupsList.filter(g => cleanId(g.teacherId || '') === currentTeacherId)
+      : (user?.role === 'supervisor')
+        ? groupsList.filter(g => (user.responsibleSections || []).some(s => g.name.includes(s)))
+        : groupsList;
 
     // 2. تحديد طلاب هذه المجموعات (أو كل الطلاب للمدير)
     const myStudents = studentsList.filter(s =>
-      (user?.role === 'director' || user?.role === 'supervisor') ||
+      (user?.role === 'director') ||
       (s.groupId && myGroups.some(g => g.id === s.groupId))
     );
 

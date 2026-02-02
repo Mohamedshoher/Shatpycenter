@@ -22,7 +22,8 @@ import {
     UserX,
     Gift,
     ChevronRight,
-    ChevronLeft
+    ChevronLeft,
+    Layers
 } from 'lucide-react';
 import { Teacher } from '@/types'; // استيراد نوع بيانات المعلم
 import { useState, useEffect } from 'react'; // هوكس الحالة والتأثيرات
@@ -40,6 +41,7 @@ interface TeacherDetailModalProps {
 
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
+import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeductions';
 import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
@@ -49,6 +51,7 @@ import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction } from '@/features/finance/services/financeService';
 import { addTransaction } from '@/features/finance/services/financeService';
 import { supabase } from '@/lib/supabase';
+import { updateGroup } from '@/features/groups/services/groupService';
 import { automationService } from '@/features/automation/services/automationService';
 
 export default function TeacherDetailModal({
@@ -61,7 +64,9 @@ export default function TeacherDetailModal({
     const queryClient = useQueryClient();
     const { data: students } = useStudents();
     const { data: groups } = useGroups();
+    const { data: teachers } = useTeachers();
     const { deductions, loading: deductionsLoading, loadDeductions, applyDeduction } = useTeacherDeductions(teacher?.id);
+
 
     // دالة لتحويل الأرقام العربية إلى إنجليزية
     const arabicToEnglishNumber = (str: string): number => {
@@ -82,6 +87,7 @@ export default function TeacherDetailModal({
 
     const { user } = useAuthStore();
     const isTeacher = user?.role === 'teacher';
+    const isDirectorOnly = user?.role === 'director';
     const isDirector = user?.role === 'director' || user?.role === 'supervisor';
 
     const [selectedMonth, setSelectedMonth] = useState(currentMonthLabel); // الشهر المختار للعرض
@@ -362,7 +368,7 @@ export default function TeacherDetailModal({
 
 
     // --- حالات التبويبات والبيانات المدخلة ---
-    const [activeTab, setActiveTab] = useState('collection'); // التبويب النشط
+    const [activeTab, setActiveTab] = useState('groups'); // التبويب النشط
     const [amount, setAmount] = useState(''); // قيمة المبلغ المحصل المدخل
     const [notes, setNotes] = useState(''); // ملاحظات التحصيل
 
@@ -436,7 +442,7 @@ export default function TeacherDetailModal({
     const currentMonthRaw = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
     const isCurrentMonthSelected = selectedMonthRaw === currentMonthRaw;
 
-    const autoDeductions = Object.values(isCurrentMonthSelected ? attendanceData : {}).reduce((acc: number, status: any) => {
+    const autoDeductions = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
         if (status === 'absent') return acc + dailyRate;
         if (status === 'half') return acc + (dailyRate * 0.5);
         if (status === 'quarter') return acc + (dailyRate * 0.25);
@@ -444,7 +450,7 @@ export default function TeacherDetailModal({
     }, 0);
 
     // حساب المكافآت التلقائية بناءً على سجل الحضور
-    const autoRewards = Object.values(isCurrentMonthSelected ? attendanceData : {}).reduce((acc: number, status: any) => {
+    const autoRewards = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
         if (status === 'half_reward') return acc + (dailyRate * 0.5);
         if (status === 'quarter_reward') return acc + (dailyRate * 0.25);
         return acc;
@@ -610,10 +616,33 @@ export default function TeacherDetailModal({
 
     // حالات التحكم في القائمة السريعة لتعديل حضور يوم محدد
     const [activeDayMenu, setActiveDayMenu] = useState<number | null>(null);
+    const [showAssignGroupModal, setShowAssignGroupModal] = useState(false);
     const [tempStatus, setTempStatus] = useState<'present' | 'absent' | 'discipline' | 'reward'>('present');
     const [tempAmount, setTempAmount] = useState<'day' | 'half' | 'quarter'>('day');
     const [tempReason, setTempReason] = useState('');
     const [dayDetails, setDayDetails] = useState<Record<number, { reason: string, type: string }>>({});
+
+    // وظائف إدارة المجموعات للمعلم
+    const handleAssignGroup = async (groupId: string) => {
+        if (!teacher) return;
+        try {
+            await updateGroup(groupId, { teacherId: teacher.id });
+            queryClient.invalidateQueries({ queryKey: ['groups'] });
+            setShowAssignGroupModal(false);
+        } catch (error) {
+            console.error('Error assigning group:', error);
+        }
+    };
+
+    const handleRemoveGroup = async (groupId: string) => {
+        if (!teacher || !confirm('هل أنت متأكد من سحب هذه المجموعة من المعلم؟')) return;
+        try {
+            await updateGroup(groupId, { teacherId: null });
+            queryClient.invalidateQueries({ queryKey: ['groups'] });
+        } catch (error) {
+            console.error('Error removing group:', error);
+        }
+    };
 
     // وظيفة إرسال مبلغ تحصيل جديد (من المعلم للمدير)
     const handleCollectionSubmit = async () => {
@@ -712,13 +741,113 @@ export default function TeacherDetailModal({
         { id: 'payroll', label: 'الراتب', icon: CreditCard },
         { id: 'attendance', label: 'الحضور', icon: Calendar },
         { id: 'collection', label: 'التحصيل', icon: CircleDollarSign },
-    ];
+        { id: 'groups', label: 'المجموعات', icon: Layers },
+    ].filter(tab => {
+        if (user?.role === 'supervisor') {
+            return tab.id !== 'payroll' && tab.id !== 'collection';
+        }
+        return true;
+    });
 
 
 
     // دالة رندر محتوى التبويبات (Switch Content)
     const renderTabContent = () => {
         switch (activeTab) {
+            case 'groups':
+                const teacherGroups = groups?.filter(g => g.teacherId === teacher?.id) || [];
+                const availableGroups = groups?.filter(g => g.teacherId !== teacher?.id) || [];
+
+                return (
+                    <div className="space-y-6">
+                        <div className="flex flex-row-reverse items-center justify-between">
+                            <div className="text-right">
+                                <h3 className="text-xl font-bold text-gray-900">المجموعات المسئول عنها</h3>
+                                <p className="text-xs text-gray-400 font-bold mt-1">يظهر هنا المجموعات التي يقوم المعلم بالتدريس لها حالياً</p>
+                            </div>
+                            {isDirector && (
+                                <button
+                                    onClick={() => setShowAssignGroupModal(true)}
+                                    className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-blue-100 transition-all"
+                                >
+                                    <Plus size={16} />
+                                    إسناد مجموعة
+                                </button>
+                            )}
+                        </div>
+
+                        {teacherGroups.length === 0 ? (
+                            <div className="py-20 text-center text-gray-400 text-sm font-bold bg-white rounded-[32px] border-2 border-dashed border-gray-100">
+                                لا توجد مجموعات مسندة لهذا المعلم حالياً.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {teacherGroups.map(group => (
+                                    <div key={group.id} className="bg-white p-5 rounded-[28px] border border-gray-100 shadow-sm group hover:border-blue-200 transition-all flex flex-row-reverse items-center justify-between">
+                                        <div className="text-right">
+                                            <h4 className="font-bold text-gray-800">{group.name}</h4>
+                                            <p className="text-[10px] text-gray-400 font-bold mt-1">
+                                                عدد الطلاب: {students?.filter(s => s.groupId === group.id && s.status === 'active').length || 0} طالباً
+                                            </p>
+                                        </div>
+                                        {isDirector && (
+                                            <button
+                                                onClick={() => handleRemoveGroup(group.id)}
+                                                className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white"
+                                                title="سحب المجموعة"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <AnimatePresence>
+                            {showAssignGroupModal && (
+                                <>
+                                    <div className="fixed inset-0 z-[150] bg-black/10 backdrop-blur-[2px]" onClick={() => setShowAssignGroupModal(false)} />
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                        className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white rounded-[40px] shadow-2xl border border-gray-100 p-6 z-[151] flex flex-col max-h-[60vh]"
+                                    >
+                                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-50">
+                                            <h3 className="font-bold text-gray-900">اختر مجموعة لإسنادها</h3>
+                                            <button onClick={() => setShowAssignGroupModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+                                            {availableGroups.length === 0 ? (
+                                                <p className="text-center py-10 text-xs text-gray-400">لا توجد مجموعات متاحة</p>
+                                            ) : (
+                                                availableGroups.map(g => (
+                                                    <button
+                                                        key={g.id}
+                                                        onClick={() => handleAssignGroup(g.id)}
+                                                        className="w-full text-right p-4 rounded-2xl hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100 group"
+                                                    >
+                                                        <div className="flex flex-row-reverse items-center justify-between">
+                                                            <div>
+                                                                <p className="font-bold text-sm text-gray-800">{g.name}</p>
+                                                                <p className="text-[10px] text-gray-400 font-bold mt-1">المعلم الحالي: {teachers?.find(t => t.id === g.teacherId)?.fullName || 'لا يوجد'}</p>
+                                                            </div>
+
+                                                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
+                                                                <Plus size={16} />
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                </>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                );
             case 'collection': // --- تبويب سجل التحصيل المالي ---
                 return (
                     <div className="space-y-6">
@@ -1048,19 +1177,19 @@ export default function TeacherDetailModal({
                                                         "aspect-square w-full rounded-xl md:rounded-2xl border flex flex-col items-center justify-center text-xs md:text-sm font-bold transition-all relative shadow-sm",
                                                         isToday ? "border-blue-500 ring-2 ring-blue-500/10 shadow-lg shadow-blue-500/10" : "border-gray-50",
                                                         isWeekend || isTeacher ? "bg-red-50/10 border-red-50 text-red-400 cursor-default" :
-                                                            status === 'present' && !isFuture ? "bg-green-50 border-green-100 text-green-600" :
+                                                            status === 'present' ? "bg-green-50 border-green-100 text-green-600" :
                                                                 (status === 'quarter' || status === 'half') ? "bg-orange-50 border-orange-100 text-orange-600" :
                                                                     (status === 'quarter_reward' || status === 'half_reward') ? "bg-green-50 border-green-200 text-green-600" :
                                                                         status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
-                                                                            "bg-white text-gray-400 hover:border-blue-200"
+                                                                            "bg-gray-50/50 text-gray-300 border-gray-100 hover:border-blue-200"
                                                     )}
                                                 >
                                                     <span className="mb-0.5">{day}</span>
                                                     {isWeekend && <span className="text-[6px] md:text-[7px] mt-0.5 font-black uppercase text-red-500/40">إجازة</span>}
-                                                    {!isFuture && status === 'present' && !isWeekend && (
+                                                    {status === 'present' && !isWeekend && (
                                                         <CheckCircle2 size={14} className="text-green-600/80" />
                                                     )}
-                                                    {(status === 'quarter' || status === 'half' || status === 'quarter_reward' || status === 'half_reward') && !isFuture && !isWeekend && (
+                                                    {(status === 'quarter' || status === 'half' || status === 'quarter_reward' || status === 'half_reward') && !isWeekend && (
                                                         <div className={cn(
                                                             "w-1 h-1 rounded-full mt-1",
                                                             status?.includes('reward') ? "bg-green-400" : "bg-orange-400"
@@ -1069,8 +1198,6 @@ export default function TeacherDetailModal({
                                                 </button>
                                                 {isToday && <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />}
 
-
-                                                {/* القائمة المنبثقة لتعديل حضور يوم محدد */}
                                                 <AnimatePresence>
                                                     {activeDayMenu === day && !isTeacher && (
                                                         <>
@@ -1226,7 +1353,7 @@ export default function TeacherDetailModal({
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div >
                 );
 
 
@@ -1467,7 +1594,7 @@ export default function TeacherDetailModal({
                         </div>
 
                         {/* Navigation Tabs - Mobile Optimized */}
-                        <div className="flex flex-row-reverse border-b border-gray-50 px-2 md:px-8 bg-white sticky top-0 z-10 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap justify-start">
+                        <div className="flex flex-row border-b border-gray-50 px-2 md:px-8 bg-white sticky top-0 z-10 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap justify-start">
                             {tabs.map((tab) => {
                                 const Icon = tab.icon;
                                 const isActive = activeTab === tab.id;
@@ -1476,7 +1603,7 @@ export default function TeacherDetailModal({
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
                                         className={cn(
-                                            "flex flex-row-reverse items-center gap-2 px-5 md:px-6 py-4 md:py-6 text-[11px] md:text-[13px] font-black transition-all relative shrink-0",
+                                            "flex flex-row items-center gap-2 px-5 md:px-6 py-4 md:py-6 text-[11px] md:text-[13px] font-black transition-all relative shrink-0",
                                             isActive ? "text-blue-600 scale-105" : "text-slate-400 hover:text-slate-600"
                                         )}
                                     >

@@ -44,6 +44,10 @@ export default function ExamsReportPage() {
     // إذا كان المستخدم "مدرس"، نقوم بتصفية المجموعات لتظهر مجموعاته فقط
     const filteredGroupsList = groups?.filter((g: any) => {
         if (user?.role === 'teacher') return g.teacherId === user.teacherId;
+        if (user?.role === 'supervisor') {
+            const sections = user.responsibleSections || [];
+            return sections.some(section => g.name.includes(section));
+        }
         return true;
     }) || [];
     const assignedGroupIds = filteredGroupsList.map((g: any) => g.id);
@@ -89,7 +93,7 @@ export default function ExamsReportPage() {
 
         if (selectedGroupId !== 'all') {
             base = base.filter((s: any) => s.groupId === selectedGroupId);
-        } else if (user?.role === 'teacher') {
+        } else if (user?.role === 'teacher' || user?.role === 'supervisor') {
             base = base.filter((s: any) => s.groupId && assignedGroupIds.includes(s.groupId));
         }
 
@@ -115,7 +119,7 @@ export default function ExamsReportPage() {
 
         if (selectedGroupId !== 'all') {
             base = base.filter((s: any) => s.groupId === selectedGroupId);
-        } else if (user?.role === 'teacher') {
+        } else if (user?.role === 'teacher' || user?.role === 'supervisor') {
             base = base.filter((s: any) => s.groupId && assignedGroupIds.includes(s.groupId));
         }
 
@@ -142,7 +146,7 @@ export default function ExamsReportPage() {
     // ج- تجميع بيانات الأداء لكل مجموعة (إحصائيات الرسوم البيانية)
     const performanceData = useMemo(() => {
         let baseGroups = (groups || []);
-        if (user?.role === 'teacher') {
+        if (user?.role === 'teacher' || user?.role === 'supervisor') {
             baseGroups = baseGroups.filter((g: any) => assignedGroupIds.includes(g.id));
         }
 
@@ -387,7 +391,7 @@ export default function ExamsReportPage() {
                                     .filter((s: any) => s.status === 'active')
                                     .filter((s: any) => {
                                         if (selectedGroupId !== 'all') return s.groupId === selectedGroupId;
-                                        if (user?.role === 'teacher') return assignedGroupIds.includes(s.groupId);
+                                        if (user?.role === 'teacher' || user?.role === 'supervisor') return assignedGroupIds.includes(s.groupId);
                                         return true;
                                     })
                                     .sort((a, b) => {

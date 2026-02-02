@@ -54,13 +54,13 @@ export default function Sidebar() {
             label: 'طلاب جدد',
             href: '/students/pending',
             icon: UserCheck,
-            roles: ['director', 'supervisor']
+            roles: ['director']
         },
         {
             label: 'أرشيف الطلاب',
             href: '/students/archive',
             icon: Archive,
-            roles: ['director', 'supervisor']
+            roles: ['director']
         },
         {
             label: user?.role === 'teacher' ? 'صفحتي' : 'المعلمين',
@@ -102,7 +102,7 @@ export default function Sidebar() {
             label: 'الأتمتة',
             href: '/automation',
             icon: Zap,
-            roles: ['director', 'supervisor']
+            roles: ['director']
         },
     ];
 

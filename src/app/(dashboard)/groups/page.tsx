@@ -81,6 +81,15 @@ export default function GroupsPage() {
             if (group.teacherId !== user.teacherId) return false;
         }
 
+        // إذا كان مشرفاً، يظهر له مجموعات الأقسام المسئول عنها فقط
+        if (user?.role === 'supervisor') {
+            const sections = user.responsibleSections || [];
+            if (sections.length > 0) {
+                const isResponsible = sections.some(section => group.name.includes(section));
+                if (!isResponsible) return false;
+            }
+        }
+
         const matchesSearch = (group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (group.teacher || '').toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesFilter = filter === 'الكل' || group.name.includes(filter);

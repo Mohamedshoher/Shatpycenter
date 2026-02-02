@@ -80,14 +80,20 @@ export default function DashboardOverview() {
     });
 
     // تصفية البيانات حسب دور المستخدم
-    const myGroups = user?.role === 'teacher' ? groups.filter((g: Group) => g.teacherId === user.teacherId) : groups;
+    const myGroups = user?.role === 'teacher'
+        ? groups.filter((g: Group) => g.teacherId === user.teacherId)
+        : user?.role === 'supervisor'
+            ? groups.filter((g: Group) => (user.responsibleSections || []).some(section => g.name.includes(section)))
+            : groups;
+
     const myGroupsIds = myGroups.map((g: Group) => g.id);
     // استبعاد الطلاب المؤرشفين من العد الإجمالي
     const activeStudents = students.filter((s: Student) => s.status !== 'archived');
-    const myStudents = user?.role === 'teacher'
+    const myStudents = (user?.role === 'teacher' || user?.role === 'supervisor')
         ? activeStudents.filter((s: Student) => myGroupsIds.includes(s.groupId || ''))
         : activeStudents;
-    const myAttendanceCount = user?.role === 'teacher'
+
+    const myAttendanceCount = (user?.role === 'teacher' || user?.role === 'supervisor')
         ? todayAttendance.filter((a: any) => myStudents.some((s: Student) => s.id === a.student_id)).length
         : todayAttendance.length;
 
@@ -151,12 +157,14 @@ export default function DashboardOverview() {
             value: students.filter(s => (s.parentPhone || '').replace(/[^0-9]/g, '').length >= 11).length.toString(),
             icon: RefreshCw,
             color: 'bg-indigo-600',
-            roles: ['director', 'supervisor'],
+            roles: ['director'], // متاح فقط للمدير
             onClick: () => handleSyncParents()
         },
         {
             title: 'طلبات الإجازة',
-            value: pendingLeaves.length.toString(),
+            value: (user?.role === 'supervisor'
+                ? pendingLeaves.filter(req => myStudents.some(s => s.fullName === req.studentName))
+                : pendingLeaves).length.toString(),
             icon: CalendarDays,
             color: 'bg-orange-500',
             roles: ['director', 'supervisor'],
@@ -164,7 +172,9 @@ export default function DashboardOverview() {
         },
         {
             title: 'ملحوظات الطلاب',
-            value: studentNotes.filter(n => !n.isRead).length.toString(),
+            value: (user?.role === 'supervisor'
+                ? studentNotes.filter(n => !n.isRead && myStudents.some(s => s.id === n.studentId))
+                : studentNotes.filter(n => !n.isRead)).length.toString(),
             icon: MessageSquare,
             color: 'bg-blue-600',
             roles: ['director', 'supervisor'],
@@ -251,7 +261,7 @@ export default function DashboardOverview() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2 md:gap-2">
                                 {[
                                     { tag: 'حضور', text: `تم تسجيل حضور ${todayAttendance.length} طالباً اليوم حتى الآن`, time: 'اليوم', icon: CalendarCheck, color: 'text-orange-500', bg: 'bg-orange-50', roles: ['director', 'supervisor', 'teacher'] },
-                                    { tag: 'طلاب', text: `تم تسجيل ${students.length} طالباً في النظام`, time: 'محدث', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50', roles: ['director', 'supervisor'] },
+                                    { tag: 'طلاب', text: `تم تسجيل ${myStudents.length} طالباً في أقسامك`, time: 'محدث', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50', roles: ['director', 'supervisor'] },
                                 ]
                                     .filter(item => item.roles.includes(user?.role || ''))
                                     .map((item, idx) => (

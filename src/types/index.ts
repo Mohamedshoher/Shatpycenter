@@ -5,8 +5,9 @@ export interface User {
   email: string;
   displayName: string;
   role: UserRole;
-  teacherId?: string; // ID of the teacher if role is 'teacher'
+  teacherId?: string; // ID of the teacher if role is 'teacher' or 'supervisor'
   teacherName?: string;
+  responsibleSections?: string[];
   photoURL?: string;
   createdAt: number;
   lastLogin?: number;

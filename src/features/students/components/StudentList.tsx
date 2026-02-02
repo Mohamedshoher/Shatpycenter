@@ -46,6 +46,12 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const myGroups = useMemo(() => {
         return groups?.filter(g => {
             if (user?.role === 'teacher') return g.teacherId === user.teacherId;
+            if (user?.role === 'supervisor') {
+                const sections = user.responsibleSections || [];
+                if (sections.length > 0) {
+                    return sections.some(section => g.name.includes(section));
+                }
+            }
             return true;
         }) || [];
     }, [groups, user]);
@@ -113,7 +119,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
 
     const filteredStudents = useMemo(() => {
         return students?.filter(student => {
-            if (user?.role === 'teacher') {
+            if (user?.role === 'teacher' || user?.role === 'supervisor') {
                 if (!student.groupId || !myGroupsIds.includes(student.groupId)) return false;
             }
 
