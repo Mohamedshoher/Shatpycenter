@@ -294,7 +294,8 @@ export default function TeacherDetailModal({
                 expectedAmount,
                 paidAmount: totalPaidByStudent,
                 remaining: Math.max(0, remaining),
-                isExempted
+                isExempted,
+                enrollmentDate: student.enrollmentDate
             };
         }).filter(s => s.remaining > 0 || s.isExempted);
     })();
@@ -537,7 +538,12 @@ export default function TeacherDetailModal({
                 fullName: teacher.fullName
             });
 
-            const today = new Date().toISOString().split('T')[0];
+            // تحديد تاريخ العملية بناءً على الشهر المختار لضمان دقة التقارير المالية
+            const now = new Date();
+            const currentMonthRaw = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const transactionDate = selectedMonthRaw === currentMonthRaw
+                ? now.toISOString().split('T')[0]
+                : `${selectedMonthRaw}-01`;
 
             // حفظ الراتب مباشرة في Supabase
             const { data, error } = await supabase
@@ -546,7 +552,7 @@ export default function TeacherDetailModal({
                     amount: Number(amount),
                     type: 'expense',
                     category: 'salary',
-                    date: today,
+                    date: transactionDate,
                     description: `راتب ${teacher.fullName} - ${type}`,
                     related_user_id: String(teacher.id), // تحويل إلى string للتأكد
                     performed_by: user?.uid || 'unknown'
@@ -649,12 +655,19 @@ export default function TeacherDetailModal({
         if (!amount || !teacher || !user) return;
 
         try {
+            // تحديد تاريخ العملية بناءً على الشهر المختار لضمان دقة التقارير المالية
+            const now = new Date();
+            const currentMonthRaw = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const transactionDate = selectedMonthRaw === currentMonthRaw
+                ? now.toISOString().split('T')[0]
+                : `${selectedMonthRaw}-01`;
+
             const { addTransaction } = await import('@/features/finance/services/financeService');
             await addTransaction({
                 amount: Number(amount),
                 type: 'income',
                 category: 'تحصيل من مدرس',
-                date: new Date().toISOString().split('T')[0],
+                date: transactionDate,
                 description: notes || `تحصيل من المدرس ${teacher.fullName}`,
                 relatedUserId: teacher.id,
                 performedBy: user?.uid || user?.displayName || 'غير معروف'
@@ -1594,7 +1607,7 @@ export default function TeacherDetailModal({
                         </div>
 
                         {/* Navigation Tabs - Mobile Optimized */}
-                        <div className="flex flex-row border-b border-gray-50 px-2 md:px-8 bg-white sticky top-0 z-10 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap justify-start">
+                        <div className="flex flex-row border-b border-gray-50 px-2 md:px-8 bg-white sticky top-0 z-10 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap md:justify-start justify-around">
                             {tabs.map((tab) => {
                                 const Icon = tab.icon;
                                 const isActive = activeTab === tab.id;
@@ -1603,12 +1616,12 @@ export default function TeacherDetailModal({
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
                                         className={cn(
-                                            "flex flex-row items-center gap-2 px-5 md:px-6 py-4 md:py-6 text-[11px] md:text-[13px] font-black transition-all relative shrink-0",
+                                            "flex flex-row items-center gap-1 md:gap-2 px-4 md:px-6 py-4 md:py-6 text-[11px] md:text-[13px] font-black transition-all relative shrink-0",
                                             isActive ? "text-blue-600 scale-105" : "text-slate-400 hover:text-slate-600"
                                         )}
                                     >
                                         <Icon size={18} className={cn(isActive ? "text-blue-600" : "text-slate-300")} />
-                                        <span>{tab.label}</span>
+                                        <span className="hidden md:inline">{tab.label}</span>
                                         {isActive && (
                                             <motion.div layoutId="teacherTab" className="absolute bottom-0 left-0 right-0 h-[4px] bg-blue-600 rounded-t-full" />
                                         )}
@@ -1847,10 +1860,9 @@ export default function TeacherDetailModal({
                                     className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-[600px] max-h-[85vh] bg-white rounded-[40px] shadow-2xl border border-amber-100 z-[301] flex flex-col overflow-hidden"
                                 >
                                     {/* رأس النافذة */}
-                                    <div className="px-6 py-5 border-b border-amber-50 bg-gradient-to-br from-amber-50 to-white flex flex-row-reverse items-center justify-between shrink-0">
+                                    <div className="px-4 py-4 border-b border-amber-50 bg-gradient-to-br from-amber-50 to-white flex flex-row-reverse items-center justify-between shrink-0">
                                         <div className="text-right">
                                             <h3 className="text-lg font-black text-amber-800">تفاصيل عجز المجموعة</h3>
-                                            <p className="text-xs font-bold text-amber-600/70 mt-1">الطلاب الذين لم يسددوا رسوم الشهر</p>
                                         </div>
                                         <button
                                             onClick={() => setShowDeficitDetails(false)}
@@ -1912,6 +1924,9 @@ export default function TeacherDetailModal({
                                                                     <h4 className="font-bold text-gray-900 truncate">{student.name}</h4>
                                                                     <div className="flex flex-row-reverse items-center gap-2 mt-1 flex-wrap">
                                                                         <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold">{student.groupName}</span>
+                                                                        {student.enrollmentDate && (
+                                                                            <span className="text-[10px] text-gray-400 font-bold font-sans" dir="ltr">{student.enrollmentDate}</span>
+                                                                        )}
                                                                         {student.isExempted && (
                                                                             <span className="text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-md font-bold">تم العفو</span>
                                                                         )}

@@ -320,7 +320,12 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
         const now = new Date();
         const monthToUse = paymentMonthKey || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const labelToUse = paymentMonth || now.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
-        const dateString = now.toISOString().split('T')[0];
+
+        // تحديد تاريخ العملية بناءً على الشهر المختار لضمان دقة التقارير المالية
+        const currentMonthRaw = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const dateString = monthToUse === currentMonthRaw
+            ? now.toISOString().split('T')[0]
+            : `${monthToUse}-01`;
 
         // 1. تسجل في سجل رسوم الطالب
         addFee.mutate({
