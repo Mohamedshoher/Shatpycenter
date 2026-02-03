@@ -161,16 +161,6 @@ export default function PendingStudentsPage() {
                                     <span className="font-sans">{student.parentPhone}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-gray-600">
-                                    <MapPin size={16} className="text-green-500" />
-                                    <span className="font-bold">العنوان:</span>
-                                    <span>{student.address}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-gray-600">
-                                    <CreditCard size={16} className="text-purple-500" />
-                                    <span className="font-bold">الرسوم الشهرية:</span>
-                                    <span className="font-sans">{student.monthlyAmount} ج.م</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-gray-600">
                                     <Calendar size={16} className="text-orange-500" />
                                     <span className="font-bold">تاريخ الالتحاق:</span>
                                     <span>{student.enrollmentDate}</span>
@@ -224,15 +214,6 @@ export default function PendingStudentsPage() {
                                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">العنوان</label>
-                                <input
-                                    type="text"
-                                    value={editingStudent.address}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, address: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                                />
-                            </div>
                             <div className="flex items-center justify-between bg-orange-50/50 border border-orange-100 p-3 rounded-xl">
                                 <label className="text-sm font-bold text-gray-700">هل الطالب يتيم؟</label>
                                 <input
@@ -272,25 +253,6 @@ export default function PendingStudentsPage() {
                                         <option key={g.id} value={g.id}>{g.name}</option>
                                     ))}
                                 </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">الموعد</label>
-                                <input
-                                    type="text"
-                                    value={editingStudent.appointment || ''}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, appointment: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                                    placeholder="مثل: السبت والأربعاء 5 مساء"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">ملاحظات</label>
-                                <textarea
-                                    value={editingStudent.notes || ''}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, notes: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                                    rows={3}
-                                />
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">
