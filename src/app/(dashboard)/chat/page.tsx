@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { chatService } from '@/features/chat/services/chatService';
 import { useQueryClient } from '@tanstack/react-query';
-import { cn } from '@/lib/utils';
+import { cn, tieredSearchFilter } from '@/lib/utils';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { Teacher, Student, Group } from '@/types';
@@ -74,21 +74,10 @@ export default function ChatPage() {
   }, []);
 
   const filteredConversations = useMemo(() => {
-    const clean = (id: string) => id ? id.replace('mock-', '').toLowerCase().trim() : '';
-    const myId = clean(userId);
-    const myAltId = user?.teacherId ? clean(user.teacherId) : '';
-    const myName = (user?.displayName || '').trim();
-
-    return conversations
-      .filter((conv) =>
-        conv.participantNames.some((name) =>
-          name.includes(searchQuery)
-        )
-      )
-      .sort((a, b) => {
-        return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
-      });
-  }, [conversations, searchQuery, userId, user]);
+    const baseList = conversations;
+    const results = tieredSearchFilter(baseList, searchQuery, (conv) => conv.participantNames.join(' '));
+    return results.sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
+  }, [conversations, searchQuery]);
 
   const filteredTeachers = useMemo(() => {
     const currentTeacherId = user?.teacherId || user?.uid || '';
@@ -96,9 +85,8 @@ export default function ChatPage() {
     const cleanCurrentId = cleanId(currentTeacherId);
 
     let list = teachersList.filter((t: any) => {
-      const isSearchMatch = t.fullName.includes(searchQuery);
       const isNotMe = cleanId(t.id) !== cleanCurrentId;
-      return isSearchMatch && isNotMe;
+      return isNotMe;
     });
 
     // إذا كان مشرفاً، يرى فقط المدرسين الذين في أقسامه
@@ -118,32 +106,27 @@ export default function ChatPage() {
         assignedGroups: [],
         status: 'active'
       } as any;
-      if (directorContact.fullName.includes(searchQuery)) {
-        list = [directorContact, ...list];
-      }
+      list = [directorContact, ...list];
     }
 
-    return list;
-  }, [teachersList, searchQuery, user]);
+    return tieredSearchFilter(list, searchQuery, (t) => t.fullName);
+  }, [teachersList, searchQuery, user, groupsList]);
 
   const filteredParents = useMemo(() => {
     const cleanId = (id: string) => id ? id.replace('mock-', '') : '';
     const currentTeacherId = cleanId(user?.teacherId || user?.uid || '');
 
-    // 1. تحديد المجموعات التي يراها (مجموعاته إذا كان مدرساً، أو مجموعات أقسامه إذا كان مشرفاً)
     const myGroups = (user?.role === 'teacher')
       ? groupsList.filter(g => cleanId(g.teacherId || '') === currentTeacherId)
       : (user?.role === 'supervisor')
         ? groupsList.filter(g => (user.responsibleSections || []).some(s => g.name.includes(s)))
         : groupsList;
 
-    // 2. تحديد طلاب هذه المجموعات (أو كل الطلاب للمدير)
     const myStudents = studentsList.filter(s =>
       (user?.role === 'director') ||
       (s.groupId && myGroups.some(g => g.id === s.groupId))
     );
 
-    // 3. إنشاء قائمة أولياء الأمور
     const uniqueParents = new Map();
     myStudents.forEach(student => {
       if (student.parentPhone && !uniqueParents.has(student.parentPhone)) {
@@ -156,9 +139,8 @@ export default function ChatPage() {
       }
     });
 
-    return Array.from(uniqueParents.values()).filter((p: any) =>
-      p.fullName.includes(searchQuery)
-    );
+    const parentList = Array.from(uniqueParents.values());
+    return tieredSearchFilter(parentList, searchQuery, (p: any) => p.fullName);
   }, [studentsList, groupsList, searchQuery, user]);
 
   const renderSideContent = () => {

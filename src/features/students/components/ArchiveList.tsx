@@ -20,7 +20,7 @@ import {
     Check
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Student } from '@/types';
 import StudentDetailModal from './StudentDetailModal';
 import EditStudentModal from './EditStudentModal';
@@ -83,11 +83,11 @@ export default function ArchiveList() {
     };
 
     const archivedStudents = useMemo(() => {
-        return students?.filter(student => {
-            const matchesSearch = student.fullName.toLowerCase().startsWith(searchTerm.toLowerCase());
+        if (!students) return [];
+
+        const baseFiltered = students.filter(student => {
             const isArchived = student.status === 'archived';
 
-            // منطق الفلترة
             let matchesFilter = true;
             if (filter === 'indebted') {
                 matchesFilter = checkDebt(student);
@@ -95,8 +95,10 @@ export default function ArchiveList() {
                 matchesFilter = student.groupId === filter;
             }
 
-            return matchesSearch && isArchived && matchesFilter;
-        }) || [];
+            return isArchived && matchesFilter;
+        });
+
+        return tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
     }, [students, searchTerm, filter, allFees]);
 
     // دالة حساب عدد الأيام في الأرشيف بدقة

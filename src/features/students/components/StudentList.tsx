@@ -27,7 +27,7 @@ import { addToOfflineQueue } from '@/lib/offline-queue';
 import AddStudentModal from './AddStudentModal';
 import StudentDetailModal from './StudentDetailModal';
 import EditStudentModal from './EditStudentModal';
-import { cn } from '@/lib/utils';
+import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Student } from '@/types';
 
 interface StudentListProps {
@@ -117,13 +117,14 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         return groupsMap[groupId] || '';
     }, [groupsMap]);
 
+    // Inside StudentList component...
     const filteredStudents = useMemo(() => {
-        return students?.filter(student => {
+        if (!students) return [];
+
+        const baseFiltered = students.filter(student => {
             if (user?.role === 'teacher' || user?.role === 'supervisor') {
                 if (!student.groupId || !myGroupsIds.includes(student.groupId)) return false;
             }
-
-            const matchesSearch = (student.fullName || '').toLowerCase().startsWith(searchTerm.toLowerCase());
 
             let matchesFilter = true;
             if (groupId) {
@@ -136,13 +137,17 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 const phone = student.parentPhone.replace(/[^0-9]/g, '');
                 matchesFilter = phone.length < 11;
             } else {
-                // It's a group ID
                 matchesFilter = student.groupId === filter;
             }
 
             const isActive = student.status === 'active';
-            return matchesSearch && matchesFilter && isActive;
-        })?.sort((a, b) => {
+            return matchesFilter && isActive;
+        });
+
+        // تطبيق البحث المتدرج باستخدام الدالة الموحدة
+        const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
+
+        return finalResults.sort((a, b) => {
             const groupA = getGroupName(a.groupId);
             const groupB = getGroupName(b.groupId);
             if (groupA !== groupB) return groupA.localeCompare(groupB, 'ar');

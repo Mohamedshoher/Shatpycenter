@@ -302,7 +302,7 @@ export default function TeacherDetailModal({
 
     // --- دالة العفو عن طالب ---
     const handleExemptStudent = async (studentId: string, studentName: string, amount: number) => {
-        if (!teacher || !confirm(`هل تريد العفو عن ${studentName} من المبلغ المتبقي (${amount} ج.م)؟`)) return;
+        if (!teacher || !confirm(`هل تريد العفو عن ${studentName} من المبلغ المتبقي (${amount} ج.م) لشهر ${selectedMonth}؟`)) return;
 
         try {
             const { error } = await supabase
@@ -311,7 +311,7 @@ export default function TeacherDetailModal({
                     student_id: studentId,
                     student_name: studentName,
                     teacher_id: teacher.id,
-                    month: selectedMonthRaw,
+                    month: selectedMonthRaw, // التأكد من استخدام الشهر المختار في الواجهة
                     amount: amount,
                     exempted_by: user?.displayName || 'المدير',
                     created_at: new Date().toISOString()
@@ -319,16 +319,17 @@ export default function TeacherDetailModal({
 
             if (error) {
                 console.error('خطأ في حفظ الإعفاء:', error);
-                // إذا كان الجدول غير موجود، نعرض رسالة توضيحية
-                if (error.code === '42P01' || error.message?.includes('does not exist')) {
-                    alert('⚠️ جدول free_exemptions غير موجود!\n\nيرجى إنشاء الجدول في Supabase SQL Editor:\n\nCREATE TABLE free_exemptions (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  student_id UUID NOT NULL,\n  student_name TEXT NOT NULL,\n  teacher_id UUID NOT NULL,\n  month VARCHAR(7) NOT NULL,\n  amount DECIMAL(10,2) NOT NULL,\n  exempted_by TEXT NOT NULL,\n  created_at TIMESTAMP DEFAULT NOW(),\n  UNIQUE(student_id, month)\n);');
+                if (error.code === '23505') {
+                    alert('⚠️ هذا الطالب معفى عنه بالفعل لهذا الشهر.');
+                } else if (error.code === '42P01' || error.message?.includes('does not exist')) {
+                    alert('⚠️ جدول free_exemptions غير موجود!\n\nيرجى إنشاء الجدول في Supabase SQL Editor.');
                 } else {
                     alert('حدث خطأ أثناء حفظ الإعفاء: ' + (error.message || 'خطأ غير معروف'));
                 }
                 return;
             }
 
-            alert(`✅ تم العفو عن ${studentName} بنجاح`);
+            alert(`✅ تم العفو عن ${studentName} بنجاح لشهر ${selectedMonth}`);
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
         } catch (err) {
             console.error('خطأ غير متوقع:', err);
@@ -337,7 +338,7 @@ export default function TeacherDetailModal({
 
     // --- دالة إلغاء العفو ---
     const handleRemoveExemption = async (studentId: string, studentName: string) => {
-        if (!confirm(`هل تريد إلغاء العفو عن ${studentName}؟`)) return;
+        if (!confirm(`هل تريد إلغاء العفو عن ${studentName} لشهر ${selectedMonth}؟`)) return;
 
         try {
             const { error } = await supabase
@@ -351,7 +352,7 @@ export default function TeacherDetailModal({
                 return;
             }
 
-            alert(`تم إلغاء العفو عن ${studentName}`);
+            alert(`تم إلغاء العفو عن ${studentName} لشهر ${selectedMonth}`);
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
         } catch (err) {
             console.error('خطأ غير متوقع:', err);
@@ -774,10 +775,6 @@ export default function TeacherDetailModal({
                 return (
                     <div className="space-y-6">
                         <div className="flex flex-row-reverse items-center justify-between">
-                            <div className="text-right">
-                                <h3 className="text-xl font-bold text-gray-900">المجموعات المسئول عنها</h3>
-                                <p className="text-xs text-gray-400 font-bold mt-1">يظهر هنا المجموعات التي يقوم المعلم بالتدريس لها حالياً</p>
-                            </div>
                             {isDirector && (
                                 <button
                                     onClick={() => setShowAssignGroupModal(true)}

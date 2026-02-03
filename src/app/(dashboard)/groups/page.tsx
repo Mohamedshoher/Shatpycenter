@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import AddGroupModal from '@/features/groups/components/AddGroupModal';
 import ManageGroupsModal from '@/features/groups/components/ManageGroupsModal';
+import { tieredSearchFilter } from '@/lib/utils';
 
 export default function GroupsPage() {
     const { data: groups, isLoading } = useQuery({
@@ -75,26 +76,33 @@ export default function GroupsPage() {
         });
     }, [groups, teachers, students]);
 
-    const filteredGroups = enhancedGroups?.filter(group => {
-        // إذا كان مدرساً، يظهر له مجموعاته فقط
-        if (user?.role === 'teacher') {
-            if (group.teacherId !== user.teacherId) return false;
-        }
+    const filteredGroups = (() => {
+        if (!enhancedGroups) return [];
 
-        // إذا كان مشرفاً، يظهر له مجموعات الأقسام المسئول عنها فقط
-        if (user?.role === 'supervisor') {
-            const sections = user.responsibleSections || [];
-            if (sections.length > 0) {
-                const isResponsible = sections.some(section => group.name.includes(section));
-                if (!isResponsible) return false;
+        const baseFiltered = enhancedGroups.filter(group => {
+            // إذا كان مدرساً، يظهر له مجموعاته فقط
+            if (user?.role === 'teacher') {
+                if (group.teacherId !== user.teacherId) return false;
             }
-        }
 
-        const matchesSearch = (group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (group.teacher || '').toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesFilter = filter === 'الكل' || group.name.includes(filter);
-        return matchesSearch && matchesFilter;
-    }).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+            // إذا كان مشرفاً، يظهر له مجموعات الأقسام المسئول عنها فقط
+            if (user?.role === 'supervisor') {
+                const sections = user.responsibleSections || [];
+                if (sections.length > 0) {
+                    const isResponsible = sections.some(section => group.name.includes(section));
+                    if (!isResponsible) return false;
+                }
+            }
+
+            const matchesFilter = filter === 'الكل' || group.name.includes(filter);
+            return matchesFilter;
+        });
+
+        // تطبيق البحث المتدرج على المجموعات (باسم المجموعة أو اسم المعلم)
+        const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (g: any) => `${g.name} ${g.teacher}`);
+
+        return finalResults.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+    })();
 
     return (
         <div className="pb-32 transition-all duration-500">

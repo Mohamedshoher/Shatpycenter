@@ -19,7 +19,7 @@ import {
     XCircle,
     TrendingDown
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Teacher } from '@/types';
 import TeacherDetailModal from './TeacherDetailModal';
 import AddStaffModal from './AddStaffModal';
@@ -86,43 +86,45 @@ export default function TeacherList() {
     const normalize = (s: string) => s?.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/\s+/g, '').trim() || '';
 
     // تصفية المعلمين بناءً على البحث والفلتر
-    const filteredTeachers = teachers?.filter(teacher => {
-        // إذا كان مدرساً، يظهر له صفحته فقط
-        if (user?.role === 'teacher') {
-            return teacher.id === user.teacherId;
-        }
+    const filteredTeachers = (() => {
+        if (!teachers) return [];
 
-        // إذا كان مشرفاً، يرى نفسه والمدرسين الذين يشرف عليهم في أقسامه
-        if (user?.role === 'supervisor') {
-            const sections = user.responsibleSections || [];
-            if (teacher.id === user.teacherId) return true; // يرى نفسه
+        const baseFiltered = teachers.filter(teacher => {
+            // إذا كان مدرساً، يظهر له صفحته فقط
+            if (user?.role === 'teacher') {
+                return teacher.id === user.teacherId;
+            }
 
-            // جلب المجموعات التابعة لأقسام المشرف
-            const supervisedGroups = groups?.filter(g =>
-                sections.some(section => g.name.includes(section))
-            ) || [];
+            // إذا كان مشرفاً، يرى نفسه والمدرسين الذين يشرف عليهم في أقسامه
+            if (user?.role === 'supervisor') {
+                const sections = user.responsibleSections || [];
+                if (teacher.id === user.teacherId) return true;
 
-            // المدرسون المشرف عليهم هم من يدرسون هذه المجموعات
-            const supervisedTeacherIds = new Set(supervisedGroups.map(g => g.teacherId).filter(Boolean));
+                const supervisedGroups = groups?.filter(g =>
+                    sections.some(section => g.name.includes(section))
+                ) || [];
 
-            if (!supervisedTeacherIds.has(teacher.id)) return false;
-        }
+                const supervisedTeacherIds = new Set(supervisedGroups.map(g => g.teacherId).filter(Boolean));
+                if (!supervisedTeacherIds.has(teacher.id)) return false;
+            }
 
-        const normSearch = normalize(searchTerm);
-        const normFullName = normalize(teacher.fullName);
-        const matchesSearch = normFullName.includes(normSearch);
+            // فلتر الحالة
+            const matchesStatus = filter === 'الكل' ||
+                (filter === 'نشط' && (teacher.status === 'active' || !teacher.status)) ||
+                (filter === 'غير نشط' && teacher.status === 'inactive');
 
-        // فلتر الحالة
-        const matchesStatus = filter === 'الكل' ||
-            (filter === 'نشط' && (teacher.status === 'active' || !teacher.status)) ||
-            (filter === 'غير نشط' && teacher.status === 'inactive');
+            // فلتر الأقسام
+            const matchesSection = sectionFilter === 'الكل' ||
+                ((teacher as any).responsibleSections || []).includes(sectionFilter);
 
-        // فلتر الأقسام
-        const matchesSection = sectionFilter === 'الكل' ||
-            ((teacher as any).responsibleSections || []).includes(sectionFilter);
+            return matchesStatus && matchesSection;
+        });
 
-        return matchesSearch && matchesStatus && matchesSection;
-    })?.sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
+        // تطبيق البحث المتدرج على المعلمين
+        const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (t) => t.fullName);
+
+        return finalResults.sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
+    })();
 
     if (isLoading) {
         return (
