@@ -10,7 +10,6 @@ import {
     ChevronRight,
     User,
     AlertCircle,
-    LayoutGrid,
     Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,7 +24,7 @@ import StudentDetailModal from '@/features/students/components/StudentDetailModa
 import { useAllExams } from '@/features/students/hooks/useAllExams';
 
 // --- تعريف الأنواع والقواميس المساعدة ---
-type TabType = 'notTested' | 'mostTested' | 'performance' | 'cycle';
+type TabType = 'notTested' | 'mostTested' | 'performance';
 
 const EXAM_TYPE_MAP: Record<string, string> = {
     'new': 'جديد',
@@ -53,17 +52,17 @@ export default function ExamsReportPage() {
     const assignedGroupIds = filteredGroupsList.map((g: any) => g.id);
 
     // --- 3. حالات الصفحة (State Management) ---
-    const [activeTab, setActiveTab] = useState<TabType>('cycle'); // التبويب النشط
+    const [activeTab, setActiveTab] = useState<TabType>('performance'); // التبويب النشط
     const [selectedGroupId, setSelectedGroupId] = useState('all'); // المجموعة المختارة للفلترة
     const [selectedExamType, setSelectedExamType] = useState('new'); // نوع الاختبار (جديد، قريب، بعيد)
     const [examsLimit, setExamsLimit] = useState('1'); // الحد الأدنى للاختبارات (لتبويب الأكثر اختباراً)
     const [performanceFilter, setPerformanceFilter] = useState<'all' | 'new' | 'near' | 'far'>('all'); // فلتر تبويب الأداء
 
+    const [selectedRemainingCount, setSelectedRemainingCount] = useState('all'); // فلتر عدد الاختبارات المتبقية (3، 2، 1)
+
     // --- 4. إدارة الوقت والتاريخ ---
     const [selectedDate, setSelectedDate] = useState(new Date()); // التاريخ المختار للتقارير الشهرية
-    const [viewDate, setViewDate] = useState(new Date()); // التاريخ المختار لتبويب "الدورة" اليومي
     const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<any>(null); // الطالب المختار لعرض تفاصيله
-    const [postponedStudentIds, setPostponedStudentIds] = useState<string[]>([]); // قائمة الطلاب المؤجلين ليوم الأربعاء
 
     // تحويل التاريخ إلى مفتاح (مثل 2023-10) لجلب بيانات الاختبارات من السيرفر
     const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
@@ -97,21 +96,60 @@ export default function ExamsReportPage() {
             base = base.filter((s: any) => s.groupId && assignedGroupIds.includes(s.groupId));
         }
 
-        const arabicType = EXAM_TYPE_MAP[selectedExamType] || 'جديد';
-        const testedInMonthIds = new Set(
-            allExams
-                .filter((e: any) => e.type === arabicType)
-                .map((e: any) => e.studentId)
-        );
+        const selectedArabicType = EXAM_TYPE_MAP[selectedExamType] || 'جديد';
 
         return base
-            .filter((s: any) => !testedInMonthIds.has(s.id))
+            .map((s: any) => {
+                const groupName = groups?.find((g: any) => g.id === s.groupId)?.name || 'غير محدد';
+
+                // تحديد عدد الاختبارات المطلوبة حسب نوع المجموعة
+                // تلقين/نور بيان: 2، قرآن (الافتراضي): 3
+                const isReducedReq = groupName.includes('تلقين') || groupName.includes('نور بيان');
+                const requiredCount = isReducedReq ? 2 : 3;
+
+                // جلب اختبارات الطالب لهذا الشهر
+                const studentExams = allExams.filter((e: any) => e.studentId === s.id);
+
+                // حساب الأنواع الفريدة التي اختبرها الطالب (مثلاً: جديد، ماضي قريب)
+                // إذا اختبر مرتين "جديد" تحسب مرة واحدة
+                const completedTypes = Array.from(new Set(studentExams.map((e: any) => e.type)));
+
+                // هل اختبر النوع المحدد في الفلتر؟
+                const hasDoneSelected = completedTypes.includes(selectedArabicType);
+
+                // هل استوفى النصاب المطلوب؟
+                const hasMetQuota = completedTypes.length >= requiredCount;
+
+                // عدد الاختبارات المتبقية
+                const remainingCount = Math.max(0, requiredCount - completedTypes.length);
+
+                return {
+                    ...s,
+                    groupName,
+                    completedTypes,
+                    hasDoneSelected,
+                    hasMetQuota,
+                    remainingCount
+                };
+            })
+            .filter((s: any) => {
+                // فلتر العدد المتبقي إذا كان محدداً
+                if (selectedRemainingCount !== 'all' && s.remainingCount !== parseInt(selectedRemainingCount)) {
+                    return false;
+                }
+
+                // يظهر الطالب إذا:
+                // 1. لم يختبر النوع المختار حالياً
+                // 2. ولم يستوف النصاب الكلي المطلوب منه بعد
+                return !s.hasDoneSelected && !s.hasMetQuota;
+            })
             .map((s: any, i: number) => ({
                 ...s,
                 rank: i + 1,
-                groupName: groups?.find((g: any) => g.id === s.groupId)?.name || 'غير محدد'
+                // تنسيق العرض: محمد أحمد (جديد، ماضي قريب)
+                completedDisplay: s.completedTypes.length > 0 ? `(${s.completedTypes.join(' - ')})` : ''
             }));
-    }, [students, groups, allExams, selectedGroupId, selectedExamType, user, assignedGroupIds]);
+    }, [students, groups, allExams, selectedGroupId, selectedExamType, selectedRemainingCount, user, assignedGroupIds]);
 
     // ب- حساب الطلاب "الأكثر اختباراً" بناءً على عدد مرات الاختبار
     const mostTestedStudents = useMemo(() => {
@@ -190,16 +228,7 @@ export default function ExamsReportPage() {
 
                 {/* --- شريط التنقل بين التبويبات --- */}
                 <div className="max-w-5xl mx-auto mt-4 flex bg-gray-100/80 p-1 rounded-xl gap-1 overflow-x-auto no-scrollbar">
-                    <button
-                        onClick={() => setActiveTab('cycle')}
-                        className={cn(
-                            "flex-1 min-w-[90px] py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap",
-                            activeTab === 'cycle' ? "bg-white text-orange-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                        )}
-                    >
-                        <Calendar size={14} />
-                        الدورة
-                    </button>
+
                     <button
                         onClick={() => setActiveTab('performance')}
                         className={cn(
@@ -248,6 +277,19 @@ export default function ExamsReportPage() {
                                     {/* فلتر المجموعة ونوع الاختبار */}
                                     <div className="relative flex-1 md:flex-none">
                                         <select
+                                            value={selectedRemainingCount}
+                                            onChange={(e) => setSelectedRemainingCount(e.target.value)}
+                                            className="appearance-none bg-white border border-gray-100 px-8 py-3 pr-4 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold text-gray-600 focus:outline-none w-full md:min-w-[120px] text-right"
+                                        >
+                                            <option value="all">الكل (بقي له)</option>
+                                            <option value="3">بقي له 3</option>
+                                            <option value="2">بقي له 2</option>
+                                            <option value="1">بقي له 1</option>
+                                        </select>
+                                        <ChevronDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    </div>
+                                    <div className="relative flex-1 md:flex-none">
+                                        <select
                                             value={selectedGroupId}
                                             onChange={(e) => setSelectedGroupId(e.target.value)}
                                             className="appearance-none bg-white border border-gray-100 px-8 py-3 pr-4 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold text-gray-600 focus:outline-none w-full md:min-w-[150px] text-right"
@@ -284,7 +326,10 @@ export default function ExamsReportPage() {
                                                 <User size={18} />
                                             </div>
                                             <div className="text-right">
-                                                <h3 className="font-bold text-gray-900 group-hover:text-amber-600 transition-colors text-base">{student.fullName}</h3>
+                                                <h3 className="font-bold text-gray-900 group-hover:text-amber-600 transition-colors text-base">
+                                                    {student.fullName}
+                                                    {student.completedDisplay && <span className="text-xs text-amber-600/70 mr-2 font-normal">{student.completedDisplay}</span>}
+                                                </h3>
                                                 <span className="text-xs text-gray-400 font-bold">{student.groupName}</span>
                                             </div>
                                         </div>
@@ -373,180 +418,7 @@ export default function ExamsReportPage() {
                         </motion.div>
                     )}
 
-                    {/* --- التبويب 3: جدول الدورة والاختبارات المجدولة --- */}
-                    {activeTab === 'cycle' && (
-                        <motion.div
-                            key="cycle"
-                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                            className="space-y-6"
-                        >
-                            {(() => {
-                                // حساب منطق "الدورة": توزيع الطلاب على أيام الأسبوع (السبت - الأربعاء)
-                                const jsDay = viewDate.getDay();
-                                const dayMap: Record<number, number> = { 6: 0, 0: 1, 1: 2, 2: 3, 3: 4 }; // السبت=0 ... الأربعاء=4
-                                const dayIndex = dayMap[jsDay] ?? -1;
 
-                                // تصفية الطلاب النشطين حسب المعلم/المجموعة
-                                const base = (students || [])
-                                    .filter((s: any) => s.status === 'active')
-                                    .filter((s: any) => {
-                                        if (selectedGroupId !== 'all') return s.groupId === selectedGroupId;
-                                        if (user?.role === 'teacher' || user?.role === 'supervisor') return assignedGroupIds.includes(s.groupId);
-                                        return true;
-                                    })
-                                    .sort((a, b) => {
-                                        const gA = groups?.find(g => g.id === a.groupId)?.name || '';
-                                        const gB = groups?.find(g => g.id === b.groupId)?.name || '';
-                                        if (gA !== gB) return gA.localeCompare(gB, 'ar');
-                                        return a.fullName.localeCompare(b.fullName, 'ar');
-                                    });
-
-                                // حساب مؤشر البداية لكل يوم (لضمان تدوير الطلاب بشكل عادل كل أسبوعين)
-                                const weekIndex = Math.floor((viewDate.getDate() - 1) / 7) % 2;
-                                const startIndex = (weekIndex * 20) + (Math.max(0, dayIndex) * 5);
-
-                                // تجميع الطلاب في هيكل بيانات حسب مجموعاتهم
-                                const studentsByGroup: { groupId: string, name: string, students: any[] }[] = [];
-                                if (dayIndex !== -1 && dayIndex !== 4) {
-                                    base.forEach(s => {
-                                        const gid = s.groupId || 'unknown';
-                                        let groupObj = studentsByGroup.find(g => g.groupId === gid);
-                                        if (!groupObj) {
-                                            const groupName = groups?.find(g => g.id === gid)?.name || 'غير محدد';
-                                            groupObj = { groupId: gid, name: groupName, students: [] };
-                                            studentsByGroup.push(groupObj);
-                                        }
-                                        groupObj.students.push(s);
-                                    });
-                                }
-
-                                // حساب عدد الطلاب المجدولين لليوم المختار
-                                let totalScheduled = 0;
-                                if (dayIndex === 4) {
-                                    totalScheduled = base.filter(s => postponedStudentIds.includes(s.id)).length;
-                                } else if (dayIndex !== -1) {
-                                    totalScheduled = studentsByGroup.reduce((sum, g) => {
-                                        const groupStart = startIndex % g.students.length;
-                                        const groupScheduled = g.students.slice(groupStart, groupStart + 5);
-                                        return sum + groupScheduled.filter(s => !postponedStudentIds.includes(s.id)).length;
-                                    }, 0);
-                                }
-
-                                return (
-                                    <div className="space-y-6">
-                                        {/* التحكم في التنقل اليومي داخل الدورة */}
-                                        <div className="flex items-center justify-between gap-2 px-1">
-                                            <div className="flex items-center bg-white p-1 rounded-2xl border border-gray-100 shadow-sm shrink-0 scale-95 origin-right">
-                                                <button onClick={() => { const d = new Date(viewDate); d.setDate(d.getDate() + 1); setViewDate(d); }} className="w-8 h-8 flex items-center justify-center text-gray-400"><ChevronRight className="rotate-180" size={18} /></button>
-                                                <div className="px-2 py-0.5 text-center min-w-[100px]">
-                                                    <p className="text-[9px] font-black text-blue-600 uppercase">{viewDate.toLocaleDateString('ar-EG', { weekday: 'long' })}</p>
-                                                    <p className="text-[10px] font-bold text-gray-400 mt-0.5">{viewDate.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}</p>
-                                                </div>
-                                                <button onClick={() => { const d = new Date(viewDate); d.setDate(d.getDate() - 1); setViewDate(d); }} className="w-8 h-8 flex items-center justify-center text-gray-400"><ChevronRight size={18} /></button>
-                                            </div>
-
-                                            <span className="text-[14px] font-black text-blue-600 bg-blue-50 px-2 py-2 rounded-full shadow-sm uppercase shrink-0">
-                                                {dayIndex === -1 ? 'عطلة الأسبوع' : (dayIndex === 4 ? `الاستدراك (${totalScheduled})` : `قائمة اليوم (${totalScheduled})`)}
-                                            </span>
-                                        </div>
-
-                                        {/* --- عرض المحتوى حسب اليوم --- */}
-                                        {dayIndex === -1 ? (
-                                            /* 1. عرض حالة العطلة (الخميس والجمعة) */
-                                            <div className="text-center py-20 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-100">
-                                                <div className="w-16 h-16 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <Calendar size={32} />
-                                                </div>
-                                                <h3 className="text-lg font-black text-gray-800">عطلة نهاية الأسبوع</h3>
-                                                <p className="text-sm text-gray-400 font-bold mt-1">لا توجد اختبارات مبرمجة ليومي الخميس والجمعة</p>
-                                            </div>
-                                        ) : dayIndex === 4 ? (
-                                            /* 2. عرض يوم الاستدراك (الأربعاء) للطلاب الذين تم تأجيلهم */
-                                            <div className="space-y-4">
-                                                <div className="bg-orange-50 p-6 rounded-[28px] border border-orange-100 text-center">
-                                                    <h3 className="text-orange-700 font-black text-lg">يوم الاستدراك</h3>
-                                                    <p className="text-orange-600/70 text-sm font-bold mt-1">الطلاب المؤجلون من هذا الأسبوع</p>
-                                                </div>
-                                                <div className="grid grid-cols-1 gap-3">
-                                                    {base.filter(s => postponedStudentIds.includes(s.id)).map((student: any) => (
-                                                        <div key={student.id} className="bg-white rounded-[24px] p-4 flex items-center justify-between border border-gray-100 shadow-sm">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 font-black text-lg shrink-0">
-                                                                    <AlertCircle size={24} />
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <h3 className="font-bold text-gray-900 text-base">{student.fullName}</h3>
-                                                                    <p className="text-xs text-gray-400 font-bold">{groups?.find(g => g.id === student.groupId)?.name}</p>
-                                                                </div>
-                                                            </div>
-                                                            <button onClick={() => setSelectedStudentForDetails(student)} className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/20"><ChevronRight size={18} /></button>
-                                                        </div>
-                                                    ))}
-                                                    {totalScheduled === 0 && <div className="text-center py-10 text-gray-400 font-bold border-2 border-dashed border-gray-50 rounded-[32px]">لا يوجد طلاب مؤجلون حالياً</div>}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            /* 3. عرض القائمة العادية لباقي أيام الأسبوع */
-                                            <div className="space-y-8">
-                                                {studentsByGroup.map((group) => {
-                                                    const groupStart = startIndex % group.students.length;
-                                                    const scheduledInGroup = group.students.slice(groupStart, groupStart + 5)
-                                                        .filter(s => !postponedStudentIds.includes(s.id));
-
-                                                    if (scheduledInGroup.length === 0) return null;
-
-                                                    return (
-                                                        <div key={group.groupId} className="space-y-3">
-                                                            <div className="flex items-center gap-3 px-1">
-                                                                <div className="h-px bg-gray-200 flex-1" />
-                                                                <h4 className="text-[10px] font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-2">
-                                                                    <LayoutGrid size={10} /> مجموعة: {group.name}
-                                                                </h4>
-                                                                <div className="h-px bg-gray-200 flex-1" />
-                                                            </div>
-
-                                                            <div className="grid grid-cols-1 gap-3">
-                                                                {scheduledInGroup.map((student: any) => (
-                                                                    <div key={student.id} className="bg-white rounded-[24px] p-4 flex items-center justify-between border border-gray-100 shadow-sm hover:border-blue-200 transition-all group overflow-hidden relative">
-                                                                        <div className="flex items-center gap-4">
-                                                                            <div className="w-12 h-12 bg-blue-50/50 rounded-2xl flex items-center justify-center text-blue-600 font-black text-lg shrink-0 font-sans">
-                                                                                {group.students.indexOf(student) + 1}
-                                                                            </div>
-                                                                            <div className="text-right">
-                                                                                <h3 className="font-bold text-gray-900 text-base">{student.fullName}</h3>
-                                                                                <p className="text-xs text-gray-400 font-bold">{group.name}</p>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            {/* زر التأجيل للمدرس فقط */}
-                                                                            {user?.role === 'teacher' && (
-                                                                                <button
-                                                                                    className="text-[10px] font-black bg-gray-50 text-gray-400 px-3 py-2 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-100"
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        setPostponedStudentIds(prev => [...prev, student.id]);
-                                                                                    }}
-                                                                                >
-                                                                                    تأجيل للأربعاء
-                                                                                </button>
-                                                                            )}
-                                                                            <button onClick={() => setSelectedStudentForDetails(student)} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
-                                                                                <ChevronRight size={18} />
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })()}
-                        </motion.div>
-                    )}
 
                     {/* --- التبويب 4: مقارنة أداء المجموعات --- */}
                     {activeTab === 'performance' && (
