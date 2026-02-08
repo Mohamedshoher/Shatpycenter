@@ -24,11 +24,13 @@ import {
 } from 'lucide-react';
 import { addToOfflineQueue } from '@/lib/offline-queue';
 
-import AddStudentModal from './AddStudentModal';
-import StudentDetailModal from './StudentDetailModal';
-import EditStudentModal from './EditStudentModal';
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Student } from '@/types';
+import dynamic from 'next/dynamic';
+
+const AddStudentModal = dynamic(() => import('./AddStudentModal'), { ssr: false });
+const StudentDetailModal = dynamic(() => import('./StudentDetailModal'), { ssr: false });
+const EditStudentModal = dynamic(() => import('./EditStudentModal'), { ssr: false });
 
 interface StudentListProps {
     groupId?: string;

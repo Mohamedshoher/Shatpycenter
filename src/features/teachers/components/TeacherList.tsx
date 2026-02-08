@@ -21,10 +21,12 @@ import {
 } from 'lucide-react';
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Teacher } from '@/types';
-import TeacherDetailModal from './TeacherDetailModal';
-import AddStaffModal from './AddStaffModal';
-import { useTeacherAttendance, useAllTeachersAttendance } from '../hooks/useTeacherAttendance';
 import { updateTeacherAttendance } from '../services/attendanceService';
+import { useTeacherAttendance, useAllTeachersAttendance } from '../hooks/useTeacherAttendance';
+import dynamic from 'next/dynamic';
+
+const TeacherDetailModal = dynamic(() => import('./TeacherDetailModal'), { ssr: false });
+const AddStaffModal = dynamic(() => import('./AddStaffModal'), { ssr: false });
 
 export default function TeacherList() {
     const { data: teachers, isLoading } = useTeachers();

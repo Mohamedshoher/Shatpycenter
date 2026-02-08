@@ -200,6 +200,7 @@ export default function TeacherDetailModal({
     // --- منطق "تحصيل المدير من طلاب المدرس" ---
     const [showManagerCollectedDetails, setShowManagerCollectedDetails] = useState(false);
     const [showDeficitDetails, setShowDeficitDetails] = useState(false);
+    const [deficitTab, setDeficitTab] = useState<'unpaid' | 'exempted'>('unpaid');
 
     const managerCollectedPayments = (() => {
         if (!teacher || !groups || !students || !allFees) return [];
@@ -1876,27 +1877,60 @@ export default function TeacherDetailModal({
                                                 <p className="text-[9px] font-bold text-amber-500">إجمالي العجز</p>
                                                 <p className="text-lg font-black text-amber-700 font-sans">{realDeficit.toLocaleString()}</p>
                                             </div>
-                                            <div className="bg-white rounded-2xl p-3 text-center border border-red-100">
+                                            <button
+                                                onClick={() => setDeficitTab('unpaid')}
+                                                className={cn(
+                                                    "rounded-2xl p-3 text-center border transition-all",
+                                                    deficitTab === 'unpaid'
+                                                        ? "bg-red-50 border-red-200 ring-2 ring-red-500/10"
+                                                        : "bg-white border-red-50 hover:bg-red-50/50"
+                                                )}
+                                            >
                                                 <p className="text-[9px] font-bold text-red-500">لم يدفعوا</p>
                                                 <p className="text-lg font-black text-red-600 font-sans">{unpaidStudents.filter(s => !s.isExempted).length}</p>
-                                            </div>
-                                            <div className="bg-white rounded-2xl p-3 text-center border border-green-100">
+                                            </button>
+                                            <button
+                                                onClick={() => setDeficitTab('exempted')}
+                                                className={cn(
+                                                    "rounded-2xl p-3 text-center border transition-all",
+                                                    deficitTab === 'exempted'
+                                                        ? "bg-green-50 border-green-200 ring-2 ring-green-500/10"
+                                                        : "bg-white border-green-50 hover:bg-green-50/50"
+                                                )}
+                                            >
                                                 <p className="text-[9px] font-bold text-green-500">معفيين</p>
                                                 <p className="text-lg font-black text-green-600 font-sans">{unpaidStudents.filter(s => s.isExempted).length}</p>
-                                            </div>
+                                            </button>
                                         </div>
                                     </div>
 
                                     {/* قائمة الطلاب */}
                                     <div className="flex-1 overflow-y-auto no-scrollbar p-4">
                                         <div className="space-y-3">
-                                            {unpaidStudents.length === 0 ? (
-                                                <div className="py-16 text-center text-gray-400 text-sm font-bold bg-white rounded-[32px] border-2 border-dashed border-gray-100">
-                                                    <CheckCircle2 size={40} className="mx-auto mb-3 text-green-400" />
-                                                    جميع الطلاب قاموا بالدفع! 🎉
-                                                </div>
-                                            ) : (
-                                                unpaidStudents.map((student, index) => (
+                                            {(() => {
+                                                const displayedStudents = unpaidStudents.filter(s =>
+                                                    deficitTab === 'unpaid' ? !s.isExempted : s.isExempted
+                                                );
+
+                                                if (displayedStudents.length === 0) {
+                                                    return (
+                                                        <div className="py-16 text-center text-gray-400 text-sm font-bold bg-white rounded-[32px] border-2 border-dashed border-gray-100">
+                                                            {deficitTab === 'unpaid' ? (
+                                                                <>
+                                                                    <CheckCircle2 size={40} className="mx-auto mb-3 text-green-400" />
+                                                                    جميع الطلاب قاموا بالدفع! 🎉
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Gift size={40} className="mx-auto mb-3 text-gray-300" />
+                                                                    لا يوجد طلاب معفيين.
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return displayedStudents.map((student, index) => (
                                                     <div
                                                         key={student.id}
                                                         className={cn(
@@ -1972,8 +2006,8 @@ export default function TeacherDetailModal({
                                                             )}
                                                         </div>
                                                     </div>
-                                                ))
-                                            )}
+                                                ));
+                                            })()}
                                         </div>
                                     </div>
 

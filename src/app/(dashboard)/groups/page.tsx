@@ -19,11 +19,12 @@ import {
     Filter
 } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn, tieredSearchFilter } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import AddGroupModal from '@/features/groups/components/AddGroupModal';
-import ManageGroupsModal from '@/features/groups/components/ManageGroupsModal';
-import { tieredSearchFilter } from '@/lib/utils';
+import dynamic from 'next/dynamic';
+
+const AddGroupModal = dynamic(() => import('@/features/groups/components/AddGroupModal'), { ssr: false });
+const ManageGroupsModal = dynamic(() => import('@/features/groups/components/ManageGroupsModal'), { ssr: false });
 
 export default function GroupsPage() {
     const { data: groups, isLoading } = useQuery({
