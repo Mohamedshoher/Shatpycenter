@@ -391,7 +391,7 @@ export default function TeacherDetailModal({
 
 
     // --- حالات التبويبات والبيانات المدخلة ---
-    const [activeTab, setActiveTab] = useState('groups'); // التبويب النشط
+    const [activeTab, setActiveTab] = useState('collection'); // التبويب النشط الافتراضي أصبح التحصيل
     const [amount, setAmount] = useState(''); // قيمة المبلغ المحصل المدخل
     const [notes, setNotes] = useState(''); // ملاحظات التحصيل
 
@@ -773,9 +773,9 @@ export default function TeacherDetailModal({
 
     // تعريف التبويبات الأساسية للنافذة
     const tabs = [
-        { id: 'payroll', label: 'الراتب', icon: CreditCard },
-        { id: 'attendance', label: 'الحضور', icon: Calendar },
         { id: 'collection', label: 'التحصيل', icon: CircleDollarSign },
+        { id: 'attendance', label: 'الحضور', icon: Calendar },
+        { id: 'payroll', label: 'الراتب', icon: CreditCard },
         { id: 'groups', label: 'المجموعات', icon: Layers },
     ].filter(tab => {
         if (user?.role === 'supervisor') {
