@@ -54,6 +54,7 @@ export default function AttendanceReportPage() {
     const [attendanceLoading, setAttendanceLoading] = useState<{ [key: string]: boolean }>({});
     const [recordedAttendance, setRecordedAttendance] = useState<{ [key: string]: 'present' | 'absent' }>({});
     const [showChart, setShowChart] = useState(false);
+    const [showPresentChart, setShowPresentChart] = useState(false);
 
     // تصفية المجموعات للمدرس
     const filteredGroupsList = groups?.filter(g => {
@@ -84,21 +85,25 @@ export default function AttendanceReportPage() {
         return d.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
     };
 
-    // دالة لحساب الغياب المتصل
+    // دالة لحساب الغياب المتصل (محدثة لدعم تداخل الأشهر)
     const calculateContinuousAbsence = (attendance: any[]) => {
-        const today = new Date();
-        const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        if (!attendance || attendance.length === 0) return 0;
 
         // ترتيب الحضور من الأحدث للأقدم
-        const sortedAttendance = attendance
-            .filter(a => a.month === currentMonth)
-            .sort((a, b) => b.day - a.day);
+        // يجب تحويل التاريخ لكائن للمقارنة الصحيحة لأن "day" يتكرر عبر الأشهر
+        const sortedAttendance = attendance.sort((a, b) => {
+            const dateA = new Date(a.month + '-' + String(a.day).padStart(2, '0'));
+            const dateB = new Date(b.month + '-' + String(b.day).padStart(2, '0'));
+            return dateB.getTime() - dateA.getTime();
+        });
 
         let continuous = 0;
+        // نبدأ العد من أحدث سجل
         for (let i = 0; i < sortedAttendance.length; i++) {
             if (sortedAttendance[i].status === 'absent') {
                 continuous++;
             } else {
+                // إذا وجدنا "حاضر"، نتوقف لأن السلسلة انقطعت
                 break;
             }
         }
@@ -124,14 +129,29 @@ export default function AttendanceReportPage() {
             const today = new Date();
             const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
-            // جلب ملحوظات الطلاب (استعلام واحد للكل)
-            // وجلب حضور الشهر الحالي (استعلام واحد للكل) - هذا يحل مشكلة الـ 340 طلب المتزامن
-            const [attendanceMap, latestNotes] = await Promise.all([
+            // حساب مفتاح الشهر السابق
+            const prevDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+            // جلب بيانات الشهر الحالي والشهر السابق لمعالجة الغياب المتصل عبر الأشهر
+            const [attendanceCurrent, attendancePrev, latestNotes] = await Promise.all([
                 getAllAttendanceForMonth(currentMonthKey),
+                getAllAttendanceForMonth(prevMonthKey),
                 getLatestNotes()
             ]);
 
-            return { attendanceMap, latestNotes };
+            // دمج سجلات الحضور
+            const mergedAttendance: Record<string, any[]> = {};
+            const allStudentIds = new Set([...Object.keys(attendanceCurrent), ...Object.keys(attendancePrev)]);
+
+            allStudentIds.forEach(id => {
+                mergedAttendance[id] = [
+                    ...(attendanceCurrent[id] || []),
+                    ...(attendancePrev[id] || [])
+                ];
+            });
+
+            return { attendanceMap: mergedAttendance, latestNotes };
         },
         enabled: !!(students && students.length > 0)
     });
@@ -151,7 +171,8 @@ export default function AttendanceReportPage() {
             .map((s) => {
                 const attendance = allAttendanceData?.[s.id] || [];
                 const totalAbsences = calculateTotalAbsence(attendance);
-                const continuousAbsences = calculateContinuousAbsence(attendance);
+                // استخدام الدالة الجديدة التي تدعم البحث في كل السجلات المدمجة
+                const continuousAbsences = calculateContinuousAbsence([...attendance]); // Spread to avoid mutating original with sort
                 const latestNote = allLatestNotes?.[s.id];
 
                 // تحديد التاريخ المختار للتحقق من حالة الحضور الحالية
@@ -228,6 +249,34 @@ export default function AttendanceReportPage() {
         });
 
         return { present, absent };
+    }, [selectedDateMode, processedStudents, allAttendanceData]);
+
+    // حساب توزيع الحضور حسب المجموعات
+    const presentsByGroup = useMemo(() => {
+        const selectedDate = new Date();
+        if (selectedDateMode === 'yesterday') selectedDate.setDate(selectedDate.getDate() - 1);
+        if (selectedDateMode === 'before') selectedDate.setDate(selectedDate.getDate() - 2);
+
+        const selectedDay = selectedDate.getDate();
+        const selectedMonth = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+
+        const breakdown: Record<string, number> = {};
+
+        processedStudents.forEach(student => {
+            const attendance = allAttendanceData?.[student.id] || [];
+            const dayRecord = attendance.find(a =>
+                a.month === selectedMonth && a.day === selectedDay
+            );
+
+            if (dayRecord && dayRecord.status === 'present') {
+                const groupName = student.groupName || 'غير محدد';
+                breakdown[groupName] = (breakdown[groupName] || 0) + 1;
+            }
+        });
+
+        return Object.entries(breakdown)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count);
     }, [selectedDateMode, processedStudents, allAttendanceData]);
 
     // حساب توزيع الغياب حسب المجموعات
@@ -341,10 +390,19 @@ export default function AttendanceReportPage() {
                         <div className="flex-1" /> {/* مسافة فاصلة */}
 
                         <div className="flex items-center gap-1.5 shrink-0 ml-1">
-                            <div className="bg-green-50/50 border border-green-100 rounded-[12px] py-1 px-2.5 flex items-center gap-1.5">
-                                <span className="text-[9px] font-black text-green-700">حاضر</span>
-                                <span className="text-lg font-black text-green-600 font-sans leading-none">{dailyStats.present}</span>
-                            </div>
+                            <button
+                                onClick={() => setShowPresentChart(!showPresentChart)}
+                                className={cn(
+                                    "border rounded-[12px] py-1 px-2.5 flex items-center gap-1.5 transition-all active:scale-95 shadow-sm",
+                                    showPresentChart ? "bg-green-500 border-green-600 text-white" : "bg-green-50/50 border-green-100 text-green-700"
+                                )}
+                            >
+                                <div className="flex flex-col items-end">
+                                    <span className={cn("text-[8px] font-black leading-tight", showPresentChart ? "text-green-100" : "text-green-700")}>حاضر</span>
+                                    <span className={cn("text-lg font-black font-sans leading-none", showPresentChart ? "text-white" : "text-green-600")}>{dailyStats.present}</span>
+                                </div>
+                                <CheckCircle2 size={16} className={showPresentChart ? "text-white" : "text-green-500"} />
+                            </button>
                             <button
                                 onClick={() => setShowChart(!showChart)}
                                 className={cn(
@@ -562,18 +620,19 @@ export default function AttendanceReportPage() {
                             </div>
 
                             {/* Content */}
-                            <div className="p-6 space-y-6">
-                                <div className="h-[250px] w-full" dir="ltr">
+                            <div className="p-4 sm:p-6 flex-1 overflow-hidden flex flex-col">
+                                <div className="w-full h-[60vh]" dir="ltr">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={absentsByGroup} layout="vertical" margin={{ left: 10, right: 30, top: 0, bottom: 0 }}>
+                                        <BarChart data={absentsByGroup} layout="vertical" margin={{ left: 20, right: 40, top: 20, bottom: 20 }}>
                                             <XAxis type="number" hide />
                                             <YAxis
                                                 dataKey="name"
                                                 type="category"
                                                 axisLine={false}
                                                 tickLine={false}
-                                                width={90}
-                                                tick={{ fontSize: 10, fontWeight: 'bold', fill: '#64748b' }}
+                                                width={120}
+                                                interval={0}
+                                                tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }}
                                             />
                                             <Tooltip
                                                 cursor={{ fill: 'transparent' }}
@@ -588,32 +647,111 @@ export default function AttendanceReportPage() {
                                                     return null;
                                                 }}
                                             />
-                                            <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={24}>
+                                            <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={32}>
                                                 {absentsByGroup.map((entry, index) => (
                                                     <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} />
                                                 ))}
-                                                <LabelList dataKey="count" position="right" style={{ fontSize: 12, fontWeight: '900', fill: '#ef4444' }} />
+                                                <LabelList dataKey="count" position="right" style={{ fontSize: 14, fontWeight: '900', fill: '#ef4444' }} />
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
+                            </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    {absentsByGroup.slice(0, 4).map((item, idx) => (
-                                        <div key={idx} className="bg-red-50/30 rounded-2xl p-3 border border-red-100/30 flex items-center justify-between">
-                                            <span className="text-[10px] font-black text-gray-500 truncate ml-2">{item.name}</span>
-                                            <span className="w-7 h-7 bg-red-500 text-white rounded-lg flex items-center justify-center text-[11px] font-black">{item.count}</span>
-                                        </div>
-                                    ))}
+                            <div className="p-4 bg-gray-50/50 border-t border-gray-100 flex justify-center shrink-0">
+                                <Button
+                                    onClick={() => setShowChart(false)}
+                                    className="bg-gray-900 text-white hover:bg-black px-12 rounded-2xl font-black h-12 shadow-lg shadow-gray-200 w-full sm:w-auto"
+                                >
+                                    إغلاق
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* نافذة الرسم البياني للحضور المنبثقة */}
+            <AnimatePresence>
+                {showPresentChart && presentsByGroup.length > 0 && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowPresentChart(false)}
+                            className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl relative z-10 overflow-hidden border border-white mx-auto"
+                        >
+                            {/* Header */}
+                            <div className="bg-green-500 p-6 flex items-center justify-between text-white">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                                        <CheckCircle2 size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-xl">توزيع الحضور</h3>
+                                        <p className="text-green-100 text-[10px] font-bold">بناءً على المجموعات لـ {getDateStr(selectedDateMode)}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowPresentChart(false)}
+                                    className="w-10 h-10 bg-black/10 rounded-full flex items-center justify-center hover:bg-black/20 transition-all active:scale-90"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-4 sm:p-6 flex-1 overflow-hidden flex flex-col">
+                                <div className="w-full h-[60vh]" dir="ltr">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={presentsByGroup} layout="vertical" margin={{ left: 20, right: 40, top: 20, bottom: 20 }}>
+                                            <XAxis type="number" hide />
+                                            <YAxis
+                                                dataKey="name"
+                                                type="category"
+                                                axisLine={false}
+                                                tickLine={false}
+                                                width={120}
+                                                interval={0}
+                                                tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }}
+                                            />
+                                            <Tooltip
+                                                cursor={{ fill: 'transparent' }}
+                                                content={({ active, payload }) => {
+                                                    if (active && payload && payload.length) {
+                                                        return (
+                                                            <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-xl">
+                                                                {payload[0].value} طالب حاضر
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                }}
+                                            />
+                                            <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={32}>
+                                                {presentsByGroup.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={index === 0 ? '#22c55e' : '#4ade80'} />
+                                                ))}
+                                                <LabelList dataKey="count" position="right" style={{ fontSize: 14, fontWeight: '900', fill: '#22c55e' }} />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
                                 </div>
                             </div>
 
-                            <div className="p-4 bg-gray-50/50 border-t border-gray-100 flex justify-center">
+                            <div className="p-4 bg-gray-50/50 border-t border-gray-100 flex justify-center shrink-0">
                                 <Button
-                                    onClick={() => setShowChart(false)}
-                                    className="bg-gray-900 text-white hover:bg-black px-12 rounded-2xl font-black h-12 shadow-lg shadow-gray-200"
+                                    onClick={() => setShowPresentChart(false)}
+                                    className="bg-gray-900 text-white hover:bg-black px-12 rounded-2xl font-black h-12 shadow-lg shadow-gray-200 w-full sm:w-auto"
                                 >
-                                    فهمت
+                                    إغلاق
                                 </Button>
                             </div>
                         </motion.div>

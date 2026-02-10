@@ -56,30 +56,72 @@ export default function ArchiveList() {
         }
     });
 
-    // منطق الدين الفعلي: التحقق من وجود أشهر غير مدفوعة منذ التحاقه
-    const checkDebt = (student: Student) => {
-        if (!student.enrollmentDate) return false;
+    // جلب كافة سجلات الحضور لفحص استحقاق الدين
+    const { data: allAttendance = [] } = useQuery({
+        queryKey: ['all-attendance'],
+        queryFn: async () => {
+            const { supabase } = await import('@/lib/supabase');
+            const { data } = await supabase
+                .from('attendance')
+                .select('student_id, month_key, status, date');
+            return (data || []) as any[];
+        }
+    });
+
+    // منطق الدين المتطور: يعتمد على عدد أيام الحضور في الشهر
+    const calculateDebt = (student: Student) => {
+        if (!student.enrollmentDate) return { isIndebted: false, label: '', amount: 0 };
 
         const start = new Date(student.enrollmentDate);
         const end = student.archivedDate ? new Date(student.archivedDate) : new Date();
 
-        // جلب قائمة الأشهر التي يجب دفعها
         let current = new Date(start.getFullYear(), start.getMonth(), 1);
         const target = new Date(end.getFullYear(), end.getMonth(), 1);
 
         const studentFees = allFees.filter(f => f.student_id === student.id);
+        const studentAttendance = allAttendance.filter(a => a.student_id === student.id);
+
+        let totalMonthDebt = 0;
 
         while (current <= target) {
             const monthLabel = current.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
             const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
 
-            const isPaid = studentFees.some(f => f.month === monthLabel || f.month === monthKey);
-            if (!isPaid) return true; // وجد شهر غير مدفوع
+            // حساب أيام الحضور في هذا الشهر
+            const monthAttendanceCount = studentAttendance.filter(a => {
+                const recordDate = new Date(a.date);
+                const recordMonthKey = a.month_key || `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}`;
+                return recordMonthKey === monthKey && a.status === 'present';
+            }).length;
+
+            let monthDebtAmount = 0;
+
+            if (monthAttendanceCount >= 10) {
+                monthDebtAmount = 1;
+            } else if (monthAttendanceCount >= 5) {
+                monthDebtAmount = 0.5;
+            }
+
+            if (monthDebtAmount > 0) {
+                const isPaid = studentFees.some(f => f.month === monthLabel || f.month === monthKey);
+                if (!isPaid) {
+                    totalMonthDebt += monthDebtAmount;
+                }
+            }
 
             current.setMonth(current.getMonth() + 1);
         }
 
-        return false;
+        let label = '';
+        if (totalMonthDebt === 0.5) label = 'مدين بنصف شهر';
+        else if (totalMonthDebt === 1) label = 'مدين بشهر';
+        else if (totalMonthDebt > 1) label = `مدين (${totalMonthDebt} أشهر)`;
+
+        return {
+            isIndebted: totalMonthDebt > 0,
+            amount: totalMonthDebt,
+            label
+        };
     };
 
     const archivedStudents = useMemo(() => {
@@ -87,10 +129,15 @@ export default function ArchiveList() {
 
         const baseFiltered = students.filter(student => {
             const isArchived = student.status === 'archived';
+            const debtInfo = calculateDebt(student);
 
             let matchesFilter = true;
             if (filter === 'indebted') {
-                matchesFilter = checkDebt(student);
+                matchesFilter = debtInfo.isIndebted;
+            } else if (filter === 'half_indebted') {
+                matchesFilter = debtInfo.amount === 0.5;
+            } else if (filter === 'full_indebted') {
+                matchesFilter = debtInfo.amount >= 1;
             } else if (filter !== 'الكل') {
                 matchesFilter = student.groupId === filter;
             }
@@ -99,7 +146,7 @@ export default function ArchiveList() {
         });
 
         return tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
-    }, [students, searchTerm, filter, allFees]);
+    }, [students, searchTerm, filter, allFees, allAttendance]);
 
     // دالة حساب عدد الأيام في الأرشيف بدقة
     const getDaysInArchive = (archivedDate?: string) => {
@@ -117,8 +164,6 @@ export default function ArchiveList() {
         if (diffDays === 2) return 'منذ يومين';
         return `منذ ${diffDays} أيام`;
     };
-
-
 
     const handleRestoreConfirm = () => {
         if (restoreTarget && targetGroupId) {
@@ -218,8 +263,22 @@ export default function ArchiveList() {
                                                 onClick={() => { setFilter('indebted'); setIsFilterOpen(false); }}
                                                 className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between", filter === 'indebted' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50")}
                                             >
-                                                المدينين فقط
+                                                المدينين (الكل)
                                                 <AlertCircle size={14} className={filter === 'indebted' ? "opacity-100" : "opacity-40"} />
+                                            </button>
+                                            <button
+                                                onClick={() => { setFilter('half_indebted'); setIsFilterOpen(false); }}
+                                                className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between", filter === 'half_indebted' ? "bg-orange-50 text-orange-600" : "text-gray-600 hover:bg-gray-50")}
+                                            >
+                                                مدين (نصف شهر)
+                                                <AlertCircle size={14} className={filter === 'half_indebted' ? "opacity-100" : "opacity-40"} />
+                                            </button>
+                                            <button
+                                                onClick={() => { setFilter('full_indebted'); setIsFilterOpen(false); }}
+                                                className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between", filter === 'full_indebted' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50")}
+                                            >
+                                                مدين (شهر كامل)
+                                                <AlertCircle size={14} className={filter === 'full_indebted' ? "opacity-100" : "opacity-40"} />
                                             </button>
 
                                             <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider border-y border-gray-50 my-1">المجموعات</div>
@@ -249,12 +308,12 @@ export default function ArchiveList() {
                         <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mx-auto">
                             <X size={40} />
                         </div>
-                        <p className="text-gray-400 font-bold">لا يوجد طلاب في الأرشيف حالياً</p>
+                        <p className="text-gray-400 font-bold">لا يوجد طلاب في الأرشيف مطابقين للبحث</p>
                     </div>
                 ) : (
                     archivedStudents?.map((student) => {
                         const daysInArchive = getDaysInArchive(student.archivedDate);
-                        const isIndebted = checkDebt(student);
+                        const debtInfo = calculateDebt(student);
 
                         return (
                             <div
@@ -286,10 +345,10 @@ export default function ArchiveList() {
                                             <Clock size={12} />
                                             {daysInArchive}
                                         </span>
-                                        {isIndebted && (
+                                        {debtInfo.isIndebted && (
                                             <span className="text-[10px] sm:text-xs text-red-600 font-bold flex items-center gap-1 bg-red-50 px-2.5 py-1.5 rounded-xl border border-red-100/50">
                                                 <AlertCircle size={12} />
-                                                مدين
+                                                {debtInfo.label}
                                             </span>
                                         )}
                                     </div>

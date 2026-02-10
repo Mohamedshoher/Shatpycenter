@@ -37,10 +37,10 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
         queryFn: getGroups
     });
 
-    const myGroups = groups?.filter((g: Group) => {
+    const myGroups = (groups?.filter((g: Group) => {
         if (user?.role === 'teacher') return g.teacherId === user.teacherId;
         return true;
-    }) || [];
+    }) || []).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
 
     const mutation = useMutation({
         mutationFn: (newStudent: Omit<Student, 'id'>) => addStudent(newStudent),
@@ -145,7 +145,7 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
                             </p>
                         </div>
                     )}
-                    
+
 
                 </div>
                 <div className="flex items-center gap-3 pt-4 justify-start">
