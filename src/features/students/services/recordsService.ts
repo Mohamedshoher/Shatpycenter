@@ -34,6 +34,17 @@ export interface FeeRecord {
     timestamp?: number;
 }
 
+export interface ExemptionRecord {
+    id: string;
+    studentId: string;
+    studentName: string;
+    teacherId?: string;
+    month: string;
+    amount: number;
+    exemptedBy: string;
+    createdAt: string;
+}
+
 export interface PlanRecord {
     id: string;
     studentId: string;
@@ -353,6 +364,45 @@ export const updateFeeRecord = async (id: string, data: Partial<FeeRecord>): Pro
 
 export const deleteFeeRecord = async (id: string): Promise<void> => {
     await supabase.from('fees').delete().eq('id', id);
+};
+
+// ===== سجلات الإعفاءات =====
+export const getStudentExemptions = async (studentId: string): Promise<ExemptionRecord[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('free_exemptions')
+            .select('*')
+            .eq('student_id', studentId);
+
+        if (error) {
+            console.error("Error fetching student exemptions:", error);
+            return [];
+        }
+
+        return (data || []).map(row => ({
+            id: row.id,
+            studentId: row.student_id,
+            studentName: row.student_name,
+            teacherId: row.teacher_id,
+            month: row.month,
+            amount: Number(row.amount),
+            exemptedBy: row.exempted_by,
+            createdAt: row.created_at
+        }));
+    } catch (error) {
+        console.error("Fatal error fetching exemptions:", error);
+        return [];
+    }
+};
+
+export const deleteExemptionRecord = async (id: string): Promise<void> => {
+    try {
+        const { error } = await supabase.from('free_exemptions').delete().eq('id', id);
+        if (error) throw error;
+    } catch (error) {
+        console.error("Error deleting exemption record:", error);
+        throw error;
+    }
 };
 
 // ===== سجلات الخطة اليومية =====

@@ -9,7 +9,9 @@ import {
     addPlanRecord,
     deleteExamRecord,
     deleteFeeRecord,
-    addLeaveRequest
+    addLeaveRequest,
+    getStudentExemptions,
+    deleteExemptionRecord
 } from "../services/recordsService";
 import { addToOfflineQueue } from "@/lib/offline-queue";
 
@@ -31,6 +33,12 @@ export const useStudentRecords = (studentId: string) => {
     const feesQuery = useQuery({
         queryKey: ['fees', studentId],
         queryFn: () => getStudentFees(studentId),
+        enabled: !!studentId
+    });
+
+    const exemptionsQuery = useQuery({
+        queryKey: ['exemptions', studentId],
+        queryFn: () => getStudentExemptions(studentId),
         enabled: !!studentId
     });
 
@@ -103,6 +111,14 @@ export const useStudentRecords = (studentId: string) => {
         mutationFn: deleteFeeRecord,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['fees'] });
+            queryClient.invalidateQueries({ queryKey: ['exemptions', studentId] });
+        }
+    });
+
+    const deleteExemption = useMutation({
+        mutationFn: deleteExemptionRecord,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['exemptions', studentId] });
         }
     });
 
@@ -166,6 +182,8 @@ export const useStudentRecords = (studentId: string) => {
         isLoadingExams: examsQuery.isLoading,
         fees: feesQuery.data || [],
         isLoadingFees: feesQuery.isLoading,
+        exemptions: exemptionsQuery.data || [],
+        isLoadingExemptions: exemptionsQuery.isLoading,
         plans: plansQuery.data || [],
         isLoadingPlans: plansQuery.isLoading,
         notes: notesQuery.data || [],
@@ -178,6 +196,7 @@ export const useStudentRecords = (studentId: string) => {
         addNote,
         deleteExam,
         deleteFee,
+        deleteExemption,
         deleteNote
     };
 };

@@ -130,7 +130,17 @@ export default function TeacherDetailModal({
             .map(g => g.id);
 
         return students
-            .filter(s => s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived')
+            .filter(s => {
+                const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
+                if (!isMember) return false;
+
+                // تصفية الطلاب بناءً على تاريخ التحاقهم: لا يظهر الطالب في كشف شهر يسبق تاريخ دخوله
+                if (s.enrollmentDate) {
+                    const enrollYearMonth = s.enrollmentDate.substring(0, 7); // YYYY-MM
+                    return enrollYearMonth <= selectedMonthRaw;
+                }
+                return true;
+            })
             .reduce((sum, s) => sum + (Number(s.monthlyAmount) || 0), 0);
     })();
 
@@ -276,7 +286,17 @@ export default function TeacherDetailModal({
             .filter(g => g.teacherId === teacher.id)
             .map(g => g.id);
         const teacherStudents = students
-            .filter(s => s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived');
+            .filter(s => {
+                const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
+                if (!isMember) return false;
+
+                // تصفية الطلاب بناءً على تاريخ التحاقهم: لا يظهر الطالب في كشف شهر يسبق تاريخ دخوله
+                if (s.enrollmentDate) {
+                    const enrollYearMonth = s.enrollmentDate.substring(0, 7); // YYYY-MM
+                    return enrollYearMonth <= selectedMonthRaw;
+                }
+                return true;
+            });
 
         const exemptedStudentIds = exemptions.map((e: any) => e.student_id);
 

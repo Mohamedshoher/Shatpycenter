@@ -55,6 +55,7 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
         attendance,
         exams,
         fees,
+        exemptions,
         notes,
         addAttendance,
         addExam,
@@ -62,6 +63,7 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
         addNote,
         deleteExam,
         deleteFee,
+        deleteExemption,
         deleteNote,
     } = useStudentRecords(student?.id || '');
 
@@ -713,12 +715,21 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                                 const studentFee = fees.find(f => f.month === m.label || f.month === mKey);
                                 const isMonthPaid = !!studentFee;
 
+                                // البحث عن سجل عفو لهذا الشهر
+                                const exemption = exemptions.find(e => e.month === m.label || e.month === mKey);
+                                const isMonthExempted = !!exemption;
+
                                 return (
                                     <div key={m.label} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between gap-4 group hover:shadow-md transition-all">
                                         <div className="text-right">
                                             <h5 className="font-bold text-gray-800 text-sm">{m.label}</h5>
-                                            <p className={cn("text-[10px] mt-0.5 font-bold", isMonthPaid ? "text-green-500" : "text-amber-500")}>
-                                                {isMonthPaid ? "✓ تم السداد" : "⚠ مطلوب السداد"}
+                                            <p className={cn(
+                                                "text-[10px] mt-0.5 font-bold",
+                                                isMonthPaid ? "text-green-500" :
+                                                    isMonthExempted ? "text-purple-500" : "text-amber-500"
+                                            )}>
+                                                {isMonthPaid ? "✓ تم السداد" :
+                                                    isMonthExempted ? "✨ تم العفو" : "⚠ مطلوب السداد"}
                                             </p>
                                         </div>
 
@@ -730,6 +741,22 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                                                 >
                                                     إلغاء الدفع
                                                 </button>
+                                            ) : isMonthExempted ? (
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className="text-[9px] font-bold text-gray-400">عفو بقيمة {exemption.amount} ج.م</span>
+                                                    {isDirector && (
+                                                        <button
+                                                            onClick={() => {
+                                                                if (confirm(`هل تريد إلغاء العفو عن شهر ${m.label}؟`)) {
+                                                                    deleteExemption.mutate(exemption.id);
+                                                                }
+                                                            }}
+                                                            className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg font-bold text-[10px] border border-purple-100 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
+                                                        >
+                                                            إلغاء العفو
+                                                        </button>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <button
                                                     onClick={() => handleQuickPay(m.label, mKey)}
@@ -814,49 +841,92 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                         <div className="space-y-3">
                             <h3 className="font-bold text-gray-900 mr-1">سجل المدفوعات التاريخي</h3>
                             <div className="space-y-3 pt-2">
-                                {fees.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((fee) => (
-                                    <div key={fee.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative group hover:shadow-md transition-all">
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div>
-                                                <h5 className="font-bold text-gray-900 text-sm mb-1">{fee.month}</h5>
-                                                <p className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
-                                                    <Calendar size={12} />
-                                                    {fee.date}
-                                                </p>
+                                {(() => {
+                                    // دمج سجلات الدفع وسجلات العفو
+                                    const combinedHistory = [
+                                        ...fees.map(f => ({ ...f, type: 'payment' as const })),
+                                        ...exemptions.map(e => ({
+                                            id: e.id,
+                                            month: e.month,
+                                            amount: `${e.amount} ج.م`,
+                                            date: e.createdAt.split('T')[0],
+                                            receipt: 'إعفاء مالي',
+                                            createdBy: e.exemptedBy,
+                                            type: 'exemption' as const
+                                        }))
+                                    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                                    return combinedHistory.map((item) => (
+                                        <div key={item.id} className={cn(
+                                            "p-4 rounded-2xl border shadow-sm relative group hover:shadow-md transition-all",
+                                            item.type === 'payment' ? "bg-white border-gray-100" : "bg-purple-50/50 border-purple-100 shadow-purple-500/5"
+                                        )}>
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h5 className="font-bold text-gray-900 text-sm">{item.month}</h5>
+                                                        {item.type === 'exemption' && (
+                                                            <span className="text-[9px] font-black bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">عفو</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+                                                        <Calendar size={12} />
+                                                        {item.date}
+                                                    </p>
+                                                </div>
+                                                <div className="text-left">
+                                                    <span className={cn(
+                                                        "block text-lg font-black font-sans tracking-tight",
+                                                        item.type === 'payment' ? "text-green-600" : "text-purple-600"
+                                                    )}>
+                                                        {item.amount.replace(/[^0-9.]/g, '')} <span className="text-xs">ج.م</span>
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="text-left">
-                                                <span className="block text-lg font-black text-green-600 font-sans tracking-tight">
-                                                    {fee.amount.replace(/[^0-9.]/g, '')} <span className="text-xs">ج.م</span>
-                                                </span>
+
+                                            <div className={cn(
+                                                "flex items-center justify-between text-[11px] font-bold p-2 rounded-xl",
+                                                item.type === 'payment' ? "text-gray-500 bg-gray-50/50" : "text-purple-600 bg-purple-100/30"
+                                            )}>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="flex items-center gap-1">
+                                                        <FileText size={12} />
+                                                        {item.type === 'payment' ? `وصل: ${item.receipt}` : 'إعفاء مالي'}
+                                                    </span>
+                                                    <span className={cn("w-px h-3 mx-1", item.type === 'payment' ? "bg-gray-300" : "bg-purple-200")} />
+                                                    <span className="flex items-center gap-1">
+                                                        <User size={12} />
+                                                        {item.createdBy}
+                                                    </span>
+                                                </div>
+
+                                                {isDirector && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (item.type === 'payment') {
+                                                                handleDeleteFee(item.id, item.receipt);
+                                                            } else {
+                                                                if (confirm('هل أنت متأكد من حذف سجل العفو هذا؟')) {
+                                                                    deleteExemption.mutate(item.id);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className={cn(
+                                                            "w-7 h-7 rounded-lg border flex items-center justify-center transition-colors shadow-sm",
+                                                            item.type === 'payment'
+                                                                ? "bg-white text-red-500 border-red-100 hover:bg-red-500 hover:text-white"
+                                                                : "bg-white text-purple-600 border-purple-100 hover:bg-purple-600 hover:text-white"
+                                                        )}
+                                                        title="حذف السجل"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
-
-                                        <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 bg-gray-50/50 p-2 rounded-xl">
-                                            <div className="flex items-center gap-2">
-                                                <span className="flex items-center gap-1">
-                                                    <FileText size={12} />
-                                                    وصل: {fee.receipt}
-                                                </span>
-                                                <span className="w-px h-3 bg-gray-300 mx-1" />
-                                                <span className="flex items-center gap-1">
-                                                    <User size={12} />
-                                                    {fee.createdBy}
-                                                </span>
-                                            </div>
-
-                                            {isDirector && (
-                                                <button
-                                                    onClick={() => handleDeleteFee(fee.id, fee.receipt)}
-                                                    className="w-7 h-7 bg-white text-red-500 rounded-lg border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm"
-                                                    title="حذف السجل"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                                {fees.length === 0 && (
+                                    ));
+                                })()}
+                                {fees.length === 0 && exemptions.length === 0 && (
                                     <div className="text-center py-12 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
                                         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-gray-300 mb-3 shadow-sm">
                                             <CreditCard size={24} />
