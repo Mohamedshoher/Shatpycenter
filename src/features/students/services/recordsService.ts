@@ -105,10 +105,16 @@ export const getStudentAttendance = async (studentId: string): Promise<Attendanc
 
 export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record<string, AttendanceRecord[]>> => {
     try {
+        // نحسب تاريخ بداية ونهاية الشهر للبحث بالمدى الزمني كبديل في حال عدم وجود month_key
+        const [year, month] = monthKey.split('-').map(Number);
+        const startDate = `${monthKey}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
+
         const { data, error } = await supabase
             .from('attendance')
             .select('*')
-            .eq('month_key', monthKey)
+            .or(`month_key.eq.${monthKey},and(date.gte.${startDate},date.lte.${endDate})`)
             .order('created_at', { ascending: false });
 
         if (error) {

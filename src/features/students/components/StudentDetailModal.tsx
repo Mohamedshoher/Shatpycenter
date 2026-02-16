@@ -1101,14 +1101,14 @@ export default function StudentDetailModal({ student: initialStudent, isOpen, on
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200]"
                     />
 
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[800px] h-fit max-h-[95vh] bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col"
+                        className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[800px] h-fit max-h-[95vh] bg-white rounded-[40px] shadow-2xl z-[201] overflow-hidden flex flex-col"
                     >
                         <div className="p-5 relative border-b border-gray-50">
                             <button

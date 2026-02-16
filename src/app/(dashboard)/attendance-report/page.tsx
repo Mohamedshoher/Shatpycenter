@@ -43,6 +43,42 @@ import { useAuthStore } from '@/store/useAuthStore';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';
 import { useStudentRecords } from '@/features/students/hooks/useStudentRecords';
 
+// دالة لحساب الغياب المتصل (محدثة لدعم تداخل الأشهر)
+export const calculateContinuousAbsence = (attendance: any[]) => {
+    if (!attendance || attendance.length === 0) return 0;
+
+    // ترتيب الحضور من الأحدث للأقدم
+    // يجب تحويل التاريخ لكائن للمقارنة الصحيحة لأن "day" يتكرر عبر الأشهر
+    const sortedAttendance = [...attendance].sort((a, b) => {
+        const dateA = new Date(a.month + '-' + String(a.day).padStart(2, '0'));
+        const dateB = new Date(b.month + '-' + String(b.day).padStart(2, '0'));
+        return dateB.getTime() - dateA.getTime();
+    });
+
+    let continuous = 0;
+    // نبدأ العد من أحدث سجل
+    for (let i = 0; i < sortedAttendance.length; i++) {
+        if (sortedAttendance[i].status === 'absent') {
+            continuous++;
+        } else {
+            // إذا وجدنا "حاضر"، نتوقف لأن السلسلة انقطعت
+            break;
+        }
+    }
+    return continuous;
+};
+
+// دالة لحساب إجمالي الغياب في الشهر الحالي
+export const calculateTotalAbsence = (attendance: any[]) => {
+    // نستخدم Set لضمان عدم تكرار العد لنفس اليوم إذا وجدت سجلات مكررة
+    const uniqueDays = new Set(
+        attendance
+            .filter(a => a.status === 'absent')
+            .map(a => `${a.month}-${a.day}`)
+    );
+    return uniqueDays.size;
+};
+
 export default function AttendanceReportPage() {
     const { data: students, archiveStudent } = useStudents();
     const { data: groups } = useGroups();
@@ -83,41 +119,6 @@ export default function AttendanceReportPage() {
         if (mode === 'yesterday') d.setDate(d.getDate() - 1);
         if (mode === 'before') d.setDate(d.getDate() - 2);
         return d.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
-    };
-
-    // دالة لحساب الغياب المتصل (محدثة لدعم تداخل الأشهر)
-    const calculateContinuousAbsence = (attendance: any[]) => {
-        if (!attendance || attendance.length === 0) return 0;
-
-        // ترتيب الحضور من الأحدث للأقدم
-        // يجب تحويل التاريخ لكائن للمقارنة الصحيحة لأن "day" يتكرر عبر الأشهر
-        const sortedAttendance = attendance.sort((a, b) => {
-            const dateA = new Date(a.month + '-' + String(a.day).padStart(2, '0'));
-            const dateB = new Date(b.month + '-' + String(b.day).padStart(2, '0'));
-            return dateB.getTime() - dateA.getTime();
-        });
-
-        let continuous = 0;
-        // نبدأ العد من أحدث سجل
-        for (let i = 0; i < sortedAttendance.length; i++) {
-            if (sortedAttendance[i].status === 'absent') {
-                continuous++;
-            } else {
-                // إذا وجدنا "حاضر"، نتوقف لأن السلسلة انقطعت
-                break;
-            }
-        }
-        return continuous;
-    };
-
-    // دالة لحساب إجمالي الغياب في الشهر الحالي
-    const calculateTotalAbsence = (attendance: any[]) => {
-        const today = new Date();
-        const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-
-        return attendance.filter(a =>
-            a.month === currentMonth && a.status === 'absent'
-        ).length;
     };
 
     // جلب بيانات الحضور والملحوظات لجميع الطلاب
@@ -764,7 +765,7 @@ export default function AttendanceReportPage() {
                 student={selectedStudentForModal}
                 isOpen={!!selectedStudentForModal}
                 onClose={() => setSelectedStudentForModal(null)}
-                initialTab="notes"
+                initialTab="attendance"
             />
         </div >
     );

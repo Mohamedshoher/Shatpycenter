@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getGroups } from '@/features/groups/services/groupService';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import { getStudents } from '@/features/students/services/studentService';
+import { getAllAttendanceForMonth } from '@/features/students/services/recordsService';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
@@ -42,6 +43,15 @@ export default function GroupsPage() {
         queryFn: getStudents
     });
 
+    const { data: attendanceMap } = useQuery({
+        queryKey: ['attendance-month-summary'],
+        queryFn: async () => {
+            const today = new Date();
+            const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+            return getAllAttendanceForMonth(monthKey);
+        }
+    });
+
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [filter, setFilter] = useState('الكل');
@@ -59,7 +69,27 @@ export default function GroupsPage() {
 
         return groups.map(group => {
             const teacher = teachers?.find(t => t.id === group.teacherId);
-            const studentCount = students?.filter(s => s.groupId === group.id && s.status === 'active').length || 0;
+            const groupStudents = students?.filter(s => s.groupId === group.id && s.status === 'active') || [];
+            const studentCount = groupStudents.length;
+
+            // حساب نسبة الحضور
+            let attendancePercentage = 0;
+            if (attendanceMap && studentCount > 0) {
+                let totalPresent = 0;
+                let totalRecords = 0;
+
+                groupStudents.forEach(student => {
+                    const studentAttendance = attendanceMap[student.id] || [];
+                    studentAttendance.forEach(rec => {
+                        totalRecords++;
+                        if (rec.status === 'present') totalPresent++;
+                    });
+                });
+
+                if (totalRecords > 0) {
+                    attendancePercentage = Math.round((totalPresent / totalRecords) * 100);
+                }
+            }
 
             // تحديد اللون بناءً على اسم المجموعة
             let color = 'bg-gray-100 text-gray-600';
@@ -72,10 +102,11 @@ export default function GroupsPage() {
                 ...group,
                 teacher: teacher?.fullName || 'غير محدد',
                 count: studentCount,
+                attendancePercentage,
                 color
             };
         });
-    }, [groups, teachers, students]);
+    }, [groups, teachers, students, attendanceMap]);
 
     const filteredGroups = (() => {
         if (!enhancedGroups) return [];
@@ -242,23 +273,32 @@ export default function GroupsPage() {
                             >
                                 <div className="flex justify-between items-start">
                                     <Link href={`/groups/${group.id}`} className="min-w-0 flex-1">
-                                        <h3 className="font-black text-[#1e293b] text-2xl group-hover:text-purple-600 transition-colors truncate">
+                                        <h3 className="font-black text-[#1e293b] text-lg group-hover:text-purple-600 transition-colors truncate">
                                             {group.name}
                                         </h3>
                                     </Link>
-                                    <span className={cn("px-3 py-1 rounded-[10px] text-[10px] font-black uppercase tracking-wider shrink-0", group.color)}>
-                                        {group.count} طلاب
-                                    </span>
+                                    <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <span className={cn("px-3 py-1 rounded-[10px] text-[10px] font-black uppercase tracking-wider", group.color)}>
+                                            {group.count} طلاب
+                                        </span>
+                                    </div>
                                 </div>
 
-                                <div className="flex items-end justify-between">
+                                <div className="flex items-center justify-between mt-auto">
                                     <div className="flex flex-col text-right min-w-0">
                                         <span className="text-base font-bold text-gray-500 truncate leading-tight">{group.teacher}</span>
                                     </div>
 
-                                    <button className="w-11 h-11 bg-indigo-50/50 text-indigo-600 rounded-[14px] flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm shrink-0">
-                                        <BarChart3 size={20} />
-                                    </button>
+                                    {group.count > 0 && attendanceMap && (
+                                        <span className={cn(
+                                            "text-[10px] font-black px-3 py-1 rounded-full border shrink-0",
+                                            group.attendancePercentage >= 90 ? "bg-green-50 text-green-600 border-green-100" :
+                                                group.attendancePercentage >= 75 ? "bg-blue-50 text-blue-600 border-blue-100" :
+                                                    "bg-red-50 text-red-600 border-red-100"
+                                        )}>
+                                            {group.attendancePercentage}% حضور
+                                        </span>
+                                    )}
                                 </div>
                             </motion.div>
                         ))

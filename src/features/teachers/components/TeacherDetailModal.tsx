@@ -1574,7 +1574,7 @@ export default function TeacherDetailModal({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100]"
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200]"
                     />
 
                     {/* Modal Body */}
@@ -1582,7 +1582,7 @@ export default function TeacherDetailModal({
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[98%] md:w-[95%] md:max-w-6xl h-[95vh] md:h-fit md:max-h-[95vh] bg-white rounded-[40px] md:rounded-[56px] shadow-2xl z-[101] overflow-hidden flex flex-col border border-white/20"
+                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[98%] md:w-[95%] md:max-w-6xl h-[95vh] md:h-fit md:max-h-[95vh] bg-white rounded-[40px] md:rounded-[56px] shadow-2xl z-[201] overflow-hidden flex flex-col border border-white/20"
                     >
                         {/* Header: Compact & Modern */}
                         <div className="p-5 md:p-8 relative bg-white border-b border-gray-50 shrink-0">
@@ -1666,12 +1666,12 @@ export default function TeacherDetailModal({
                     <AnimatePresence>
                         {showCollectedDetails && (
                             <>
-                                <div className="fixed inset-0 z-[120] bg-black/20 backdrop-blur-[2px]" onClick={() => setShowCollectedDetails(false)} />
+                                <div className="fixed inset-0 z-[250] bg-black/20 backdrop-blur-[2px]" onClick={() => setShowCollectedDetails(false)} />
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-3xl bg-white rounded-[40px] shadow-2xl border border-gray-100 p-6 z-[121] h-[80vh] flex flex-col"
+                                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-3xl bg-white rounded-[40px] shadow-2xl border border-gray-100 p-6 z-[251] h-[80vh] flex flex-col"
                                 >
                                     <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                                         <div className="flex items-center gap-3">
@@ -1771,12 +1771,12 @@ export default function TeacherDetailModal({
                     <AnimatePresence>
                         {showManagerCollectedDetails && (
                             <>
-                                <div className="fixed inset-0 z-[120] bg-black/20 backdrop-blur-[2px]" onClick={() => setShowManagerCollectedDetails(false)} />
+                                <div className="fixed inset-0 z-[250] bg-black/20 backdrop-blur-[2px]" onClick={() => setShowManagerCollectedDetails(false)} />
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-3xl bg-white rounded-[40px] shadow-2xl border border-gray-100 p-6 z-[121] h-[80vh] flex flex-col"
+                                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-3xl bg-white rounded-[40px] shadow-2xl border border-gray-100 p-6 z-[251] h-[80vh] flex flex-col"
                                 >
                                     <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                                         <div className="flex items-center gap-3">

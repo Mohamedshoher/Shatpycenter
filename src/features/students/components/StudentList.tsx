@@ -23,6 +23,10 @@ import {
     BookOpen
 } from 'lucide-react';
 import { addToOfflineQueue } from '@/lib/offline-queue';
+import {
+    calculateTotalAbsence,
+    calculateContinuousAbsence
+} from '@/app/(dashboard)/attendance-report/page';
 
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Student } from '@/types';
@@ -81,38 +85,51 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const todayDate = new Date();
     const todayKey = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
 
-    const { data: attendanceState = {} } = useQuery({
-        queryKey: ['today-attendance', todayKey],
+    const { data: attendanceData = { today: {}, monthMap: {} } as any } = useQuery({
+        queryKey: ['attendance-context', todayKey],
         queryFn: async () => {
-            // نستخدم استيراد ديناميكي فقط عند الحاجة الحقيقية أو نستورده في الملف إذا لم يكن ثقيلاً.
-            // هنا سنفترض أننا بحاجة له.
-            if (!students || students.length === 0) return {};
+            if (!students || students.length === 0) return { today: {}, monthMap: {} };
             const { getAllAttendanceForMonth } = await import('../services/recordsService');
 
             const today = new Date();
             const dayNum = today.getDate();
             const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
-            // جلب حضور الشهر بالكامل
-            const allAttendanceMap = await getAllAttendanceForMonth(monthKey);
+            // حساب مفتاح الشهر السابق
+            const prevDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
 
-            const attendanceMap: Record<string, 'present' | 'absent'> = {};
-            // نستخدم students من الـ closure، وهذا آمن لأننا نتحقق منه في البداية
-            // وإذا تغيرت القائمة سيعاد الجلب لأننا نعتمد عليه في enabled (جزئياً) أو يمكن إضافته للمفتاح إذا كان ضروري جداً
-            // لكن للأداء، الاعتماد على التاريخ يكفي، وسنفلتر النتائج هنا
+            // جلب بيانات الحضور للشهر الحالي والسابق
+            const [attendanceCurrent, attendancePrev] = await Promise.all([
+                getAllAttendanceForMonth(monthKey),
+                getAllAttendanceForMonth(prevMonthKey)
+            ]);
+
+            const mergedMap: Record<string, any[]> = {};
+            const allStudentIds = new Set([...Object.keys(attendanceCurrent), ...Object.keys(attendancePrev)]);
+
+            allStudentIds.forEach(id => {
+                mergedMap[id] = [
+                    ...(attendanceCurrent[id] || []),
+                    ...(attendancePrev[id] || [])
+                ];
+            });
+
+            const todayMap: Record<string, 'present' | 'absent'> = {};
             students.forEach(student => {
-                const studentRecords = allAttendanceMap[student.id] || [];
-                const todayRec = studentRecords.find(r => r.day === dayNum);
+                const todayRec = (attendanceCurrent[student.id] || []).find(r => r.day === dayNum);
                 if (todayRec) {
-                    attendanceMap[student.id] = todayRec.status;
+                    todayMap[student.id] = todayRec.status;
                 }
             });
 
-            return attendanceMap;
+            return { today: todayMap, monthMap: mergedMap };
         },
         enabled: !!(students && students.length > 0),
         staleTime: 1000 * 60 * 5 // 5 minutes cache
     });
+
+    const attendanceState = attendanceData.today;
 
     const getGroupName = useCallback((groupId: string | null) => {
         if (!groupId) return '';
@@ -138,6 +155,24 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             } else if (filter === 'أرقام ناقصة') {
                 const phone = student.parentPhone.replace(/[^0-9]/g, '');
                 matchesFilter = phone.length < 11;
+            } else if (filter === 'غاب 3 فأكثر') {
+                const records = attendanceData.monthMap[student.id] || [];
+                matchesFilter = calculateTotalAbsence(records) >= 3;
+            } else if (filter === 'غاب 5 أيام') {
+                const records = attendanceData.monthMap[student.id] || [];
+                matchesFilter = calculateTotalAbsence(records) >= 5;
+            } else if (filter === 'غاب 3 متصلاً') {
+                const records = attendanceData.monthMap[student.id] || [];
+                matchesFilter = calculateContinuousAbsence(records) >= 3;
+            } else if (filter === 'غاب 4 متصلاً') {
+                const records = attendanceData.monthMap[student.id] || [];
+                matchesFilter = calculateContinuousAbsence(records) >= 4;
+            } else if (filter === 'غاب 5 متصلاً') {
+                const records = attendanceData.monthMap[student.id] || [];
+                matchesFilter = calculateContinuousAbsence(records) >= 5;
+            } else if (filter === 'الأكثر غياباً') {
+                const records = attendanceData.monthMap[student.id] || [];
+                matchesFilter = calculateTotalAbsence(records) > 0;
             } else {
                 matchesFilter = student.groupId === filter;
             }
@@ -150,6 +185,11 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
 
         return finalResults.sort((a, b) => {
+            if (filter === 'الأكثر غياباً') {
+                const absA = calculateTotalAbsence(attendanceData.monthMap[a.id] || []);
+                const absB = calculateTotalAbsence(attendanceData.monthMap[b.id] || []);
+                if (absA !== absB) return absB - absA;
+            }
             const groupA = getGroupName(a.groupId);
             const groupB = getGroupName(b.groupId);
             if (groupA !== groupB) return groupA.localeCompare(groupB, 'ar');
@@ -186,9 +226,22 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
 
         // 1. التحديث الفوري للكاش (Optimistic Update)
         queryClient.setQueryData(
-            ['today-attendance', todayStrKey],
-            (old: Record<string, 'present' | 'absent'> | undefined) => {
-                return { ...(old || {}), [student.id]: status };
+            ['attendance-context', todayStrKey],
+            (old: any) => {
+                const newToday = { ...(old?.today || {}), [student.id]: status };
+                // تحديث الـ monthMap أيضاً لضمان دقة الفلاتر فوراً
+                const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                const newRecords = [...(old?.monthMap?.[student.id] || [])];
+                const dayIndex = newRecords.findIndex(r => r.day === day && r.month === monthKey);
+                if (dayIndex > -1) {
+                    newRecords[dayIndex] = { ...newRecords[dayIndex], status };
+                } else {
+                    newRecords.push({ studentId: student.id, day, month: monthKey, status });
+                }
+                return {
+                    today: newToday,
+                    monthMap: { ...(old?.monthMap || {}), [student.id]: newRecords }
+                };
             }
         );
 
@@ -344,6 +397,60 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                     )}
                                                 >
                                                     أرقام ناقصة
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('غاب 3 فأكثر'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'غاب 3 فأكثر' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    غاب 3 فأكثر
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('غاب 5 أيام'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'غاب 5 أيام' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    غاب 5 أيام
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('غاب 3 متصلاً'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'غاب 3 متصلاً' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    غاب 3 متصلاً
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('غاب 4 متصلاً'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'غاب 4 متصلاً' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    غاب 4 متصلاً
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('غاب 5 متصلاً'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'غاب 5 متصلاً' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    غاب 5 متصلاً
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('الأكثر غياباً'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'الأكثر غياباً' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    الأكثر غياباً
                                                 </button>
                                                 <div className="h-px bg-gray-100 my-1" />
                                                 {myGroups.map((group) => (
