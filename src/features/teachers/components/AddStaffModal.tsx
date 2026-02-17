@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { addTeacher, updateTeacher } from '../services/teacherService';
 import { Teacher } from '@/types';
+import { addToOfflineQueue } from '@/lib/offline-queue';
 
 interface AddStaffModalProps {
     isOpen: boolean;
@@ -74,10 +75,23 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
         mutationFn: async (data: any) => {
             setError(null); // Clear previous errors
             if (initialTeacher) {
-                await updateTeacher(initialTeacher.id, data);
-                return;
+                return await updateTeacher(initialTeacher.id, data);
             }
-            await addTeacher(data);
+            return await addTeacher(data);
+        },
+        onMutate: async (newData) => {
+            await queryClient.cancelQueries({ queryKey: ['teachers'] });
+            const previousTeachers = queryClient.getQueryData(['teachers']);
+
+            queryClient.setQueryData(['teachers'], (old: any) => {
+                if (!old) return [newData];
+                if (initialTeacher) {
+                    return old.map((t: any) => t.id === initialTeacher.id ? { ...t, ...newData } : t);
+                }
+                return [...old, { ...newData, id: 'temp-' + Date.now() }];
+            });
+
+            return { previousTeachers };
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['teachers'] });
@@ -97,9 +111,15 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                 });
             }
         },
-        onError: (err: any) => {
-            console.error("Mutation failed:", err);
-            setError(err.message || "حدث خطأ أثناء الحفظ");
+        onError: (err: any, variables) => {
+            console.log("Teacher mutation failed, adding to offline queue");
+            if (initialTeacher) {
+                addToOfflineQueue('teacher_update', { id: initialTeacher.id, updates: variables });
+            } else {
+                addToOfflineQueue('teacher_add', variables);
+            }
+            // Close modal even on error if it's queued
+            onClose();
         }
     });
 

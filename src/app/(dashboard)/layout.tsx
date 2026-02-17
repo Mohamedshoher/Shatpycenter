@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import { ChatFloatingButton } from '@/components/ChatFloatingButton';
 import { PresenceTracker } from '@/components/PresenceTracker';
 import SyncManager from '@/components/SyncManager';
+import DataPreloader from '@/components/DataPreloader';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -62,6 +63,7 @@ export default function DashboardLayout({
 
             {pathname !== '/chat' && <ChatFloatingButton />}
             <SyncManager />
+            <DataPreloader />
         </div>
     );
 }

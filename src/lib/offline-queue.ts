@@ -2,7 +2,7 @@
 
 export interface PendingAction {
     id: string;
-    type: 'attendance' | 'exam' | 'fee' | 'plan';
+    type: 'attendance' | 'exam' | 'fee' | 'plan' | 'student_add' | 'student_update' | 'student_delete' | 'teacher_add' | 'teacher_update' | 'teacher_delete' | 'group_add' | 'group_update' | 'group_delete' | 'transaction_add' | 'transaction_delete' | 'teacher_attendance';
     data: any;
     timestamp: number;
 }
@@ -30,7 +30,7 @@ export const addToOfflineQueue = (type: PendingAction['type'], data: any) => {
         timestamp: Date.now(),
     };
 
-    // For attendance, we might want to deduplicate by studentId + day + month
+    // For specific records, we might want to deduplicate
     if (type === 'attendance') {
         const index = queue.findIndex(a =>
             a.type === 'attendance' &&

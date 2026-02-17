@@ -6,7 +6,8 @@ import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { deleteTeacher } from '../services/teacherService'; // Assuming this service exists
+import { deleteTeacher } from '../services/teacherService';
+import { addToOfflineQueue } from '@/lib/offline-queue';
 import {
     UserPlus,
     Search,
@@ -54,6 +55,18 @@ export default function TeacherList() {
 
     const deleteMutation = useMutation({
         mutationFn: (id: string) => deleteTeacher(id),
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: ['teachers'] });
+            const previousTeachers = queryClient.getQueryData(['teachers']);
+            queryClient.setQueryData(['teachers'], (old: any) => {
+                if (!old) return old;
+                return old.filter((t: any) => t.id !== id);
+            });
+            return { previousTeachers };
+        },
+        onError: (err, id) => {
+            addToOfflineQueue('teacher_delete', { id });
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['teachers'] });
             setIsDetailOpen(false);
@@ -79,7 +92,18 @@ export default function TeacherList() {
 
     const handleQuickAttendance = (teacherId: string, status: 'present' | 'absent') => {
         const todayDate = new Date().toISOString().split('T')[0];
-        updateTeacherAttendance(teacherId, todayDate, status).then(() => {
+        // We need to use the mutation from useTeacherAttendance even if teacher is not "selected" in the detailed view context
+        // But the hook is per-teacher. This is a bit tricky. 
+        // Let's call updateAttendanceAsync if it exists or define a global teacher attendance mutation.
+        // For simplicity, let's just use the direct service but wrap it in a logic that handles offline.
+        // BETTER: Since we already updated useTeacherAttendance, if we can't use it easily here, 
+        // we should define a useUpdateTeacherAttendance hook.
+
+        // Actually, updateTeacherAttendance service is imported on line 24.
+        // Let's just use addToOfflineQueue directly if it fails, or better, use a mutation.
+        updateTeacherAttendance(teacherId, todayDate, status).catch(() => {
+            addToOfflineQueue('teacher_attendance', { teacherId, date: todayDate, status });
+        }).finally(() => {
             queryClient.invalidateQueries({ queryKey: ['all-teachers-attendance', selectedMonthRaw] });
         });
     };

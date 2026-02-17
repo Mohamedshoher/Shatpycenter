@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { X, Plus, Loader } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { addTransaction } from '../services/financeService';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { addToOfflineQueue } from '@/lib/offline-queue';
 
 interface AddTransactionModalProps {
     isOpen: boolean;
@@ -40,6 +40,7 @@ const categoryOptions = {
 
 export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTransactionModalProps) {
     const { user } = useAuthStore();
+    const queryClient = useQueryClient();
     const [type, setType] = useState<'income' | 'expense'>('income');
     const [category, setCategory] = useState<'fees' | 'salary' | 'donation' | 'utilities' | 'other' | 'تحصيل من مدرس'>('fees');
     const [amount, setAmount] = useState('');
@@ -61,23 +62,29 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
                 relatedUserId: undefined
             });
         },
+        onMutate: async (newRecord) => {
+            // Optimistic update
+            const formData: TransactionData = {
+                ...newRecord,
+                amount: parseFloat(newRecord.amount.toString()),
+            };
+            onAdd(formData);
+            resetForm();
+            onClose();
+        },
+        onError: (err, newRecord) => {
+            console.log('Transaction failed, adding to offline queue');
+            addToOfflineQueue('transaction_add', {
+                amount: newRecord.amount,
+                type: newRecord.type,
+                category: newRecord.category,
+                date: newRecord.date,
+                description: newRecord.title,
+                performedBy: user?.uid || 'unknown'
+            });
+        },
         onSuccess: (result) => {
-            if (result) {
-                // استدعاء onAdd لتحديث البيانات
-                const formData: TransactionData = {
-                    type,
-                    category: category as any,
-                    amount: parseFloat(amount),
-                    title,
-                    notes,
-                    date,
-                };
-                onAdd(formData);
-
-                // إعادة تعيين النموذج
-                resetForm();
-                onClose();
-            }
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
         }
     });
 
