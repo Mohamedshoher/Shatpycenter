@@ -77,6 +77,19 @@ export default function FinancePage() {
         setIsClient(true);
     }, []);
 
+    const months = useMemo(() => {
+        const result = [];
+        const now = new Date();
+        for (let i = 0; i < 12; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            result.push({
+                value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+                label: d.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })
+            });
+        }
+        return result;
+    }, []);
+
     // Fetch transactions from DB
     const { data: dbTransactions = [], isLoading } = useQuery({
         queryKey: ['transactions', selectedMonth],
@@ -93,7 +106,18 @@ export default function FinancePage() {
         queryKey: ['all-fees', selectedMonth],
         queryFn: async () => {
             if (!isClient) return [];
-            return await getFeesByMonth(selectedMonth);
+            // Try fetching by both YYYY-MM and Arabic label to support all versions of data
+            const feesByKey = await getFeesByMonth(selectedMonth);
+            const label = months.find(m => m.value === selectedMonth)?.label;
+            const feesByLabel = label ? await getFeesByMonth(label) : [];
+
+            // Merge and deduplicate
+            const seen = new Set();
+            return [...feesByKey, ...feesByLabel].filter(f => {
+                if (seen.has(f.id)) return false;
+                seen.add(f.id);
+                return true;
+            });
         },
         enabled: isClient && !!selectedMonth
     });
@@ -211,7 +235,17 @@ export default function FinancePage() {
         const collectionsWithDeficit = teacherCollections.map(col => {
             const teacherId = col.teacherId;
             const teacherGroups = groups.filter(g => g.teacherId === teacherId).map(g => g.id);
-            const teacherStudents = students.filter(s => s.groupId && teacherGroups.includes(s.groupId) && s.status !== 'archived');
+            const teacherStudents = students.filter(s => {
+                const isMember = s.groupId && teacherGroups.includes(s.groupId) && s.status !== 'archived';
+                if (!isMember) return false;
+
+                // Only include student if they were enrolled on or before the selected month
+                if (s.enrollmentDate) {
+                    const enrollYearMonth = s.enrollmentDate.substring(0, 7); // YYYY-MM
+                    return enrollYearMonth <= selectedMonth;
+                }
+                return true;
+            });
 
             let teacherDeficit = 0;
             let teacherExpected = 0;
@@ -255,7 +289,7 @@ export default function FinancePage() {
             totalGlobalExpected,
             totalGlobalExempted: exemptions.reduce((sum, e: any) => sum + (Number(e.amount) || 0), 0)
         };
-    }, [filteredTransactions, teachers, students, groups, allFees, user?.displayName, exemptions]);
+    }, [filteredTransactions, teachers, students, groups, allFees, user?.displayName, exemptions, selectedMonth]);
 
     const expenseBreakdown = useMemo(() => {
         const breakdown: Record<string, number> = {};
@@ -267,19 +301,6 @@ export default function FinancePage() {
             });
         return breakdown;
     }, [filteredTransactions]);
-
-    const months = useMemo(() => {
-        const result = [];
-        const now = new Date();
-        for (let i = 0; i < 12; i++) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            result.push({
-                value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-                label: d.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })
-            });
-        }
-        return result;
-    }, []);
 
     const handleAddTransaction = (data: TransactionData) => {
         setIsModalOpen(false);
