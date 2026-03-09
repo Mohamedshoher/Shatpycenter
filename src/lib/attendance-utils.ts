@@ -34,11 +34,12 @@ export const calculateContinuousAbsence = (attendance: any[]): number => {
 };
 
 // دالة لحساب إجمالي الغياب في شهر محدد (مع إزالة التكرار)
-export const calculateTotalAbsence = (attendance: any[], targetMonth: string): number => {
+// إذا لم يتم تمرير targetMonth، تُحسب جميع أيام الغياب بغض النظر عن الشهر
+export const calculateTotalAbsence = (attendance: any[], targetMonth?: string): number => {
     // نستخدم Set لضمان عدم تكرار العد لنفس اليوم إذا وجدت سجلات مكررة
     const uniqueDays = new Set(
         attendance
-            .filter(a => a.status === 'absent' && a.month === targetMonth)
+            .filter(a => a.status === 'absent' && (targetMonth ? a.month === targetMonth : true))
             .map(a => `${a.month}-${a.day}`)
     );
     return uniqueDays.size;

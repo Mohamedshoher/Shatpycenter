@@ -26,7 +26,7 @@ import { addToOfflineQueue } from '@/lib/offline-queue';
 import {
     calculateTotalAbsence,
     calculateContinuousAbsence
-} from '@/app/(dashboard)/attendance-report/page';
+} from '@/lib/attendance-utils';
 
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Student } from '@/types';
