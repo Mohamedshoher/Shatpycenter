@@ -10,6 +10,7 @@ import { Student, Group } from '@/types';
 import { getGroups } from '@/features/groups/services/groupService';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
+import { addToOfflineQueue } from '@/lib/offline-queue';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -44,8 +45,11 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
 
     const mutation = useMutation({
         mutationFn: (newStudent: Omit<Student, 'id'>) => addStudent(newStudent),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['students'] });
+        onMutate: async (newStudent) => {
+            await queryClient.cancelQueries({ queryKey: ['students'] });
+            const previousStudents = queryClient.getQueryData(['students']);
+            queryClient.setQueryData(['students'], (old: any) => [...(old || []), { ...newStudent, id: 'temp-' + Date.now() }]);
+
             if (isTeacher) {
                 alert('تم إرسال بيانات الطالب، وفي انتظار مراجعة وقبول الإدارة.');
             }
@@ -60,6 +64,15 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
                 groupId: defaultGroupId || '',
                 monthlyAmount: 80,
             });
+
+            return { previousStudents };
+        },
+        onError: (err, newStudent, context: any) => {
+            queryClient.setQueryData(['students'], context?.previousStudents);
+            addToOfflineQueue('student_add', newStudent);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['students'] });
         },
     });
 

@@ -47,7 +47,7 @@ import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeduct
 import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
 import { DeductionsList } from '@/features/teachers/components/DeductionsList';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { getFeesByMonth } from '@/features/students/services/recordsService';
+import { getFeesByMonth, deleteFeeRecord } from '@/features/students/services/recordsService';
 import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction } from '@/features/finance/services/financeService';
 import { addTransaction } from '@/features/finance/services/financeService';
 import { supabase } from '@/lib/supabase';
@@ -194,6 +194,7 @@ export default function TeacherDetailModal({
 
                 return {
                     id: f.receipt,
+                    feeId: f.id,
                     studentId: f.studentId,
                     studentName: student?.fullName || 'طالب غير معروف',
                     amount: Number(f.amount.replace(/[^0-9.]/g, '')) || 0,
@@ -238,6 +239,7 @@ export default function TeacherDetailModal({
                 const student = students.find(s => s.id === f.studentId);
                 return {
                     id: f.receipt,
+                    feeId: f.id,
                     studentId: f.studentId,
                     studentName: student?.fullName || 'طالب غير معروف',
                     amount: Number(f.amount.replace(/[^0-9.]/g, '')) || 0,
@@ -377,6 +379,25 @@ export default function TeacherDetailModal({
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
         } catch (err) {
             console.error('خطأ غير متوقع:', err);
+        }
+    };
+
+    // --- دالة حذف عملية تحصيل خاطئة للطلاب ---
+    const handleDeleteFee = async (feeId: string, studentName: string) => {
+        if (!isDirector) {
+            alert('عذراً، هذه الصلاحية للمدير فقط.');
+            return;
+        }
+        if (!confirm(`هل أنت متأكد من حذف عملية التحصيل الخاصة بالطالب ${studentName}؟\nتنبيه: هذا الإجراء لا يمكن التراجع عنه وسيقوم بحذف العملية والمبلغ من الإجماليات.`)) return;
+
+        try {
+            await deleteFeeRecord(feeId);
+            queryClient.invalidateQueries({ queryKey: ['fees'] });
+            queryClient.invalidateQueries({ queryKey: ['fees', 'month', selectedMonthRaw] });
+            alert('تم حذف عملية التحصيل بنجاح.');
+        } catch (error) {
+            console.error('Error deleting fee:', error);
+            alert('حدث خطأ أثناء حذف عملية التحصيل');
         }
     };
 
@@ -1752,8 +1773,17 @@ export default function TeacherDetailModal({
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-left font-sans">
+                                                            <div className="text-left font-sans flex flex-col items-end gap-2">
                                                                 <p className="text-lg font-black text-green-600">{payment.amount.toLocaleString()} <span className="text-[10px] font-bold">ج.م</span></p>
+                                                                {isDirector && (
+                                                                    <button
+                                                                        onClick={() => handleDeleteFee(payment.feeId, payment.studentName)}
+                                                                        className="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors"
+                                                                        title="حذف هذا الوصل"
+                                                                    >
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );
@@ -1844,8 +1874,17 @@ export default function TeacherDetailModal({
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-left font-sans">
+                                                            <div className="text-left font-sans flex flex-col items-end gap-2">
                                                                 <p className="text-lg font-black text-emerald-600">{payment.amount.toLocaleString()} <span className="text-[10px] font-bold">ج.م</span></p>
+                                                                {isDirector && (
+                                                                    <button
+                                                                        onClick={() => handleDeleteFee(payment.feeId, payment.studentName)}
+                                                                        className="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors"
+                                                                        title="حذف هذا الوصل"
+                                                                    >
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );

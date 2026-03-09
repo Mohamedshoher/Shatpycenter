@@ -105,17 +105,18 @@ export const getStudentAttendance = async (studentId: string): Promise<Attendanc
 
 export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record<string, AttendanceRecord[]>> => {
     try {
-        // نحسب تاريخ بداية ونهاية الشهر للبحث بالمدى الزمني كبديل في حال عدم وجود month_key
         const [year, month] = monthKey.split('-').map(Number);
         const startDate = `${monthKey}-01`;
         const lastDay = new Date(year, month, 0).getDate();
         const endDate = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
 
+        // نستخدم نطاق التاريخ فقط - أكثر موثوقية من OR مع month_key
         const { data, error } = await supabase
             .from('attendance')
             .select('*')
-            .or(`month_key.eq.${monthKey},and(date.gte.${startDate},date.lte.${endDate})`)
-            .order('created_at', { ascending: false });
+            .gte('date', startDate)
+            .lte('date', endDate)
+            .order('created_at', { ascending: true }); // من القديم للجديد حتى تكون آخر قيمة هي الأحدث
 
         if (error) {
             console.error("Supabase error fetching month attendance:", error);
@@ -126,12 +127,17 @@ export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record
         (data || []).forEach(row => {
             if (!map[row.student_id]) map[row.student_id] = [];
 
-            const dateObj = new Date(row.date);
+            // نستخدم month_key المخزن مباشرة إذا وُجد، وإلا نشتقه من التاريخ بتحويله يدوياً
+            // لتجنب مشاكل المناطق الزمنية
+            const dateParts = (row.date as string).split('-');
+            const derivedMonth = dateParts.length >= 2 ? `${dateParts[0]}-${dateParts[1]}` : monthKey;
+            const derivedDay = dateParts.length >= 3 ? parseInt(dateParts[2], 10) : 1;
+
             map[row.student_id].push({
                 id: row.id,
                 studentId: row.student_id,
-                day: dateObj.getDate(),
-                month: row.month_key || `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`,
+                day: derivedDay,
+                month: row.month_key || derivedMonth,
                 status: row.status as 'present' | 'absent',
                 recordedBy: '',
                 timestamp: new Date(row.created_at).getTime()

@@ -42,42 +42,8 @@ import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useAuthStore } from '@/store/useAuthStore';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';
 import { useStudentRecords } from '@/features/students/hooks/useStudentRecords';
+import { calculateContinuousAbsence, calculateTotalAbsence } from '@/lib/attendance-utils';
 
-// دالة لحساب الغياب المتصل (محدثة لدعم تداخل الأشهر)
-export const calculateContinuousAbsence = (attendance: any[]) => {
-    if (!attendance || attendance.length === 0) return 0;
-
-    // ترتيب الحضور من الأحدث للأقدم
-    // يجب تحويل التاريخ لكائن للمقارنة الصحيحة لأن "day" يتكرر عبر الأشهر
-    const sortedAttendance = [...attendance].sort((a, b) => {
-        const dateA = new Date(a.month + '-' + String(a.day).padStart(2, '0'));
-        const dateB = new Date(b.month + '-' + String(b.day).padStart(2, '0'));
-        return dateB.getTime() - dateA.getTime();
-    });
-
-    let continuous = 0;
-    // نبدأ العد من أحدث سجل
-    for (let i = 0; i < sortedAttendance.length; i++) {
-        if (sortedAttendance[i].status === 'absent') {
-            continuous++;
-        } else {
-            // إذا وجدنا "حاضر"، نتوقف لأن السلسلة انقطعت
-            break;
-        }
-    }
-    return continuous;
-};
-
-// دالة لحساب إجمالي الغياب في الشهر الحالي
-export const calculateTotalAbsence = (attendance: any[]) => {
-    // نستخدم Set لضمان عدم تكرار العد لنفس اليوم إذا وجدت سجلات مكررة
-    const uniqueDays = new Set(
-        attendance
-            .filter(a => a.status === 'absent')
-            .map(a => `${a.month}-${a.day}`)
-    );
-    return uniqueDays.size;
-};
 
 export default function AttendanceReportPage() {
     const { data: students, archiveStudent } = useStudents();
@@ -141,23 +107,30 @@ export default function AttendanceReportPage() {
                 getLatestNotes()
             ]);
 
-            // دمج سجلات الحضور
+            // نحتفظ ببيانات الشهر الحالي منفصلة لحساب الإجمالي بدقة
+            // وندمج هنا فقط لغرض حساب الغياب المتصل
             const mergedAttendance: Record<string, any[]> = {};
             const allStudentIds = new Set([...Object.keys(attendanceCurrent), ...Object.keys(attendancePrev)]);
 
             allStudentIds.forEach(id => {
                 mergedAttendance[id] = [
-                    ...(attendanceCurrent[id] || []),
-                    ...(attendancePrev[id] || [])
+                    ...(attendancePrev[id] || []),     // الشهر السابق أولاً
+                    ...(attendanceCurrent[id] || [])   // ثم الحالي (ordered ASC في كليهما)
                 ];
             });
 
-            return { attendanceMap: mergedAttendance, latestNotes };
+            return {
+                attendanceMap: mergedAttendance,    // مدمج - للغياب المتصل
+                currentMonthMap: attendanceCurrent, // الشهر الحالي فقط - للإجمالي
+                latestNotes
+            };
         },
+        staleTime: 30_000, // ع ذاكرة التخزين مداها 30 ثانية فقط لضمان التحديث
         enabled: !!(students && students.length > 0)
     });
 
-    const allAttendanceData = reportData?.attendanceMap;
+    const allAttendanceData = reportData?.attendanceMap;       // مدمج للغياب المتصل
+    const currentMonthData = reportData?.currentMonthMap;      // الشهر الحالي فقط للإجمالي
     const allLatestNotes = reportData?.latestNotes;
 
     // معالجة بيانات الطلاب مع الحضور الحقيقي
@@ -170,20 +143,28 @@ export default function AttendanceReportPage() {
                 return s.status === 'active';
             })
             .map((s) => {
-                const attendance = allAttendanceData?.[s.id] || [];
-                const totalAbsences = calculateTotalAbsence(attendance);
-                // استخدام الدالة الجديدة التي تدعم البحث في كل السجلات المدمجة
-                const continuousAbsences = calculateContinuousAbsence([...attendance]); // Spread to avoid mutating original with sort
-                const latestNote = allLatestNotes?.[s.id];
-
-                // تحديد التاريخ المختار للتحقق من حالة الحضور الحالية
                 const checkDate = new Date();
                 if (selectedDateMode === 'yesterday') checkDate.setDate(checkDate.getDate() - 1);
                 if (selectedDateMode === 'before') checkDate.setDate(checkDate.getDate() - 2);
-                const day = checkDate.getDate();
-                const month = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`;
 
-                const currentStatus = attendance.find(a => a.day === day && a.month === month)?.status;
+                const targetMonthForTotal = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`;
+
+                // البيانات المدمجة (للغياب المتصل عبر الأشهر)
+                const mergedAttendance = allAttendanceData?.[s.id] || [];
+                // بيانات الشهر الحالي فقط (للإجمالي بدقة تامة)
+                const currentMonthAttendance = currentMonthData?.[s.id] || [];
+
+                const totalAbsences = calculateTotalAbsence(currentMonthAttendance, targetMonthForTotal);
+                const continuousAbsences = calculateContinuousAbsence([...mergedAttendance]);
+                const latestNote = allLatestNotes?.[s.id];
+
+                const day = checkDate.getDate();
+                const month = targetMonthForTotal;
+
+                // نجد آخر حالة مسجلة لهذا اليوم (البيانات مرتبة تصاعدياً فالأخير هو الأحدث)
+                const currentStatus = currentMonthAttendance
+                    .filter(a => a.day === day && a.month === month)
+                    .pop()?.status; // آخر عنصر = الأحدث (ASC order)
 
                 return {
                     ...s,
@@ -195,7 +176,7 @@ export default function AttendanceReportPage() {
                     groupName: groups?.find(g => g.id === s.groupId)?.name || 'غير محدد'
                 };
             });
-    }, [students, allAttendanceData, groups, user, assignedGroupIds, selectedDateMode, allLatestNotes]);
+    }, [students, allAttendanceData, currentMonthData, groups, user, assignedGroupIds, selectedDateMode, allLatestNotes]);
 
     // تصفية الطلاب بناءً على المدخلات
     const filteredStudents = processedStudents.filter(s => {

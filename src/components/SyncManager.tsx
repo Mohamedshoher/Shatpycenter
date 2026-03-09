@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getOfflineQueue, removeFromOfflineQueue, PendingAction } from '@/lib/offline-queue';
 import {
     addAttendanceRecord,
@@ -23,9 +23,37 @@ export default function SyncManager() {
     const [lastSyncStatus, setLastSyncStatus] = useState<'success' | 'error' | null>(null);
     const queryClient = useQueryClient();
 
-    const updateCount = () => {
-        setPendingCount(getOfflineQueue().length);
-    };
+    const updateCount = useCallback(async () => {
+        const queue = await getOfflineQueue();
+        setPendingCount(queue.length);
+    }, []);
+
+    const syncAll = useCallback(async () => {
+        if (isSyncing || !navigator.onLine) return;
+        const queue = await getOfflineQueue();
+        if (queue.length === 0) return;
+
+        setIsSyncing(true);
+        console.log(`📡 البدء في مزامنة ${queue.length} عمليات مخزنة...`);
+
+        for (const action of queue) {
+            try {
+                await processAction(action);
+                await removeFromOfflineQueue(action.id);
+            } catch (error) {
+                console.error(`❌ فشل مزامنة العملية ${action.id}:`, error);
+                // We keep going for other records
+            }
+        }
+
+        setIsSyncing(false);
+        setLastSyncStatus('success');
+        updateCount();
+        setTimeout(() => setLastSyncStatus(null), 10000);
+
+        // Invalidate ALL queries to refresh everything from server
+        queryClient.invalidateQueries();
+    }, [isSyncing, queryClient, updateCount]);
 
     useEffect(() => {
         updateCount();
@@ -42,33 +70,7 @@ export default function SyncManager() {
             window.removeEventListener('online', syncAll);
             clearInterval(interval);
         };
-    }, []);
-
-    const syncAll = async () => {
-        if (isSyncing || !navigator.onLine) return;
-        const queue = getOfflineQueue();
-        if (queue.length === 0) return;
-
-        setIsSyncing(true);
-        console.log(`📡 البدء في مزامنة ${queue.length} عمليات مخزنة...`);
-
-        for (const action of queue) {
-            try {
-                await processAction(action);
-                removeFromOfflineQueue(action.id);
-            } catch (error) {
-                console.error(`❌ فشل مزامنة العملية ${action.id}:`, error);
-                // We keep going for other records
-            }
-        }
-
-        setIsSyncing(false);
-        setLastSyncStatus('success');
-        setTimeout(() => setLastSyncStatus(null), 10000);
-
-        // Invalidate ALL queries to refresh everything from server
-        queryClient.invalidateQueries();
-    };
+    }, [updateCount, syncAll]);
 
     const processAction = async (action: PendingAction) => {
         const { type, data } = action;
@@ -126,7 +128,7 @@ export default function SyncManager() {
                         'تم المزامنة'}
             </span>
 
-            {pendingCount > 0 && !isSyncing && navigator.onLine && (
+            {pendingCount > 0 && !isSyncing && (typeof navigator !== 'undefined' && navigator.onLine) && (
                 <button
                     onClick={syncAll}
                     className="mr-1 bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-lg text-[10px]"

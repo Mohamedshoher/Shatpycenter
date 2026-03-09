@@ -1,5 +1,7 @@
 "use client";
 
+import { get, set, del } from 'idb-keyval';
+
 export interface PendingAction {
     id: string;
     type: 'attendance' | 'exam' | 'fee' | 'plan' | 'student_add' | 'student_update' | 'student_delete' | 'teacher_add' | 'teacher_update' | 'teacher_delete' | 'group_add' | 'group_update' | 'group_delete' | 'transaction_add' | 'transaction_delete' | 'teacher_attendance';
@@ -9,20 +11,20 @@ export interface PendingAction {
 
 const QUEUE_KEY = 'shatibi_offline_queue';
 
-export const getOfflineQueue = (): PendingAction[] => {
+export const getOfflineQueue = async (): Promise<PendingAction[]> => {
     if (typeof window === 'undefined') return [];
     try {
-        const stored = localStorage.getItem(QUEUE_KEY);
-        return stored ? JSON.parse(stored) : [];
+        const stored = await get<PendingAction[]>(QUEUE_KEY);
+        return stored || [];
     } catch (e) {
         console.error('Error reading offline queue', e);
         return [];
     }
 };
 
-export const addToOfflineQueue = (type: PendingAction['type'], data: any) => {
+export const addToOfflineQueue = async (type: PendingAction['type'], data: any) => {
     if (typeof window === 'undefined') return;
-    const queue = getOfflineQueue();
+    const queue = await getOfflineQueue();
     const newAction: PendingAction = {
         id: Math.random().toString(36).substring(2, 9),
         type,
@@ -47,21 +49,21 @@ export const addToOfflineQueue = (type: PendingAction['type'], data: any) => {
         queue.push(newAction);
     }
 
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    await set(QUEUE_KEY, queue);
     // Trigger an event so other components know the queue changed
     window.dispatchEvent(new Event('offlineQueueChanged'));
 };
 
-export const removeFromOfflineQueue = (id: string) => {
+export const removeFromOfflineQueue = async (id: string) => {
     if (typeof window === 'undefined') return;
-    const queue = getOfflineQueue();
+    const queue = await getOfflineQueue();
     const newQueue = queue.filter(a => a.id !== id);
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(newQueue));
+    await set(QUEUE_KEY, newQueue);
     window.dispatchEvent(new Event('offlineQueueChanged'));
 };
 
-export const clearOfflineQueue = () => {
+export const clearOfflineQueue = async () => {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem(QUEUE_KEY);
+    await del(QUEUE_KEY);
     window.dispatchEvent(new Event('offlineQueueChanged'));
 };
