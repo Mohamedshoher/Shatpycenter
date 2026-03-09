@@ -21,7 +21,9 @@ import {
     Archive,
     Check,
     X,
-    BarChart2
+    BarChart2,
+    Users,
+    MessageSquare
 } from 'lucide-react';
 import {
     BarChart,
@@ -88,8 +90,8 @@ export default function AttendanceReportPage() {
     };
 
     // جلب بيانات الحضور والملحوظات لجميع الطلاب
-    const { data: reportData } = useQuery({
-        queryKey: ['report-data'],
+    const { data: reportData, isLoading: isReportLoading } = useQuery({
+        queryKey: ['report-data-v3'], // مفتاح جديد لتجاوز الكاش تماماً
         queryFn: async () => {
             const { getAllAttendanceForMonth, getLatestNotes } = await import('@/features/students/services/recordsService');
 
@@ -125,7 +127,7 @@ export default function AttendanceReportPage() {
                 latestNotes
             };
         },
-        staleTime: 30_000, // ع ذاكرة التخزين مداها 30 ثانية فقط لضمان التحديث
+        refetchOnMount: true, // إعادة الجلب عند كل زيارة للصفحة
         enabled: !!(students && students.length > 0)
     });
 
@@ -147,24 +149,25 @@ export default function AttendanceReportPage() {
                 if (selectedDateMode === 'yesterday') checkDate.setDate(checkDate.getDate() - 1);
                 if (selectedDateMode === 'before') checkDate.setDate(checkDate.getDate() - 2);
 
-                const targetMonthForTotal = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`;
+                const targetMonth = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`;
 
-                // البيانات المدمجة (للغياب المتصل عبر الأشهر)
+                // البيانات المدمجة (تغطي الشهر الحالي والسابق)
                 const mergedAttendance = allAttendanceData?.[s.id] || [];
-                // بيانات الشهر الحالي فقط (للإجمالي بدقة تامة)
-                const currentMonthAttendance = currentMonthData?.[s.id] || [];
 
-                const totalAbsences = calculateTotalAbsence(currentMonthAttendance, targetMonthForTotal);
+                // حساب إجمالي الغياب للشهر الذي يقع فيه التاريخ المختار
+                const totalAbsences = calculateTotalAbsence(mergedAttendance, targetMonth);
+
+                // حساب الغياب المتصل (يعتمد على كل البيانات التاريخية المتاحة)
                 const continuousAbsences = calculateContinuousAbsence([...mergedAttendance]);
+
                 const latestNote = allLatestNotes?.[s.id];
 
                 const day = checkDate.getDate();
-                const month = targetMonthForTotal;
 
-                // نجد آخر حالة مسجلة لهذا اليوم (البيانات مرتبة تصاعدياً فالأخير هو الأحدث)
-                const currentStatus = currentMonthAttendance
-                    .filter(a => a.day === day && a.month === month)
-                    .pop()?.status; // آخر عنصر = الأحدث (ASC order)
+                // نجد أحدث حالة مسجلة لهذا اليوم بالتحديد من البيانات المدمجة
+                const currentStatus = mergedAttendance
+                    .filter(a => a.day === day && a.month === targetMonth)
+                    .pop()?.status;
 
                 return {
                     ...s,
@@ -176,13 +179,13 @@ export default function AttendanceReportPage() {
                     groupName: groups?.find(g => g.id === s.groupId)?.name || 'غير محدد'
                 };
             });
-    }, [students, allAttendanceData, currentMonthData, groups, user, assignedGroupIds, selectedDateMode, allLatestNotes]);
+    }, [students, allAttendanceData, groups, user, assignedGroupIds, selectedDateMode, allLatestNotes]);
 
     // تصفية الطلاب بناءً على المدخلات
     const filteredStudents = processedStudents.filter(s => {
         const matchesGroup = selectedGroupId === 'all' || s.groupId === selectedGroupId;
 
-        // نظهر فقط الطلاب الغائبين في اليوم المحدد
+        // حالة الحضور لليوم المحدد
         const isAbsent = s.currentStatus === 'absent';
 
         const contLimit = Number(continuousAbsenceLimit);
@@ -192,15 +195,17 @@ export default function AttendanceReportPage() {
         const matchesContinuous = contLimit > 0 ? s.continuousAbsences >= contLimit : false;
         const matchesTotal = totLimit > 0 ? s.totalAbsences >= totLimit : false;
 
-        // إذا لم يتم إدخال أي أرقام، نظهر كل طلاب المجموعة المختارة (شرط أن يكون غائباً)
+        // المنطق:
+        // 1. إذا لم يتم إدخال أي أرقام لفلاتر الغياب، نظهر فقط الغائبين اليوم (للمتابعة السريعة)
         if (!contLimit && !totLimit) return matchesGroup && isAbsent;
 
-        // إذا تم إدخال رقم في خانة واحدة، نظهر ما يطابق هذا الشرط فقط
-        if (contLimit && !totLimit) return matchesGroup && matchesContinuous && isAbsent;
-        if (!contLimit && totLimit) return matchesGroup && matchesTotal && isAbsent;
+        // 2. إذا تم إدخال أرقام، نظهر من يطابق هذه الأرقام حتى لو كان حاضراً اليوم
+        // (لأنها حالة تستدعي الانتباه في التقرير العام)
+        if (contLimit && !totLimit) return matchesGroup && matchesContinuous;
+        if (!contLimit && totLimit) return matchesGroup && matchesTotal;
 
-        // إذا تم إدخال أرقام في الخانتين، نظهر من ينطبق عليه أي من الشرطين
-        return matchesGroup && (matchesContinuous || matchesTotal) && isAbsent;
+        // 3. إذا تم إدخال أرقام في الخانتين، نظهر من ينطبق عليه أي من شرطي الغياب العام
+        return matchesGroup && (matchesContinuous || matchesTotal);
     }).sort((a, b) => b.totalAbsences - a.totalAbsences);
 
     // دالة لجلب اسم الشهر الحالي بالعربية
@@ -313,8 +318,8 @@ export default function AttendanceReportPage() {
             // تحديث الحالة المحلية فوراً
             setRecordedAttendance(prev => ({ ...prev, [studentId]: status }));
 
-            // إعادة تحميل بيانات الحضور للتطبيق بالكامل
-            await queryClient.invalidateQueries({ queryKey: ['report-data'] });
+            // إعادة تحميل بيانات الحضور للتطبيق بالكامل لضمان تحديث التقرير فوراً
+            await queryClient.invalidateQueries({ queryKey: ['report-data-v3'] });
             await queryClient.invalidateQueries({ queryKey: ['all-attendance'] });
 
             // إخفاء مؤشر النجاح بعد ثانيتين
@@ -404,164 +409,180 @@ export default function AttendanceReportPage() {
             </div>
 
             <main className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
-                {/* السطر الثاني: الفلاتر والعدد الإجمالي (أصبح الآن جزءاً من محتوى الصفحة) */}
-                <div className="flex items-center gap-1.5 pb-1">
-                    {/* اختيار المجموعة */}
-                    <div className="relative shrink min-w-0">
-                        <select
-                            value={selectedGroupId}
-                            onChange={(e) => setSelectedGroupId(e.target.value)}
-                            className="appearance-none bg-white border border-gray-100 px-6 py-2.5 pr-2 rounded-[16px] text-[10px] font-black text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 w-full truncate shadow-sm cursor-pointer"
-                        >
-                            <option value="all">الكل</option>
-                            {filteredGroupsList?.map(g => (
-                                <option key={g.id} value={g.id}>{g.name}</option>
-                            ))}
-                        </select>
-                        <ChevronDown size={12} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
-
-                    {/* غياب متصل */}
-                    <div className="relative flex items-center bg-gray-100/50 rounded-[16px] p-0.5 border border-gray-100 shadow-sm shrink-0">
-                        <input
-                            type="number"
-                            min="0"
-                            placeholder="0"
-                            value={continuousAbsenceLimit}
-                            onChange={(e) => setContinuousAbsenceLimit(e.target.value.replace(/\D/g, ''))}
-                            className="w-8 h-8 bg-white rounded-[12px] text-center font-black text-blue-600 focus:outline-none border-none text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm"
-                        />
-                        <span className="text-[8px] font-black text-blue-800/60 px-1.5 uppercase">متصل</span>
-                    </div>
-
-                    {/* غياب كلي */}
-                    <div className="relative flex items-center bg-gray-100/50 rounded-[16px] p-0.5 border border-gray-100 shadow-sm shrink-0">
-                        <input
-                            type="number"
-                            min="0"
-                            placeholder="0"
-                            value={totalAbsenceLimit}
-                            onChange={(e) => setTotalAbsenceLimit(e.target.value.replace(/\D/g, ''))}
-                            className="w-8 h-8 bg-white rounded-[12px] text-center font-black text-amber-600 focus:outline-none border-none text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm"
-                        />
-                        <span className="text-[8px] font-black text-amber-800/60 px-1.5 uppercase">فأكثر</span>
-                    </div>
-
-                    {/* العدد الإجمالي */}
-                    <div className="w-9 h-9 bg-blue-600 rounded-[16px] flex items-center justify-center shadow-lg shadow-blue-200 shrink-0 mr-auto">
-                        <span className="text-sm font-black text-white font-sans">{filteredStudents.length}</span>
-                    </div>
-                </div>
-
-
-
-                {/* شبكة الطلاب */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {filteredStudents.length === 0 ? (
-                        <div className="col-span-full py-20 text-center text-gray-400 font-bold bg-white rounded-[32px] border border-dashed border-gray-200">
-                            لا يوجد طلاب يطابقون هذه المعايير
+                {(isReportLoading || !students) ? (
+                    <div className="flex flex-col items-center justify-center py-32 gap-6 bg-white rounded-[32px] border-2 border-dashed border-gray-100">
+                        <div className="relative">
+                            <div className="w-16 h-16 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin" />
+                            <Users size={20} className="absolute inset-0 m-auto text-blue-500/50" />
                         </div>
-                    ) : (
-                        filteredStudents.map((student, idx) => (
-                            <motion.div
-                                key={student.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                onClick={() => setSelectedStudentForModal(student)}
-                                className="bg-white rounded-[24px] p-3.5 shadow-sm border border-gray-100 flex flex-col gap-1.5 relative group cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
-                            >
-                                {/* السطر الأول: الاسم والمجموعة */}
-                                <div className="flex items-center justify-between gap-3 px-0.5">
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                        <div className="w-9 h-9 bg-blue-50 rounded-[14px] flex items-center justify-center text-blue-600 shrink-0 font-black text-base">
-                                            {idx + 1}
-                                        </div>
-                                        <h3 className="font-black text-gray-900 text-xl truncate leading-tight">{student.fullName}</h3>
-                                        <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-lg border border-gray-100 shrink-0">
-                                            {student.groupName}
-                                        </span>
-                                    </div>
+                        <div className="text-center">
+                            <h3 className="text-sm font-black text-gray-700 mb-1">جاري تحميل تقارير الحضور...</h3>
+                            <p className="text-[10px] text-gray-400 font-bold">يتم الآن جلب وتحليل بيانات الطلاب</p>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {/* السطر الثاني: الفلاتر والعدد الإجمالي (أصبح الآن جزءاً من محتوى الصفحة) */}
+                        <div className="flex items-center gap-1.5 pb-1">
+                            {/* اختيار المجموعة */}
+                            <div className="relative shrink min-w-0">
+                                <select
+                                    value={selectedGroupId}
+                                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                                    className="appearance-none bg-white border border-gray-100 px-6 py-2.5 pr-2 rounded-[16px] text-[10px] font-black text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 w-full truncate shadow-sm cursor-pointer"
+                                >
+                                    <option value="all">الكل</option>
+                                    {filteredGroupsList?.map(g => (
+                                        <option key={g.id} value={g.id}>{g.name}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown size={12} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            </div>
+
+                            {/* غياب متصل */}
+                            <div className="relative flex items-center bg-gray-100/50 rounded-[16px] p-0.5 border border-gray-100 shadow-sm shrink-0">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    value={continuousAbsenceLimit}
+                                    onChange={(e) => setContinuousAbsenceLimit(e.target.value.replace(/\D/g, ''))}
+                                    className="w-8 h-8 bg-white rounded-[12px] text-center font-black text-blue-600 focus:outline-none border-none text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm"
+                                />
+                                <span className="text-[8px] font-black text-blue-800/60 px-1.5 uppercase">متصل</span>
+                            </div>
+
+                            {/* غياب كلي */}
+                            <div className="relative flex items-center bg-gray-100/50 rounded-[16px] p-0.5 border border-gray-100 shadow-sm shrink-0">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    value={totalAbsenceLimit}
+                                    onChange={(e) => setTotalAbsenceLimit(e.target.value.replace(/\D/g, ''))}
+                                    className="w-8 h-8 bg-white rounded-[12px] text-center font-black text-amber-600 focus:outline-none border-none text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm"
+                                />
+                                <span className="text-[8px] font-black text-amber-800/60 px-1.5 uppercase">فأكثر</span>
+                            </div>
+
+                            {/* العدد الإجمالي */}
+                            <div className="w-9 h-9 bg-blue-600 rounded-[16px] flex items-center justify-center shadow-lg shadow-blue-200 shrink-0 mr-auto">
+                                <span className="text-sm font-black text-white font-sans">{filteredStudents.length}</span>
+                            </div>
+                        </div>
+
+
+
+                        {/* شبكة الطلاب */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {filteredStudents.length === 0 ? (
+                                <div className="col-span-full py-20 text-center text-gray-400 font-bold bg-white rounded-[32px] border border-dashed border-gray-200">
+                                    <h3 className="text-sm font-black text-gray-600 mb-1">لا يوجد طلاب يطابقون هذه المعايير</h3>
+                                    <p className="text-[10px] text-gray-400">تأكد من اختيار اليوم الصحيح أو ضبط فلاتر الغياب بشكل صحيح</p>
                                 </div>
-
-                                {/* السطر الثاني: الإحصائيات والأيقونات */}
-                                <div className="flex items-center justify-between border-t border-gray-50 pt-2 px-0.5">
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                        <div className="flex items-center gap-1.5 bg-red-50/50 px-2.5 py-1.5 rounded-xl border border-red-100/30">
-                                            <span className="text-[10px] text-red-700 font-bold">إجمالي:</span>
-                                            <span className="text-red-600 font-black text-base font-sans">{student.totalAbsences}</span>
+                            ) : (
+                                filteredStudents.map((student, idx) => (
+                                    <motion.div
+                                        key={student.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        onClick={() => setSelectedStudentForModal(student)}
+                                        className="bg-white rounded-[24px] p-3.5 shadow-sm border border-gray-100 flex flex-col gap-1.5 relative group cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
+                                    >
+                                        {/* السطر الأول: الاسم والمجموعة */}
+                                        <div className="flex items-center justify-between gap-3 px-0.5">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className="w-9 h-9 bg-blue-50 rounded-[14px] flex items-center justify-center text-blue-600 shrink-0 font-black text-base">
+                                                    {idx + 1}
+                                                </div>
+                                                <h3 className="font-black text-gray-900 text-xl truncate leading-tight">{student.fullName}</h3>
+                                                <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-lg border border-gray-100 shrink-0">
+                                                    {student.groupName}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-1.5 bg-amber-50/50 px-2.5 py-1.5 rounded-xl border border-amber-100/30">
-                                            <span className="text-[10px] text-amber-800 font-bold">متصل:</span>
-                                            <span className="text-amber-700 font-black text-base font-sans">{student.continuousAbsences}</span>
-                                        </div>
-                                    </div>
 
-                                    <div className="flex items-center gap-1">
-                                        {user?.role !== 'teacher' && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (confirm(`هل أنت متأكد من أرشفة الطالب ${student.fullName}؟`)) {
-                                                        archiveStudent(student.id);
-                                                    }
-                                                }}
-                                                className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
-                                            >
-                                                <Archive size={18} />
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedStudentForModal(student);
-                                            }}
-                                            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                                        >
-                                            <FileText size={18} />
-                                        </button>
-                                        {user?.role !== 'teacher' && (
-                                            <>
+                                        {/* السطر الثاني: الإحصائيات والأيقونات */}
+                                        <div className="flex items-center justify-between border-t border-gray-50 pt-2 px-0.5">
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <div className="flex items-center gap-1.5 bg-red-50/50 px-2.5 py-1.5 rounded-xl border border-red-100/30">
+                                                    <span className="text-[10px] text-red-700 font-bold">إجمالي:</span>
+                                                    <span className="text-red-600 font-black text-base font-sans">{student.totalAbsences}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 bg-amber-50/50 px-2.5 py-1.5 rounded-xl border border-amber-100/30">
+                                                    <span className="text-[10px] text-amber-800 font-bold">متصل:</span>
+                                                    <span className="text-amber-700 font-black text-base font-sans">{student.continuousAbsences}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-1">
+                                                {user?.role !== 'teacher' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (confirm(`هل أنت متأكد من أرشفة الطالب ${student.fullName}؟`)) {
+                                                                archiveStudent(student.id);
+                                                            }
+                                                        }}
+                                                        className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+                                                    >
+                                                        <Archive size={18} />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        window.open(`https://wa.me/${student.parentPhone}`, '_blank');
+                                                        setSelectedStudentForModal(student);
                                                     }}
-                                                    className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-xl transition-all"
+                                                    className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
                                                 >
-                                                    <MessageCircle size={18} />
+                                                    <FileText size={18} />
                                                 </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        window.location.href = `tel:${student.parentPhone}`;
-                                                    }}
-                                                    className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                                                >
-                                                    <Phone size={18} />
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
+                                                {user?.role !== 'teacher' && (
+                                                    <>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                window.open(`https://wa.me/${student.parentPhone}`, '_blank');
+                                                            }}
+                                                            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-xl transition-all"
+                                                        >
+                                                            <MessageCircle size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                window.location.href = `tel:${student.parentPhone}`;
+                                                            }}
+                                                            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                        >
+                                                            <Phone size={18} />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
 
-                                {/* السطر الثالث: الملحوظة */}
-                                <div className="flex items-center gap-2">
-                                    {/* نص الملحوظة */}
-                                    <div className="bg-gray-50/60 rounded-xl p-2 border border-gray-100 text-right flex-1 group-hover:bg-blue-50/20 transition-colors relative min-h-[38px] flex items-center">
-                                        {student.lastNoteDate && (
-                                            <span className="absolute left-2 top-0.5 text-[7px] text-gray-300 font-bold">
-                                                {student.lastNoteDate}
-                                            </span>
-                                        )}
-                                        <p className="text-[10px] font-bold text-gray-500 leading-tight line-clamp-2 pr-1">
-                                            {student.lastNote}
-                                        </p>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))
-                    )}
-                </div>
+                                        {/* السطر الثالث: الملحوظة */}
+                                        <div className="flex items-center gap-2">
+                                            {/* نص الملحوظة */}
+                                            <div className="bg-gray-50/60 rounded-xl p-2 border border-gray-100 text-right flex-1 group-hover:bg-blue-50/20 transition-colors relative min-h-[38px] flex items-center">
+                                                {student.lastNoteDate && (
+                                                    <span className="absolute left-2 top-0.5 text-[7px] text-gray-300 font-bold">
+                                                        {student.lastNoteDate}
+                                                    </span>
+                                                )}
+                                                <p className="text-[10px] font-bold text-gray-500 leading-tight line-clamp-2 pr-1">
+                                                    {student.lastNote}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))
+                            )}
+                        </div>
+                    </>
+                )}
             </main>
 
 

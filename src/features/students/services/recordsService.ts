@@ -110,13 +110,13 @@ export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record
         const lastDay = new Date(year, month, 0).getDate();
         const endDate = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
 
-        // نستخدم نطاق التاريخ فقط - أكثر موثوقية من OR مع month_key
+        // نستخدم الشرطين معاً: month_key المباشر أو نطاق التاريخ
+        // لضمان إرجاع جميع السجلات سواء كان month_key مضبوطاً أم لا
         const { data, error } = await supabase
             .from('attendance')
             .select('*')
-            .gte('date', startDate)
-            .lte('date', endDate)
-            .order('created_at', { ascending: true }); // من القديم للجديد حتى تكون آخر قيمة هي الأحدث
+            .or(`month_key.eq.${monthKey},and(date.gte.${startDate},date.lte.${endDate})`)
+            .order('created_at', { ascending: true }); // تصاعدي حتى يكون آخر سجل مُضاف هو الأحدث
 
         if (error) {
             console.error("Supabase error fetching month attendance:", error);
@@ -127,17 +127,22 @@ export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record
         (data || []).forEach(row => {
             if (!map[row.student_id]) map[row.student_id] = [];
 
-            // نستخدم month_key المخزن مباشرة إذا وُجد، وإلا نشتقه من التاريخ بتحويله يدوياً
-            // لتجنب مشاكل المناطق الزمنية
-            const dateParts = (row.date as string).split('-');
-            const derivedMonth = dateParts.length >= 2 ? `${dateParts[0]}-${dateParts[1]}` : monthKey;
-            const derivedDay = dateParts.length >= 3 ? parseInt(dateParts[2], 10) : 1;
+            // نستخدم string split بدلاً من new Date() لتجنب مشاكل المناطق الزمنية
+            const dateStr = (row.date as string).split('T')[0]; // نأخذ الجزء YYYY-MM-DD فقط
+            const dateParts = dateStr.split('-');
+
+            const yearPart = dateParts[0];
+            const monthPart = dateParts.length >= 2 ? dateParts[1].padStart(2, '0') : String(month).padStart(2, '0');
+            const dayPart = dateParts.length >= 3 ? dateParts[2].padStart(2, '0') : '01';
+
+            const derivedDay = parseInt(dayPart, 10);
+            const derivedMonth = `${yearPart}-${monthPart}`;
 
             map[row.student_id].push({
                 id: row.id,
                 studentId: row.student_id,
                 day: derivedDay,
-                month: row.month_key || derivedMonth,
+                month: derivedMonth, // نستخدم الشهر المستمد من التاريخ لضمان التطابق مع التنسيق (YYYY-MM)
                 status: row.status as 'present' | 'absent',
                 recordedBy: '',
                 timestamp: new Date(row.created_at).getTime()
