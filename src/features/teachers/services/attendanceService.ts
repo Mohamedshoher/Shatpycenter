@@ -1,5 +1,8 @@
 import { supabase } from '@/lib/supabase';
 
+// ==========================================================
+// 1. التعريفات والأنواع (Types)
+// ==========================================================
 export type TeacherAttendanceStatus = 'present' | 'absent' | 'quarter' | 'half' | 'quarter_reward' | 'half_reward' | 'full_reward';
 
 export interface TeacherAttendanceRecord {
@@ -10,11 +13,19 @@ export interface TeacherAttendanceRecord {
     notes?: string;
 }
 
+// ==========================================================
+// 2. دوال جلب البيانات (Fetch Functions)
+// ==========================================================
+
+/**
+ * جلب سجل حضور معلم محدد خلال شهر معين
+ */
 export const getTeacherAttendance = async (teacherId: string, monthKey: string): Promise<Record<string, TeacherAttendanceStatus>> => {
     try {
         const [year, month] = monthKey.split('-');
         const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
 
+        // جلب البيانات من جدول الحضور ضمن النطاق الزمني المحدد للشهر
         const { data, error } = await supabase
             .from('teacher_attendance')
             .select('*')
@@ -27,9 +38,10 @@ export const getTeacherAttendance = async (teacherId: string, monthKey: string):
             return {};
         }
 
+        // تحويل البيانات إلى خريطة (Map) لتسهيل الوصول إليها برقم اليوم
         const attendanceMap: Record<string, TeacherAttendanceStatus> = {};
         data?.forEach(row => {
-            // استخدام تقسيم السلسلة بدلاً من new Date لتجنب مشاكل المناطق الزمنية
+            // استخدام تقسيم السلسلة لتجنب مشاكل المناطق الزمنية الخاصة بـ Date
             const dateParts = row.date.split('-');
             const day = parseInt(dateParts[2], 10);
             attendanceMap[day] = row.status as TeacherAttendanceStatus;
@@ -42,6 +54,9 @@ export const getTeacherAttendance = async (teacherId: string, monthKey: string):
     }
 };
 
+/**
+ * جلب سجل حضور جميع المعلمين خلال شهر معين
+ */
 export const getAllTeachersAttendance = async (monthKey: string): Promise<Record<string, Record<string, TeacherAttendanceStatus>>> => {
     try {
         const [year, month] = monthKey.split('-');
@@ -58,10 +73,11 @@ export const getAllTeachersAttendance = async (monthKey: string): Promise<Record
             return {};
         }
 
+        // هيكلة البيانات لتكون: { [teacherId]: { [day]: status } }
         const fullMap: Record<string, Record<string, TeacherAttendanceStatus>> = {};
         data?.forEach(row => {
             if (!fullMap[row.teacher_id]) fullMap[row.teacher_id] = {};
-            // استخدام تقسيم السلسلة بدلاً من new Date لتجنب مشاكل المناطق الزمنية
+            
             const dateParts = row.date.split('-');
             const day = parseInt(dateParts[2], 10);
             fullMap[row.teacher_id][day] = row.status as TeacherAttendanceStatus;
@@ -74,18 +90,25 @@ export const getAllTeachersAttendance = async (monthKey: string): Promise<Record
     }
 }
 
+// ==========================================================
+// 3. دالة تعديل البيانات (Mutation Function)
+// ==========================================================
+
+/**
+ * تحديث حالة حضور معلم ليوم معين (تتم عبر حذف السجل القديم ثم إدراج الجديد)
+ */
 export const updateTeacherAttendance = async (teacherId: string, date: string, status: TeacherAttendanceStatus, notes?: string): Promise<void> => {
     try {
         console.log(`Attempting to update attendance for teacher ${teacherId} on date ${date} with status ${status}`);
 
-        // حذف السجل القديم أولاً
+        // حذف السجل القديم أولاً لضمان عدم تكرار البيانات لنفس اليوم
         await supabase
             .from('teacher_attendance')
             .delete()
             .eq('teacher_id', teacherId)
             .eq('date', date);
 
-        // إدراج السجل الجديد
+        // إدراج السجل الجديد بالحالة المحدثة
         const { error } = await supabase
             .from('teacher_attendance')
             .insert({
@@ -114,4 +137,3 @@ export const updateTeacherAttendance = async (teacherId: string, date: string, s
         throw error;
     }
 };
-

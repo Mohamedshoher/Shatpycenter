@@ -1,6 +1,13 @@
 import { Teacher } from "@/types";
 import { supabase } from "@/lib/supabase";
 
+// ==========================================================
+// خدمة إدارة بيانات الموظفين (Teacher Service)
+// ==========================================================
+
+/**
+ * جلب جميع الموظفين من قاعدة البيانات
+ */
 export const getTeachers = async (): Promise<Teacher[]> => {
     try {
         const { data, error } = await supabase
@@ -12,11 +19,12 @@ export const getTeachers = async (): Promise<Teacher[]> => {
             return [];
         }
 
+        // تحويل البيانات القادمة من Supabase إلى شكل الكائن (Object) المتوافق مع واجهة Teacher
         return (data || []).map(row => ({
             id: row.id,
             fullName: row.full_name,
             phone: row.phone,
-            email: '', // Not in schema but required by type
+            email: '', // غير موجود في المخطط ولكن النوع (Type) يتطلبه
             role: row.role || 'teacher',
             accountingType: row.accounting_type || 'fixed',
             salary: row.salary || 0,
@@ -25,7 +33,7 @@ export const getTeachers = async (): Promise<Teacher[]> => {
             responsibleSections: row.responsible_sections || [],
             status: row.status,
             joinDate: row.created_at,
-            assignedGroups: [] // These are usually fetched separately or via join
+            assignedGroups: [] // عادة ما يتم جلب المجموعات في طلب منفصل
         } as Teacher));
     } catch (error) {
         console.error("Unexpected error fetching teachers:", error);
@@ -33,6 +41,9 @@ export const getTeachers = async (): Promise<Teacher[]> => {
     }
 };
 
+/**
+ * إضافة موظف جديد إلى قاعدة البيانات
+ */
 export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<string> => {
     try {
         const { data, error } = await supabase
@@ -59,8 +70,12 @@ export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<string> 
     }
 };
 
+/**
+ * تحديث بيانات موظف حالي بناءً على معرفه (ID)
+ */
 export const updateTeacher = async (id: string, data: Partial<Teacher>): Promise<void> => {
     try {
+        // بناء كائن التحديثات بناءً على ما تم تغييره فقط
         const updates: any = {};
         if (data.fullName !== undefined) updates.full_name = data.fullName;
         if (data.phone !== undefined) updates.phone = data.phone;
@@ -84,6 +99,9 @@ export const updateTeacher = async (id: string, data: Partial<Teacher>): Promise
     }
 };
 
+/**
+ * حذف موظف من قاعدة البيانات
+ */
 export const deleteTeacher = async (id: string): Promise<void> => {
     try {
         const { error } = await supabase
@@ -97,4 +115,3 @@ export const deleteTeacher = async (id: string): Promise<void> => {
         throw error;
     }
 };
-

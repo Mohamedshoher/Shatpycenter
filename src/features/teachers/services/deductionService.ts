@@ -1,12 +1,13 @@
 import { supabase } from '@/lib/supabase';
-// Removed circular import
 
-// Teacher deduction tracking service
+// ==========================================================
+// 1. تعريف واجهات البيانات (Interfaces)
+// ==========================================================
 export interface TeacherDeduction {
   id: string;
   teacherId: string;
   teacherName: string;
-  amount: number; // 0.25, 0.5, 1 (days)
+  amount: number; // قيمة الخصم (0.25، 0.5، 1) يوم
   reason: string;
   appliedDate: Date;
   appliedBy: string;
@@ -14,8 +15,12 @@ export interface TeacherDeduction {
   notes?: string;
 }
 
+// ==========================================================
+// 2. خدمة تتبع خصومات المعلمين (Teacher Deduction Service)
+// ==========================================================
 export const teacherDeductionService = {
-  // Get deductions for a specific teacher
+  
+  // جلب الخصومات الخاصة بمعلم محدد
   getTeacherDeductions: async (teacherId: string): Promise<TeacherDeduction[]> => {
     try {
       const { data, error } = await supabase
@@ -35,7 +40,7 @@ export const teacherDeductionService = {
         teacherName: row.teachers?.full_name || 'Unknown',
         amount: Number(row.amount),
         reason: row.reason,
-        appliedDate: new Date(row.date), // Using date as appliedDate
+        appliedDate: new Date(row.date),
         appliedBy: row.applied_by || 'system',
         status: row.status || 'applied',
         notes: row.notes
@@ -46,7 +51,7 @@ export const teacherDeductionService = {
     }
   },
 
-  // Get all deductions
+  // جلب جميع الخصومات لجميع المعلمين
   getAllDeductions: async (): Promise<TeacherDeduction[]> => {
     try {
       const { data, error } = await supabase
@@ -76,7 +81,7 @@ export const teacherDeductionService = {
     }
   },
 
-  // Apply deduction automatically or manually
+  // تطبيق خصم (سواء تلقائي أو يدوي)
   applyDeduction: async (
     teacherId: string,
     teacherName: string,
@@ -85,7 +90,7 @@ export const teacherDeductionService = {
     appliedBy: string = 'system'
   ): Promise<TeacherDeduction> => {
     try {
-      const dateStr = new Date().toISOString().split('T')[0]; // Current date
+      const dateStr = new Date().toISOString().split('T')[0]; 
 
       const { data, error } = await supabase
         .from('deductions')
@@ -106,7 +111,7 @@ export const teacherDeductionService = {
       return {
         id: data.id,
         teacherId,
-        teacherName, // Kept passed value for return, though DB relation exists
+        teacherName,
         amount: Number(data.amount),
         reason: data.reason,
         appliedDate: new Date(data.date),
@@ -120,7 +125,7 @@ export const teacherDeductionService = {
     }
   },
 
-  // Update deduction status
+  // تحديث حالة الخصم (مثلاً: عند قبول تظلم أو تغيير الحالة)
   updateDeductionStatus: async (
     deductionId: string,
     status: 'applied' | 'pending' | 'appealed',
@@ -142,7 +147,7 @@ export const teacherDeductionService = {
     }
   },
 
-  // Remove deduction (appeals)
+  // حذف خصم (إلغاء الخصم)
   removeDeduction: async (deductionId: string): Promise<void> => {
     try {
       const { error } = await supabase
@@ -157,7 +162,7 @@ export const teacherDeductionService = {
     }
   },
 
-  // Calculate total deductions for a teacher
+  // حساب إجمالي أيام الخصم لمعلم معين
   calculateTotalDeductions: async (teacherId: string): Promise<number> => {
     const deductions = await teacherDeductionService.getTeacherDeductions(teacherId);
     return deductions
@@ -165,7 +170,7 @@ export const teacherDeductionService = {
       .reduce((sum, d) => sum + d.amount, 0);
   },
 
-  // Get monthly deductions for a teacher
+  // جلب الخصومات الشهرية لمعلم
   getMonthlyDeductions: async (teacherId: string, year: number, month: number): Promise<TeacherDeduction[]> => {
     try {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -199,7 +204,7 @@ export const teacherDeductionService = {
     }
   },
 
-  // Get deduction statistics
+  // جلب إحصائيات الخصومات لجميع المعلمين
   getDeductionStats: async (): Promise<{ teacher: string; totalDays: number }[]> => {
     const deductions = await teacherDeductionService.getAllDeductions();
     const stats: { [key: string]: { name: string; total: number } } = {};
@@ -222,7 +227,7 @@ export const teacherDeductionService = {
     }));
   },
 
-  // Check if deduction already applied for a specific date
+  // التحقق مما إذا كان هناك خصم مسجل مسبقاً لهذا التاريخ
   hasDeductionForDate: async (teacherId: string, date: Date): Promise<boolean> => {
     try {
       const dateStr = date.toISOString().split('T')[0];
@@ -242,4 +247,3 @@ export const teacherDeductionService = {
     }
   }
 };
-

@@ -382,7 +382,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                                 <Loader2 className="w-5 h-5 animate-spin" />
                                 <span>جاري الحفظ...</span>
                             </div>
-                        ) : "حفظ البيانات"}
+                        ) : "حفظ "}
                     </button>
                     <button
                         type="button"
