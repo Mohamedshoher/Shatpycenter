@@ -106,7 +106,11 @@ export const TeacherCollectionTab = ({
 
                 {/* زر الشهر التالي/الحالي */}
                 <button
-                    onClick={() => updateMonth(0)}
+                    onClick={() => {
+                        const today = new Date();
+                        const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                        updateMonth(monthStr);
+                    }}
                     className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
                 >
                     <span className="hidden md:inline">الشهر الحالي</span>
@@ -117,7 +121,7 @@ export const TeacherCollectionTab = ({
             {/* 2. نموذج إضافة تحصيل جديد - مخفي للمدرس */}
             {!isTeacher && (
                 <div className="bg-white p-6 rounded-[32px] border-2 border-teal-500/10 shadow-sm space-y-4">
-                    <div className="flex flex-row-reverse items-center gap-2 text-teal-600 mb-2">
+                    <div className="flex flex-row items-center gap-2 text-teal-600 mb-2">
                         <CircleDollarSign size={20} />
                         <h4 className="font-bold">تسجيل مبلغ محصل من المدرس</h4>
                     </div>
@@ -216,7 +220,7 @@ export const TeacherCollectionTab = ({
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {collectionHistoryMapped.map((record: { id: string, amount: string, date: string, type: string, notes: string }) => (
+                        {collectionHistoryMapped.map((record: { id: string, amount: string, date: string, timestamp?: number, type: string, notes: string }) => (
                             <div key={record.id} className="bg-white p-5 rounded-[28px] border border-slate-50 shadow-sm hover:border-teal-100 transition-all group">
                                 <div className="flex flex-row-reverse items-start justify-between">
                                     <div className="flex flex-row-reverse items-center gap-3">
@@ -225,7 +229,12 @@ export const TeacherCollectionTab = ({
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-black text-slate-900 font-sans">{Number(record.amount).toLocaleString()} ج.م</p>
-                                            <p className="text-[10px] font-bold text-slate-400 mt-0.5">{record.date}</p>
+                                            <p className="text-[10px] font-bold text-slate-400 mt-0.5" dir="ltr">
+                                                {record.timestamp 
+                                                    ? new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: '2-digit', year: 'numeric' }).format(record.timestamp)
+                                                    : record.date
+                                                }
+                                            </p>
                                         </div>
                                     </div>
                                     {!isTeacher && (

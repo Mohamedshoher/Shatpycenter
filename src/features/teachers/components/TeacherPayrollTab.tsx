@@ -1,6 +1,7 @@
 "use client";
 
 import { Calendar, CircleDollarSign, MessageCircle, Trash2, Loader, ChevronRight, ChevronLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
 interface TeacherPayrollTabProps {
     selectedMonth: string;
     selectedMonthRaw: string;
@@ -18,6 +19,8 @@ interface TeacherPayrollTabProps {
     handlePaySalary: (amount: number, description: string) => void;
     handleSendReport: () => void;
     deleteSalaryMutation: any;
+    isSettlementMode: boolean; // إضافة هنا
+    setIsSettlementMode: (val: boolean) => void; // إضافة هنا
 }
 
 export const TeacherPayrollTab = ({
@@ -36,7 +39,9 @@ export const TeacherPayrollTab = ({
     paymentsHistory,
     handlePaySalary,
     handleSendReport,
-    deleteSalaryMutation
+    deleteSalaryMutation,
+    isSettlementMode,
+    setIsSettlementMode
 }: TeacherPayrollTabProps) => {
 
     return (
@@ -78,6 +83,22 @@ export const TeacherPayrollTab = ({
                     <span className="hidden md:inline">الشهر الحالي</span>
                     <ChevronLeft size={16} />
                 </button>
+
+                {/* زر التصفية الحالية */}
+                {!isTeacher && (
+                    <button
+                        onClick={() => setIsSettlementMode(!isSettlementMode)}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all h-10 md:h-auto border",
+                            isSettlementMode
+                                ? "bg-red-600 text-white border-red-700 shadow-lg shadow-red-200"
+                                : "bg-teal-50 text-teal-700 border-teal-100 hover:bg-teal-100"
+                        )}
+                    >
+                        <CircleDollarSign size={14} />
+                        {isSettlementMode ? "إلغاء التصفية" : "تصفية حساب حالية"}
+                    </button>
+                )}
             </div>
 
             {/* بطاقة الراتب والمستحقات (كرت المحاسبة الرئيسي) */}
@@ -139,6 +160,19 @@ export const TeacherPayrollTab = ({
                         </div>
                     </div>
                 </div>
+
+                {/* تنبيه وضع التصفية */}
+                {isSettlementMode && (
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-3xl flex flex-row-reverse items-center gap-3 animate-pulse">
+                        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 shrink-0">
+                            <Calendar size={20} />
+                        </div>
+                        <div className="text-right">
+                            <h5 className="text-xs font-black text-amber-800">وضع التصفية النشط</h5>
+                            <p className="text-[10px] font-bold text-amber-600">يتم الآن حساب الراتب الأساسي بناءً على أيام العمل المنقضية فقط من الشهر الحالي.</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* سجل الدفعات النقدية المصروفة لهذا الشهر */}
                 <div className="space-y-4 pt-4 border-t border-gray-50 relative z-10">
