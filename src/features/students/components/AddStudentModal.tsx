@@ -10,7 +10,6 @@ import { Student, Group } from '@/types';
 import { getGroups } from '@/features/groups/services/groupService';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
-import { addToOfflineQueue } from '@/lib/offline-queue';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -69,7 +68,6 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
         },
         onError: (err, newStudent, context: any) => {
             queryClient.setQueryData(['students'], context?.previousStudents);
-            addToOfflineQueue('student_add', newStudent);
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['students'] });

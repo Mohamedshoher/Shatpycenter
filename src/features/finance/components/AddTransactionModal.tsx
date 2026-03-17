@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 import { addTransaction } from '../services/financeService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { addToOfflineQueue } from '@/lib/offline-queue';
 
 interface AddTransactionModalProps {
     isOpen: boolean;
@@ -73,15 +72,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
             onClose();
         },
         onError: (err, newRecord) => {
-            console.log('Transaction failed, adding to offline queue');
-            addToOfflineQueue('transaction_add', {
-                amount: newRecord.amount,
-                type: newRecord.type,
-                category: newRecord.category,
-                date: newRecord.date,
-                description: newRecord.title,
-                performedBy: user?.uid || 'unknown'
-            });
+            console.error('Transaction failed', err);
         },
         onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });

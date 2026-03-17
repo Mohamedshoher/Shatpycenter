@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-export type TeacherAttendanceStatus = 'present' | 'absent' | 'quarter' | 'half' | 'quarter_reward' | 'half_reward';
+export type TeacherAttendanceStatus = 'present' | 'absent' | 'quarter' | 'half' | 'quarter_reward' | 'half_reward' | 'full_reward';
 
 export interface TeacherAttendanceRecord {
     id: string;

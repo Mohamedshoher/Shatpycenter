@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStudents, updateStudent } from '../services/studentService';
 import { Student } from '@/types';
-import { addToOfflineQueue } from '@/lib/offline-queue';
 
 export const useStudents = () => {
     const queryClient = useQueryClient();
@@ -31,11 +30,7 @@ export const useStudents = () => {
             });
             return { previousStudents };
         },
-        onError: (err, variables) => {
-            const updateData: Partial<Student> = { status: variables.status };
-            if (variables.status === 'active') updateData.groupId = variables.groupId;
-            addToOfflineQueue('student_update', { id: variables.id, updates: updateData });
-        },
+
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['students'] });
         },
@@ -55,9 +50,7 @@ export const useStudents = () => {
             });
             return { previousStudents };
         },
-        onError: (err, id) => {
-            addToOfflineQueue('student_delete', { id });
-        },
+
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['students'] });
         },

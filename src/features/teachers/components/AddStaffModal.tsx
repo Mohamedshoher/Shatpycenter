@@ -1,8 +1,16 @@
-"use client";
+"use client"; // توجيه لاستخدام المكون في جانب العميل (Client-side)
 
-import { useState, useEffect } from 'react';
-import Modal from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
+// ==========================================
+// 1. استيراد المكتبات الأساسية ومكونات واجهة المستخدم
+// ==========================================
+import { useState, useEffect } from 'react'; // هوكس إدارة الحالة والتأثيرات من React
+import Modal from '@/components/ui/modal'; // مكون النافذة المنبثقة الأساسي
+import { Button } from '@/components/ui/button'; // مكون الزر الجاهز
+import { cn } from '@/lib/utils'; // وظيفة لدمج أصناف CSS بشكل ديناميكي
+
+// ==========================================
+// 2. استيراد الأيقونات
+// ==========================================
 import {
     User,
     Phone,
@@ -15,20 +23,31 @@ import {
     CheckCircle2,
     AlertCircle
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { addTeacher, updateTeacher } from '../services/teacherService';
-import { Teacher } from '@/types';
-import { addToOfflineQueue } from '@/lib/offline-queue';
 
+// ==========================================
+// 3. استيراد أدوات إدارة البيانات (React Query & Services)
+// ==========================================
+import { useMutation, useQueryClient } from '@tanstack/react-query'; // خطافات جلب وتعديل البيانات
+import { addTeacher, updateTeacher } from '../services/teacherService'; // خدمات التواصل مع قاعدة البيانات للموظفين
+import { Teacher } from '@/types'; // استيراد نوع بيانات المعلم
+
+// ==========================================
+// 4. تعريف خصائص المكون (Props)
+// ==========================================
 interface AddStaffModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    initialTeacher?: Teacher | null;
+    isOpen: boolean; // حالة فتح النافذة
+    onClose: () => void; // وظيفة إغلاق النافذة
+    initialTeacher?: Teacher | null; // بيانات الموظف في حالة "التعديل" (إن وجدت)
 }
 
+// ==========================================
+// 5. المكون الرئيسي: نافذة إضافة أو تعديل موظف
+// ==========================================
 export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddStaffModalProps) {
-    const queryClient = useQueryClient();
+    const queryClient = useQueryClient(); // أداة لإدارة تحديث البيانات محلياً (Cache)
+
+    // --- حالة النموذج (Form State) ---
+    // تخزين المدخلات مع تعيين قيم افتراضية بناءً على ما إذا كنا في وضع "الإضافة" أو "التعديل"
     const [formData, setFormData] = useState({
         fullName: initialTeacher?.fullName || '',
         phone: initialTeacher?.phone || '',
@@ -42,9 +61,13 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
         responsibleSections: (initialTeacher as any)?.responsibleSections || ['قرآن'] as string[],
     });
 
+    // حالة تخزين وعرض الأخطاء
     const [error, setError] = useState<string | null>(null);
 
-    // Update form when initialTeacher changes
+    // ==========================================
+    // التأثيرات الجانبية (Effects)
+    // ==========================================
+    // تحديث بيانات النموذج تلقائياً عند تغيير الموظف الممرر للمكون (عند فتح النافذة للتعديل)
     useEffect(() => {
         if (initialTeacher) {
             setFormData({
@@ -62,23 +85,32 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
         }
     }, [initialTeacher]);
 
+    // ==========================================
+    // الدوال المساعدة (Helper Functions)
+    // ==========================================
+    // وظيفة لإضافة أو إزالة قسم من قائمة الأقسام المسؤولة للمشرف
     const toggleSection = (section: string) => {
         setFormData(prev => ({
             ...prev,
             responsibleSections: prev.responsibleSections.includes(section)
-                ? prev.responsibleSections.filter((s: string) => s !== section)
-                : [...prev.responsibleSections, section]
+                ? prev.responsibleSections.filter((s: string) => s !== section) // إزالة إذا كان موجوداً
+                : [...prev.responsibleSections, section] // إضافة إذا لم يكن موجوداً
         }));
     };
 
+    // ==========================================
+    // معالجة البيانات (Mutation) للإضافة والتعديل
+    // ==========================================
     const mutation = useMutation({
+        // دالة التنفيذ الفعلية
         mutationFn: async (data: any) => {
-            setError(null); // Clear previous errors
+            setError(null); // مسح الأخطاء السابقة
             if (initialTeacher) {
-                return await updateTeacher(initialTeacher.id, data);
+                return await updateTeacher(initialTeacher.id, data); // تعديل موظف حالي
             }
-            return await addTeacher(data);
+            return await addTeacher(data); // إضافة موظف جديد
         },
+        // التحديث المتفائل (Optimistic Update) لجعل واجهة المستخدم سريعة الاستجابة
         onMutate: async (newData) => {
             await queryClient.cancelQueries({ queryKey: ['teachers'] });
             const previousTeachers = queryClient.getQueryData(['teachers']);
@@ -88,14 +120,16 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                 if (initialTeacher) {
                     return old.map((t: any) => t.id === initialTeacher.id ? { ...t, ...newData } : t);
                 }
-                return [...old, { ...newData, id: 'temp-' + Date.now() }];
+                return [...old, { ...newData, id: 'temp-' + Date.now() }]; // إنشاء ID مؤقت
             });
 
             return { previousTeachers };
         },
+        // عند نجاح العملية
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['teachers'] });
-            onClose();
+            queryClient.invalidateQueries({ queryKey: ['teachers'] }); // تحديث البيانات من الخادم
+            onClose(); // إغلاق النافذة
+            // تفريغ النموذج فقط إذا كانت عملية إضافة (وليست تعديل)
             if (!initialTeacher) {
                 setFormData({
                     fullName: '',
@@ -111,28 +145,30 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                 });
             }
         },
+        // عند حدوث خطأ
         onError: (err: any, variables) => {
-            console.log("Teacher mutation failed, adding to offline queue");
-            if (initialTeacher) {
-                addToOfflineQueue('teacher_update', { id: initialTeacher.id, updates: variables });
-            } else {
-                addToOfflineQueue('teacher_add', variables);
-            }
-            // Close modal even on error if it's queued
+            console.error("Teacher mutation failed", err);
             onClose();
         }
     });
 
+    // معالج زر إرسال النموذج (Submit)
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        // إنشاء بريد إلكتروني وهمي لغرض تسجيل الدخول بناءً على رقم الهاتف
         const email = formData.phone + "@shadbi.com";
+        // إرسال البيانات مع الحفاظ على المجموعات المعينة مسبقاً في حالة التعديل
         mutation.mutate({ ...formData, email, assignedGroups: initialTeacher?.assignedGroups || [] });
     };
 
+    // ==========================================
+    // واجهة المستخدم (Render)
+    // ==========================================
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="إضافة موظف جديد">
+        <Modal isOpen={isOpen} onClose={onClose} title="إضافة معلم جديد">
             <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Error Alert */}
+                
+                {/* 1. تنبيه الأخطاء (Error Alert) */}
                 {error && (
                     <div className="bg-red-50 text-red-600 p-4 rounded-[18px] border border-red-100 flex items-center gap-2 text-sm font-bold animate-in fade-in slide-in-from-top-2">
                         <AlertCircle size={18} />
@@ -140,7 +176,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 )}
 
-                {/* Role Toggle */}
+                {/* 2. اختيار الدور: مدرس أم مشرف (Role Toggle) */}
                 <div className="bg-gray-50/50 p-1 rounded-[20px] flex gap-1 border border-gray-100">
                     <button
                         type="button"
@@ -170,7 +206,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </button>
                 </div>
 
-                {/* Name & Phone */}
+                {/* 3. البيانات الأساسية: الاسم ورقم الهاتف (Name & Phone) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5 text-right">
                         <label className="text-[10px] font-black text-gray-400 uppercase mr-1">الاسم</label>
@@ -201,7 +237,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 </div>
 
-                {/* Accounting Type Section */}
+                {/* 4. نوع المحاسبة المالية: راتب ثابت أم شراكة (Accounting Type Section) */}
                 <div className="bg-teal-50/30 p-4 rounded-[28px] border border-teal-50 space-y-4">
                     <h4 className="text-xs font-black text-teal-700 text-center uppercase tracking-wider">نوع المحاسبة:</h4>
                     <div className="grid grid-cols-2 gap-3">
@@ -234,8 +270,10 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 </div>
 
-                {/* Dynamic Fields Grid */}
+                {/* 5. الحقول الديناميكية (الراتب/النسبة) وحقل كلمة المرور (Dynamic Fields Grid) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* عرض حقل الراتب إذا كان النوع "ثابت"، وعرض حقل النسبة إذا كان "شراكة" */}
                     {formData.accountingType === 'fixed' ? (
                         <div className="space-y-1.5 text-right">
                             <label className="text-[10px] font-black text-gray-400 uppercase mr-1">الراتب الأساسي</label>
@@ -269,6 +307,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                         </div>
                     )}
 
+                    {/* حقل إدخال كلمة المرور للموظف للولوج للنظام */}
                     <div className="space-y-1.5 text-right">
                         <label className="text-[10px] font-black text-gray-400 uppercase mr-1">كلمة المرور</label>
                         <div className="relative group">
@@ -285,7 +324,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 </div>
 
-                {/* Status Dropdown */}
+                {/* 6. قائمة منسدلة لحالة الموظف (Status Dropdown) */}
                 <div className="space-y-1.5 text-right">
                     <label className="text-[10px] font-black text-gray-400 uppercase mr-1">الحالة</label>
                     <select
@@ -299,7 +338,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </select>
                 </div>
 
-                {/* Supervisor Specific Sections (Matches Image) */}
+                {/* 7. الأقسام المسؤولة (تظهر فقط إذا كان الدور "مشرف") */}
                 {formData.role === 'supervisor' && (
                     <div className="bg-blue-50/50 p-5 rounded-[28px] border border-blue-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                         <h4 className="text-xs font-black text-blue-800 text-center uppercase tracking-wider">الأقسام المسؤول عنها:</h4>
@@ -331,7 +370,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 )}
 
-                {/* Buttons */}
+                {/* 8. أزرار الإجراءات (حفظ وإلغاء) */}
                 <div className="flex items-center gap-3 pt-6">
                     <button
                         type="submit"

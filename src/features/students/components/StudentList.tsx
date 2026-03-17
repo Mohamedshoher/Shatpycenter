@@ -22,7 +22,6 @@ import {
     User,
     BookOpen
 } from 'lucide-react';
-import { addToOfflineQueue } from '@/lib/offline-queue';
 import {
     calculateTotalAbsence,
     calculateContinuousAbsence
@@ -269,13 +268,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             // نحدث كاش الطالب الفردي فقط للتأكيد
             queryClient.invalidateQueries({ queryKey: ['attendance', student.id] });
         } catch (error) {
-            console.error('Error saving attendance, adding to offline queue:', error);
-            addToOfflineQueue('attendance', {
-                studentId: student.id,
-                day,
-                month: monthKey,
-                status
-            });
+            console.error('Error saving attendance:', error);
         }
     }, [queryClient]);
 

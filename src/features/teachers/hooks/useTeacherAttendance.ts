@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTeacherAttendance, getAllTeachersAttendance, updateTeacherAttendance, TeacherAttendanceStatus } from "../services/attendanceService";
-import { addToOfflineQueue } from "@/lib/offline-queue";
 
 export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
     const queryClient = useQueryClient();
@@ -37,16 +36,7 @@ export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
                 }
             }));
         },
-        onError: (err, variables) => {
-            if (teacherId) {
-                addToOfflineQueue('teacher_attendance', {
-                    teacherId,
-                    date: variables.date,
-                    status: variables.status,
-                    notes: variables.notes
-                });
-            }
-        },
+
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['teacher-attendance', teacherId, monthKey] });
             queryClient.invalidateQueries({ queryKey: ['all-teachers-attendance', monthKey] });

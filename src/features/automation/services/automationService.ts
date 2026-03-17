@@ -547,7 +547,8 @@ export const sendManualNotification = async (
         const isReward = type === 'reward';
         const title = isReward ? '🌟 مكافأة إدارية' : '⚠️ تنبيه إداري';
 
-        const message = `${title}:\n\nتم تسجيل ${isReward ? 'مكافأة مالية' : 'خصم مالي'} بقيمة ${amount} ج.م.\nالبيان: ${note || 'بدون سبب'}`;
+        const unit = amount <= 5 ? 'يوم' : 'ج.م';
+        const message = `${title}:\n\nتم تسجيل ${isReward ? 'مكافأة' : 'خصم'} بقيمة ${amount} ${unit}.\nالبيان: ${note || 'بدون سبب'}`;
 
         const conversation = await chatService.getOrCreateConversation(
             [senderId, teacherId],

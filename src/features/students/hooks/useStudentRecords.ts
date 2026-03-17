@@ -13,7 +13,6 @@ import {
     getStudentExemptions,
     deleteExemptionRecord
 } from "../services/recordsService";
-import { addToOfflineQueue } from "@/lib/offline-queue";
 
 export const useStudentRecords = (studentId: string) => {
     const queryClient = useQueryClient();
@@ -57,8 +56,7 @@ export const useStudentRecords = (studentId: string) => {
             return { previousAttendance };
         },
         onError: (err, newRecord, context) => {
-            console.error('Attendance mutation error, saving to offline queue:', err);
-            addToOfflineQueue('attendance', newRecord);
+            console.error('Attendance mutation error:', err);
             // We don't rollback the cache here because we want it to stay "saved" in UI
         },
         onSettled: () => {
@@ -76,9 +74,7 @@ export const useStudentRecords = (studentId: string) => {
             queryClient.setQueryData(['exams', studentId], (old: any) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
             return { previousExams };
         },
-        onError: (err, newRecord) => {
-            addToOfflineQueue('exam', newRecord);
-        },
+
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['exams', studentId] });
         }
@@ -92,9 +88,7 @@ export const useStudentRecords = (studentId: string) => {
             queryClient.setQueryData(['fees', studentId], (old: any) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
             return { previousFees };
         },
-        onError: (err, newRecord) => {
-            addToOfflineQueue('fee', newRecord);
-        },
+
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['fees'] });
         }
@@ -167,9 +161,7 @@ export const useStudentRecords = (studentId: string) => {
             queryClient.setQueryData(['plans', studentId], (old: any) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
             return { previousPlans };
         },
-        onError: (err, newRecord) => {
-            addToOfflineQueue('plan', newRecord);
-        },
+
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['plans', studentId] });
         }

@@ -7,7 +7,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { deleteTeacher } from '../services/teacherService';
-import { addToOfflineQueue } from '@/lib/offline-queue';
 import {
     UserPlus,
     Search,
@@ -26,33 +25,40 @@ import { updateTeacherAttendance } from '../services/attendanceService';
 import { useTeacherAttendance, useAllTeachersAttendance } from '../hooks/useTeacherAttendance';
 import dynamic from 'next/dynamic';
 
+// تحميل المكونات ديناميكياً
 const TeacherDetailModal = dynamic(() => import('./TeacherDetailModal'), { ssr: false });
 const AddStaffModal = dynamic(() => import('./AddStaffModal'), { ssr: false });
 
 export default function TeacherList() {
+    // جلب البيانات الأساسية من الخطافات
     const { data: teachers, isLoading } = useTeachers();
     const { toggleSidebar } = useUIStore();
     const { user } = useAuthStore();
     const { data: groups } = useGroups();
 
     const queryClient = useQueryClient();
+    
+    // حالات البحث والفلترة
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [filter, setFilter] = useState('نشط');
     const [sectionFilter, setSectionFilter] = useState('الكل');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+    // حالات النوافذ (Modals)
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
 
+    // حالة الحضور
     const today = new Date();
     const [selectedMonthRaw, setSelectedMonthRaw] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
     const { data: allTeachersAttendanceMap = {} } = useAllTeachersAttendance(selectedMonthRaw);
 
     const { updateAttendance, updateAttendanceAsync } = useTeacherAttendance(selectedTeacher?.id, selectedMonthRaw);
 
+    // دالة حذف المدرس
     const deleteMutation = useMutation({
         mutationFn: (id: string) => deleteTeacher(id),
         onMutate: async (id) => {
@@ -64,19 +70,18 @@ export default function TeacherList() {
             });
             return { previousTeachers };
         },
-        onError: (err, id) => {
-            addToOfflineQueue('teacher_delete', { id });
-        },
+
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['teachers'] });
             setIsDetailOpen(false);
         }
     });
 
+    // معالجات الأحداث
     const handleEdit = (teacher: Teacher) => {
         setEditingTeacher(teacher);
         setIsAddModalOpen(true);
-        setIsDetailOpen(false); // Close detail modal if open
+        setIsDetailOpen(false);
     };
 
     const handleDelete = (teacher: Teacher) => {
@@ -92,17 +97,8 @@ export default function TeacherList() {
 
     const handleQuickAttendance = (teacherId: string, status: 'present' | 'absent') => {
         const todayDate = new Date().toISOString().split('T')[0];
-        // We need to use the mutation from useTeacherAttendance even if teacher is not "selected" in the detailed view context
-        // But the hook is per-teacher. This is a bit tricky. 
-        // Let's call updateAttendanceAsync if it exists or define a global teacher attendance mutation.
-        // For simplicity, let's just use the direct service but wrap it in a logic that handles offline.
-        // BETTER: Since we already updated useTeacherAttendance, if we can't use it easily here, 
-        // we should define a useUpdateTeacherAttendance hook.
-
-        // Actually, updateTeacherAttendance service is imported on line 24.
-        // Let's just use addToOfflineQueue directly if it fails, or better, use a mutation.
-        updateTeacherAttendance(teacherId, todayDate, status).catch(() => {
-            addToOfflineQueue('teacher_attendance', { teacherId, date: todayDate, status });
+        updateTeacherAttendance(teacherId, todayDate, status).catch((error) => {
+            console.error('Attendance mutation error:', error);
         }).finally(() => {
             queryClient.invalidateQueries({ queryKey: ['all-teachers-attendance', selectedMonthRaw] });
         });
@@ -164,7 +160,7 @@ export default function TeacherList() {
 
     return (
         <div className="pb-24 transition-all duration-500">
-            {/* Sticky Header */}
+            {/* الشريط العلوي */}
             <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
                 <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
                     <div className="flex items-center gap-2 relative z-50">
@@ -289,7 +285,7 @@ export default function TeacherList() {
                 </div>
             </div>
 
-            {/* Teacher Grid */}
+            {/* شبكة المدرسين */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 mt-2 max-w-7xl mx-auto">
                 {filteredTeachers?.map((teacher) => (
                     <div
@@ -297,7 +293,7 @@ export default function TeacherList() {
                         onClick={() => handleOpenDetail(teacher)}
                         className="bg-white rounded-[32px] p-5 shadow-sm border border-gray-50 flex flex-col gap-4 relative group cursor-pointer hover:border-teal-200 transition-all hover:shadow-md"
                     >
-                        {/* Top Section */}
+                        {/* الجزء العلوي */}
                         <div className="flex items-center justify-between group/card">
                             <div className="flex items-center gap-2 min-w-0">
                                 <div className="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-500 shrink-0">
@@ -327,7 +323,7 @@ export default function TeacherList() {
                             </a>
                         </div>
 
-                        {/* Bottom Section: Attendance Status (View only for Teacher) */}
+                        {/* الجزء السفلي: الحضور */}
                         <div className="flex items-center gap-2 pt-2 border-t border-gray-50" onClick={(e) => e.stopPropagation()}>
                             {(() => {
                                 const todayDay = new Date().getDate();
@@ -378,7 +374,8 @@ export default function TeacherList() {
                     </div>
                 ))}
             </div>
-            {/* نافذة تفاصيل المعلم */}
+            
+            {/* المودالز */}
             <TeacherDetailModal
                 teacher={selectedTeacher}
                 isOpen={isDetailOpen}
@@ -387,7 +384,6 @@ export default function TeacherList() {
                 onDelete={handleDelete}
             />
 
-            {/* نافذة إضافة موظف جديد */}
             <AddStaffModal
                 isOpen={isAddModalOpen}
                 onClose={() => {

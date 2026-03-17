@@ -1,36 +1,43 @@
-"use client"; // توجيه لاستخدام المكون في جانب العميل
+"use client"; // توجيه لاستخدام المكون في جانب العميل (Client-side)
 
-// استيراد المكتبات والأيقونات اللازمة لواجهة المستخدم والأنيميشن
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    X,
-    Calendar,
-    CreditCard,
-    Briefcase,
-    Phone,
-    MessageCircle,
-    FileText,
-    Users,
-    Trash2,
-    Edit3,
-    Plus,
-    CircleDollarSign,
-    Coins,
-    CheckCircle2,
-    AlertCircle,
-    Loader,
-    UserX,
-    Gift,
-    ChevronRight,
-    ChevronLeft,
-    Layers
-} from 'lucide-react';
-import { Teacher } from '@/types'; // استيراد نوع بيانات المعلم
-import { useState, useEffect } from 'react'; // هوكس الحالة والتأثيرات
-import { cn } from '@/lib/utils'; // وظيفة دمج أصناف CSS
+// ==========================================
+// 1. استيراد المكتبات والأدوات الأساسية
+// ==========================================
+import { useState, useEffect } from 'react'; // هوكس الحالة والتأثيرات من React
+import { motion, AnimatePresence } from 'framer-motion'; // مكتبة الحركات والأنيميشن
+import { cn } from '@/lib/utils'; // وظيفة لدمج أصناف CSS بشكل ديناميكي
 import { Button } from '@/components/ui/button'; // مكون الزر الجاهز
+import { supabase } from '@/lib/supabase'; // عميل قاعدة بيانات Supabase
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'; // مكتبة إدارة جلب البيانات
 
-// تعريف خصائص المكون (Props)
+// ==========================================
+// 2. استيراد الأيقونات
+// ==========================================
+import {
+    X, Calendar, CreditCard, Briefcase, Phone, MessageCircle, FileText,
+    Users, Trash2, Edit3, Plus, CircleDollarSign, Coins, CheckCircle2,
+    AlertCircle, Loader, UserX, Gift, ChevronRight, ChevronLeft, Layers
+} from 'lucide-react';
+
+// ==========================================
+// 3. استيراد الأنواع (Types) والخطافات (Hooks) والخدمات (Services)
+// ==========================================
+import { Teacher } from '@/types';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useStudents } from '@/features/students/hooks/useStudents';
+import { useGroups } from '@/features/groups/hooks/useGroups';
+import { useTeachers } from '@/features/teachers/hooks/useTeachers';
+import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeductions';
+import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
+import { DeductionsList } from '@/features/teachers/components/DeductionsList';
+import { getFeesByMonth, deleteFeeRecord } from '@/features/students/services/recordsService';
+import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction, addTransaction } from '@/features/finance/services/financeService';
+import { updateGroup } from '@/features/groups/services/groupService';
+import { automationService } from '@/features/automation/services/automationService';
+
+// ==========================================
+// 4. تعريف خصائص المكون (Props)
+// ==========================================
 interface TeacherDetailModalProps {
     teacher: Teacher | null; // بيانات المعلم المختار
     isOpen: boolean; // حالة فتح النافذة
@@ -39,21 +46,9 @@ interface TeacherDetailModalProps {
     onDelete?: (teacher: Teacher) => void; // وظيفة الحذف
 }
 
-import { useStudents } from '@/features/students/hooks/useStudents';
-import { useGroups } from '@/features/groups/hooks/useGroups';
-import { useTeachers } from '@/features/teachers/hooks/useTeachers';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeductions';
-import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
-import { DeductionsList } from '@/features/teachers/components/DeductionsList';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { getFeesByMonth, deleteFeeRecord } from '@/features/students/services/recordsService';
-import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction } from '@/features/finance/services/financeService';
-import { addTransaction } from '@/features/finance/services/financeService';
-import { supabase } from '@/lib/supabase';
-import { updateGroup } from '@/features/groups/services/groupService';
-import { automationService } from '@/features/automation/services/automationService';
-
+// ==========================================
+// 5. المكون الرئيسي
+// ==========================================
 export default function TeacherDetailModal({
     teacher,
     isOpen,
@@ -61,13 +56,25 @@ export default function TeacherDetailModal({
     onEdit,
     onDelete
 }: TeacherDetailModalProps) {
+    
+    // --- تهيئة الأدوات الأساسية ---
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
+    
+    // --- تحديد صلاحيات المستخدم الحالي ---
+    const isTeacher = user?.role === 'teacher';
+    const isDirectorOnly = user?.role === 'director';
+    const isDirector = user?.role === 'director' || user?.role === 'supervisor';
+
+    // --- جلب البيانات العامة ---
     const { data: students } = useStudents();
     const { data: groups } = useGroups();
     const { data: teachers } = useTeachers();
-    const { deductions, loading: deductionsLoading, loadDeductions, applyDeduction } = useTeacherDeductions(teacher?.id);
-
-
+    
+    // ==========================================================
+    // الدوال المساعدة (Helper Functions)
+    // ==========================================================
+    
     // دالة لتحويل الأرقام العربية إلى إنجليزية
     const arabicToEnglishNumber = (str: string): number => {
         const arabicNumerals = '٠١٢٣٤٥٦٧٨٩';
@@ -75,9 +82,9 @@ export default function TeacherDetailModal({
         return parseInt(converted.replace(/[^0-9]/g, '')) || 0;
     };
 
-    // دالة لجلب اسم الشهر والسنة بشكل ديناميكي بناءً على تاريخ محدد
+    // دالة لجلب اسم الشهر والسنة بشكل ديناميكي
     const getMonthLabel = (offset: number) => {
-        const d = new Date(); // استخدام التاريخ الفعلي الحالي
+        const d = new Date();
         d.setMonth(d.getMonth() + offset);
         return new Intl.DateTimeFormat('ar-EG', { month: 'long', year: 'numeric' }).format(d);
     };
@@ -85,68 +92,7 @@ export default function TeacherDetailModal({
     const currentMonthLabel = getMonthLabel(0); // الشهر الحالي
     const previousMonthLabel = getMonthLabel(-1); // الشهر السابق
 
-    const { user } = useAuthStore();
-    const isTeacher = user?.role === 'teacher';
-    const isDirectorOnly = user?.role === 'director';
-    const isDirector = user?.role === 'director' || user?.role === 'supervisor';
-
-    const [selectedMonth, setSelectedMonth] = useState(currentMonthLabel); // الشهر المختار للعرض
-    const today = new Date();
-    const [selectedMonthRaw, setSelectedMonthRaw] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`); // القيمة الخام للمدخل (YYYY-MM)
-
-    // جلب بيانات الحضور للشهر المختار
-    const { attendance: attendanceData, updateAttendanceAsync } = useTeacherAttendance(teacher?.id, selectedMonthRaw);
-
-    // --- جلب البيانات الفعلية من Supabase ---
-    const { data: allFees = [] } = useQuery({
-        queryKey: ['fees', 'month', selectedMonthRaw],
-        queryFn: async () => {
-            const feesByKey = await getFeesByMonth(selectedMonthRaw);
-            // Also try fetching by Arabic label to support old/mixed data
-            const feesByLabel = await getFeesByMonth(selectedMonth);
-
-            // Merge and deduplicate
-            const seen = new Set();
-            return [...feesByKey, ...feesByLabel].filter(f => {
-                if (seen.has(f.id)) return false;
-                seen.add(f.id);
-                return true;
-            });
-        },
-        enabled: !!selectedMonthRaw && isOpen
-    });
-
-    const { data: handovers = [] } = useQuery({
-        queryKey: ['handovers', teacher?.id, selectedMonthRaw],
-        queryFn: () => getTeacherHandovers(teacher!.id, selectedMonthRaw),
-        enabled: !!teacher?.id && !!selectedMonthRaw && isOpen
-    });
-
-    // حساب المصروفات المتوقعة (مجموع رسوم الطلاب في مجموعات هذا المدرس)
-    const expectedExpenses = (() => {
-        if (!teacher || !groups || !students) return 0;
-        const teacherGroupIds = groups
-            .filter(g => g.teacherId === teacher.id)
-            .map(g => g.id);
-
-        return students
-            .filter(s => {
-                const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
-                if (!isMember) return false;
-
-                // تصفية الطلاب بناءً على تاريخ التحاقهم: لا يظهر الطالب في كشف شهر يسبق تاريخ دخوله
-                if (s.enrollmentDate) {
-                    const enrollYearMonth = s.enrollmentDate.substring(0, 7); // YYYY-MM
-                    return enrollYearMonth <= selectedMonthRaw;
-                }
-                return true;
-            })
-            .reduce((sum, s) => sum + (Number(s.monthlyAmount) || 0), 0);
-    })();
-
-    // --- منطق "ما حصله المدرس" ---
-    const [showCollectedDetails, setShowCollectedDetails] = useState(false);
-
+    // دالة لتوحيد النصوص (إزالة التشكيل والمسافات) للمطابقة الدقيقة
     const normalize = (s: string) => {
         if (!s) return '';
         return s
@@ -159,31 +105,158 @@ export default function TeacherDetailModal({
             .trim();
     };
 
+    // ==========================================
+    // إدارة حالة الشهر والتواريخ
+    // ==========================================
+    const today = new Date();
+    const [selectedMonth, setSelectedMonth] = useState(currentMonthLabel); // الشهر المعروض للمستخدم
+    const [selectedMonthRaw, setSelectedMonthRaw] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`); // القيمة التقنية للشهر (YYYY-MM)
+
+    // وظيفة لتحديث الشهر (للأمام/للخلف أو باختيار مباشر)
+    const updateMonth = (offsetOrValue: number | string) => {
+        let newDate: Date;
+        if (typeof offsetOrValue === 'number') {
+            const [year, month] = selectedMonthRaw.split('-');
+            newDate = new Date(parseInt(year), parseInt(month) - 1 + offsetOrValue, 1);
+        } else {
+            const [year, month] = offsetOrValue.split('-');
+            newDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+        }
+
+        const yearStr = newDate.getFullYear();
+        const monthStr = String(newDate.getMonth() + 1).padStart(2, '0');
+        const rawValue = `${yearStr}-${monthStr}`;
+
+        setSelectedMonthRaw(rawValue);
+        setSelectedMonth(new Intl.DateTimeFormat('ar-EG', { month: 'long', year: 'numeric' }).format(newDate));
+        setActiveDayMenu(null); // إغلاق قائمة التعديل عند تغيير الشهر
+    };
+
+    // ==========================================
+    // جلب البيانات الخاصة بالمعلم (Queries)
+    // ==========================================
+    
+    // 1. جلب الخصومات
+    const { deductions, loading: deductionsLoading, loadDeductions, applyDeduction } = useTeacherDeductions(teacher?.id);
+
+    // 2. جلب الحضور
+    const { attendance: attendanceData, updateAttendanceAsync } = useTeacherAttendance(teacher?.id, selectedMonthRaw);
+
+    // 3. جلب المصروفات/الرسوم للشهر المختار
+    const { data: allFees = [] } = useQuery({
+        queryKey: ['fees', 'month', selectedMonthRaw],
+        queryFn: async () => {
+            const feesByKey = await getFeesByMonth(selectedMonthRaw);
+            const feesByLabel = await getFeesByMonth(selectedMonth);
+            // دمج البيانات ومنع التكرار
+            const seen = new Set();
+            return [...feesByKey, ...feesByLabel].filter(f => {
+                if (seen.has(f.id)) return false;
+                seen.add(f.id);
+                return true;
+            });
+        },
+        enabled: !!selectedMonthRaw && isOpen
+    });
+
+    // 4. جلب عمليات تسليم النقدية (ما سلمه المعلم للمدير)
+    const { data: handovers = [] } = useQuery({
+        queryKey: ['handovers', teacher?.id, selectedMonthRaw],
+        queryFn: () => getTeacherHandovers(teacher!.id, selectedMonthRaw),
+        enabled: !!teacher?.id && !!selectedMonthRaw && isOpen
+    });
+
+    // 5. جلب الإعفاءات
+    const { data: exemptions = [] } = useQuery({
+        queryKey: ['free_exemptions', selectedMonthRaw],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('free_exemptions')
+                .select('*')
+                .eq('month', selectedMonthRaw);
+            if (error) {
+                console.warn('جدول free_exemptions غير موجود أو خطأ:', error.message);
+                return [];
+            }
+            return data || [];
+        },
+        enabled: isOpen
+    });
+
+    // 6. جلب سجل الرواتب
+    const { data: paymentsHistory = [], isLoading: paymentsLoading } = useQuery({
+        queryKey: ['salaryPayments', teacher?.id, selectedMonthRaw],
+        queryFn: async () => {
+            if (!teacher?.id) return [];
+            try {
+                const [year, month] = selectedMonthRaw.split('-').map(Number);
+                const result = await getTeacherSalaryPayments(teacher.id, year, month);
+                return result || [];
+            } catch (err) {
+                console.error('Error fetching salary payments:', err);
+                return [];
+            }
+        },
+        enabled: !!teacher?.id,
+        staleTime: 5 * 60 * 1000 // 5 دقائق
+    });
+
+    // 7. ميوتيشن حذف سجل صرف الراتب
+    const deleteSalaryMutation = useMutation({
+        mutationFn: (paymentId: string) => deleteTransaction(paymentId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['salaryPayments', teacher?.id, selectedMonthRaw] });
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        },
+        onError: (error) => {
+            console.error('خطأ في حذف الراتب:', error);
+        }
+    });
+
+    // ====================================================================================
+    // الحسابات المالية والإحصائيات (Business Logic)
+    // ====================================================================================
+
+    // 1. حساب المصروفات المتوقعة (إجمالي المطلوب من طلاب هذا المعلم)
+    const expectedExpenses = (() => {
+        if (!teacher || !groups || !students) return 0;
+        const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
+
+        return students
+            .filter(s => {
+                const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
+                if (!isMember) return false;
+
+                if (s.enrollmentDate) {
+                    const enrollYearMonth = s.enrollmentDate.substring(0, 7);
+                    return enrollYearMonth <= selectedMonthRaw;
+                }
+                return true;
+            })
+            .reduce((sum, s) => sum + (Number(s.monthlyAmount) || 0), 0);
+    })();
+
+    // 2. حساب ما حصله المعلم بنفسه
+    const [showCollectedDetails, setShowCollectedDetails] = useState(false);
     const collectedPayments = (() => {
         if (!teacher || !groups || !students || !allFees) return [];
-        const teacherGroupIds = groups
-            .filter(g => g.teacherId === teacher.id)
-            .map(g => g.id);
+        const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
 
         return allFees
             .filter(f => {
                 const student = students.find(s => s.id === f.studentId);
                 const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
 
-                // المطابقة بناءً على من قام بالعملية (createdBy) لضمان الدقة حتى لو انتقل الطالب
                 const isCollectedByTeacher = f.createdBy === teacher.fullName ||
                     f.createdBy === teacher.phone ||
                     (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
 
-                // أو إذا كان الطالب حالياً في مجموعة المدرس ولم يحدد من قام بالتحصيل (خيار احتياطي)
                 const isUnclear = !f.createdBy || f.createdBy === 'غير معروف';
 
-                // نعتبر التحصيل للمدرس إذا قام به بنفسه أو إذا كان القائم بالتحصيل غير معروف والطالب في مجموعته
                 return isCollectedByTeacher || (isTeacherStudent && isUnclear);
             })
             .map(f => {
                 const student = students.find(s => s.id === f.studentId);
-                const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
                 const isCurrentTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
 
                 let transferStatus = '';
@@ -205,22 +278,14 @@ export default function TeacherDetailModal({
                 };
             });
     })();
-
     const totalCollected = collectedPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    // --- منطق "تحصيل المدير من طلاب المدرس" ---
+    // 3. حساب ما حصله المدير من طلاب هذا المعلم
     const [showManagerCollectedDetails, setShowManagerCollectedDetails] = useState(false);
-    const [showDeficitDetails, setShowDeficitDetails] = useState(false);
-    const [deficitTab, setDeficitTab] = useState<'unpaid' | 'exempted'>('unpaid');
-
     const managerCollectedPayments = (() => {
         if (!teacher || !groups || !students || !allFees) return [];
-        const teacherGroupIds = groups
-            .filter(g => g.teacherId === teacher.id)
-            .map(g => g.id);
-        const teacherStudentIds = students
-            .filter(s => s.groupId && teacherGroupIds.includes(s.groupId))
-            .map(s => s.id);
+        const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
+        const teacherStudentIds = students.filter(s => s.groupId && teacherGroupIds.includes(s.groupId)).map(s => s.id);
 
         return allFees
             .filter(f => {
@@ -231,8 +296,6 @@ export default function TeacherDetailModal({
 
                 const isUnclear = !f.createdBy || f.createdBy === 'غير معروف';
 
-                // المدير هو من حصل من طلاب المدرس، بشرط ألا يكون المدرس هو القائم بالتحصيل، وألا يكون القائم بالتحصيل مجهولاً
-                // (لأن المجهول ننسبه للمدرس افتراضياً في مجموعته)
                 return isTeacherStudent && !isCollectedByTeacher && !isUnclear;
             })
             .map(f => {
@@ -249,10 +312,9 @@ export default function TeacherDetailModal({
                 };
             });
     })();
-
     const totalCollectedByManager = managerCollectedPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    // --- سجل عمليات التسليم للمدير ---
+    // 4. سجل عمليات التسليم (ما سلمه المدرس للمدير)
     const collectionHistoryMapped = handovers.map(h => ({
         id: h.id,
         date: h.date,
@@ -261,40 +323,22 @@ export default function TeacherDetailModal({
         notes: h.description || '-',
         type: 'تحصيل نقدي'
     }));
-
     const totalHandedOver = handovers.reduce((sum, h) => sum + Number(h.amount), 0);
 
-    // --- جلب الإعفاءات من قاعدة البيانات ---
-    const { data: exemptions = [] } = useQuery({
-        queryKey: ['free_exemptions', selectedMonthRaw],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('free_exemptions')
-                .select('*')
-                .eq('month', selectedMonthRaw);
-            if (error) {
-                console.warn('جدول free_exemptions غير موجود أو خطأ:', error.message);
-                return [];
-            }
-            return data || [];
-        },
-        enabled: isOpen
-    });
-
-    // --- حساب الطلاب المدينين (الذين لم يدفعوا أو عليهم مبالغ متبقية) ---
+    // 5. حساب الطلاب المدينين (الذين لم يدفعوا)
+    const [showDeficitDetails, setShowDeficitDetails] = useState(false);
+    const [deficitTab, setDeficitTab] = useState<'unpaid' | 'exempted'>('unpaid');
+    
     const unpaidStudents = (() => {
         if (!teacher || !groups || !students || !allFees) return [];
-        const teacherGroupIds = groups
-            .filter(g => g.teacherId === teacher.id)
-            .map(g => g.id);
+        const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
         const teacherStudents = students
             .filter(s => {
                 const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
                 if (!isMember) return false;
 
-                // تصفية الطلاب بناءً على تاريخ التحاقهم: لا يظهر الطالب في كشف شهر يسبق تاريخ دخوله
                 if (s.enrollmentDate) {
-                    const enrollYearMonth = s.enrollmentDate.substring(0, 7); // YYYY-MM
+                    const enrollYearMonth = s.enrollmentDate.substring(0, 7);
                     return enrollYearMonth <= selectedMonthRaw;
                 }
                 return true;
@@ -323,32 +367,107 @@ export default function TeacherDetailModal({
         }).filter(s => s.remaining > 0 || s.isExempted);
     })();
 
-    // --- دالة العفو عن طالب ---
+    // 6. حساب العجز الحقيقي مع استثناء المعفيين
+    const realDeficit = (() => {
+        const totalUnpaid = unpaidStudents
+            .filter(s => !s.isExempted)
+            .reduce((sum, s) => sum + s.remaining, 0);
+        return totalUnpaid;
+    })();
+
+    // 7. حسابات الراتب (الأساسي، الخصومات، المكافآت)
+    const basicSalary = teacher?.salary || 1000;
+    const dailyRate = basicSalary / 22; // أجر اليوم الواحد 
+
+    const currentDate = new Date();
+    const currentMonthRaw = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    const isCurrentMonthSelected = selectedMonthRaw === currentMonthRaw;
+
+    // خصومات تلقائية (حسب الحضور)
+    const autoDeductions = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
+        if (status === 'absent') return acc + dailyRate;
+        if (status === 'half') return acc + (dailyRate * 0.5);
+        if (status === 'quarter') return acc + (dailyRate * 0.25);
+        return acc;
+    }, 0);
+
+    // مكافآت تلقائية (حسب الحضور)
+    const autoRewards = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
+        if (status === 'full_reward') return acc + dailyRate;
+        if (status === 'half_reward') return acc + (dailyRate * 0.5);
+        if (status === 'quarter_reward') return acc + (dailyRate * 0.25);
+        return acc;
+    }, 0);
+
+    // مكافآت يدوية
+    const manualRewardsTotal = deductions
+        .filter(d => {
+            const dDate = new Date(d.appliedDate);
+            const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
+            return dMonthRaw === selectedMonthRaw && d.reason.startsWith('مكافأة:');
+        })
+        .reduce((acc: number, curr) => acc + Math.abs(curr.amount), 0);
+
+    // خصومات يدوية
+    const manualDeductionsTotal = deductions
+        .filter(d => {
+            const dDate = new Date(d.appliedDate);
+            const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
+            return dMonthRaw === selectedMonthRaw && !d.reason.startsWith('مكافأة:');
+        })
+        .reduce((acc: number, curr) => acc + curr.amount, 0);
+
+    // إجمالي ما تم صرفه بالفعل
+    const totalPaid = paymentsHistory.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
+
+    // الاستحقاق النهائي
+    const totalEntitlement = Math.round((basicSalary + autoRewards + manualRewardsTotal - autoDeductions - manualDeductionsTotal) * 100) / 100;
+    const remainingToPay = Math.max(0, Math.round((totalEntitlement - totalPaid) * 100) / 100);
+
+    // ==========================================
+    // الحالات الخاصة بالنماذج (States)
+    // ==========================================
+    const [activeTab, setActiveTab] = useState('collection'); // التبويب النشط
+    const [amount, setAmount] = useState(''); // مبلغ التحصيل
+    const [notes, setNotes] = useState(''); // ملاحظات التحصيل
+    
+    // حالات الخصم والمكافأة اليدوية
+    const [manualEntryType, setManualEntryType] = useState<'reward' | 'discipline'>('reward');
+    const [manualEntryAmount, setManualEntryAmount] = useState('');
+    const [manualEntryNote, setManualEntryNote] = useState('');
+
+    // حالات تقويم الحضور
+    const [activeDayMenu, setActiveDayMenu] = useState<number | null>(null);
+    const [showAssignGroupModal, setShowAssignGroupModal] = useState(false);
+    const [tempStatus, setTempStatus] = useState<'present' | 'absent' | 'discipline' | 'reward'>('present');
+    const [tempAmount, setTempAmount] = useState<'day' | 'half' | 'quarter'>('day');
+    const [tempReason, setTempReason] = useState('');
+    const [dayDetails, setDayDetails] = useState<Record<number, { reason: string, type: string }>>({});
+
+    // ==========================================
+    // معالجات الأحداث (Event Handlers)
+    // ==========================================
+
+    // 1. العفو عن طالب
     const handleExemptStudent = async (studentId: string, studentName: string, amount: number) => {
         if (!teacher || !confirm(`هل تريد العفو عن ${studentName} من المبلغ المتبقي (${amount} ج.م) لشهر ${selectedMonth}؟`)) return;
 
         try {
-            const { error } = await supabase
-                .from('free_exemptions')
-                .insert([{
-                    student_id: studentId,
-                    student_name: studentName,
-                    teacher_id: teacher.id,
-                    month: selectedMonthRaw, // التأكد من استخدام الشهر المختار في الواجهة
-                    amount: amount,
-                    exempted_by: user?.displayName || 'المدير',
-                    created_at: new Date().toISOString()
-                }]);
+            const { error } = await supabase.from('free_exemptions').insert([{
+                student_id: studentId,
+                student_name: studentName,
+                teacher_id: teacher.id,
+                month: selectedMonthRaw,
+                amount: amount,
+                exempted_by: user?.displayName || 'المدير',
+                created_at: new Date().toISOString()
+            }]);
 
             if (error) {
                 console.error('خطأ في حفظ الإعفاء:', error);
-                if (error.code === '23505') {
-                    alert('⚠️ هذا الطالب معفى عنه بالفعل لهذا الشهر.');
-                } else if (error.code === '42P01' || error.message?.includes('does not exist')) {
-                    alert('⚠️ جدول free_exemptions غير موجود!\n\nيرجى إنشاء الجدول في Supabase SQL Editor.');
-                } else {
-                    alert('حدث خطأ أثناء حفظ الإعفاء: ' + (error.message || 'خطأ غير معروف'));
-                }
+                if (error.code === '23505') alert('⚠️ هذا الطالب معفى عنه بالفعل لهذا الشهر.');
+                else if (error.code === '42P01' || error.message?.includes('does not exist')) alert('⚠️ جدول free_exemptions غير موجود!');
+                else alert('حدث خطأ أثناء حفظ الإعفاء: ' + (error.message || 'خطأ غير معروف'));
                 return;
             }
 
@@ -359,22 +478,16 @@ export default function TeacherDetailModal({
         }
     };
 
-    // --- دالة إلغاء العفو ---
+    // 2. إلغاء العفو
     const handleRemoveExemption = async (studentId: string, studentName: string) => {
         if (!confirm(`هل تريد إلغاء العفو عن ${studentName} لشهر ${selectedMonth}؟`)) return;
 
         try {
-            const { error } = await supabase
-                .from('free_exemptions')
-                .delete()
-                .eq('student_id', studentId)
-                .eq('month', selectedMonthRaw);
-
+            const { error } = await supabase.from('free_exemptions').delete().eq('student_id', studentId).eq('month', selectedMonthRaw);
             if (error) {
                 console.error('خطأ في إلغاء الإعفاء:', error);
                 return;
             }
-
             alert(`تم إلغاء العفو عن ${studentName} لشهر ${selectedMonth}`);
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
         } catch (err) {
@@ -382,12 +495,9 @@ export default function TeacherDetailModal({
         }
     };
 
-    // --- دالة حذف عملية تحصيل خاطئة للطلاب ---
+    // 3. حذف عملية تحصيل خاطئة
     const handleDeleteFee = async (feeId: string, studentName: string) => {
-        if (!isDirector) {
-            alert('عذراً، هذه الصلاحية للمدير فقط.');
-            return;
-        }
+        if (!isDirector) return alert('عذراً، هذه الصلاحية للمدير فقط.');
         if (!confirm(`هل أنت متأكد من حذف عملية التحصيل الخاصة بالطالب ${studentName}؟\nتنبيه: هذا الإجراء لا يمكن التراجع عنه وسيقوم بحذف العملية والمبلغ من الإجماليات.`)) return;
 
         try {
@@ -401,154 +511,19 @@ export default function TeacherDetailModal({
         }
     };
 
-    // حساب العجز الحقيقي مع استثناء المعفيين
-    const realDeficit = (() => {
-        const totalUnpaid = unpaidStudents
-            .filter(s => !s.isExempted)
-            .reduce((sum, s) => sum + s.remaining, 0);
-        return totalUnpaid;
-    })();
-
-
-
-    // --- حالات التبويبات والبيانات المدخلة ---
-    const [activeTab, setActiveTab] = useState('collection'); // التبويب النشط الافتراضي أصبح التحصيل
-    const [amount, setAmount] = useState(''); // قيمة المبلغ المحصل المدخل
-    const [notes, setNotes] = useState(''); // ملاحظات التحصيل
-
-    // وظيفة لتحديث الشهر بناءً على إزاحة (Offset) أو قيمة مباشرة
-    const updateMonth = (offsetOrValue: number | string) => {
-        let newDate: Date;
-        if (typeof offsetOrValue === 'number') {
-            const [year, month] = selectedMonthRaw.split('-');
-            // نستخدم اليوم الأول من الشهر دائماً لتجنب تخطي الأشهر عند الانتقال من شهر فيه 31 يوماً
-            newDate = new Date(parseInt(year), parseInt(month) - 1 + offsetOrValue, 1);
-        } else {
-            const [year, month] = offsetOrValue.split('-');
-            newDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-        }
-
-        const yearStr = newDate.getFullYear();
-        const monthStr = String(newDate.getMonth() + 1).padStart(2, '0');
-        const rawValue = `${yearStr}-${monthStr}`;
-
-        setSelectedMonthRaw(rawValue);
-        setSelectedMonth(new Intl.DateTimeFormat('ar-EG', { month: 'long', year: 'numeric' }).format(newDate));
-
-        // إغلاق أي قائمة تعديل مفتوحة عند تغيير الشهر لتجنب محاولة حفظ يوم غير موجود
-        setActiveDayMenu(null);
-    };
-
-    // حساب إجمالي "المسلم للمدير" من سجل عمليات التسليم للشهر المختار
-    // Replaced local collectionHistory with handovers from DB
-
-    // --- جلب سجل صرف الرواتب من قاعدة البيانات ---
-    const { data: paymentsHistory = [], isLoading: paymentsLoading } = useQuery({
-        queryKey: ['salaryPayments', teacher?.id, selectedMonthRaw],
-        queryFn: async () => {
-            if (!teacher?.id) return [];
-            try {
-                const [year, month] = selectedMonthRaw.split('-').map(Number);
-                const result = await getTeacherSalaryPayments(teacher.id, year, month);
-                return result || [];
-            } catch (err) {
-                console.error('Error fetching salary payments:', err);
-                return [];
-            }
-        },
-        enabled: !!teacher?.id,
-        staleTime: 5 * 60 * 1000 // 5 minutes
-    });
-
-    // ميوتيشن لحذف سجل صرف الراتب
-    const deleteSalaryMutation = useMutation({
-        mutationFn: (paymentId: string) => deleteTransaction(paymentId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['salaryPayments', teacher?.id, selectedMonthRaw] });
-            queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        },
-        onError: (error) => {
-            console.error('خطأ في حذف الراتب:', error);
-        }
-    });
-
-    // حالات نموذج الإضافة اليدوية للخصم والمكافأة
-    const [manualEntryType, setManualEntryType] = useState<'reward' | 'discipline'>('reward');
-    const [manualEntryAmount, setManualEntryAmount] = useState('');
-    const [manualEntryNote, setManualEntryNote] = useState('');
-
-    // --- حسابات الراتب التلقائية (Business Logic) ---
-    const basicSalary = teacher?.salary || 1000; // الراتب الأساسي
-    const dailyRate = basicSalary / 22; // أجر اليوم الواحد (بناءً على 22 حصة/يوم عمل في الشهر)
-
-    // حساب الخصومات التلقائية بناءً على سجل الحضور (فقط للشهر الحالي في هذه النسخة التجريبية)
-    const currentDate = new Date();
-    const currentMonthRaw = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-    const isCurrentMonthSelected = selectedMonthRaw === currentMonthRaw;
-
-    const autoDeductions = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
-        if (status === 'absent') return acc + dailyRate;
-        if (status === 'half') return acc + (dailyRate * 0.5);
-        if (status === 'quarter') return acc + (dailyRate * 0.25);
-        return acc;
-    }, 0);
-
-    // حساب المكافآت التلقائية بناءً على سجل الحضور
-    const autoRewards = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
-        if (status === 'half_reward') return acc + (dailyRate * 0.5);
-        if (status === 'quarter_reward') return acc + (dailyRate * 0.25);
-        return acc;
-    }, 0);
-
-    // حساب إجمالي المكافآت اليدوية من قاعدة البيانات (للشهر المختار)
-    const manualRewardsTotal = deductions
-        .filter(d => {
-            const dDate = new Date(d.appliedDate);
-            const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
-            return dMonthRaw === selectedMonthRaw && d.reason.startsWith('مكافأة:');
-        })
-        .reduce((acc: number, curr) => acc + Math.abs(curr.amount), 0);
-
-    // حساب إجمالي الخصومات اليدوية من قاعدة البيانات (للشهر المختار)
-    const manualDeductionsTotal = deductions
-        .filter(d => {
-            const dDate = new Date(d.appliedDate);
-            const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
-            return dMonthRaw === selectedMonthRaw && !d.reason.startsWith('مكافأة:');
-        })
-        .reduce((acc: number, curr) => acc + curr.amount, 0);
-
-    // حساب إجمالي المبالغ التي تم صرفها بالفعل للمعلم (للشهر المختار حصراً)
-    const totalPaid = paymentsHistory
-        .reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
-
-    // الحسبة النهائية: (الراتب + المكافآت) - الخصومات = صافي المستحق
-    const totalEntitlement = Math.round((basicSalary + autoRewards + manualRewardsTotal - autoDeductions - manualDeductionsTotal) * 100) / 100;
-    // المبلغ المتبقي صرفه للمعلم
-    const remainingToPay = Math.max(0, Math.round((totalEntitlement - totalPaid) * 100) / 100);
-
-    // وظيفة إضافة قيد يدوي (مكافأة أو خصم) للسجل الحقيقي
+    // 4. إضافة خصم أو مكافأة يدوية
     const handleAddManualEntry = async () => {
         if (!manualEntryAmount || !teacher) return;
         const prefix = manualEntryType === 'reward' ? 'مكافأة: ' : 'خصم: ';
         const actualAmount = Number(manualEntryAmount);
 
         try {
-            await applyDeduction(
-                teacher.id,
-                teacher.fullName,
-                actualAmount,
-                prefix + (manualEntryNote || 'بدون سبب')
-            );
+            await applyDeduction(teacher.id, teacher.fullName, actualAmount, prefix + (manualEntryNote || 'بدون سبب'));
 
-            // إرسال إشعار فوري للمعلم عبر المحادثة
             try {
                 await automationService.sendManualNotification(
-                    teacher.id,
-                    teacher.fullName,
-                    actualAmount,
-                    manualEntryType as 'reward' | 'deduction',
-                    manualEntryNote,
+                    teacher.id, teacher.fullName, actualAmount,
+                    manualEntryType as 'reward' | 'deduction', manualEntryNote,
                     { uid: user?.uid || 'director', displayName: user?.displayName || 'المدير العام' }
                 );
             } catch (notifyError) {
@@ -557,73 +532,35 @@ export default function TeacherDetailModal({
 
             setManualEntryAmount('');
             setManualEntryNote('');
-            loadDeductions(); // إعادة تحميل البيانات
+            loadDeductions();
         } catch (error) {
             console.error("Error adding manual entry:", error);
             alert('حدث خطأ أثناء الإضافة');
         }
     };
 
-    // وظيفة تسجيل صرف جزء أو كامل الراتب
+    // 5. صرف جزء أو كامل الراتب
     const handlePaySalary = async (amount: number, type: string) => {
-        if (amount <= 0 || !teacher) {
-            alert('لا يمكن صرف مبلغ صفر أو سالب');
-            return;
-        }
+        if (amount <= 0 || !teacher) return alert('لا يمكن صرف مبلغ صفر أو سالب');
 
-        // حفظ في قاعدة البيانات
         try {
-            console.log('Starting handlePaySalary:', {
-                amount,
-                type,
-                teacherId: teacher.id,
-                userId: user?.uid,
-                fullName: teacher.fullName
-            });
-
-            // تحديد تاريخ العملية بناءً على الشهر المختار لضمان دقة التقارير المالية
             const now = new Date();
-            const currentMonthRaw = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const transactionDate = selectedMonthRaw === currentMonthRaw
-                ? now.toISOString().split('T')[0]
-                : `${selectedMonthRaw}-01`;
+            const transactionDate = selectedMonthRaw === currentMonthRaw ? now.toISOString().split('T')[0] : `${selectedMonthRaw}-01`;
 
-            // حفظ الراتب مباشرة في Supabase
-            const { data, error } = await supabase
-                .from('financial_transactions')
-                .insert([{
-                    amount: Number(amount),
-                    type: 'expense',
-                    category: 'salary',
-                    date: transactionDate,
-                    description: `راتب ${teacher.fullName} - ${type}`,
-                    related_user_id: String(teacher.id), // تحويل إلى string للتأكد
-                    performed_by: user?.uid || 'unknown'
-                }])
-                .select();
+            const { data, error } = await supabase.from('financial_transactions').insert([{
+                amount: Number(amount),
+                type: 'expense',
+                category: 'salary',
+                date: transactionDate,
+                description: `راتب ${teacher.fullName} - ${type}`,
+                related_user_id: String(teacher.id),
+                performed_by: user?.uid || 'unknown'
+            }]).select();
 
-            console.log('Insert result:', { data, error });
+            if (error) return alert('❌ فشل حفظ الراتب:\n' + (error.message || 'خطأ غير معروف'));
+            if (!data || data.length === 0) return alert('❌ لم يتم إرجاع البيانات من Supabase');
 
-            if (error) {
-                console.error('Supabase insert error:', {
-                    message: error.message,
-                    details: error.details,
-                    code: error.code,
-                    hint: error.hint
-                });
-                alert('❌ فشل حفظ الراتب:\n' + (error.message || 'خطأ غير معروف'));
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                alert('❌ لم يتم إرجاع البيانات من Supabase');
-                return;
-            }
-
-            console.log('Salary saved successfully:', data);
             alert('✅ تم صرف الراتب بنجاح');
-
-            // تحديث البيانات المعروضة مباشرة من قاعدة البيانات
             setTimeout(() => {
                 queryClient.invalidateQueries({ queryKey: ['salaryPayments', teacher.id, selectedMonthRaw] });
                 queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -634,7 +571,7 @@ export default function TeacherDetailModal({
         }
     };
 
-    // وظيفة إنشاء تقرير وإرساله عبر الواتس آب
+    // 6. إرسال تقرير الراتب عبر الواتساب
     const handleSendReport = () => {
         if (!teacher) return;
         const report = `
@@ -656,22 +593,7 @@ export default function TeacherDetailModal({
         window.open(whatsappUrl, '_blank');
     };
 
-    useEffect(() => {
-        if (teacher && isOpen) {
-            // تحميل الخصومات عند فتح النافذة
-            loadDeductions();
-        }
-    }, [teacher, isOpen, loadDeductions]);
-
-    // حالات التحكم في القائمة السريعة لتعديل حضور يوم محدد
-    const [activeDayMenu, setActiveDayMenu] = useState<number | null>(null);
-    const [showAssignGroupModal, setShowAssignGroupModal] = useState(false);
-    const [tempStatus, setTempStatus] = useState<'present' | 'absent' | 'discipline' | 'reward'>('present');
-    const [tempAmount, setTempAmount] = useState<'day' | 'half' | 'quarter'>('day');
-    const [tempReason, setTempReason] = useState('');
-    const [dayDetails, setDayDetails] = useState<Record<number, { reason: string, type: string }>>({});
-
-    // وظائف إدارة المجموعات للمعلم
+    // 7. إسناد مجموعة للمعلم
     const handleAssignGroup = async (groupId: string) => {
         if (!teacher) return;
         try {
@@ -683,6 +605,7 @@ export default function TeacherDetailModal({
         }
     };
 
+    // 8. سحب مجموعة من المعلم
     const handleRemoveGroup = async (groupId: string) => {
         if (!teacher || !confirm('هل أنت متأكد من سحب هذه المجموعة من المعلم؟')) return;
         try {
@@ -693,19 +616,14 @@ export default function TeacherDetailModal({
         }
     };
 
-    // وظيفة إرسال مبلغ تحصيل جديد (من المعلم للمدير)
+    // 9. إرسال مبلغ تحصيل (تسليم النقدية)
     const handleCollectionSubmit = async () => {
         if (!amount || !teacher || !user) return;
 
         try {
-            // تحديد تاريخ العملية بناءً على الشهر المختار لضمان دقة التقارير المالية
             const now = new Date();
-            const currentMonthRaw = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const transactionDate = selectedMonthRaw === currentMonthRaw
-                ? now.toISOString().split('T')[0]
-                : `${selectedMonthRaw}-01`;
+            const transactionDate = selectedMonthRaw === currentMonthRaw ? now.toISOString().split('T')[0] : `${selectedMonthRaw}-01`;
 
-            const { addTransaction } = await import('@/features/finance/services/financeService');
             await addTransaction({
                 amount: Number(amount),
                 type: 'income',
@@ -717,7 +635,6 @@ export default function TeacherDetailModal({
             });
             setAmount('');
             setNotes('');
-            // Refetch handovers
             queryClient.invalidateQueries({ queryKey: ['handovers', teacher.id, selectedMonthRaw] });
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             alert('تم تسجيل عملية التحصيل بنجاح');
@@ -727,17 +644,16 @@ export default function TeacherDetailModal({
         }
     };
 
-    // وظيفة حفظ تعديلات الانضباط أو المكافأة ليوم معين في التقويم
+    // 10. حفظ تعديلات الانضباط/المكافأة من التقويم
     const handleAddDiscipline = async () => {
         if (!activeDayMenu || !teacher) return;
 
         try {
-            // التحقق من صحة التاريخ قبل الحفظ
             const [year, month] = selectedMonthRaw.split('-').map(Number);
             const daysInMonth = new Date(year, month, 0).getDate();
 
             if (activeDayMenu > daysInMonth) {
-                alert(`اليوم ${activeDayMenu} غير موجود في الشهر المختار. يرجى تحديث الصفحة.`);
+                alert(`اليوم ${activeDayMenu} غير موجود في الشهر المختار.`);
                 setActiveDayMenu(null);
                 return;
             }
@@ -745,17 +661,12 @@ export default function TeacherDetailModal({
             let finalStatus: any = 'present';
             if (tempStatus === 'present') finalStatus = 'present';
             else if (tempStatus === 'absent') finalStatus = 'absent';
-            else if (tempStatus === 'discipline') {
-                finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half' : 'quarter';
-            } else if (tempStatus === 'reward') {
-                finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half_reward' : 'quarter_reward';
-            }
+            else if (tempStatus === 'discipline') finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half' : 'quarter';
+            else if (tempStatus === 'reward') finalStatus = tempAmount === 'day' ? 'full_reward' : tempAmount === 'half' ? 'half_reward' : 'quarter_reward';
 
-            // تنفيذ التغيير في قاعدة البيانات
             const date = `${selectedMonthRaw}-${String(activeDayMenu).padStart(2, '0')}`;
             await updateAttendanceAsync({ date, status: finalStatus });
 
-            // إرسال إشعار فوري للمعلم في حالة الخصم أو المكافأة عبر التقويم
             if (tempStatus === 'discipline' || tempStatus === 'reward') {
                 try {
                     const numericAmount = tempAmount === 'day' ? 1 : tempAmount === 'half' ? 0.5 : 0.25;
@@ -763,11 +674,8 @@ export default function TeacherDetailModal({
                     const note = tempReason ? `${tempReason} (بتاريخ ${specificDate})` : `إجراء إداري لليوم الموافق ${specificDate}`;
 
                     automationService.sendManualNotification(
-                        teacher.id,
-                        teacher.fullName,
-                        numericAmount,
-                        tempStatus === 'reward' ? 'reward' : 'deduction',
-                        note,
+                        teacher.id, teacher.fullName, numericAmount,
+                        tempStatus === 'reward' ? 'reward' : 'deduction', note,
                         { uid: user?.uid || 'director', displayName: user?.displayName || 'المدير العام' }
                     ).catch(err => console.error("Calendar notification failed", err));
                 } catch (notifyError) {
@@ -775,41 +683,46 @@ export default function TeacherDetailModal({
                 }
             }
 
-            if (tempReason) {
-                setDayDetails(prev => ({
-                    ...prev,
-                    [activeDayMenu]: { reason: tempReason, type: tempStatus }
-                }));
-            }
+            if (tempReason) setDayDetails(prev => ({ ...prev, [activeDayMenu]: { reason: tempReason, type: tempStatus } }));
 
-            // نجاح العملية - إغلاق القائمة
             setActiveDayMenu(null);
             setTempReason('');
         } catch (error: any) {
             console.error("Error in handleAddDiscipline:", error);
-            const errorMsg = error?.message || error?.toString() || "خطأ غير معروف";
-            alert(`حدث خطأ أثناء حفظ التعديلات:\n${errorMsg}\n\nيرجى المحاولة مرة أخرى.`);
+            alert(`حدث خطأ أثناء حفظ التعديلات:\n${error?.message || "خطأ غير معروف"}`);
         }
     };
 
-    // تعريف التبويبات الأساسية للنافذة
+    // ==========================================
+    // تأثيرات جانبية (Effects)
+    // ==========================================
+    useEffect(() => {
+        if (teacher && isOpen) {
+            loadDeductions();
+        }
+    }, [teacher, isOpen, loadDeductions]);
+
+    // ==========================================
+    // واجهة المستخدم: تعريف التبويبات
+    // ==========================================
     const tabs = [
         { id: 'collection', label: 'التحصيل', icon: CircleDollarSign },
         { id: 'attendance', label: 'الحضور', icon: Calendar },
         { id: 'payroll', label: 'الراتب', icon: CreditCard },
         { id: 'groups', label: 'المجموعات', icon: Layers },
     ].filter(tab => {
-        if (user?.role === 'supervisor') {
-            return tab.id !== 'payroll' && tab.id !== 'collection';
-        }
+        if (user?.role === 'supervisor') return tab.id !== 'payroll' && tab.id !== 'collection';
         return true;
     });
 
-
-
-    // دالة رندر محتوى التبويبات (Switch Content)
+    // ==========================================
+    // واجهة المستخدم: محتوى التبويبات (Render)
+    // ==========================================
     const renderTabContent = () => {
         switch (activeTab) {
+            // ----------------------------------------
+            // تبويب المجموعات (Groups)
+            // ----------------------------------------
             case 'groups':
                 const teacherGroups = groups?.filter(g => g.teacherId === teacher?.id) || [];
                 const availableGroups = groups?.filter(g => g.teacherId !== teacher?.id) || [];
@@ -900,10 +813,13 @@ export default function TeacherDetailModal({
                         </AnimatePresence>
                     </div>
                 );
-            case 'collection': // --- تبويب سجل التحصيل المالي ---
+            
+            // ----------------------------------------
+            // تبويب التحصيل المالي (Collection)
+            // ----------------------------------------
+            case 'collection':
                 return (
                     <div className="space-y-6">
-                        {/* اختيار الشهر */}
                         {/* اختيار الشهر - تصميم متجاوب للموبايل */}
                         <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
                             {/* زر السابق (يمين) */}
@@ -983,6 +899,7 @@ export default function TeacherDetailModal({
 
                         {/* بطاقات الإحصائيات المالية (المصروفات، التحصيل، العجز) */}
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                            {/* بطاقة المصروفات المتوقعة */}
                             <div className="bg-gradient-to-br from-indigo-50 to-white p-4 md:p-6 rounded-[32px] border border-indigo-100 shadow-sm flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-transform">
                                 <p className="text-[10px] md:text-xs font-black text-indigo-400 mb-2 uppercase tracking-wide">إجمالي المصروفات المتوقعة</p>
                                 <p className="text-xl md:text-3xl font-black text-indigo-700 font-sans">{expectedExpenses.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
@@ -1000,24 +917,28 @@ export default function TeacherDetailModal({
                                 </div>
                             </div>
 
+                            {/* بطاقة ما حصله المدرس */}
                             <div className="bg-gradient-to-br from-blue-50 to-white p-4 md:p-6 rounded-[32px] border border-blue-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
                                 <p className="text-[10px] md:text-xs font-black text-blue-400 mb-2 uppercase tracking-wide">ما حصله المدرس</p>
                                 <p className="text-xl md:text-3xl font-black text-blue-700 font-sans">{totalCollected.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
                                 <button onClick={() => setShowCollectedDetails(true)} className="mt-3 px-4 py-1.5 bg-blue-100/50 text-blue-600 rounded-full text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all">كشف تفصيلي</button>
                             </div>
 
+                            {/* بطاقة المحصل من المدير */}
                             <div className="bg-white p-4 md:p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
                                 <p className="text-[10px] md:text-xs font-black text-slate-400 mb-2 uppercase tracking-wide">المحصل من المدير</p>
                                 <p className="text-xl md:text-3xl font-black text-slate-800 font-sans">{totalCollectedByManager.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
                                 <button onClick={() => setShowManagerCollectedDetails(true)} className="mt-3 px-4 py-1.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black hover:bg-slate-800 hover:text-white transition-all">عرض الطلاب</button>
                             </div>
 
+                            {/* بطاقة المسلم للمدير */}
                             <div className="bg-gradient-to-br from-emerald-50 to-white p-4 md:p-6 rounded-[32px] border border-emerald-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
                                 <p className="text-[10px] md:text-xs font-black text-emerald-400 mb-2 uppercase tracking-wide">المسلم للمدير</p>
                                 <p className="text-xl md:text-3xl font-black text-emerald-700 font-sans">{totalHandedOver.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
                                 <div className="mt-3 w-10 h-1 bg-emerald-100 rounded-full" />
                             </div>
 
+                            {/* بطاقة عجز التسليم */}
                             <div className="bg-gradient-to-br from-rose-50 to-white p-4 md:p-6 rounded-[32px] border border-rose-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
                                 <p className="text-[10px] md:text-xs font-black text-rose-400 mb-2 uppercase tracking-wide">عجز التسليم (معه)</p>
                                 <p className="text-xl md:text-3xl font-black text-rose-600 font-sans">{Math.max(0, totalCollected - totalHandedOver).toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
@@ -1027,6 +948,7 @@ export default function TeacherDetailModal({
                                 </div>
                             </div>
 
+                            {/* بطاقة عجز المجموعة الحقيقي */}
                             <div
                                 onClick={() => setShowDeficitDetails(true)}
                                 className="bg-gradient-to-br from-amber-50 to-white p-4 md:p-6 rounded-[32px] border border-amber-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform cursor-pointer hover:border-amber-300 group"
@@ -1089,7 +1011,11 @@ export default function TeacherDetailModal({
                         </div>
                     </div>
                 );
-            case 'attendance': // --- تبويب سجل الحضور والغياب ---
+            
+            // ----------------------------------------
+            // تبويب سجل الحضور والغياب (Attendance)
+            // ----------------------------------------
+            case 'attendance':
                 // حسابات إحصائية سريعة لأيام الغياب والمكافآت
                 const totalAbsenceDays = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
                     if (status === 'absent') return acc + 1;
@@ -1099,6 +1025,7 @@ export default function TeacherDetailModal({
                 }, 0);
 
                 const totalRewardDays = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
+                    if (status === 'full_reward') return acc + 1;
                     if (status === 'half_reward') return acc + 0.5;
                     if (status === 'quarter_reward') return acc + 0.25;
                     return acc;
@@ -1108,7 +1035,6 @@ export default function TeacherDetailModal({
 
                 return (
                     <div className="space-y-6">
-                        {/* شريط اختيار الشهر والملخص */}
                         {/* شريط اختيار الشهر والملخص - تصميم متجاوب */}
                         <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
                             {/* زر السابق */}
@@ -1231,17 +1157,17 @@ export default function TeacherDetailModal({
                                                         isWeekend || isTeacher ? "bg-red-50/10 border-red-50 text-red-400 cursor-default" :
                                                             status === 'present' ? "bg-green-50 border-green-100 text-green-600" :
                                                                 (status === 'quarter' || status === 'half') ? "bg-orange-50 border-orange-100 text-orange-600" :
-                                                                    (status === 'quarter_reward' || status === 'half_reward') ? "bg-green-50 border-green-200 text-green-600" :
+                                                                    (status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') ? "bg-green-50 border-green-200 text-green-600" :
                                                                         status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
                                                                             "bg-gray-50/50 text-gray-300 border-gray-100 hover:border-blue-200"
                                                     )}
                                                 >
                                                     <span className="mb-0.5">{day}</span>
                                                     {isWeekend && <span className="text-[6px] md:text-[7px] mt-0.5 font-black uppercase text-red-500/40">إجازة</span>}
-                                                    {status === 'present' && !isWeekend && (
+                                                    {(status === 'present' || status?.includes('reward')) && !isWeekend && (
                                                         <CheckCircle2 size={14} className="text-green-600/80" />
                                                     )}
-                                                    {(status === 'quarter' || status === 'half' || status === 'quarter_reward' || status === 'half_reward') && !isWeekend && (
+                                                    {(status === 'quarter' || status === 'half' || status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') && !isWeekend && (
                                                         <div className={cn(
                                                             "w-1 h-1 rounded-full mt-1",
                                                             status?.includes('reward') ? "bg-green-400" : "bg-orange-400"
@@ -1365,23 +1291,24 @@ export default function TeacherDetailModal({
                                                 status === 'half' ? (dailyRate * 0.5) :
                                                     status === 'quarter' ? (dailyRate * 0.25) :
                                                         status === 'half_reward' ? (dailyRate * 0.5) :
-                                                            status === 'quarter_reward' ? (dailyRate * 0.25) : 0;
+                                                        status === 'full_reward' ? dailyRate :
+                                                        status === 'quarter_reward' ? (dailyRate * 0.25) : 0;
 
                                             return (
                                                 <div key={day} className="bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-md transition-all relative group">
                                                     <div className="flex justify-between items-start mb-2">
                                                         <span className={cn(
                                                             "px-2 py-1 rounded-lg text-[10px] font-bold",
-                                                            status.includes('reward') ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
+                                                            status?.includes('reward') ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
                                                         )}>
-                                                            {status.includes('reward') ? 'مكافأة' : 'خصم'}
+                                                            {status?.includes('reward') ? 'مكافأة' : 'خصم'}
                                                         </span>
                                                         <span className="text-xs font-black text-gray-400 font-sans">{day} {selectedMonth.split(' ')[0]}</span>
                                                     </div>
 
                                                     <div className="flex items-center justify-between mb-3 text-right">
                                                         <h5 className="font-bold text-gray-900 text-sm">
-                                                            {dayDetails[Number(day)]?.reason || `تسجيل ${status.includes('reward') ? 'مكافأة' : 'غياب'} يوم ${weekDays[(d - 1 + startOffset) % 7]}`}
+                                                            {dayDetails[Number(day)]?.reason || `تسجيل ${status === 'full_reward' ? 'مكافأة (يوم كامل)' : status === 'half_reward' ? 'مكافأة (نصف يوم)' : status === 'quarter_reward' ? 'مكافأة (ربع يوم)' : 'غياب'} يوم ${weekDays[(d - 1 + startOffset) % 7]}`}
                                                         </h5>
                                                         <span className="font-black font-sans text-gray-800 text-sm">{amount.toFixed(2)} ج.م</span>
                                                     </div>
@@ -1408,12 +1335,12 @@ export default function TeacherDetailModal({
                     </div >
                 );
 
-
-
-            case 'payroll': // --- تبويب الراتب والمحاسبة المالية ---
+            // --------------------------------------------------------------------------------
+            // تبويب الراتب والمحاسبة المالية (Payroll)
+            // ----------------------------------------
+            case 'payroll':
                 return (
                     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-                        {/* اختيار الشهر في تبويب الراتب */}
                         {/* اختيار الشهر في تبويب الراتب - متجاوب */}
                         <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
                             {/* زر السابق */}
@@ -1585,11 +1512,14 @@ export default function TeacherDetailModal({
         }
     };
 
+    // ==========================================
+    // واجهة المستخدم: الهيكل الرئيسي (Main Return JSX)
+    // ==========================================
     return (
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* Backdrop */}
+                    {/* خلفية النافذة (Backdrop) */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -1598,14 +1528,14 @@ export default function TeacherDetailModal({
                         className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200]"
                     />
 
-                    {/* Modal Body */}
+                    {/* جسم النافذة المنبثقة (Modal Body) */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[98%] md:w-[95%] md:max-w-6xl h-[95vh] md:h-fit md:max-h-[95vh] bg-white rounded-[40px] md:rounded-[56px] shadow-2xl z-[201] overflow-hidden flex flex-col border border-white/20"
                     >
-                        {/* Header: Compact & Modern */}
+                        {/* رأس النافذة (Header) */}
                         <div className="p-5 md:p-8 relative bg-white border-b border-gray-50 shrink-0">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex flex-row-reverse items-center gap-3">
@@ -1645,7 +1575,7 @@ export default function TeacherDetailModal({
                             </div>
                         </div>
 
-                        {/* Navigation Tabs - Mobile Optimized */}
+                        {/* شريط التبويبات (Navigation Tabs) */}
                         <div className="flex flex-row border-b border-gray-50 px-2 md:px-8 bg-white sticky top-0 z-10 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap md:justify-start justify-around">
                             {tabs.map((tab) => {
                                 const Icon = tab.icon;
@@ -1669,7 +1599,7 @@ export default function TeacherDetailModal({
                             })}
                         </div>
 
-                        {/* Main Content Area */}
+                        {/* مساحة عرض المحتوى (Main Content Area) */}
                         <div className="flex-1 overflow-y-auto bg-[#FBFDFF] p-4 md:p-10 no-scrollbar">
                             <motion.div
                                 key={activeTab}
@@ -1683,7 +1613,11 @@ export default function TeacherDetailModal({
                         </div>
                     </motion.div>
 
-                    {/* Sub-modals for details */}
+                    {/* ========================================== */}
+                    {/* النوافذ الفرعية (Sub-modals for details) */}
+                    {/* ========================================== */}
+
+                    {/* نافذة تفاصيل ما حصله المدرس */}
                     <AnimatePresence>
                         {showCollectedDetails && (
                             <>
@@ -1798,6 +1732,7 @@ export default function TeacherDetailModal({
                         )}
                     </AnimatePresence>
 
+                    {/* نافذة تفاصيل التحصيل من قبل المدير */}
                     <AnimatePresence>
                         {showManagerCollectedDetails && (
                             <>
@@ -1929,7 +1864,7 @@ export default function TeacherDetailModal({
                                         </button>
                                     </div>
 
-                                    {/* ملخص سريع */}
+                                    {/* ملخص سريع للطلاب */}
                                     <div className="px-6 py-4 bg-amber-50/30 border-b border-amber-100/50 shrink-0">
                                         <div className="grid grid-cols-3 gap-3">
                                             <div className="bg-white rounded-2xl p-3 text-center border border-amber-100">
@@ -1963,7 +1898,7 @@ export default function TeacherDetailModal({
                                         </div>
                                     </div>
 
-                                    {/* قائمة الطلاب */}
+                                    {/* قائمة الطلاب في النافذة */}
                                     <div className="flex-1 overflow-y-auto no-scrollbar p-4">
                                         <div className="space-y-3">
                                             {(() => {
@@ -2036,7 +1971,7 @@ export default function TeacherDetailModal({
                                                             </div>
                                                         </div>
 
-                                                        {/* تفاصيل الدفع */}
+                                                        {/* تفاصيل الدفع وزر العفو */}
                                                         <div className="mt-3 pt-3 border-t border-gray-100 flex flex-row-reverse items-center justify-between gap-2">
                                                             <div className="flex flex-row-reverse items-center gap-3 text-[10px] font-bold">
                                                                 <span className="text-gray-400">المطلوب: <span className="text-gray-600 font-sans">{student.expectedAmount}</span></span>

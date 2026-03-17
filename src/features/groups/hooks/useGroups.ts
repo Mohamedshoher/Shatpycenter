@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getGroups, addGroup, updateGroup, deleteGroup } from '../services/groupService';
 import { Group } from '@/types';
-import { addToOfflineQueue } from '@/lib/offline-queue';
 
 export const useGroups = () => {
     return useQuery({
@@ -19,9 +18,6 @@ export const useAddGroup = () => {
             const previousGroups = queryClient.getQueryData(['groups']);
             queryClient.setQueryData(['groups'], (old: any) => [...(old || []), { ...newGroup, id: 'temp-' + Date.now() }]);
             return { previousGroups };
-        },
-        onError: (err, newGroup) => {
-            addToOfflineQueue('group_add', newGroup);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups'] });
@@ -42,9 +38,6 @@ export const useUpdateGroup = () => {
             });
             return { previousGroups };
         },
-        onError: (err, variables) => {
-            addToOfflineQueue('group_update', { id: variables.id, updates: variables.data });
-        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups'] });
         },
@@ -63,9 +56,6 @@ export const useDeleteGroup = () => {
                 return old.filter((g: any) => g.id !== id);
             });
             return { previousGroups };
-        },
-        onError: (err, id) => {
-            addToOfflineQueue('group_delete', { id });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups'] });
