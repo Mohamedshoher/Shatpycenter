@@ -240,7 +240,19 @@ export default function TeacherDetailModal({
 
     // 2. حساب ما حصله المعلم بنفسه
     const [showCollectedDetails, setShowCollectedDetails] = useState(false);
-    const collectedPayments = (() => {
+    interface CollectedPayment {
+        id: string;
+        feeId: string;
+        studentId: string;
+        studentName: string;
+        amount: number;
+        date: string;
+        status: 'active' | 'archived';
+        transferStatus: string;
+        groupName: string;
+    }
+
+    const collectedPayments: CollectedPayment[] = (() => {
         if (!teacher || !groups || !students || !allFees) return [];
         const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
 
@@ -331,7 +343,18 @@ export default function TeacherDetailModal({
     const [showDeficitDetails, setShowDeficitDetails] = useState(false);
     const [deficitTab, setDeficitTab] = useState<'unpaid' | 'exempted'>('unpaid');
 
-    const unpaidStudents = (() => {
+    interface UnpaidStudent {
+        id: string;
+        name: string;
+        groupName: string;
+        expectedAmount: number;
+        paidAmount: number;
+        remaining: number;
+        isExempted: boolean;
+        enrollmentDate?: string;
+    }
+
+    const unpaidStudents: UnpaidStudent[] = (() => {
         if (!teacher || !groups || !students || !allFees) return [];
         const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
         const teacherStudents = students

@@ -16,6 +16,40 @@ import { useQueryClient } from '@tanstack/react-query';
 // ==========================================================
 // مكون تبويب التحصيل المالي (TeacherCollectionTab)
 // ==========================================================
+interface UnpaidStudent {
+    id: string;
+    name: string;
+    groupName: string;
+    expectedAmount: number;
+    paidAmount: number;
+    remaining: number;
+    isExempted: boolean;
+    enrollmentDate?: string;
+}
+
+interface TeacherCollectionTabProps {
+    teacher: any;
+    isTeacher: boolean;
+    updateMonth: (val: number | string) => void;
+    selectedMonthRaw: string;
+    amount: string;
+    setAmount: (val: string) => void;
+    notes: string;
+    setNotes: (val: string) => void;
+    handleCollectionSubmit: () => void;
+    expectedExpenses: number;
+    totalCollected: number;
+    totalCollectedByManager: number;
+    totalHandedOver: number;
+    collectionHistoryMapped: any[];
+    setShowCollectedDetails: (val: boolean) => void;
+    setShowManagerCollectedDetails: (val: boolean) => void;
+    setShowDeficitDetails: (val: boolean) => void;
+    realDeficit: number;
+    unpaidStudents: UnpaidStudent[];
+    handleDeleteFee: (feeId: string, studentName: string) => void;
+}
+
 export const TeacherCollectionTab = ({
     teacher,
     isTeacher,
@@ -37,7 +71,7 @@ export const TeacherCollectionTab = ({
     realDeficit,
     unpaidStudents,
     handleDeleteFee
-}: any) => {
+}: TeacherCollectionTabProps) => {
     
     // أداة لإعادة تحديث البيانات عند الحاجة
     const queryClient = useQueryClient();
@@ -165,7 +199,7 @@ export const TeacherCollectionTab = ({
                     <p className="text-[10px] md:text-xs font-black text-amber-500 mb-2 uppercase tracking-wide">عجز المجموعة الحقيقي</p>
                     <p className="text-xl md:text-3xl font-black text-amber-600 font-sans">{realDeficit.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
                     <div className="mt-3 flex flex-col items-center gap-1">
-                        <span className="text-[9px] font-bold text-amber-500">{unpaidStudents.filter(s => !s.isExempted).length} طالب لم يدفع بعد</span>
+                        <span className="text-[9px] font-bold text-amber-500">{unpaidStudents.filter((s: UnpaidStudent) => !s.isExempted).length} طالب لم يدفع بعد</span>
                         <button className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-[9px] font-black group-hover:bg-amber-500 group-hover:text-white transition-all">
                             عرض التفاصيل
                         </button>
@@ -182,7 +216,7 @@ export const TeacherCollectionTab = ({
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {collectionHistoryMapped.map((record: any) => (
+                        {collectionHistoryMapped.map((record: { id: string, amount: string, date: string, type: string, notes: string }) => (
                             <div key={record.id} className="bg-white p-5 rounded-[28px] border border-slate-50 shadow-sm hover:border-teal-100 transition-all group">
                                 <div className="flex flex-row-reverse items-start justify-between">
                                     <div className="flex flex-row-reverse items-center gap-3">

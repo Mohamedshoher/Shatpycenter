@@ -4,26 +4,48 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, ChevronRight, ChevronLeft, X, CheckCircle2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { TeacherAttendanceStatus } from '../services/attendanceService';
+
+interface TeacherAttendanceTabProps {
+    updateMonth: (val: number | string) => void;
+    selectedMonthRaw: string;
+    selectedMonth: string;
+    attendanceData: Record<string, TeacherAttendanceStatus>;
+    isTeacher: boolean;
+    setActiveDayMenu: (day: number | null) => void;
+    setTempStatus: (status: 'present' | 'absent' | 'discipline' | 'reward') => void;
+    activeDayMenu: number | null;
+    handleAddDiscipline: () => void;
+    tempStatus: string;
+    tempAmount: 'day' | 'half' | 'quarter';
+    setTempAmount: (amt: 'day' | 'half' | 'quarter') => void;
+    tempReason: string;
+    setTempReason: (val: string) => void;
+    dayDetails: Record<number, { reason: string, type: string }>;
+    setDayDetails: (details: any) => void;
+    updateAttendanceAsync: (params: { date: string, status: TeacherAttendanceStatus, notes?: string }) => Promise<void>;
+    dailyRate: number;
+}
 
 export const TeacherAttendanceTab = ({
     updateMonth, selectedMonthRaw, selectedMonth, attendanceData,
     isTeacher, setActiveDayMenu, setTempStatus, activeDayMenu,
     handleAddDiscipline, tempStatus, tempAmount, setTempAmount,
-    tempReason, setTempReason, dayDetails, updateAttendanceAsync, 
-    dailyRate
-}: any) => {
+    tempReason, setTempReason, dayDetails, setDayDetails,
+    updateAttendanceAsync, dailyRate
+}: TeacherAttendanceTabProps) => {
 
     const weekDays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
     // حسابات إحصائية سريعة
-    const totalAbsenceDays = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
+    const totalAbsenceDays = Object.values(attendanceData || {}).reduce((acc: number, status: TeacherAttendanceStatus) => {
         if (status === 'absent') return acc + 1;
         if (status === 'half') return acc + 0.5;
         if (status === 'quarter') return acc + 0.25;
         return acc;
     }, 0);
 
-    const totalRewardDays = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
+    const totalRewardDays = Object.values(attendanceData || {}).reduce((acc: number, status: TeacherAttendanceStatus) => {
         if (status === 'full_reward') return acc + 1;
         if (status === 'half_reward') return acc + 0.5;
         if (status === 'quarter_reward') return acc + 0.25;
@@ -270,7 +292,7 @@ export const TeacherAttendanceTab = ({
                             const startOffset = (firstDay.getDay() + 1) % 7;
 
                             const records = Object.entries(attendanceData)
-                                .filter(([day, status]) => {
+                                .filter(([day, status]: [string, TeacherAttendanceStatus]) => {
                                     const d = Number(day);
                                     const weekDayIdx = (d - 1 + startOffset) % 7;
                                     const isWeekend = weekDayIdx === 5 || weekDayIdx === 6;
@@ -281,7 +303,7 @@ export const TeacherAttendanceTab = ({
                                 return <div className="col-span-full py-8 text-center text-gray-400 text-sm font-bold bg-white rounded-3xl border border-gray-100 md:col-span-2">لا توجد سجلات انضباط أو خصومات لهذا الشهر</div>
                             }
 
-                            return records.map(([day, status]: [string, any]) => {
+                            return records.map(([day, status]: [string, TeacherAttendanceStatus]) => {
                                 const d = Number(day);
                                 const weekDayIdx = (d - 1 + startOffset) % 7;
                                 const amount = status === 'absent' ? dailyRate :
