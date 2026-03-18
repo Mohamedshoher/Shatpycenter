@@ -8,7 +8,7 @@ export const getStudents = async (): Promise<Student[]> => {
             .select('*');
 
         if (error) {
-            console.error("Supabase error fetching students:", error);
+            console.error("Supabase error fetching students:", error.message || error);
             return [];
         }
 

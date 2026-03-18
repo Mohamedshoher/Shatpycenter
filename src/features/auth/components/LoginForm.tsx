@@ -9,20 +9,36 @@ import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/** 
+ * --- الأنواع (Types) ---
+ * تعريف أنواع التبويبات والأدوار لضمان دقة البيانات
+ */
 type MainTab = 'admin' | 'parent';
 type RoleTab = 'director' | 'supervisor' | 'teacher';
 
 export default function LoginForm() {
+    
+    /** 
+     * --- الخطافات والبيانات (Hooks & Data) ---
+     * استدعاء دوال تسجيل الدخول وجلب بيانات المعلمين
+     */
     const { login, loading, error } = useLogin();
     const { data: teachers } = useTeachers();
 
+    /** 
+     * --- حالات الواجهة (State) ---
+     * إدارة حالة التبويبات، المدخلات، والاختيارات
+     */
     const [mainTab, setMainTab] = useState<MainTab>('parent');
     const [roleTab, setRoleTab] = useState<RoleTab>('director');
     const [password, setPassword] = useState('');
     const [selectedTeacherId, setSelectedTeacherId] = useState('');
     const [phone, setPhone] = useState('');
 
-    // Load saved credentials for all roles
+    /** 
+     * --- التأثيرات الجانبية (Effects) ---
+     * استرجاع بيانات الدخول المحفوظة سابقاً من الذاكرة المحلية (LocalStorage)
+     */
     useEffect(() => {
         const savedMainTab = localStorage.getItem('shatibi_last_main_tab') as MainTab | null;
         const savedRoleTab = localStorage.getItem('shatibi_last_role_tab') as RoleTab | null;
@@ -37,12 +53,16 @@ export default function LoginForm() {
         if (savedPass) setPassword(savedPass);
     }, []);
 
+    /** 
+     * --- معالج الإرسال (Submit Handler) ---
+     * منطق التحقق من البيانات وحفظ الاختيارات وإتمام عملية تسجيل الدخول
+     */
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         let loginIdentifier: string = roleTab;
 
-        // Save preferences and credentials
+        // حفظ التفضيلات وكلمة المرور في الذاكرة المحلية
         localStorage.setItem('shatibi_last_main_tab', mainTab);
         localStorage.setItem('shatibi_last_pass', password);
 
@@ -61,38 +81,54 @@ export default function LoginForm() {
         await login(loginIdentifier, password);
     };
 
+    /** 
+     * --- مكونات واجهة المستخدم (UI Components) ---
+     * تقسيم الواجهة إلى أجزاء صغيرة لسهولة القراءة
+     */
+
+    // 1. رأس الصفحة (الشعار والعنوان)
+    const renderHeader = () => (
+        <div className="text-center mb-6 md:mb-10">
+            <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">مركز الشاطبي</h1>
+            <p className="text-blue-200/60 text-base md:text-lg">للقرآن وعلومه</p>
+        </div>
+    );
+
+    // 2. أزرار التبديل الرئيسية (ولي الأمر / الإدارة)
+    const renderMainTabs = () => (
+        <div className="flex bg-[#ecedef] p-1.5 rounded-[20px] mb-5 md:mb-8">
+            <button
+                onClick={() => setMainTab('parent')}
+                className={cn(
+                    "flex-1 py-3 rounded-[18px] text-base md:text-lg font-bold transition-all duration-300",
+                    mainTab === 'parent' ? "bg-[#3366ff] text-white shadow-lg" : "text-[#7b809a]"
+                )}
+            >
+                ولي الأمر
+            </button>
+            <button
+                onClick={() => setMainTab('admin')}
+                className={cn(
+                    "flex-1 py-3 rounded-[18px] text-base md:text-lg font-bold transition-all duration-300",
+                    mainTab === 'admin' ? "bg-[#3366ff] text-white shadow-lg" : "text-[#7b809a]"
+                )}
+            >
+                الإدارة
+            </button>
+        </div>
+    );
+
+    /** 
+     * --- العرض الرئيسي (Main Render) ---
+     */
     return (
         <div className="w-full max-w-[450px] flex flex-col items-center scale-100 origin-center transition-transform duration-300">
-            {/* Logo Section */}
-            <div className="text-center mb-6 md:mb-10">
-                <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">مركز الشاطبي</h1>
-                <p className="text-blue-200/60 text-base md:text-lg">للقرآن وعلومه</p>
-            </div>
+            
+            {renderHeader()}
 
-            {/* Main Login Card */}
             <div className="w-full bg-[#f8f9fa] rounded-[32px] md:rounded-[40px] p-6 md:p-10 shadow-2xl relative overflow-hidden ring-1 ring-white/10">
-
-                {/* Top Toggle Tabs (الإدارة / ولي الأمر) */}
-                <div className="flex bg-[#ecedef] p-1.5 rounded-[20px] mb-5 md:mb-8">
-                    <button
-                        onClick={() => setMainTab('parent')}
-                        className={cn(
-                            "flex-1 py-3 rounded-[18px] text-base md:text-lg font-bold transition-all duration-300",
-                            mainTab === 'parent' ? "bg-[#3366ff] text-white shadow-lg" : "text-[#7b809a]"
-                        )}
-                    >
-                        ولي الأمر
-                    </button>
-                    <button
-                        onClick={() => setMainTab('admin')}
-                        className={cn(
-                            "flex-1 py-3 rounded-[18px] text-base md:text-lg font-bold transition-all duration-300",
-                            mainTab === 'admin' ? "bg-[#3366ff] text-white shadow-lg" : "text-[#7b809a]"
-                        )}
-                    >
-                        الإدارة
-                    </button>
-                </div>
+                
+                {renderMainTabs()}
 
                 <AnimatePresence mode="wait">
                     {mainTab === 'admin' ? (
@@ -103,7 +139,7 @@ export default function LoginForm() {
                             exit={{ opacity: 0, x: -20 }}
                             className="space-y-6"
                         >
-                            {/* Role Sub-Tabs */}
+                            {/* تبويبات الأدوار داخل الإدارة */}
                             <div className="flex bg-[#f1f3f5] p-1 rounded-2xl justify-between shadow-inner">
                                 {[
                                     { id: 'director', label: 'المدير' },
@@ -126,7 +162,7 @@ export default function LoginForm() {
                                 ))}
                             </div>
 
-                            {/* Role Content */}
+                            {/* أيقونة الدور والوصف */}
                             <div className="flex flex-col items-center gap-4 py-2">
                                 <div className={cn(
                                     "w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center transition-colors",
@@ -148,7 +184,7 @@ export default function LoginForm() {
                                 </div>
                             </div>
 
-                            {/* Admin/Staff Form */}
+                            {/* نموذج دخول الإدارة */}
                             <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
                                 {(roleTab === 'teacher' || roleTab === 'supervisor') && (
                                     <div className="space-y-2">
@@ -230,7 +266,7 @@ export default function LoginForm() {
                             exit={{ opacity: 0, x: 20 }}
                             className="space-y-6 md:space-y-8"
                         >
-                            {/* Icon & Title */}
+                            {/* أيقونة وعنوان ولي الأمر */}
                             <div className="flex flex-col items-center gap-4 py-2">
                                 <div className="w-14 h-14 md:w-16 md:h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
                                     <Users size={28} className="md:w-8 md:h-8" />
@@ -241,6 +277,7 @@ export default function LoginForm() {
                                 </div>
                             </div>
 
+                            {/* نموذج دخول ولي الأمر */}
                             <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
                                 <div className="space-y-2">
                                     <label className="text-xs md:text-sm font-bold text-[#344767] pr-2">رقم الهاتف</label>
@@ -289,7 +326,7 @@ export default function LoginForm() {
                 </AnimatePresence>
             </div>
 
-            {/* Footer Text */}
+            {/* تذييل الصفحة */}
             <p className="mt-4 md:mt-8 text-blue-200/40 text-xs md:text-sm text-center">
                 © 2026 . جميع الحقوق محفوظة.
             </p>

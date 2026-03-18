@@ -86,7 +86,8 @@ export default function ChatPage() {
 
     let list = teachersList.filter((t: any) => {
       const isNotMe = cleanId(t.id) !== cleanCurrentId;
-      return isNotMe;
+      const isActive = t.status === 'active' || !t.status; // النشطين فقط
+      return isNotMe && isActive;
     });
 
     // إذا كان مشرفاً، يرى فقط المدرسين الذين في أقسامه
@@ -123,8 +124,9 @@ export default function ChatPage() {
         : groupsList;
 
     const myStudents = studentsList.filter(s =>
-      (user?.role === 'director') ||
-      (s.groupId && myGroups.some(g => g.id === s.groupId))
+      ((user?.role === 'director') ||
+      (s.groupId && myGroups.some(g => g.id === s.groupId))) &&
+      s.status === 'active' // الطلاب النشطين فقط
     );
 
     const uniqueParents = new Map();
@@ -413,7 +415,6 @@ export default function ChatPage() {
                 conversation={selectedConversation}
                 messages={messages}
                 currentUserId={userId}
-                showHeader={false}
                 onTogglePin={togglePinMessage}
               />
               <div className="p-3 bg-white border-t border-gray-100 safe-bottom">

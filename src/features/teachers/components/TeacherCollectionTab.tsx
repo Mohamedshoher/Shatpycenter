@@ -1,4 +1,4 @@
-"use client";
+"use client";// تبويب التحصيل
 
 import { Button } from '@/components/ui/button';
 import { 

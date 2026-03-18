@@ -1,4 +1,4 @@
-"use client";
+"use client";// قائمة المدرسين
 
 import { useState } from 'react';
 import { useTeachers } from '../hooks/useTeachers';

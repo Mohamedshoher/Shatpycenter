@@ -1,4 +1,4 @@
-"use client";
+"use client";// تبويب الراتب
 
 import { Calendar, CircleDollarSign, MessageCircle, Trash2, Loader, ChevronRight, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';

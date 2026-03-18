@@ -1,4 +1,4 @@
-// features/teachers/components/TeacherDeficitModal.tsx
+//  تفاصيل عجز المجموعة
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Gift, UserX } from 'lucide-react';
 import { cn } from '@/lib/utils';

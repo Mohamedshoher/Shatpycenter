@@ -2,13 +2,17 @@ import { supabase } from '@/lib/supabase';
 import { teacherDeductionService } from '@/features/teachers/services/deductionService';
 import { chatService } from '@/features/chat/services/chatService';
 
+// ==========================================
+// 1. التعريفات والأنواع (Interfaces)
+// ==========================================
+
 export interface AutomationRule {
     id: string;
     name: string;
     trigger: 'deduction' | 'absence' | 'payment_due' | 'low_grade' | 'missing_daily_report' | 'repeated_absence' | 'repeated_exams' | 'overdue_fees';
     recipients: ('teacher' | 'parent')[];
     schedule?: {
-        time?: string; // HH:mm format
+        time?: string; // بصيغة HH:mm
         frequency?: 'daily' | 'weekly' | 'monthly';
     };
     condition: {
@@ -39,7 +43,10 @@ export interface AutomationLog {
     status: 'success' | 'failed';
 }
 
-// القواعد الافتراضية للتهيئة الأولية
+// ==========================================
+// 2. القواعد الافتراضية للتهيئة
+// ==========================================
+
 const DEFAULT_RULES: Omit<AutomationRule, 'id'>[] = [
     {
         name: 'خصم ربع يوم لعدم تسليم التقرير اليومي',
@@ -56,14 +63,14 @@ const DEFAULT_RULES: Omit<AutomationRule, 'id'>[] = [
     }
 ];
 
-// ===== خدمات القواعد =====
+// ==========================================
+// 3. خدمات إدارة القواعد (CRUD)
+// ==========================================
+
 export const getRules = async (): Promise<AutomationRule[]> => {
     try {
-        const { data, error } = await supabase
-            .from('automation_rules')
-            .select('*');
+        const { data, error } = await supabase.from('automation_rules').select('*');
 
-        // إذا لم توجد قواعد أو الجدول فارغ، أضف القواعد الافتراضية
         if ((!data || data.length === 0) && !error) {
             const addedRules: AutomationRule[] = [];
             for (const rule of DEFAULT_RULES) {
@@ -71,7 +78,7 @@ export const getRules = async (): Promise<AutomationRule[]> => {
                     .from('automation_rules')
                     .insert([{
                         name: rule.name,
-                        type: rule.trigger, // Mapping trigger to type column
+                        type: rule.trigger,
                         is_active: rule.enabled,
                         conditions: rule.condition,
                         actions: rule.action,
@@ -79,8 +86,7 @@ export const getRules = async (): Promise<AutomationRule[]> => {
                         schedule: rule.schedule,
                         created_at: rule.createdAt
                     }])
-                    .select()
-                    .single();
+                    .select().single();
 
                 if (newRule && !insertError) {
                     addedRules.push({
@@ -99,10 +105,7 @@ export const getRules = async (): Promise<AutomationRule[]> => {
             return addedRules;
         }
 
-        if (error) {
-            console.error("Error fetching automation rules from Supabase:", error.message || error);
-            return [];
-        }
+        if (error) throw error;
 
         return (data || []).map(row => ({
             id: row.id,
@@ -116,419 +119,236 @@ export const getRules = async (): Promise<AutomationRule[]> => {
             createdAt: new Date(row.created_at)
         }));
     } catch (error: any) {
-        console.error("Unexpected error in getRules:", error.message || error);
-        return [];
-    }
-};
-
-export const getLogs = async (logLimit: number = 20): Promise<AutomationLog[]> => {
-    try {
-        const { data, error } = await supabase
-            .from('automation_logs')
-            .select('*')
-            .order('triggered_at', { ascending: false })
-            .limit(logLimit);
-
-        if (error) {
-            console.error("Error fetching automation logs from Supabase:", error.message || error);
-            return [];
-        }
-
-        return (data || []).map(row => ({
-            id: row.id,
-            ruleId: row.rule_id,
-            ruleName: row.rule_name,
-            triggeredBy: 'system', // Default
-            recipientId: row.affected_entity_id,
-            recipientName: row.affected_entity_name,
-            messageSent: row.details, // Using details for message
-            timestamp: new Date(row.triggered_at),
-            status: row.status as 'success' | 'failed'
-        }));
-    } catch (error: any) {
-        console.error("Unexpected error in getLogs:", error.message || error);
+        console.error("Error fetching rules:", error.message);
         return [];
     }
 };
 
 export const createRule = async (rule: Omit<AutomationRule, 'id' | 'createdAt'>): Promise<AutomationRule> => {
-    try {
-        const { data, error } = await supabase
-            .from('automation_rules')
-            .insert([{
-                name: rule.name,
-                type: rule.trigger,
-                is_active: rule.enabled,
-                conditions: rule.condition,
-                actions: rule.action,
-                recipients: rule.recipients,
-                schedule: rule.schedule
-            }])
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return {
-            id: data.id,
-            name: data.name,
-            trigger: data.type,
-            recipients: data.recipients,
-            schedule: data.schedule,
-            condition: data.conditions,
-            action: data.actions,
-            enabled: data.is_active,
-            createdAt: new Date(data.created_at)
-        };
-    } catch (error) {
-        console.error("Error creating rule:", error);
-        throw error;
-    }
+    const { data, error } = await supabase.from('automation_rules').insert([{
+        name: rule.name,
+        type: rule.trigger,
+        is_active: rule.enabled,
+        conditions: rule.condition,
+        actions: rule.action,
+        recipients: rule.recipients,
+        schedule: rule.schedule
+    }]).select().single();
+    if (error) throw error;
+    return {
+        id: data.id,
+        name: data.name,
+        trigger: data.type,
+        recipients: data.recipients,
+        schedule: data.schedule,
+        condition: data.conditions,
+        action: data.actions,
+        enabled: data.is_active,
+        createdAt: new Date(data.created_at)
+    };
 };
 
 export const updateRule = async (id: string, updates: Partial<AutomationRule>): Promise<AutomationRule> => {
-    try {
-        const dbUpdates: any = {};
-        if (updates.name) dbUpdates.name = updates.name;
-        if (updates.trigger) dbUpdates.type = updates.trigger;
-        if (updates.enabled !== undefined) dbUpdates.is_active = updates.enabled;
-        if (updates.condition) dbUpdates.conditions = updates.condition;
-        if (updates.action) dbUpdates.actions = updates.action;
-        if (updates.recipients) dbUpdates.recipients = updates.recipients;
-        if (updates.schedule) dbUpdates.schedule = updates.schedule;
+    const dbUpdates: any = {};
+    if (updates.name) dbUpdates.name = updates.name;
+    if (updates.trigger) dbUpdates.type = updates.trigger;
+    if (updates.enabled !== undefined) dbUpdates.is_active = updates.enabled;
+    if (updates.condition) dbUpdates.conditions = updates.condition;
+    if (updates.action) dbUpdates.actions = updates.action;
+    if (updates.recipients) dbUpdates.recipients = updates.recipients;
+    if (updates.schedule) dbUpdates.schedule = updates.schedule;
 
-        const { error } = await supabase
-            .from('automation_rules')
-            .update(dbUpdates)
-            .eq('id', id);
-
-        if (error) throw error;
-
-        // Re-fetch to return full object
-        const rules = await getRules();
-        return rules.find(r => r.id === id)!;
-    } catch (error) {
-        console.error("Error updating rule:", error);
-        throw error;
-    }
+    const { error } = await supabase.from('automation_rules').update(dbUpdates).eq('id', id);
+    if (error) throw error;
+    const rules = await getRules();
+    return rules.find(r => r.id === id)!;
 };
 
 export const deleteRule = async (id: string): Promise<void> => {
-    try {
-        const { error } = await supabase
-            .from('automation_rules')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-    } catch (error) {
-        console.error("Error deleting rule:", error);
-        throw error;
-    }
+    const { error } = await supabase.from('automation_rules').delete().eq('id', id);
+    if (error) throw error;
 };
 
 export const toggleRule = async (id: string): Promise<AutomationRule> => {
     const rules = await getRules();
     const rule = rules.find(r => r.id === id);
-    if (!rule) {
-        throw new Error("Rule not found");
-    }
-
-    const { error } = await supabase
-        .from('automation_rules')
-        .update({ is_active: !rule.enabled })
-        .eq('id', id);
-
+    if (!rule) throw new Error("Rule not found");
+    const { error } = await supabase.from('automation_rules').update({ is_active: !rule.enabled }).eq('id', id);
     if (error) throw error;
-
     return { ...rule, enabled: !rule.enabled };
 };
 
-// ===== تسجيل الأحداث =====
+// ==========================================
+// 4. خدمات السجلات (Logging)
+// ==========================================
+
+export const getLogs = async (logLimit: number = 20): Promise<AutomationLog[]> => {
+    const { data, error } = await supabase.from('automation_logs').select('*').order('triggered_at', { ascending: false }).limit(logLimit);
+    if (error) return [];
+    return (data || []).map(row => ({
+        id: row.id,
+        ruleId: row.rule_id,
+        ruleName: row.rule_name,
+        triggeredBy: 'system',
+        recipientId: row.affected_entity_id,
+        recipientName: row.affected_entity_name,
+        messageSent: row.details,
+        timestamp: new Date(row.triggered_at),
+        status: row.status as 'success' | 'failed'
+    }));
+};
+
 export const addLog = async (log: Omit<AutomationLog, 'id'>): Promise<AutomationLog> => {
-    try {
-        const { data, error } = await supabase
-            .from('automation_logs')
-            .insert([{
-                rule_id: log.ruleId,
-                rule_name: log.ruleName,
-                triggered_at: log.timestamp.toISOString(), // Assuming timestamp is Date
-                status: log.status,
-                details: log.messageSent,
-                affected_entity_id: log.recipientId,
-                affected_entity_name: log.recipientName
-            }])
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return {
-            id: data.id,
-            ruleId: data.rule_id,
-            ruleName: data.rule_name,
-            triggeredBy: 'system',
-            recipientId: data.affected_entity_id,
-            recipientName: data.affected_entity_name,
-            messageSent: data.details,
-            timestamp: new Date(data.triggered_at),
-            status: data.status
-        };
-    } catch (error) {
-        console.error("Error adding log:", error);
-        throw error;
-    }
-};
-
-// ===== تنفيذ الأتمتة =====
-export const triggerAutomation = async (
-    ruleId: string,
-    recipientId: string,
-    recipientName: string,
-    data: Record<string, any>
-): Promise<AutomationLog> => {
-    const rules = await getRules();
-    const rule = rules.find(r => r.id === ruleId);
-
-    if (!rule) {
-        throw new Error("Rule not found");
-    }
-
-    let message = rule.action.messageTemplate;
-    Object.entries(data).forEach(([key, value]) => {
-        message = message.replace(`{{${key}}}`, String(value));
-    });
-
-    const log: Omit<AutomationLog, 'id'> = {
-        ruleId,
-        ruleName: rule.name,
-        triggeredBy: 'director-1',
-        recipientId,
-        recipientName,
-        messageSent: message,
-        timestamp: new Date(),
-        status: 'success',
+    const { data, error } = await supabase.from('automation_logs').insert([{
+        rule_id: log.ruleId,
+        rule_name: log.ruleName,
+        triggered_at: log.timestamp.toISOString(),
+        status: log.status,
+        details: log.messageSent,
+        affected_entity_id: log.recipientId,
+        affected_entity_name: log.recipientName
+    }]).select().single();
+    if (error) throw error;
+    return {
+        id: data.id,
+        ruleId: data.rule_id,
+        ruleName: data.rule_name,
+        triggeredBy: 'system',
+        recipientId: data.affected_entity_id,
+        recipientName: data.affected_entity_name,
+        messageSent: data.details,
+        timestamp: new Date(data.triggered_at),
+        status: data.status
     };
-
-    return await addLog(log);
 };
 
+// ==========================================
+// 5. محرك الأتمتة الرئيسي (المحسّن)
+// ==========================================
+
+/**
+ * فحص التقارير المفقودة - النسخة السريعة (Bulk Fetching)
+ */
 export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
     const logsCreated: AutomationLog[] = [];
-
-    // 1. تحديد يوم الفحص (الأمس)
     const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() - 1); // الرجوع يوم واحد للوراء
-
-    const targetDateStr = targetDate.toLocaleDateString('en-CA'); // YYYY-MM-DD
-
-    // التحقق من يوم الإجازة (الخميس والجمعة)
-    // 0: Sun, 1: Mon, ...
+    targetDate.setDate(targetDate.getDate() - 1);
+    const targetDateStr = targetDate.toLocaleDateString('en-CA');
     const dayOfWeek = targetDate.getDay();
 
-    // إذا كان **أمس** هو الخميس (4) أو الجمعة (5)، نتخطى الفحص
-    if (dayOfWeek === 4 || dayOfWeek === 5) {
-        console.log(`تاريخ الفحص (${targetDateStr}) يوافق عطلة (خميس/جمعة). تم التخطي.`);
-        return [];
-    }
+    // 1. تخطي العطلات (الخميس والجمعة)
+    if (dayOfWeek === 4 || dayOfWeek === 5) return [];
 
-    // جلب قاعدة الخصم
+    // 2. التحقق من وجود القاعدة وتفعيلها
     const rules = await getRules();
     const rule = rules.find(r => r.trigger === 'missing_daily_report' && r.enabled);
+    if (!rule) return [];
 
-    if (!rule) {
-        console.log("قاعدة الخصم غير مفعلة أو غير موجودة");
-        return logsCreated;
-    }
+    // 3. جلب المعلمين النشطين
+    const { data: teachers, error: teachersError } = await supabase
+        .from('teachers').select('id, full_name').eq('status', 'active');
+    if (teachersError || !teachers || teachers.length === 0) return [];
 
+    const teacherIds = teachers.map(t => t.id);
+
+    // -----------------------------------------------------------------
+    // الخطوة الأهم للسرعة: جلب كل البيانات المطلوبة دفعة واحدة خارج الحلقة
+    // -----------------------------------------------------------------
+    const [
+        { data: allTeacherAttendance },
+        { data: allDeductions },
+        { data: allGroups },
+        { data: allStudentAttendance }
+    ] = await Promise.all([
+        supabase.from('teacher_attendance').select('id, teacher_id, status').in('teacher_id', teacherIds).eq('date', targetDateStr),
+        supabase.from('deductions').select('id, teacher_id').in('teacher_id', teacherIds).eq('date', targetDateStr),
+        supabase.from('groups').select('id, teacher_id, students(id)').in('teacher_id', teacherIds),
+        supabase.from('attendance').select('student_id').eq('date', targetDateStr)
+    ]);
+
+    // تحويل البيانات لخرائط (Maps) للبحث السريع جداً
+    const teacherAttendanceMap = new Map(allTeacherAttendance?.map(a => [a.teacher_id, a]));
+    const teacherDeductionMap = new Set(allDeductions?.map(d => d.teacher_id));
+    const submittedStudentIds = new Set(allStudentAttendance?.map(a => a.student_id));
+
+    const senderId = 'director';
+    const senderName = 'المدير العام';
     const daysMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const dayName = daysMap[dayOfWeek];
 
-    // جلب المعلمين النشطين
-    const { data: teachers, error: teachersError } = await supabase
-        .from('teachers')
-        .select('id, full_name') // Removed user_id as it appears to not exist and causes 400 error
-        .eq('status', 'active');
-
-    if (teachersError) {
-        console.error("Failed to fetch teachers list:", teachersError);
-        return [];
-    }
-
-    // استخدام معرف 'director' النصي مباشرة ليتطابق مع نظام الدخول الوهمي (Mock Auth)
-    // هذا يضمن أن يرى المدير العام المراسلات في شاشة المحادثات الخاصة به
-    const senderId = 'director';
-    const senderName = 'المدير العام';
-
-    if (!teachers) {
-        return [];
-    }
-
-    console.log(`بدء فحص التقارير لـ ${teachers.length} معلم للتاريخ ${targetDateStr} (الأمس)`);
-
+    // 4. معالجة المعلمين داخل الحلقة (سريعة لأنها في الذاكرة)
     for (const teacher of teachers) {
-        console.log(`---> جاري فحص المعلم: ${teacher.full_name} (${teacher.id})`);
+        // فحص الطلاب المسجلين لهذا المعلم
+        const teacherGroups = allGroups?.filter(g => g.teacher_id === teacher.id) || [];
+        const studentIds = teacherGroups.flatMap(g => (g.students as any[] || []).map(s => s.id));
 
-        // 1. **التحقق من سجل الحضور**:
-        const { data: existingAttendance } = await supabase
-            .from('teacher_attendance')
-            .select('id, status')
-            .eq('teacher_id', teacher.id)
-            .eq('date', targetDateStr)
-            .maybeSingle();
+        if (studentIds.length === 0) continue;
 
+        // هل قام المعلم بتحضير أي طالب من طلابه؟
+        const hasSubmitted = studentIds.some(id => submittedStudentIds.has(id));
 
-
-        // 2. **التحقق من وجود خصم مسبق في جدول deductions**:
-        const { data: existingDeduction } = await supabase
-            .from('deductions')
-            .select('id')
-            .eq('teacher_id', teacher.id)
-            .eq('date', targetDateStr)
-            .maybeSingle();
-
-        // 3. الفحص الفعلي: هل قام بتحضير طلابه في ذلك اليوم؟
-        const { data: groups } = await supabase.from('groups').select('id, name').eq('teacher_id', teacher.id);
-        if (!groups || groups.length === 0) {
-            console.log(`   - ⚠️ تجاوز: لا توجد مجموعات مسجلة لهذا المعلم. قد يكون معلم احتياط أو لم تكتمل بياناته.`);
-            continue;
-        }
-
-        const groupIds = groups.map(g => g.id);
-        const { data: students } = await supabase.from('students').select('id').in('group_id', groupIds);
-        if (!students || students.length === 0) {
-            console.log(`   - ⚠️ تجاوز: المعلم لديه مجموعات (${groups.length}) ولكنها فارغة من الطلاب حالياً.`);
-            continue;
-        }
-
-        const studentIds = students.map(s => s.id);
-        const { data: attendance } = await supabase
-            .from('attendance')
-            .select('id')
-            .in('student_id', studentIds)
-            .eq('date', targetDateStr)
-            .limit(1);
-
-        // إذا **لم** نجد أي سجل حضور للطلاب => المعلم لم يسلم التقرير
-        if (!attendance || attendance.length === 0) {
-            console.log(`   - ❌ مخالفة مؤكدة! لم يسجل حضور للطلاب ليوم ${targetDateStr}.`);
-
+        if (!hasSubmitted) {
             const deductionAmount = rule.condition.deductionAmount || 0.25;
-            const dbReason = 'خصم ربع يوم لعدم تسليم التقرير اليومي';
-            const chatDetail = `خصم ربع يوم لعدم تسليم التقرير اليومي ليوم ${dayName} الموافق ${targetDateStr}`;
+            const existingAtt = teacherAttendanceMap.get(teacher.id);
+            const alreadyDeducted = teacherDeductionMap.has(teacher.id);
 
-            // أ. تحديث سجل الحضور في التقويم (إذا لم يكن غائباً بالفعل)
-            if (existingAttendance) {
-                if (existingAttendance.status !== 'absent' && existingAttendance.status !== 'quarter') {
-                    await supabase
-                        .from('teacher_attendance')
-                        .update({
-                            status: 'quarter',
-                            notes: 'أتمتة: تم تغيير الحالة لعدم تسليم التقرير اليومي'
-                        })
-                        .eq('id', existingAttendance.id);
-                    console.log(`   -> تم تحديث التقويم لـ ${teacher.full_name}.`);
+            // أ. تحديث سجل الحضور في التقويم
+            if (existingAtt) {
+                if (existingAtt.status !== 'absent' && existingAtt.status !== 'quarter') {
+                    await supabase.from('teacher_attendance').update({ status: 'quarter', notes: 'أتمتة: عدم تسليم التقرير' }).eq('id', (existingAtt as any).id);
                 }
             } else {
-                await supabase
-                    .from('teacher_attendance')
-                    .insert([{
-                        teacher_id: teacher.id,
-                        date: targetDateStr,
-                        status: 'quarter',
-                        notes: 'أتمتة: خصم تلقائي لعدم تسليم التقرير'
-                    }]);
-                console.log(`   -> تم إنشاء سجل حضور جديد لـ ${teacher.full_name}.`);
+                await supabase.from('teacher_attendance').insert([{ teacher_id: teacher.id, date: targetDateStr, status: 'quarter', notes: 'أتمتة: خصم تلقائي' }]);
             }
 
-            // إذا كان هناك خصم مالي مسجل مسبقاً، نتوقف هنا حتى لا نكرر الخصم المالي
-            if (existingDeduction) {
-                console.log(`   - ℹ️ الملاحظة: الخصم المالي مسجل مسبقاً لهذا التاريخ. تم تحديث التقويم فقط.`);
-                continue;
+            // ب. تنفيذ الخصم المالي وإرسال الرسالة (إذا لم يتم الخصم مسبقاً)
+            if (!alreadyDeducted) {
+                const res = await executeDeduction(teacher.id, teacher.full_name, deductionAmount, 'خصم ربع يوم لعدم تسليم التقرير اليومي', rule.id);
+                logsCreated.push(...res.logs);
+
+                try {
+                    const conv = await chatService.getOrCreateConversation([senderId, teacher.id], [senderName, teacher.full_name], 'director-teacher');
+                    await chatService.sendMessage(conv.id, senderId, senderName, 'director', `⚠️ تنبيه آلي:\n\nتم خصم ربع يوم لعدم تسليم التقرير اليومي ليوم ${dayName} الموافق ${targetDateStr}.`);
+                } catch (e) { console.error("Chat Error:", e); }
             }
-
-            // ب. تنفيذ الخصم المالي وإضافة السجل العام
-            const result = await executeDeduction(
-                teacher.id,
-                teacher.full_name,
-                deductionAmount,
-                dbReason,
-                rule.id
-            );
-            logsCreated.push(...result.logs);
-
-            // جـ. إرسال رسالة شات
-            try {
-                const conversation = await chatService.getOrCreateConversation(
-                    [senderId, teacher.id],
-                    [senderName, teacher.full_name],
-                    'director-teacher'
-                );
-
-                await chatService.sendMessage(
-                    conversation.id,
-                    senderId,
-                    senderName,
-                    'director',
-                    `⚠️ تنبيه آلي:\n\n${chatDetail}.\nيرجى تسليم التقرير اليومي بانتظام لتجنب الخصومات.`
-                );
-            } catch (msgError) {
-                console.error(`Error sending message to ${teacher.full_name}:`, msgError);
-            }
-        } else {
-            console.log(`   - ✅ سليم: المعلم سلم تقريره (تم العثور على سجلات حضور للطلاب).`);
         }
     }
-
     return logsCreated;
 };
+
+// ==========================================
+// 6. دوال التنفيذ المساعدة
+// ==========================================
 
 export const executeDeduction = async (
     teacherId: string,
     teacherName: string,
     amount: number,
     reason: string,
-    ruleId?: string // Optional
+    ruleId?: string
 ): Promise<{ deduction: any; logs: AutomationLog[] }> => {
-    const deduction = await teacherDeductionService.applyDeduction(
-        teacherId,
-        teacherName,
-        amount,
-        reason,
-        'system-automation'
-    );
-
+    const deduction = await teacherDeductionService.applyDeduction(teacherId, teacherName, amount, reason, 'system-automation');
     const logsCreated: AutomationLog[] = [];
 
-    // Try to find a valid rule ID if not provided
     let effectiveRuleId = ruleId;
     if (!effectiveRuleId) {
         const rules = await getRules();
-        const defaultRule = rules.find(r => r.trigger === 'missing_daily_report');
-        if (defaultRule) {
-            effectiveRuleId = defaultRule.id;
-        }
+        effectiveRuleId = rules.find(r => r.trigger === 'missing_daily_report')?.id;
     }
 
     if (effectiveRuleId) {
-        try {
-            // Log: للمدير فقط أو سجل عام
-            const systemLog = await addLog({
-                ruleId: effectiveRuleId,
-                ruleName: 'خصم ربع يوم لعدم تسليم التقرير اليومي',
-                triggeredBy: 'system',
-                recipientId: teacherId,
-                recipientName: teacherName,
-                messageSent: `تم تطبيق خصم آلي (${amount} يوم) | السبب: ${reason}`,
-                timestamp: new Date(),
-                status: 'success',
-            });
-            logsCreated.push(systemLog);
-        } catch (logError) {
-            console.error("Failed to add logs in executeDeduction:", logError);
-        }
+        const log = await addLog({
+            ruleId: effectiveRuleId,
+            ruleName: 'خصم ربع يوم لعدم تسليم التقرير اليومي',
+            triggeredBy: 'system',
+            recipientId: teacherId,
+            recipientName: teacherName,
+            messageSent: `تم تطبيق خصم آلي (${amount} يوم) | السبب: ${reason}`,
+            timestamp: new Date(),
+            status: 'success',
+        });
+        logsCreated.push(log);
     }
-
     return { deduction, logs: logsCreated };
 };
 
@@ -541,34 +361,32 @@ export const sendManualNotification = async (
     sender?: { uid: string; displayName: string }
 ): Promise<void> => {
     try {
-        const senderId = sender?.uid || 'director';
-        const senderName = sender?.displayName || 'المدير العام';
-
-        const isReward = type === 'reward';
-        const title = isReward ? '🌟 مكافأة إدارية' : '⚠️ تنبيه إداري';
-
+        const sId = sender?.uid || 'director';
+        const sName = sender?.displayName || 'المدير العام';
+        const title = type === 'reward' ? '🌟 مكافأة إدارية' : '⚠️ تنبيه إداري';
         const unit = amount <= 5 ? 'يوم' : 'ج.م';
-        const message = `${title}:\n\nتم تسجيل ${isReward ? 'مكافأة' : 'خصم'} بقيمة ${amount} ${unit}.\nالبيان: ${note || 'بدون سبب'}`;
 
-        const conversation = await chatService.getOrCreateConversation(
-            [senderId, teacherId],
-            [senderName, teacherName],
-            'director-teacher'
-        );
-
-        await chatService.sendMessage(
-            conversation.id,
-            senderId,
-            senderName,
-            'director',
-            message
-        );
-        console.log(`✅ تم إرسال إشعار ${type} للمعلم ${teacherName} بنجاح.`);
-    } catch (error) {
-        console.error("Failed to send manual notification:", error);
-        throw error;
-    }
+        const conv = await chatService.getOrCreateConversation([sId, teacherId], [sName, teacherName], 'director-teacher');
+        await chatService.sendMessage(conv.id, sId, sName, 'director', `${title}:\n\nتم تسجيل ${type === 'reward' ? 'مكافأة' : 'خصم'} بقيمة ${amount} ${unit}.\nالبيان: ${note || 'بدون سبب'}`);
+    } catch (error) { console.error("Failed to send notification:", error); }
 };
+
+export const triggerAutomation = async (ruleId: string, recipientId: string, recipientName: string, data: Record<string, any>): Promise<AutomationLog> => {
+    const rules = await getRules();
+    const rule = rules.find(r => r.id === ruleId);
+    if (!rule) throw new Error("Rule not found");
+
+    let message = rule.action.messageTemplate;
+    Object.entries(data).forEach(([key, value]) => { message = message.replace(`{{${key}}}`, String(value)); });
+
+    return await addLog({
+        ruleId, ruleName: rule.name, triggeredBy: 'system', recipientId, recipientName, messageSent: message, timestamp: new Date(), status: 'success',
+    });
+};
+
+// ==========================================
+// 7. التصدير النهائي
+// ==========================================
 
 export const automationService = {
     getRules,

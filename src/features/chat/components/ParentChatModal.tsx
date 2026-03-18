@@ -219,7 +219,6 @@ export const ParentChatModal: React.FC<ParentChatModalProps> = ({ isOpen, onClos
                                         conversation={selectedConversation}
                                         messages={messages}
                                         currentUserId={userId}
-                                        showHeader={false}
                                     />
                                     <div className="p-4 bg-white border-t border-gray-100">
                                         <MessageInput onSend={sendMessage} disabled={sending} />

@@ -259,3 +259,14 @@ create table if not exists leave_requests (
 -- تفعيل RLS لطلبات الإجازة
 alter table leave_requests enable row level security;
 create policy "Public access" on leave_requests for all using (true);
+-- 19. إنشاء جدول حالة التواجد (User Presence)
+create table if not exists user_presence (
+  user_id text primary key,
+  last_seen timestamp with time zone default now(),
+  is_online boolean default false,
+  updated_at timestamp with time zone default now()
+);
+
+-- تفعيل RLS لحالة التواجد
+alter table user_presence enable row level security;
+create policy "Public access" on user_presence for all using (true);

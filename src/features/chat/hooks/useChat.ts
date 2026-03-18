@@ -117,6 +117,12 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
   const togglePinMessage = useCallback(
     async (messageId: string, currentPinStatus: boolean) => {
       if (!selectedConversation) return;
+      
+      // منع تثبيت الرسائل المؤقتة التي لم تصل لقاعدة البيانات بعد
+      if (messageId.startsWith('temp-')) {
+          console.warn('⚠️ الانتظار حتى يتم تأكيد إرسال الرسالة قبل تثبيتها');
+          return;
+      }
 
       const newStatus = !currentPinStatus;
 
@@ -125,11 +131,11 @@ export const useChat = (userId: string, userRole: 'director' | 'teacher' | 'pare
 
       try {
         await chatService.togglePinMessage(selectedConversation.id, messageId, newStatus);
-      } catch (err) {
-        console.error('Pinning error:', err);
+      } catch (err: any) {
+        console.error('❌ Pinning error detailed:', err?.message || err?.details || err);
         // التراجع في حالة الفشل
         updateMessage(messageId, { isPinned: currentPinStatus });
-        setError('خطأ في تثبيت الرسالة');
+        setError(err?.message || 'خطأ في تثبيت الرسالة');
       }
     },
     [selectedConversation, updateMessage]

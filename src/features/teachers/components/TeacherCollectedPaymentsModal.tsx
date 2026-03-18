@@ -1,4 +1,4 @@
-// features/teachers/components/TeacherCollectedPaymentsModal.tsx
+// التحصيل من المدرس ومن المدير
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CircleDollarSign, AlertCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';

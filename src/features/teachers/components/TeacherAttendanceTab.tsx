@@ -1,4 +1,4 @@
-"use client";
+"use client";// غياب المدرسين وحضورهم 
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, ChevronRight, ChevronLeft, X, CheckCircle2, Trash2 } from 'lucide-react';

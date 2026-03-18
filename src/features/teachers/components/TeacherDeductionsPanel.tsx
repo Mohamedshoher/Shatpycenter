@@ -1,4 +1,4 @@
-'use client';
+'use client';// لوحة الخصومات
 
 import { useEffect, useState } from 'react';
 import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeductions';

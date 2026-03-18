@@ -1,4 +1,4 @@
-// features/teachers/components/TeacherGroupsTab.tsx
+// مجموعات  المدرس
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, X, Layers } from 'lucide-react';
