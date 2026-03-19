@@ -49,7 +49,7 @@ export default function AttendanceReportPage() {
     // 2. معالجة البيانات وحساب الغياب المتصل والكلي
     const processedStudents = useMemo(() => {
         if (!students || !reportData) return [];
-        
+
         // تصفية حسب صلاحية المدرس/المشرف
         const filteredGroups = groups?.filter(g => {
             if (user?.role === 'teacher') return g.teacherId === user.teacherId;
@@ -60,14 +60,14 @@ export default function AttendanceReportPage() {
             return true;
         }) || [];
         const groupIds = filteredGroups.map(g => g.id);
-        const isControlRole = user?.role === 'director' || user?.role === 'admin';
+        const isControlRole = user?.role === 'director'
 
         return students
             .filter(s => s.status === 'active' && (isControlRole || groupIds.includes(s.groupId!)))
             .map(s => {
                 const history = reportData.attendance[s.id] || [];
                 const targetDay = dateMode === 'today' ? new Date().getDate() : dateMode === 'yesterday' ? new Date().getDate() - 1 : new Date().getDate() - 2;
-                
+
                 return {
                     ...s,
                     groupName: groups?.find(g => g.id === s.groupId)?.name || 'بدون حلقة',
@@ -92,7 +92,7 @@ export default function AttendanceReportPage() {
 
             // إذا لم يتم تحديد فلاتر أرقام، اظهر الغائبين اليوم فقط
             if (!cL && !tL) return s.currentStatus === 'absent';
-            
+
             // إذا تم تحديد أرقام، اظهر من يطابق الشرط أو الغائب اليوم
             return s.currentStatus === 'absent' || (cL > 0 && s.continuousAbsences >= cL) || (tL > 0 && s.totalAbsences >= tL);
         }).sort((a, b) => b.totalAbsences - a.totalAbsences);
@@ -131,7 +131,7 @@ export default function AttendanceReportPage() {
                             </button>
                         ))}
                     </div>
-                    <AttendanceStats 
+                    <AttendanceStats
                         presentCount={dailyStats.p} absentCount={dailyStats.a}
                         showPresentChart={showPresentChart} setShowPresentChart={setShowPresentChart}
                         showAbsentChart={showAbsentChart} setShowAbsentChart={setShowAbsentChart}
@@ -142,9 +142,9 @@ export default function AttendanceReportPage() {
             <main className="max-w-5xl mx-auto p-4 space-y-4">
                 {/* شريط البحث */}
                 <div className="relative group">
-                    <input 
-                        type="text" 
-                        placeholder="ابحث عن طالب بالاسم..." 
+                    <input
+                        type="text"
+                        placeholder="ابحث عن طالب بالاسم..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-white border border-gray-100 pr-12 pl-4 py-3 rounded-[20px] text-sm font-bold shadow-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
@@ -158,7 +158,7 @@ export default function AttendanceReportPage() {
                     <div className="py-20 text-center font-black text-gray-400">جاري تحميل البيانات...</div>
                 ) : (
                     <>
-                        <AttendanceFilters 
+                        <AttendanceFilters
                             groups={groups?.filter(g => {
                                 if (user?.role === 'teacher') return g.teacherId === user.teacherId;
                                 if (user?.role === 'supervisor') {
@@ -188,7 +188,7 @@ export default function AttendanceReportPage() {
 
             <AttendanceChartModal isOpen={showAbsentChart} onClose={() => setShowAbsentChart(false)} type="absent" title="توزيع الغياب" data={chartData.absent} />
             <AttendanceChartModal isOpen={showPresentChart} onClose={() => setShowPresentChart(false)} type="present" title="توزيع الحضور" data={chartData.present} />
-            
+
             <StudentDetailModal student={selectedStudent} isOpen={!!selectedStudent} onClose={() => setSelectedStudent(null)} initialTab="attendance" />
         </div>
     );

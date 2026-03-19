@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -28,7 +29,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
-, "src/features/teachers/components/teacher"  ],
+    "**/*.mts",
+    "src/features/teachers/components/teacher/**/*"
+  ],
   "exclude": ["node_modules"]
 }

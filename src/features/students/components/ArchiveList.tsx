@@ -472,7 +472,7 @@ export default function ArchiveList() {
                 isOpen={!!selectedStudent}
                 onClose={() => setSelectedStudent(null)}
                 initialTab="attendance"
-                onEdit={(s) => {
+                onEdit={(s: any) => {
                     setSelectedStudent(null);
                     setStudentToEdit(s);
                     setIsEditModalOpen(true);

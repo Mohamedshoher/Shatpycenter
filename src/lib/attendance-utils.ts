@@ -15,14 +15,14 @@ export const calculateContinuousAbsence = (attendance: any[]): number => {
 
     const normalizeMonth = (m: string) => m.split('-').map(p => p.padStart(2, '0')).join('-');
     const dayMap = new Map<string, string>();
-    
+
     attendance.forEach(a => {
         const dayKey = `${normalizeMonth(a.month)}-${String(a.day).padStart(2, '0')}`;
         dayMap.set(dayKey, a.status);
     });
 
     const sortedDays = Array.from(dayMap.keys()).sort((a, b) => b.localeCompare(a));
-    
+
     let continuous = 0;
     for (const day of sortedDays) {
         if (dayMap.get(day) === 'absent') {
@@ -41,14 +41,14 @@ export const getAllAttendance = async (monthKey: string): Promise<Record<string,
         const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
         // لضمان شمولية الشهر، نأخذ حتى يوم 31 (Postgres سيتعامل معها بشكل صحيح)
         const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
-        
+
         const { data, error } = await supabase
             .from('attendance')
             .select('*')
             .gte('date', startDate)
             .lte('date', endDate)
             .order('created_at', { ascending: true }) // ترتيب تصاعدي ليحل الجديد محل القديم في الـ Map
-            .limit(100000); 
+            .limit(100000);
 
         if (error) {
             console.error("Supabase error fetching month attendance:", error);
@@ -59,7 +59,7 @@ export const getAllAttendance = async (monthKey: string): Promise<Record<string,
         (data || []).forEach((row: any) => {
             const sid = row.student_id;
             if (!map[sid]) map[sid] = [];
-            
+
             // استخراج اليوم والشهر بدقة من حقل التاريخ
             const dateStr = row.date.split('T')[0];
             const [y, m, d] = dateStr.split('-').map(Number);
@@ -89,10 +89,10 @@ export const calculateTotalAbsence = (studentAttendance: any[], monthKey: string
         const parts = m.split('-');
         return `${parts[0]}-${String(parts[1]).padStart(2, '0')}`;
     };
-    
+
     const target = normalize(monthKey);
     const dayMap: Record<number, string> = {};
-    
+
     studentAttendance.forEach(rec => {
         if (normalize(rec.month) === target) {
             dayMap[rec.day] = rec.status;

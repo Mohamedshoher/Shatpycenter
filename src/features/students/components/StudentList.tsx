@@ -83,6 +83,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     // تبسيط مفتاح الكاش ليكون مستقلاً عن قائمة الطلاب
     const todayDate = new Date();
     const todayKey = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
+    const currentMonthKey = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`;
 
     const { data: attendanceData = { today: {}, monthMap: {} } as any } = useQuery({
         queryKey: ['attendance-context', todayKey],
@@ -156,10 +157,10 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 matchesFilter = phone.length < 11;
             } else if (filter === 'غاب 3 فأكثر') {
                 const records = attendanceData.monthMap[student.id] || [];
-                matchesFilter = calculateTotalAbsence(records) >= 3;
+                matchesFilter = calculateTotalAbsence(records, currentMonthKey) >= 3;
             } else if (filter === 'غاب 5 أيام') {
                 const records = attendanceData.monthMap[student.id] || [];
-                matchesFilter = calculateTotalAbsence(records) >= 5;
+                matchesFilter = calculateTotalAbsence(records, currentMonthKey) >= 5;
             } else if (filter === 'غاب 3 متصلاً') {
                 const records = attendanceData.monthMap[student.id] || [];
                 matchesFilter = calculateContinuousAbsence(records) >= 3;
@@ -171,7 +172,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 matchesFilter = calculateContinuousAbsence(records) >= 5;
             } else if (filter === 'الأكثر غياباً') {
                 const records = attendanceData.monthMap[student.id] || [];
-                matchesFilter = calculateTotalAbsence(records) > 0;
+                matchesFilter = calculateTotalAbsence(records, currentMonthKey) > 0;
             } else {
                 matchesFilter = student.groupId === filter;
             }
@@ -185,8 +186,8 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
 
         return finalResults.sort((a, b) => {
             if (filter === 'الأكثر غياباً') {
-                const absA = calculateTotalAbsence(attendanceData.monthMap[a.id] || []);
-                const absB = calculateTotalAbsence(attendanceData.monthMap[b.id] || []);
+                const absA = calculateTotalAbsence(attendanceData.monthMap[a.id] || [], currentMonthKey);
+                const absB = calculateTotalAbsence(attendanceData.monthMap[b.id] || [], currentMonthKey);
                 if (absA !== absB) return absB - absA;
             }
             const groupA = getGroupName(a.groupId);
@@ -567,7 +568,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 onClose={() => setSelectedStudent(null)}
                 initialTab={selectedTab}
                 currentAttendance={selectedStudent ? attendanceState[selectedStudent.id] : undefined}
-                onEdit={(s) => {
+                onEdit={(s:any) => {
                     setSelectedStudent(null);
                     setStudentToEdit(s);
                     setIsEditModalOpen(true);
