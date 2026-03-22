@@ -31,32 +31,46 @@ export default function StudentReportCard({ student, index, userRole, onArchive,
                 </span>
             </div>
 
-            {/* أرقام الغياب */}
-            <div className="flex items-center justify-between border-t border-gray-50 pt-2 px-0.5">
-                <div className="flex items-center gap-1.5 shrink-0">
-                    <div className="flex items-center gap-1.5 bg-red-50/50 px-2.5 py-1.5 rounded-xl border border-red-100/30">
-                        <span className="text-[10px] text-red-700 font-bold">إجمالي:</span>
-                        <span className="text-red-600 font-black text-base font-sans">{student.totalAbsences}</span>
+            {/* أرقام الغياب والحضور */}
+            <div className="flex flex-col gap-2 border-t border-gray-50 pt-3 px-0.5">
+                <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1.5 bg-red-50/50 px-2 py-1 rounded-xl border border-red-100/30">
+                            <span className="text-[9px] text-red-700 font-bold">إجمالي الأسبوع:</span>
+                            <span className="text-red-600 font-black text-sm font-sans">{student.totalAbsences}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-amber-50/50 px-2 py-1 rounded-xl border border-amber-100/30">
+                            <span className="text-[9px] text-amber-800 font-bold">متصل:</span>
+                            <span className="text-amber-700 font-black text-sm font-sans">{student.continuousAbsences}</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-1.5 bg-amber-50/50 px-2.5 py-1.5 rounded-xl border border-amber-100/30">
-                        <span className="text-[10px] text-amber-800 font-bold">متصل:</span>
-                        <span className="text-amber-700 font-black text-base font-sans">{student.continuousAbsences}</span>
+
+                    {/* أزرار التواصل */}
+                    <div className="flex items-center gap-1">
+                        {userRole !== 'teacher' && (
+                            <button onClick={(e) => { e.stopPropagation(); onArchive(student.id); }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl" title="أرشفة الطالب">
+                                <Archive size={14} />
+                            </button>
+                        )}
+                        <button onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${student.parentPhone}`, '_blank'); }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-xl" title="تواصل واتساب">
+                            <MessageCircle size={14} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${student.parentPhone}`; }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl" title="اتصال">
+                            <Phone size={14} />
+                        </button>
                     </div>
                 </div>
 
-                {/* أزرار التواصل */}
-                <div className="flex items-center gap-1">
-                    {userRole !== 'teacher' && (
-                        <button onClick={(e) => { e.stopPropagation(); onArchive(student.id); }} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl">
-                            <Archive size={16} />
-                        </button>
-                    )}
-                    <button onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${student.parentPhone}`, '_blank'); }} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-xl">
-                        <MessageCircle size={16} />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${student.parentPhone}`; }} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl">
-                        <Phone size={16} />
-                    </button>
+                {/* شريط نسب الحضور والغياب */}
+                <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex-1 h-3 rounded-full overflow-hidden flex bg-gray-100 border border-gray-200">
+                        <div style={{ width: `${student.presencePercentage}%` }} className="h-full bg-green-500 hover:bg-green-400 transition-all duration-500" title={`حضور: ${student.presencePercentage}%`} />
+                        <div style={{ width: `${student.absencePercentage}%` }} className="h-full bg-red-500 hover:bg-red-400 transition-all duration-500" title={`غياب: ${student.absencePercentage}%`} />
+                    </div>
+                    <div className="flex items-center gap-2 text-[9px] font-black shrink-0 font-sans">
+                        <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded-md border border-green-100">ح: {student.presencePercentage}%</span>
+                        <span className="text-red-600 bg-red-50 px-1.5 py-0.5 rounded-md border border-red-100">غ: {student.absencePercentage}%</span>
+                    </div>
                 </div>
             </div>
 

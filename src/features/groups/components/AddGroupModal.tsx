@@ -1,73 +1,98 @@
-"use client";
+"use client"; // توجيه Next.js بأن هذا المكون يعمل على جهة العميل (Client-Side)
 
+// --- الاستيرادات (Imports) ---
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTeachers } from '@/features/teachers/services/teacherService';
-import { addGroup, updateGroup, deleteGroup } from '@/features/groups/services/groupService';
+import { addGroup } from '@/features/groups/services/groupService';
 import Modal from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, User, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// --- الثوابت (Constants) ---
+// تحديد ألوان كل نوع من أنواع المجموعات لسهولة الاستخدام والتعديل مستقبلاً
+const GROUP_COLORS = {
+    'قرآن': 'bg-blue-100 text-blue-600',
+    'تلقين': 'bg-green-100 text-green-600',
+    'نور بيان': 'bg-orange-100 text-orange-600',
+    'إقراء': 'bg-red-100 text-red-600'
+} as const;
+
+// استخراج أنواع المجموعات من كائن الألوان
+const GROUP_TYPES = Object.keys(GROUP_COLORS) as Array<keyof typeof GROUP_COLORS>;
+
+// --- واجهات الاستخدام (Interfaces) ---
 interface AddGroupModalProps {
-    isOpen: boolean;
-    onClose: () => void;
+    isOpen: boolean;       // حالة فتح/إغلاق النافذة المنبثقة
+    onClose: () => void;   // دالة إغلاق النافذة المنبثقة
 }
 
+// --- المكون الأساسي (Main Component) ---
 export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
     const queryClient = useQueryClient();
+
+    // 1. جلب بيانات المدرسين باستخدام React Query
     const { data: teachers } = useQuery({
         queryKey: ['teachers'],
         queryFn: getTeachers
     });
 
+    // 2. إدارة حالة البيانات داخل النموذج (State Management)
     const [name, setName] = useState('');
-    const [teacher, setTeacher] = useState('');
-    const [type, setType] = useState('قرآن');
+    const [teacherId, setTeacherId] = useState(''); // تم التحسين: استخدام الـ ID بدلاً من الاسم
+    const [type, setType] = useState<keyof typeof GROUP_COLORS>('قرآن');
 
+    // 3. إعداد عملية الإضافة (Mutation) لإرسال البيانات للخادم
     const addMutation = useMutation({
         mutationFn: addGroup,
         onSuccess: () => {
+            // تحديث قائمة المجموعات تلقائياً بعد الإضافة الناجحة
             queryClient.invalidateQueries({ queryKey: ['groups'] });
+            
+            // إعادة تعيين الحقول وإغلاق النافذة
             onClose();
             setName('');
-            setTeacher('');
+            setTeacherId('');
         }
     });
 
+    // 4. معالجة حدث إرسال النموذج (Form Submit Handler)
     const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const selectedTeacher = teachers?.find(t => t.fullName === teacher);
-        const colors = {
-            'قرآن': 'bg-blue-100 text-blue-600',
-            'تلقين': 'bg-green-100 text-green-600',
-            'نور بيان': 'bg-orange-100 text-orange-600',
-            'إقراء': 'bg-red-100 text-red-600'
-        };
+        e.preventDefault(); // منع إعادة تحميل الصفحة الافتراضي
+        
+        // البحث عن المدرس المختار بناءً على الـ ID الخاص به
+        const selectedTeacher = teachers?.find(t => t.id === teacherId);
+        
+        // تنفيذ طلب الإضافة وإرسال البيانات المجمعة
         addMutation.mutate({
-            name: `${type} (${name})`,
+            name: `${type} (${name})`, // دمج نوع المجموعة مع اسمها (مثال: قرآن (أ))
             teacherId: selectedTeacher?.id || null,
-            teacher,
+            teacher: selectedTeacher?.fullName || '', // إرسال اسم المدرس إن وجد
             schedule: '',
             count: 0,
-            color: colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-600'
+            color: GROUP_COLORS[type] || 'bg-gray-100 text-gray-600'
         });
     };
 
+    // --- واجهة المستخدم (UI / JSX) ---
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="إضافة مجموعة جديدة">
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                
+                {/* --- حقل: نوع المجموعة --- */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-600 block">نوع المجموعة</label>
                     <div className="grid grid-cols-2 gap-2">
-                        {['قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((t) => (
+                        {GROUP_TYPES.map((t) => (
                             <button
                                 key={t}
                                 type="button"
                                 onClick={() => setType(t)}
                                 className={cn(
                                     "py-2 rounded-xl text-xs font-bold border transition-all",
-                                    type === t ? "bg-purple-600 text-white border-purple-600" : "bg-white text-gray-500 border-gray-100 hover:border-purple-200"
+                                    type === t 
+                                        ? "bg-purple-600 text-white border-purple-600" // التنسيق عند التحديد
+                                        : "bg-white text-gray-500 border-gray-100 hover:border-purple-200" // التنسيق العادي
                                 )}
                             >
                                 {t}
@@ -76,6 +101,7 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
                     </div>
                 </div>
 
+                {/* --- حقل: اسم/رقم المجموعة --- */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-600 block">اسم/رقم المجموعة</label>
                     <input
@@ -88,30 +114,35 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
                     />
                 </div>
 
+                {/* --- حقل: اختيار المدرس --- */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-600 block">المدرس المسؤول</label>
                     <select
                         required
-                        value={teacher}
-                        onChange={(e) => setTeacher(e.target.value)}
+                        value={teacherId} // نستخدم الـ ID كقيمة
+                        onChange={(e) => setTeacherId(e.target.value)}
                         className="w-full h-12 bg-gray-50 border border-gray-100 rounded-xl px-4 text-right font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/10"
                     >
                         <option value="">اختر مدرساً</option>
                         {teachers?.map((t) => (
-                            <option key={t.id} value={t.fullName}>{t.fullName}</option>
+                            <option key={t.id} value={t.id}> 
+                                {t.fullName}
+                            </option>
                         ))}
                     </select>
                 </div>
 
+                {/* --- زر الإرسال والحفظ --- */}
                 <div className="pt-4">
                     <Button
                         type="submit"
                         className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-lg shadow-purple-500/20"
-                        disabled={addMutation.isPending}
+                        disabled={addMutation.isPending} // تعطيل الزر أثناء رفع البيانات
                     >
                         {addMutation.isPending ? 'جاري الإضافة...' : 'إضافة المجموعة'}
                     </Button>
                 </div>
+                
             </form>
         </Modal>
     );

@@ -20,9 +20,9 @@ export const TeacherDeficitModal = ({
     deficitTab, setDeficitTab, isDirector, 
     handleExemptStudent, handleRemoveExemption 
 }: Props) => {
-    const displayedStudents = unpaidStudents.filter(s =>
-        deficitTab === 'unpaid' ? !s.isExempted : s.isExempted
-    );
+    const displayedStudents = unpaidStudents
+        .filter(s => deficitTab === 'unpaid' ? !s.isExempted : s.isExempted)
+        .sort((a, b) => a.remaining - b.remaining);
 
     return (
         <AnimatePresence>

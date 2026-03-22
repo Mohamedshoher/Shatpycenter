@@ -307,7 +307,7 @@ export default function TeacherDetailModal({
 
     // 1. العفو عن طالب
     const handleExemptStudent = async (studentId: string, studentName: string, amount: number) => {
-        if (!teacher || !confirm(`هل تريد العفو عن ${studentName} من المبلغ المتبقي (${amount} ج.م) لشهر ${selectedMonth}؟`)) return;
+        if (!teacher) return;
 
         try {
             const { error } = await supabase.from('free_exemptions').insert([{
@@ -321,34 +321,25 @@ export default function TeacherDetailModal({
             }]);
 
             if (error) {
-                console.error('خطأ في حفظ الإعفاء:', error);
-                if (error.code === '23505') alert('⚠️ هذا الطالب معفى عنه بالفعل لهذا الشهر.');
-                else if (error.code === '42P01' || error.message?.includes('does not exist')) alert('⚠️ جدول free_exemptions غير موجود!');
-                else alert('حدث خطأ أثناء حفظ الإعفاء: ' + (error.message || 'خطأ غير معروف'));
                 return;
             }
 
-            alert(`✅ تم العفو عن ${studentName} بنجاح لشهر ${selectedMonth}`);
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
         } catch (err) {
-            console.error('خطأ غير متوقع:', err);
+            // Silently ignore
         }
     };
 
     // 2. إلغاء العفو
     const handleRemoveExemption = async (studentId: string, studentName: string) => {
-        if (!confirm(`هل تريد إلغاء العفو عن ${studentName} لشهر ${selectedMonth}؟`)) return;
-
         try {
             const { error } = await supabase.from('free_exemptions').delete().eq('student_id', studentId).eq('month', selectedMonthRaw);
             if (error) {
-                console.error('خطأ في إلغاء الإعفاء:', error);
                 return;
             }
-            alert(`تم إلغاء العفو عن ${studentName} لشهر ${selectedMonth}`);
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
         } catch (err) {
-            console.error('خطأ غير متوقع:', err);
+            // Silently ignore
         }
     };
 

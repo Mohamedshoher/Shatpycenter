@@ -17,7 +17,8 @@ import {
     Settings2,
     BarChart3,
     ChevronDown,
-    Filter
+    Filter,
+    ArrowDownUp
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn, tieredSearchFilter } from '@/lib/utils';
@@ -60,6 +61,8 @@ export default function GroupsPage() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isManageModalOpen, setIsManageModalOpen] = useState(false);
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+    const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+    const [sortBy, setSortBy] = useState<'name' | 'studentCount' | 'attendance'>('name');
     const { toggleSidebar } = useUIStore();
     const { user } = useAuthStore();
 
@@ -133,7 +136,11 @@ export default function GroupsPage() {
         // تطبيق البحث المتدرج على المجموعات (باسم المجموعة أو اسم المعلم)
         const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (g: any) => `${g.name} ${g.teacher}`);
 
-        return finalResults.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+        return finalResults.sort((a, b) => {
+            if (sortBy === 'studentCount') return b.count - a.count;
+            if (sortBy === 'attendance') return b.attendancePercentage - a.attendancePercentage;
+            return a.name.localeCompare(b.name, 'ar');
+        });
     })();
 
     return (
@@ -208,47 +215,105 @@ export default function GroupsPage() {
                                     </button>
 
                                     {user?.role !== 'teacher' && (
-                                        <div className="relative">
-                                            <button
-                                                onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                                                className={cn(
-                                                    "h-11 px-4 bg-white border border-gray-100 rounded-[16px] flex items-center gap-2 text-gray-600 font-bold transition-all shadow-sm active:scale-95",
-                                                    isFilterDropdownOpen ? "border-purple-500" : "hover:border-purple-200"
-                                                )}
-                                            >
-                                                <Filter size={18} className="text-purple-500" />
-                                                <span className="text-xs hidden sm:inline">{filter}</span>
-                                                <ChevronDown size={14} className={cn("transition-transform duration-300", isFilterDropdownOpen && "rotate-180")} />
-                                            </button>
+                                        <>
+                                            {/* Filter Dropdown */}
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => {
+                                                        setIsFilterDropdownOpen(!isFilterDropdownOpen);
+                                                        setIsSortDropdownOpen(false);
+                                                    }}
+                                                    className={cn(
+                                                        "h-11 px-4 bg-white border border-gray-100 rounded-[16px] flex items-center gap-2 text-gray-600 font-bold transition-all shadow-sm active:scale-95",
+                                                        isFilterDropdownOpen ? "border-purple-500" : "hover:border-purple-200"
+                                                    )}
+                                                >
+                                                    <Filter size={18} className="text-purple-500" />
+                                                    <span className="text-xs hidden sm:inline">{filter}</span>
+                                                    <ChevronDown size={14} className={cn("transition-transform duration-300", isFilterDropdownOpen && "rotate-180")} />
+                                                </button>
 
-                                            <AnimatePresence>
-                                                {isFilterDropdownOpen && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        exit={{ opacity: 0, y: 10 }}
-                                                        className="absolute top-[120%] left-0 w-40 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1"
-                                                    >
-                                                        {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
-                                                            <button
-                                                                key={type}
-                                                                onClick={() => {
-                                                                    setFilter(type);
-                                                                    setIsFilterDropdownOpen(false);
-                                                                }}
-                                                                className={cn(
-                                                                    "w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
-                                                                    filter === type ? "bg-purple-50 text-purple-600" : "text-gray-600 hover:bg-gray-50"
-                                                                )}
-                                                            >
-                                                                {type}
-                                                                {filter === type && <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
-                                                            </button>
-                                                        ))}
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
+                                                <AnimatePresence>
+                                                    {isFilterDropdownOpen && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: 10 }}
+                                                            className="absolute top-[120%] left-0 w-40 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1"
+                                                        >
+                                                            {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
+                                                                <button
+                                                                    key={type}
+                                                                    onClick={() => {
+                                                                        setFilter(type);
+                                                                        setIsFilterDropdownOpen(false);
+                                                                    }}
+                                                                    className={cn(
+                                                                        "w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
+                                                                        filter === type ? "bg-purple-50 text-purple-600" : "text-gray-600 hover:bg-gray-50"
+                                                                    )}
+                                                                >
+                                                                    {type}
+                                                                    {filter === type && <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
+                                                                </button>
+                                                            ))}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+
+                                            {/* Sort Dropdown */}
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => {
+                                                        setIsSortDropdownOpen(!isSortDropdownOpen);
+                                                        setIsFilterDropdownOpen(false);
+                                                    }}
+                                                    className={cn(
+                                                        "h-11 px-4 bg-white border border-gray-100 rounded-[16px] flex items-center gap-2 text-gray-600 font-bold transition-all shadow-sm active:scale-95",
+                                                        isSortDropdownOpen ? "border-blue-500" : "hover:border-blue-200"
+                                                    )}
+                                                >
+                                                    <ArrowDownUp size={18} className="text-blue-500" />
+                                                    <span className="text-xs hidden sm:inline">
+                                                        {sortBy === 'name' ? 'الاسم' : sortBy === 'studentCount' ? 'العدد' : 'الحضور'}
+                                                    </span>
+                                                    <ChevronDown size={14} className={cn("transition-transform duration-300", isSortDropdownOpen && "rotate-180")} />
+                                                </button>
+
+                                                <AnimatePresence>
+                                                    {isSortDropdownOpen && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: 10 }}
+                                                            className="absolute top-[120%] left-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1"
+                                                        >
+                                                            {[
+                                                                { id: 'name', label: 'الترتيب الأبجدي' },
+                                                                { id: 'studentCount', label: 'عدد الطلاب (الأكثر أولاً)' },
+                                                                { id: 'attendance', label: 'نسبة الحضور (الأعلى أولاً)' }
+                                                            ].map((sortOption) => (
+                                                                <button
+                                                                    key={sortOption.id}
+                                                                    onClick={() => {
+                                                                        setSortBy(sortOption.id as any);
+                                                                        setIsSortDropdownOpen(false);
+                                                                    }}
+                                                                    className={cn(
+                                                                        "w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
+                                                                        sortBy === sortOption.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                                    )}
+                                                                >
+                                                                    {sortOption.label}
+                                                                    {sortBy === sortOption.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+                                                                </button>
+                                                            ))}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             )}

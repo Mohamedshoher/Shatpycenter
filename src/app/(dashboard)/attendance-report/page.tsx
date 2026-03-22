@@ -15,15 +15,18 @@ import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useAuthStore } from '@/store/useAuthStore';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';
-import { calculateContinuousAbsence, calculateTotalAbsence } from '@/lib/attendance-utils';
 
 export default function AttendanceReportPage() {
     const { data: students, archiveStudent } = useStudents();
     const { data: groups } = useGroups();
     const { user } = useAuthStore();
 
-    // حالات الصفحة
-    const [dateMode, setDateMode] = useState<'today' | 'yesterday' | 'before'>('today');
+    // حالة التاريخ المختار
+    const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+
     const [groupId, setGroupId] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [contLimit, setContLimit] = useState('');
@@ -34,14 +37,52 @@ export default function AttendanceReportPage() {
 
     // 1. جلب بيانات الغياب والملحوظات
     const { data: reportData, isLoading } = useQuery({
-        queryKey: ['attendance-report-data-v5', dateMode],
+        queryKey: ['attendance-report-data-v6', selectedDateStr],
         queryFn: async () => {
-            const { getAllAttendance } = await import('@/lib/attendance-utils');
+            const { supabase } = await import('@/lib/supabase');
             const { getLatestNotes } = await import('@/features/students/services/recordsService');
-            const now = new Date();
-            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const [attendance, notes] = await Promise.all([getAllAttendance(monthKey), getLatestNotes()]);
-            return { attendance, notes, monthKey };
+            
+            const [y, m, d] = selectedDateStr.split('-').map(Number);
+            const dObj = new Date(y, m - 1, d);
+            dObj.setDate(dObj.getDate() - 60); // آخر 60 يوم لحساب المتصل بدقة
+            const sinceDate = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
+
+            const fetchAllAtt = async () => {
+                let allData: any[] = [];
+                let from = 0;
+                const step = 1000; // Supabase enforced max-rows is usually 1000
+                while (true) {
+                    const { data, error } = await supabase.from('attendance')
+                        .select('student_id, date, status, created_at')
+                        .gte('date', sinceDate)
+                        .order('created_at', { ascending: false })
+                        .range(from, from + step - 1);
+                    
+                    if (error || !data || data.length === 0) break;
+                    allData = [...allData, ...data];
+                    
+                    // إذا كان الاستعلام أرجع أقل من الحد الأقصى، معناه أننا وصلنا للنهاية
+                    if (data.length < step) break;
+                    from += step;
+                }
+                return allData;
+            };
+
+            const [attData, notes] = await Promise.all([
+                fetchAllAtt(),
+                getLatestNotes()
+            ]);
+
+            const map: Record<string, any[]> = {};
+            (attData || []).forEach(row => {
+                if (!map[row.student_id]) map[row.student_id] = [];
+                map[row.student_id].push({
+                    date: row.date.split('T')[0],
+                    status: row.status
+                });
+            });
+
+            return { attendanceMap: map, notes };
         },
         enabled: !!students
     });
@@ -50,7 +91,6 @@ export default function AttendanceReportPage() {
     const processedStudents = useMemo(() => {
         if (!students || !reportData) return [];
 
-        // تصفية حسب صلاحية المدرس/المشرف
         const filteredGroups = groups?.filter(g => {
             if (user?.role === 'teacher') return g.teacherId === user.teacherId;
             if (user?.role === 'supervisor') {
@@ -62,23 +102,64 @@ export default function AttendanceReportPage() {
         const groupIds = filteredGroups.map(g => g.id);
         const isControlRole = user?.role === 'director'
 
+        const selectedDate = new Date(selectedDateStr);
+        const dayOfWeek = selectedDate.getDay(); 
+        const diffFromSat = (dayOfWeek + 1) % 7; // الأسبوع يبدأ من السبت
+        const weekStartDate = new Date(selectedDate);
+        weekStartDate.setDate(selectedDate.getDate() - diffFromSat);
+        const wStartStr = `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`;
+
         return students
             .filter(s => s.status === 'active' && (isControlRole || groupIds.includes(s.groupId!)))
             .map(s => {
-                const history = reportData.attendance[s.id] || [];
-                const targetDay = dateMode === 'today' ? new Date().getDate() : dateMode === 'yesterday' ? new Date().getDate() - 1 : new Date().getDate() - 2;
+                const history = reportData.attendanceMap[s.id] || [];
+                
+                // استخراج الحالة الأحدث لكل يوم
+                const dailyStatusMap = new Map<string, string>();
+                history.forEach(h => {
+                    if (!dailyStatusMap.has(h.date)) dailyStatusMap.set(h.date, h.status);
+                });
+
+                // 1. حساب الغياب المتصل تنازلياً من اليوم المختار (في حدود الأسبوع فقط)
+                const recordedDates = Array.from(dailyStatusMap.keys())
+                    .filter(d => d >= wStartStr && d <= selectedDateStr)
+                    .sort((a,b) => b.localeCompare(a));
+                
+                let continuousAbsences = 0;
+                for (const d of recordedDates) {
+                    if (dailyStatusMap.get(d) === 'absent') {
+                        continuousAbsences++;
+                    } else if (dailyStatusMap.get(d) === 'present') {
+                        break;
+                    }
+                }
+
+                // 2. حساب الغياب والحضور في الأسبوع الحالي لليوم المختار
+                let totalAbsentWeek = 0;
+                let totalPresentWeek = 0;
+                for (const [d, status] of dailyStatusMap.entries()) {
+                    if (d >= wStartStr && d <= selectedDateStr) {
+                        if (status === 'absent') totalAbsentWeek++;
+                        if (status === 'present') totalPresentWeek++;
+                    }
+                }
+                const totalRecordsWeek = totalAbsentWeek + totalPresentWeek;
+                const absencePercentage = totalRecordsWeek > 0 ? Math.round((totalAbsentWeek / totalRecordsWeek) * 100) : 0;
+                const presencePercentage = totalRecordsWeek > 0 ? Math.round((totalPresentWeek / totalRecordsWeek) * 100) : 0;
 
                 return {
                     ...s,
                     groupName: groups?.find(g => g.id === s.groupId)?.name || 'بدون حلقة',
-                    totalAbsences: calculateTotalAbsence(history, reportData.monthKey),
-                    continuousAbsences: calculateContinuousAbsence(history),
-                    currentStatus: history.find(h => h.day === targetDay)?.status || 'not_recorded',
+                    totalAbsences: totalAbsentWeek,
+                    continuousAbsences,
+                    absencePercentage,
+                    presencePercentage,
+                    currentStatus: dailyStatusMap.get(selectedDateStr) || 'not_recorded',
                     lastNote: reportData.notes[s.id]?.text || "لا توجد ملحوظات",
                     lastNoteDate: reportData.notes[s.id]?.date ? new Date(reportData.notes[s.id].date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' }) : ""
                 };
             });
-    }, [students, reportData, groups, user, dateMode]);
+    }, [students, reportData, groups, user, selectedDateStr]);
 
     // 3. الفلترة النهائية للعرض وحساب إحصائيات المخططات
     const { displayStudents, chartData } = useMemo(() => {
@@ -124,12 +205,20 @@ export default function AttendanceReportPage() {
             {/* Header */}
             <div className="sticky top-0 z-[70] bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-2">
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
-                    <div className="flex bg-gray-100 p-1 rounded-xl">
-                        {(['today', 'yesterday', 'before'] as const).map(m => (
-                            <button key={m} onClick={() => setDateMode(m)} className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black", dateMode === m ? "bg-white text-blue-600 shadow-sm" : "text-gray-400")}>
-                                {m === 'today' ? 'اليوم' : m === 'yesterday' ? 'أمس' : 'أول أمس'}
-                            </button>
-                        ))}
+                    <div className="flex bg-gray-100 p-1 rounded-xl items-center gap-2">
+                        <input 
+                            type="date" 
+                            value={selectedDateStr}
+                            onChange={(e) => setSelectedDateStr(e.target.value)}
+                            max={new Date().toISOString().split('T')[0]}
+                            className="bg-white border flex-1 border-gray-200 text-sm font-bold text-gray-700 px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        />
+                        <button onClick={() => {
+                            const d = new Date();
+                            setSelectedDateStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                        }} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
+                            اليوم
+                        </button>
                     </div>
                     <AttendanceStats
                         presentCount={dailyStats.p} absentCount={dailyStats.a}
