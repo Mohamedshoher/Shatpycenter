@@ -45,6 +45,7 @@ export const viewport: Viewport = {
 };
 
 import BottomNavigation from "@/components/layout/BottomNavigation";
+import NetworkStatusBar from "@/components/ui/NetworkStatusBar";
 
 export default function RootLayout({
   children,
@@ -56,6 +57,7 @@ export default function RootLayout({
       <body className={`${cairo.variable} ${cairo.className} antialiased bg-gray-50`}>
         <QueryProvider>
           <AuthProvider>
+            <NetworkStatusBar />
             <main className="min-h-screen pb-20 md:pb-0">
               {children}
             </main>

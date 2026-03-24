@@ -10,8 +10,6 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
-import { getTransactionsByMonth } from '@/features/finance/services/financeService';
-import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
@@ -50,158 +48,174 @@ export default function FinanceComparisonChart() {
     return result;
   }, [monthsCount]);
 
-  const { data: chartData = [], isLoading } = useQuery({
-    queryKey: ['finance-comparison', monthsCount, teachers.length, students.length],
+  // ✅ 3 requests only (regardless of how many months selected)
+  const { data: rawData, isLoading } = useQuery({
+    queryKey: ['finance-comparison-raw', recentMonths[0]?.value, recentMonths[recentMonths.length - 1]?.value],
+    staleTime: 1000 * 60 * 15,   // 15 دقيقة - لا يعيد التحميل تلقائياً
+    gcTime: 1000 * 60 * 60,      // يبقى في الـ cache لساعة كاملة
+    retry: 1,                    // محاولة إعادة واحدة فقط عند الفشل
     queryFn: async () => {
-      const data: MonthlyData[] = [];
+      const firstMonth = recentMonths[0].value;
+      const lastMonth = recentMonths[recentMonths.length - 1].value;
 
-      const normalize = (s: string) => {
-        if (!s) return '';
-        return s
-          .replace(/[أإآ]/g, 'ا')
-          .replace(/ة/g, 'ه')
-          .replace(/ى/g, 'ي')
-          .replace(/[ءئؤ]/g, '')
-          .replace(/[ًٌٍَُِّ]/g, '')
-          .replace(/\s+/g, '')
-          .trim();
+      // Start/end dates for the entire range
+      const startDate = `${firstMonth}-01`;
+      const [ly, lm] = lastMonth.split('-').map(Number);
+      const lastDay = new Date(ly, lm, 0).getDate();
+      const endDate = `${lastMonth}-${String(lastDay).padStart(2, '0')}`;
+
+      // === 3 parallel requests for ALL months at once ===
+      const [txResult, feesResult, exemptResult] = await Promise.all([
+        // 1. All transactions in the date range
+        supabase
+          .from('financial_transactions')
+          .select('id, type, category, amount, date, performed_by, related_user_id')
+          .gte('date', startDate)
+          .lte('date', endDate),
+
+        // 2. All fees in the month range (using .in for all month values & full labels)
+        supabase
+          .from('fees')
+          .select('id, student_id, month, amount, created_by')
+          .in('month', [
+            ...recentMonths.map(m => m.value),
+            ...recentMonths.map(m => m.fullLabel)
+          ]),
+
+        // 3. All exemptions
+        supabase
+          .from('free_exemptions')
+          .select('id, student_id, month, amount')
+          .in('month', recentMonths.map(m => m.value))
+      ]);
+
+      return {
+        transactions: txResult.data || [],
+        fees: feesResult.data || [],
+        exemptions: exemptResult.data || []
       };
-
-      // Fetch exemptions for all selected months
-      const { data: allExemptions = [] } = await supabase
-        .from('free_exemptions')
-        .select('*')
-        .in('month', recentMonths.map(m => m.value));
-
-      for (const m of recentMonths) {
-        const [year, month] = m.value.split('-');
-
-        // Fetch transactions & fees concurrently
-        const [dbTransactions, feesByKey, feesByLabel] = await Promise.all([
-          getTransactionsByMonth(parseInt(year), parseInt(month)),
-          getFeesByMonth(m.value),
-          getFeesByMonth(m.fullLabel)
-        ]);
-
-        // Merge fees
-        const seenFees = new Set();
-        const allFees = [...feesByKey, ...feesByLabel].filter(f => {
-          if (seenFees.has(f.id)) return false;
-          seenFees.add(f.id);
-          return true;
-        });
-
-        // Income transactions
-        const incomeTransactions = dbTransactions.filter(tr => tr.type === 'income');
-        const expenseTransactions = dbTransactions.filter(tr => tr.type === 'expense');
-
-        // Total received logic (from page.tsx)
-        const totalFeesByManagerDirect = allFees
-          .filter(fee => {
-            const isByTeacher = teachers.some(t =>
-              fee.createdBy === t.fullName ||
-              fee.createdBy === t.phone ||
-              (fee.createdBy && normalize(fee.createdBy) === normalize(t.fullName))
-            );
-            const isExplicitManager = fee.createdBy === user?.displayName || fee.createdBy === 'المدير' || fee.createdBy === 'admin';
-            const isNotTeacher = !isByTeacher && fee.createdBy && fee.createdBy !== 'غير معروف';
-            return isExplicitManager || isNotTeacher;
-          })
-          .reduce((sum, fee) => sum + (Number(fee.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
-
-        const totalFromTeachers = incomeTransactions
-          .filter(tr => tr.category === 'تحصيل من مدرس')
-          .reduce((sum, tr) => sum + tr.amount, 0);
-
-        const totalOtherIncome = incomeTransactions
-          .filter(tr => tr.category === 'donation' || tr.category === 'other')
-          .reduce((sum, tr) => sum + tr.amount, 0);
-
-        const managerTotal = totalFeesByManagerDirect + totalFromTeachers + totalOtherIncome;
-        const totalExp = expenseTransactions.reduce((sum, tr) => sum + tr.amount, 0);
-
-        // Calculate Deficit (العجز)
-        const monthExemptions = (allExemptions || []).filter(e => e.month === m.value);
-        const exemptedStudentIds = monthExemptions.map((e: any) => e.student_id);
-
-        let totalDeficit = 0;
-
-        teachers.forEach(t => {
-          if (t.status === 'active' || !t.status) {
-            const teacherGroups = groups.filter(g => g.teacherId === t.id).map(g => g.id);
-            const teacherStudents = students.filter(s => {
-              const isMember = s.groupId && teacherGroups.includes(s.groupId) && s.status !== 'archived';
-              if (!isMember) return false;
-
-              if (s.enrollmentDate) {
-                const enrollYearMonth = s.enrollmentDate.substring(0, 7);
-                return enrollYearMonth <= m.value;
-              }
-              return true;
-            });
-
-            teacherStudents.forEach(student => {
-              // Fees for THIS month
-              const studentFees = allFees.filter(f => f.studentId === student.id);
-              const totalPaidByStudent = studentFees.reduce((sum, f) => sum + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
-              const expectedAmount = Number(student.monthlyAmount) || 0;
-              const remaining = Math.max(0, expectedAmount - totalPaidByStudent);
-              const isExempted = exemptedStudentIds.includes(student.id);
-
-              if (remaining > 0 && !isExempted) {
-                totalDeficit += remaining;
-              }
-            });
-          }
-        });
-
-        data.push({
-          month: m.value,
-          label: m.label,
-          income: managerTotal,
-          expenses: totalExp,
-          balance: managerTotal - totalExp,
-          deficit: totalDeficit
-        });
-      }
-
-      return data;
     },
-    enabled: teachers.length > 0 && students.length > 0 && groups.length > 0
+    enabled: teachers.length > 0 && students.length > 0 && groups.length > 0 && recentMonths.length > 0
   });
 
-  const transposedData = useMemo(() => {
-    if (!chartData || chartData.length === 0) return [];
+  // All calculation is local (no network)
+  const chartData = useMemo<MonthlyData[]>(() => {
+    if (!rawData) return [];
 
-    const incomeRow: any = { metric: 'الإيرادات' };
-    const expensesRow: any = { metric: 'المصروفات' };
-    const deficitRow: any = { metric: 'إجمالي العجز' };
-    const balanceRow: any = { metric: 'صافي الربح' };
+    const normalize = (s: string) => {
+      if (!s) return '';
+      return s
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/ى/g, 'ي')
+        .replace(/[ءئؤ]/g, '')
+        .replace(/[ًٌٍَُِّ]/g, '')
+        .replace(/\s+/g, '')
+        .trim();
+    };
 
-    chartData.forEach(d => {
-      incomeRow[d.label] = d.income;
-      expensesRow[d.label] = d.expenses;
-      deficitRow[d.label] = d.deficit;
-      balanceRow[d.label] = d.balance;
+    const { transactions, fees, exemptions } = rawData;
+
+    return recentMonths.map(m => {
+      // Filter transactions for this month
+      const monthTx = transactions.filter(tr => (tr.date as string).startsWith(m.value));
+      const incomeTx = monthTx.filter(tr => tr.type === 'income');
+      const expenseTx = monthTx.filter(tr => tr.type === 'expense');
+
+      // Filter fees for this month (support both YYYY-MM & fullLabel formats)
+      const monthFees = fees.filter(f => f.month === m.value || f.month === m.fullLabel);
+
+      // Deduplicate fees
+      const seenFees = new Set<string>();
+      const allFees = monthFees.filter(f => {
+        if (seenFees.has(f.id)) return false;
+        seenFees.add(f.id);
+        return true;
+      });
+
+      // Manager direct fees
+      const totalFeesByManagerDirect = allFees
+        .filter(fee => {
+          const isByTeacher = teachers.some(t =>
+            fee.created_by === t.fullName ||
+            fee.created_by === t.phone ||
+            (fee.created_by && normalize(fee.created_by) === normalize(t.fullName))
+          );
+          const isExplicitManager = fee.created_by === user?.displayName || fee.created_by === 'المدير' || fee.created_by === 'admin';
+          const isNotTeacher = !isByTeacher && fee.created_by && fee.created_by !== 'غير معروف';
+          return isExplicitManager || isNotTeacher;
+        })
+        .reduce((sum, fee) => sum + (Number(String(fee.amount).replace(/[^0-9.]/g, '')) || 0), 0);
+
+      const totalFromTeachers = incomeTx
+        .filter(tr => tr.category === 'تحصيل من مدرس')
+        .reduce((sum, tr) => sum + Number(tr.amount), 0);
+
+      const totalOtherIncome = incomeTx
+        .filter(tr => tr.category === 'donation' || tr.category === 'other')
+        .reduce((sum, tr) => sum + Number(tr.amount), 0);
+
+      const managerTotal = totalFeesByManagerDirect + totalFromTeachers + totalOtherIncome;
+      const totalExp = expenseTx.reduce((sum, tr) => sum + Number(tr.amount), 0);
+
+      // Deficit
+      const monthExemptions = exemptions.filter(e => e.month === m.value);
+      const exemptedStudentIds = new Set(monthExemptions.map((e: any) => e.student_id));
+
+      let totalDeficit = 0;
+      teachers.forEach(t => {
+        if (t.status === 'active' || !t.status) {
+          const teacherGroups = groups.filter(g => g.teacherId === t.id).map(g => g.id);
+          const teacherStudents = students.filter(s => {
+            if (!s.groupId || !teacherGroups.includes(s.groupId) || s.status === 'archived') return false;
+            if (s.enrollmentDate) return s.enrollmentDate.substring(0, 7) <= m.value;
+            return true;
+          });
+          teacherStudents.forEach(student => {
+            const studentFees = allFees.filter(f => f.student_id === student.id);
+            const totalPaid = studentFees.reduce((sum, f) => sum + (Number(String(f.amount).replace(/[^0-9.]/g, '')) || 0), 0);
+            const expected = Number(student.monthlyAmount) || 0;
+            const remaining = Math.max(0, expected - totalPaid);
+            if (remaining > 0 && !exemptedStudentIds.has(student.id)) {
+              totalDeficit += remaining;
+            }
+          });
+        }
+      });
+
+      return {
+        month: m.value,
+        label: m.label,
+        income: managerTotal,
+        expenses: totalExp,
+        balance: managerTotal - totalExp,
+        deficit: totalDeficit
+      };
     });
+  }, [rawData, recentMonths, teachers, students, groups, user?.displayName]);
 
-    return [incomeRow, expensesRow, deficitRow, balanceRow];
+  // Transpose: X-axis = metric, bars = months
+  const transposedData = useMemo(() => {
+    if (!chartData.length) return [];
+    const rows: Record<string, any>[] = [
+      { metric: 'الإيرادات' },
+      { metric: 'المصروفات' },
+      { metric: 'إجمالي العجز' },
+      { metric: 'صافي الربح' },
+    ];
+    chartData.forEach(d => {
+      rows[0][d.label] = d.income;
+      rows[1][d.label] = d.expenses;
+      rows[2][d.label] = d.deficit;
+      rows[3][d.label] = d.balance;
+    });
+    return rows;
   }, [chartData]);
 
-  // A palette of nice vibrant colors for the months
   const monthColors = [
-    "#3B82F6", // blue
-    "#10B981", // green
-    "#F59E0B", // amber
-    "#EF4444", // red
-    "#8B5CF6", // purple
-    "#EC4899", // pink
-    "#14B8A6", // teal
-    "#F97316", // orange
-    "#06B6D4", // cyan
-    "#84CC16", // lime
-    "#EAB308", // yellow
-    "#6366F1", // indigo
+    "#3B82F6", "#10B981", "#F59E0B", "#EF4444",
+    "#8B5CF6", "#EC4899", "#14B8A6", "#F97316",
+    "#06B6D4", "#84CC16", "#EAB308", "#6366F1"
   ];
 
   return (
@@ -274,14 +288,12 @@ export default function FinanceComparisonChart() {
                 backgroundColor: '#ffffff',
                 borderRadius: '20px',
                 border: '1px solid #F3F4F6',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
                 padding: '16px',
                 direction: 'rtl',
                 textAlign: 'right'
               }}
-              formatter={(value: any, name: any) => {
-                return [`${(value || 0).toLocaleString()} ج.م`, name];
-              }}
+              formatter={(value: any, name: any) => [`${(value || 0).toLocaleString()} ج.م`, name]}
               labelStyle={{ color: '#111827', fontWeight: 900, marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #F3F4F6' }}
             />
             <Legend
@@ -297,7 +309,7 @@ export default function FinanceComparisonChart() {
                 fill={monthColors[index % monthColors.length]}
                 radius={[6, 6, 0, 0]}
                 barSize={20}
-                animationDuration={1500}
+                animationDuration={1200}
               />
             ))}
           </BarChart>
