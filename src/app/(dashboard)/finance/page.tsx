@@ -29,6 +29,7 @@ import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
 import TeacherCollectionsModal from '@/features/finance/components/TeacherCollectionsModal';
 import TeacherDetailModal from '@/features/teachers/components/TeacherDetailModal';
+import FinanceComparisonChart from '@/features/finance/components/FinanceComparisonChart';
 
 interface Transaction extends TransactionData {
     id: string;
@@ -387,8 +388,8 @@ export default function FinancePage() {
                                             {fromTeachers.toLocaleString()} <span className="text-[10px]">ج.م</span>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xs font-black text-blue-700">المستلم من المدرسين</p>
-                                            <p className="text-[10px] font-bold text-blue-600/60">مبالغ تم توريدها من تحصيل المجموعات</p>
+                                            <p className="text-xs font-black text-blue-700">المحصل من المدرسين</p>
+                                            <p className="text-[10px] font-bold text-blue-600/60">مجموع المبالغ الذي أخذها المدير من المدرسين</p>
                                         </div>
                                     </div>
 
@@ -742,6 +743,11 @@ export default function FinancePage() {
                                     </h3>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Comparison Chart */}
+                        <div className="mt-8">
+                            <FinanceComparisonChart />
                         </div>
                     </>
                 )}
