@@ -60,6 +60,19 @@ const DEFAULT_RULES: Omit<AutomationRule, 'id'>[] = [
         },
         enabled: true,
         createdAt: new Date('2026-01-20'),
+    },
+    {
+        name: 'خصم ربع يوم لعدم تسجيل اختبار يومي',
+        trigger: 'repeated_exams',
+        recipients: ['teacher'],
+        schedule: { time: '14:00', frequency: 'daily' },
+        condition: { checkTime: '14:00', deductionAmount: 0.25 },
+        action: {
+            type: 'apply_deduction',
+            messageTemplate: 'تم خصم ربع يوم - لم تسجل أي اختبار بتاريخ {{date}}',
+        },
+        enabled: true,
+        createdAt: new Date('2026-01-20'),
     }
 ];
 
@@ -316,6 +329,154 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
     return logsCreated;
 };
 
+/**
+ * فحص الاختبارات المفقودة - يخصم ربع يوم من كل مدرس لم يسجّل اختباراً اليوم
+ */
+export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
+    const logsCreated: AutomationLog[] = [];
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() - 1);
+    const targetDateStr = targetDate.toLocaleDateString('en-CA');
+    const dayOfWeek = targetDate.getDay();
+
+    // تخطي العطلات (الخميس والجمعة)
+    if (dayOfWeek === 4 || dayOfWeek === 5) return [];
+
+    // ✅ تأكد من وجود قاعدة الاختبارات في قاعدة البيانات، وأضفها إن لم تكن موجودة
+    const { data: existingRules } = await supabase
+        .from('automation_rules')
+        .select('id, type, is_active')
+        .eq('type', 'repeated_exams');
+
+    let rule: AutomationRule | undefined;
+
+    if (!existingRules || existingRules.length === 0) {
+        // لا توجد القاعدة — أضفها الآن
+        const { data: newRule } = await supabase
+            .from('automation_rules')
+            .insert([{
+                name: 'خصم ربع يوم لعدم تسجيل اختبار يومي',
+                type: 'repeated_exams',
+                is_active: true,
+                conditions: { checkTime: '14:00', deductionAmount: 0.25 },
+                actions: { type: 'apply_deduction', messageTemplate: 'تم خصم ربع يوم - لم تسجل أي اختبار بتاريخ {{date}}' },
+                recipients: ['teacher'],
+                schedule: { time: '14:00', frequency: 'daily' },
+                created_at: new Date().toISOString()
+            }])
+            .select().single();
+        if (newRule) {
+            rule = {
+                id: newRule.id,
+                name: newRule.name,
+                trigger: 'repeated_exams',
+                recipients: ['teacher'],
+                schedule: newRule.schedule,
+                condition: newRule.conditions,
+                action: newRule.actions,
+                enabled: true,
+                createdAt: new Date(newRule.created_at)
+            };
+        }
+    } else {
+        const r = existingRules[0];
+        if (!r.is_active) return []; // القاعدة موجودة لكن معطّلة
+        const allRules = await getRules();
+        rule = allRules.find(ar => ar.trigger === 'repeated_exams');
+    }
+
+    if (!rule) return [];
+
+    // جلب المعلمين النشطين
+    const { data: teachers, error: teachersError } = await supabase
+        .from('teachers').select('id, full_name').eq('status', 'active');
+    if (teachersError || !teachers || teachers.length === 0) return [];
+
+    const teacherIds = teachers.map(t => t.id);
+
+    // جلب كل البيانات المطلوبة دفعة واحدة
+    const [
+        { data: allGroups },
+        { data: allExamsToday },
+        { data: allDeductionsToday },
+        { data: allTeacherAttendance }
+    ] = await Promise.all([
+        supabase.from('groups').select('id, teacher_id, students(id)').in('teacher_id', teacherIds),
+        supabase.from('exams').select('student_id').gte('date', targetDateStr).lte('date', targetDateStr),
+        supabase.from('deductions').select('id, teacher_id, reason').in('teacher_id', teacherIds).eq('date', targetDateStr),
+        supabase.from('teacher_attendance').select('id, teacher_id, status').in('teacher_id', teacherIds).eq('date', targetDateStr),
+    ]);
+
+    const examStudentIds = new Set(allExamsToday?.map(e => e.student_id) || []);
+    const alreadyDeductedForExams = new Set(
+        allDeductionsToday?.filter(d => d.reason?.includes('اختبار')).map(d => d.teacher_id) || []
+    );
+    const teacherAttendanceMap = new Map(allTeacherAttendance?.map(a => [a.teacher_id, a]));
+
+    const senderId = 'director';
+    const senderName = 'المدير العام';
+    const daysMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayName = daysMap[dayOfWeek];
+
+    for (const teacher of teachers) {
+        const teacherGroups = allGroups?.filter(g => g.teacher_id === teacher.id) || [];
+        const studentIds = teacherGroups.flatMap(g => (g.students as any[] || []).map(s => s.id));
+
+        if (studentIds.length === 0) continue;
+
+        // هل سجّل المعلم اختباراً لأي طالب من طلابه اليوم؟
+        const hasRecordedExam = studentIds.some(id => examStudentIds.has(id));
+
+        if (!hasRecordedExam && !alreadyDeductedForExams.has(teacher.id)) {
+            const deductionAmount = rule.condition.deductionAmount || 0.25;
+            const existingAtt = teacherAttendanceMap.get(teacher.id);
+
+            // تحديث سجل حضور المعلم
+            if (existingAtt) {
+                if (existingAtt.status !== 'absent' && existingAtt.status !== 'quarter') {
+                    await supabase.from('teacher_attendance')
+                        .update({ status: 'quarter', notes: 'أتمتة: عدم تسجيل اختبار يومي' })
+                        .eq('id', (existingAtt as any).id);
+                }
+            } else {
+                await supabase.from('teacher_attendance').insert([{
+                    teacher_id: teacher.id,
+                    date: targetDateStr,
+                    status: 'quarter',
+                    notes: 'أتمتة: خصم تلقائي - لا اختبار'
+                }]);
+            }
+
+            // تنفيذ الخصم المالي
+            const res = await executeDeduction(
+                teacher.id,
+                teacher.full_name,
+                deductionAmount,
+                'عدم تسجيل الاختبارات (أتمتة)',
+                rule.id
+            );
+            logsCreated.push(...res.logs);
+
+            // إرسال رسالة تنبيه
+            try {
+                const conv = await chatService.getOrCreateConversation(
+                    [senderId, teacher.id],
+                    [senderName, teacher.full_name],
+                    'director-teacher'
+                );
+                await chatService.sendMessage(
+                    conv.id, senderId, senderName, 'director',
+                    `⚠️ تنبيه آلي:\n\nالسيد المعلم المكرم،\nنفيدكم أنه تم خصم ربع يوم لعدم تسجيل أي اختبار ليوم ${dayName} الموافق ${targetDateStr}.\nالرجاء الحرص على تسجيل اختبار واحد على الأقل يومياً.`
+                );
+            } catch (e) { console.error("Chat Error:", e); }
+        }
+    }
+
+    return logsCreated;
+};
+
+
+
 // ==========================================
 // 6. دوال التنفيذ المساعدة
 // ==========================================
@@ -397,6 +558,7 @@ export const automationService = {
     toggleRule,
     triggerAutomation,
     checkMissingDailyReports,
+    checkMissingDailyExams,
     executeDeduction,
     sendManualNotification
 };

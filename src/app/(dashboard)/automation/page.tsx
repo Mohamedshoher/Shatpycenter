@@ -1,20 +1,31 @@
 'use client';
 
-import { useState } from 'react';
 import { useAutomationExecution } from '@/features/automation/hooks/useAutomationExecution';
 import { useAutomation } from '@/features/automation/hooks/useAutomation';
-import { Play, Calendar, Trash2 } from 'lucide-react';
+import { Play, Calendar, Trash2, BookOpen } from 'lucide-react';
 
 export default function AutomationPage() {
-    const { isExecuting, executeMissingReportDeduction } = useAutomationExecution();
+    const { isExecuting, isExecutingExams, executeMissingReportDeduction, executeMissingExamDeduction } = useAutomationExecution();
     const { logs, loading: logsLoading, loadLogs } = useAutomation();
 
-    const handleRunCheck = async () => {
-        if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص الغياب والتقارير لليوم وتطبيق الخصومات على المخالفين؟")) {
+    const handleRunReportCheck = async () => {
+        if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص التقارير اليومية وتطبيق الخصومات على المخالفين؟")) {
             const result = await executeMissingReportDeduction();
             if (result && result.length > 0) {
                 alert(`✅ تمت العملية بنجاح! تم تسجيل ${result.length} مخالفة.`);
-                loadLogs(); // Refresh logs
+                loadLogs();
+            } else {
+                alert("✨ تم الفحص: لم يتم العثور على مخالفات جديدة اليوم.");
+            }
+        }
+    };
+
+    const handleRunExamCheck = async () => {
+        if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص الاختبارات اليومية وتطبيق الخصومات على من لم يسجّل اختباراً؟")) {
+            const result = await executeMissingExamDeduction();
+            if (result && result.length > 0) {
+                alert(`✅ تمت العملية بنجاح! تم تسجيل ${result.length} مخالفة.`);
+                loadLogs();
             } else {
                 alert("✨ تم الفحص: لم يتم العثور على مخالفات جديدة اليوم.");
             }
@@ -36,7 +47,7 @@ export default function AutomationPage() {
                 </div>
             </div>
 
-            {/* Action Card */}
+            {/* أتمتة التقارير */}
             <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex-1">
@@ -45,11 +56,11 @@ export default function AutomationPage() {
                             فحص التقارير اليومية
                         </h2>
                         <p className="text-indigo-100 leading-relaxed max-w-2xl">
-                            يقوم هذا النظام بفحص جميع المعلمين النشطين. إذا وجد معلماً لم يقم بتسجيل حضور طلابه لهذا اليوم، ولم يكن مسجلاً كحاضر أو معتذر، سيتم تطبيق خصم ربع يوم عليه وإرسال رسالة تنبيهية له فوراً.
+                            يفحص جميع المعلمين النشطين. إذا وجد معلماً لم يقم بتسجيل حضور طلابه لهذا اليوم سيتم تطبيق خصم ربع يوم عليه وإرسال رسالة تنبيهية له فوراً.
                         </p>
                     </div>
                     <button
-                        onClick={handleRunCheck}
+                        onClick={handleRunReportCheck}
                         disabled={isExecuting}
                         className={`
               px-8 py-4 bg-white text-indigo-700 rounded-2xl font-black text-lg 
@@ -60,6 +71,42 @@ export default function AutomationPage() {
                         {isExecuting ? (
                             <>
                                 <div className="w-6 h-6 border-4 border-indigo-200 border-t-indigo-700 rounded-full animate-spin" />
+                                جاري الفحص...
+                            </>
+                        ) : (
+                            <>
+                                <Play className="w-6 h-6 fill-current" />
+                                تشغيل الفحص الآن
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+
+            {/* أتمتة الاختبارات */}
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 text-white shadow-xl shadow-emerald-200">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex-1">
+                        <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                            <BookOpen className="w-8 h-8 text-emerald-200" />
+                            فحص الاختبارات اليومية
+                        </h2>
+                        <p className="text-emerald-100 leading-relaxed max-w-2xl">
+                            يفحص جميع المعلمين النشطين. إذا لم يسجّل المعلم أي اختبار لأحد طلابه في اليوم السابق، سيتم تطبيق خصم ربع يوم عليه وإرسال رسالة تنبيهية فوراً.
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleRunExamCheck}
+                        disabled={isExecutingExams}
+                        className={`
+              px-8 py-4 bg-white text-emerald-700 rounded-2xl font-black text-lg 
+              shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-3
+              ${isExecutingExams ? 'opacity-70 cursor-wait' : ''}
+            `}
+                    >
+                        {isExecutingExams ? (
+                            <>
+                                <div className="w-6 h-6 border-4 border-emerald-200 border-t-emerald-700 rounded-full animate-spin" />
                                 جاري الفحص...
                             </>
                         ) : (
