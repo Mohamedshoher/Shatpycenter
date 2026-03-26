@@ -87,10 +87,11 @@ export const teacherDeductionService = {
     teacherName: string,
     amount: number,
     reason: string,
-    appliedBy: string = 'system'
+    appliedBy: string = 'system',
+    customDate?: string // تاريخ اختياري (مثلاً لتسجيل خصم بتاريخ أمس)
   ): Promise<TeacherDeduction> => {
     try {
-      const dateStr = new Date().toISOString().split('T')[0]; 
+      const dateStr = customDate || new Date().toISOString().split('T')[0]; 
 
       const { data, error } = await supabase
         .from('deductions')
@@ -101,7 +102,7 @@ export const teacherDeductionService = {
           reason: reason,
           applied_by: appliedBy,
           status: 'applied',
-          is_automatic: appliedBy === 'system'
+          is_automatic: appliedBy === 'system' || appliedBy === 'system-automation'
         }])
         .select()
         .single();

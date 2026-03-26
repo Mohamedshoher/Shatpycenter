@@ -195,10 +195,66 @@ export const toggleRule = async (id: string): Promise<AutomationRule> => {
 // 4. خدمات السجلات (Logging)
 // ==========================================
 
-export const getLogs = async (logLimit: number = 20): Promise<AutomationLog[]> => {
-    const { data, error } = await supabase.from('automation_logs').select('*').order('triggered_at', { ascending: false }).limit(logLimit);
+export const getLogs = async (logLimit: number = 200): Promise<AutomationLog[]> => {
+    // 1. تحديد أحدث تاريخ لعملية فحص التقارير
+    const { data: reportLatest } = await supabase
+        .from('automation_logs')
+        .select('triggered_at')
+        .ilike('rule_name', '%تقرير%')
+        .order('triggered_at', { ascending: false })
+        .limit(1);
+
+    // 2. تحديد أحدث تاريخ لعملية فحص الاختبارات
+    const { data: examLatest } = await supabase
+        .from('automation_logs')
+        .select('triggered_at')
+        .ilike('rule_name', '%اختبار%')
+        .order('triggered_at', { ascending: false })
+        .limit(1);
+
+    const datesToFilter: string[] = [];
+    if (reportLatest?.[0]) {
+        const d = new Date(reportLatest[0].triggered_at);
+        datesToFilter.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString());
+    }
+    if (examLatest?.[0]) {
+        const d = new Date(examLatest[0].triggered_at);
+        datesToFilter.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString());
+    }
+
+    if (datesToFilter.length === 0) return [];
+
+    // 3. جلب كافة السجلات التي تنتمي لآخر يوم فحص (لكل نوع على حدة)
+    let query = supabase.from('automation_logs').select('*');
+    
+    // إذا كان التاريخان مختلفين، نستخدم الفلترة للأقدم منهما لضمان ظهور النوعين، ثم سنقوم بالفلترة النهائية في الكود
+    const earliestDate = datesToFilter.reduce((a, b) => a < b ? a : b);
+
+    const { data, error } = await query
+        .gte('triggered_at', earliestDate)
+        .order('triggered_at', { ascending: false })
+        .limit(logLimit);
+
     if (error) return [];
-    return (data || []).map(row => ({
+
+    // 4. نقوم بتصفية البيانات في الذاكرة لضمان عرض فقط أحدث يوم لكل نوع
+    const finalLogs = (data || []).filter(log => {
+        const logDate = new Date(log.triggered_at).toDateString();
+        
+        // إذا كان نوع السجل "تقرير"، نتأكد أنه ينتمي لأحدث يوم سجلت فيه التقارير
+        if (log.rule_name.includes('تقرير') && reportLatest?.[0]) {
+            return logDate === new Date(reportLatest[0].triggered_at).toDateString();
+        }
+        
+        // إذا كان نوع السجل "اختبار"، نتأكد أنه ينتمي لأحدث يوم سجلت فيه الاختبارات
+        if (log.rule_name.includes('اختبار') && examLatest?.[0]) {
+            return logDate === new Date(examLatest[0].triggered_at).toDateString();
+        }
+        
+        return false;
+    });
+
+    return finalLogs.map(row => ({
         id: row.id,
         ruleId: row.rule_id,
         ruleName: row.rule_name,
@@ -316,7 +372,7 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
 
             // ب. تنفيذ الخصم المالي وإرسال الرسالة (إذا لم يتم الخصم مسبقاً)
             if (!alreadyDeducted) {
-                const res = await executeDeduction(teacher.id, teacher.full_name, deductionAmount, 'خصم ربع يوم لعدم تسليم التقرير اليومي', rule.id);
+                const res = await executeDeduction(teacher.id, teacher.full_name, deductionAmount, 'عدم تسليم التقرير اليومي (أتمتة)', rule.id, 'فحص التقارير', targetDateStr);
                 logsCreated.push(...res.logs);
 
                 try {
@@ -453,7 +509,9 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
                 teacher.full_name,
                 deductionAmount,
                 'عدم تسجيل الاختبارات (أتمتة)',
-                rule.id
+                rule.id,
+                'فحص الاختبارات',
+                targetDateStr
             );
             logsCreated.push(...res.logs);
 
@@ -486,9 +544,13 @@ export const executeDeduction = async (
     teacherName: string,
     amount: number,
     reason: string,
-    ruleId?: string
+    ruleId?: string,
+    ruleName?: string,
+    deductionDate?: string // تاريخ الخصم (أمس مثلاً)
 ): Promise<{ deduction: any; logs: AutomationLog[] }> => {
-    const deduction = await teacherDeductionService.applyDeduction(teacherId, teacherName, amount, reason, 'system-automation');
+    // الخصم المالي سيظهر فيه "البيان" الممرر في المتغير reason
+    // نستخدم التاريخ الممرر أو تاريخ اليوم افتراضياً
+    const deduction = await teacherDeductionService.applyDeduction(teacherId, teacherName, amount, reason, 'system-automation', deductionDate);
     const logsCreated: AutomationLog[] = [];
 
     let effectiveRuleId = ruleId;
@@ -500,12 +562,14 @@ export const executeDeduction = async (
     if (effectiveRuleId) {
         const log = await addLog({
             ruleId: effectiveRuleId,
-            ruleName: 'خصم ربع يوم لعدم تسليم التقرير اليومي',
+            ruleName: ruleName || (reason.includes('تقرير') ? 'فحص التقارير اليومية' : 'فحص الاختبارات اليومية'),
             triggeredBy: 'system',
             recipientId: teacherId,
             recipientName: teacherName,
-            messageSent: `تم تطبيق خصم آلي (${amount} يوم) | السبب: ${reason}`,
-            timestamp: new Date(),
+            messageSent: `تم تطبيق خصم تلقائي (${amount} يوم) | السبب: ${reason}`,
+            // هام: بدلاً من الوقت الحالي فقط، نقوم بتخزين تاريخ الخصم الفعلي في الـ triggered_at
+            // ليسهل استرجاعه في الـ Undo لاحقاً
+            timestamp: deductionDate ? new Date(deductionDate + 'T' + new Date().toTimeString().split(' ')[0]) : new Date(),
             status: 'success',
         });
         logsCreated.push(log);
@@ -545,6 +609,45 @@ export const triggerAutomation = async (ruleId: string, recipientId: string, rec
     });
 };
 
+/**
+ * إلغاء الخصم الناتج عن عملية أتمتة
+ */
+export const undoAutomationDeduction = async (logId: string, teacherId: string, timestamp: Date): Promise<void> => {
+    const dateStr = timestamp.toISOString().split('T')[0];
+
+    // 1. البحث عن الخصم في جدول الخصومات
+    const { data: deductions, error: dError } = await supabase
+        .from('deductions')
+        .select('id')
+        .eq('teacher_id', teacherId)
+        .eq('date', dateStr)
+        .eq('applied_by', 'system-automation');
+
+    if (dError) throw dError;
+
+    // 2. حذف الخصم إذا وجد
+    if (deductions && deductions.length > 0) {
+        for (const d of deductions) {
+            await teacherDeductionService.removeDeduction(d.id);
+        }
+    }
+
+    // 3. حذف سجل الأتمتة أو تحديثه
+    const { error: lError } = await supabase
+        .from('automation_logs')
+        .delete()
+        .eq('id', logId);
+
+    if (lError) throw lError;
+
+    // 4. حذف سجل الحضور المرتبط من teacher_attendance (اختياري لكن مفضل)
+    await supabase.from('teacher_attendance')
+        .delete()
+        .eq('teacher_id', teacherId)
+        .eq('date', dateStr)
+        .ilike('notes', '%أتمتة%');
+};
+
 // ==========================================
 // 7. التصدير النهائي
 // ==========================================
@@ -560,5 +663,6 @@ export const automationService = {
     checkMissingDailyReports,
     checkMissingDailyExams,
     executeDeduction,
+    undoAutomationDeduction,
     sendManualNotification
 };

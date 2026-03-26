@@ -29,27 +29,27 @@ export default function AttendanceChartModal({ isOpen, onClose, title, type, dat
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative bg-white w-full max-w-xl rounded-[40px] shadow-2xl z-[201] overflow-hidden flex flex-col text-right">
+                        className="relative bg-white w-[95vw] max-w-4xl h-[85vh] rounded-[30px] shadow-2xl z-[201] overflow-hidden flex flex-col text-right">
 
                         {/* Header */}
                         <div className={cn(
-                            "p-6 flex items-center justify-between text-white shrink-0",
+                            "p-3 px-5 flex items-center justify-between text-white shrink-0",
                             type === 'absent' ? "bg-red-500" : "bg-green-500"
                         )}>
-                            <div className="flex items-center gap-3">
-                                {type === 'absent' ? <BarChart2 size={24} /> : <BarChart2 size={24} className="rotate-180" />}
+                            <div className="flex items-center gap-2">
+                                {type === 'absent' ? <BarChart2 size={18} /> : <BarChart2 size={18} className="rotate-180" />}
                                 <div>
-                                    <h3 className="font-black text-xl">{title}</h3>
-                                    <p className="text-[10px] font-bold opacity-80">إحصائية اليوم المختار مقسمة حسب الفصول</p>
+                                    <h3 className="font-black text-base">{title}</h3>
+                                    <p className="text-[9px] font-bold opacity-80 leading-none mt-0.5">إحصائية اليوم المختار مقسمة حسب الفصول</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all">
-                                <X size={20} />
+                            <button onClick={onClose} className="w-8 h-8 bg-black/10 rounded-lg flex items-center justify-center hover:bg-black/20 transition-all">
+                                <X size={16} />
                             </button>
                         </div>
 
                         {/* Content - المخطط البياني */}
-                        <div className="p-8 max-h-[60vh] overflow-y-auto bg-gray-50/50">
+                        <div className="p-6 flex-1 overflow-y-auto bg-gray-50/50">
                             {data.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-12 text-gray-400 opacity-50">
                                     <Users size={48} className="mb-4 text-gray-300" />

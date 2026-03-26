@@ -428,34 +428,34 @@ export default function ExamsReportPage() {
                             className="space-y-8"
                         >
                             {/* شريط الفلاتر التفاعلي لتبويب الأداء */}
-                            <div className="flex flex-wrap items-center justify-center gap-6 py-4 border-y border-gray-100 flex-row-reverse">
+                            <div className="flex items-center justify-start md:justify-center gap-2 md:gap-4 py-3 border-y border-gray-100 flex-row-reverse overflow-x-auto no-scrollbar w-full">
                                 <button
                                     onClick={() => setPerformanceFilter('all')}
-                                    className={cn("flex flex-row-reverse items-center gap-3 px-4 py-2 rounded-2xl transition-all", performanceFilter === 'all' ? "bg-blue-600 text-white shadow-md" : "text-gray-400 hover:bg-gray-100")}
+                                    className={cn("flex flex-row-reverse items-center gap-1.5 md:gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all shrink-0", performanceFilter === 'all' ? "bg-blue-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
                                 >
-                                    <span className="text-sm font-black uppercase">الكل</span>
-                                    <div className={cn("w-2 h-2 rounded-lg", performanceFilter === 'all' ? "bg-white/20" : "bg-blue-600")} />
+                                    <span className="text-[10px] md:text-sm font-black uppercase whitespace-nowrap">الكل</span>
+                                    <div className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full", performanceFilter === 'all' ? "bg-white/20" : "bg-blue-600")} />
                                 </button>
                                 <button
                                     onClick={() => setPerformanceFilter('new')}
-                                    className={cn("flex flex-row-reverse items-center gap-3 px-4 py-2 rounded-2xl transition-all", performanceFilter === 'new' ? "bg-green-500 text-white shadow-md" : "text-gray-400 hover:bg-gray-100")}
+                                    className={cn("flex flex-row-reverse items-center gap-1.5 md:gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all shrink-0", performanceFilter === 'new' ? "bg-green-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
                                 >
-                                    <span className="text-sm font-black uppercase">جديد</span>
-                                    <div className={cn("w-2 h-2 rounded-full", performanceFilter === 'new' ? "bg-white" : "bg-green-500")} />
+                                    <span className="text-[10px] md:text-sm font-black uppercase whitespace-nowrap">جديد</span>
+                                    <div className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full", performanceFilter === 'new' ? "bg-white" : "bg-green-500")} />
                                 </button>
                                 <button
                                     onClick={() => setPerformanceFilter('near')}
-                                    className={cn("flex flex-row-reverse items-center gap-3 px-4 py-2 rounded-2xl transition-all", performanceFilter === 'near' ? "bg-blue-500 text-white shadow-md" : "text-gray-400 hover:bg-gray-100")}
+                                    className={cn("flex flex-row-reverse items-center gap-1.5 md:gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all shrink-0", performanceFilter === 'near' ? "bg-blue-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
                                 >
-                                    <span className="text-sm font-black uppercase">ماضي قريب</span>
-                                    <div className={cn("w-2 h-2 rounded-full", performanceFilter === 'near' ? "bg-white" : "bg-blue-500")} />
+                                    <span className="text-[10px] md:text-sm font-black uppercase whitespace-nowrap">ماضي قريب</span>
+                                    <div className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full", performanceFilter === 'near' ? "bg-white" : "bg-blue-500")} />
                                 </button>
                                 <button
                                     onClick={() => setPerformanceFilter('far')}
-                                    className={cn("flex flex-row-reverse items-center gap-3 px-4 py-2 rounded-2xl transition-all", performanceFilter === 'far' ? "bg-purple-500 text-white shadow-md" : "text-gray-400 hover:bg-gray-100")}
+                                    className={cn("flex flex-row-reverse items-center gap-1.5 md:gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all shrink-0", performanceFilter === 'far' ? "bg-purple-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
                                 >
-                                    <span className="text-sm font-black uppercase">بعيد</span>
-                                    <div className={cn("w-2 h-2 rounded-full", performanceFilter === 'far' ? "bg-white" : "bg-purple-500")} />
+                                    <span className="text-[10px] md:text-sm font-black uppercase whitespace-nowrap">بعيد</span>
+                                    <div className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full", performanceFilter === 'far' ? "bg-white" : "bg-purple-500")} />
                                 </button>
                             </div>
 

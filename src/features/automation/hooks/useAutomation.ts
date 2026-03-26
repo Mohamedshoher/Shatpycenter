@@ -98,6 +98,22 @@ export const useAutomation = () => {
         }
     };
 
+    /**
+     * إلغاء عملية أتمتة (تراجع عن الخصم)
+     */
+    const undoLogAction = async (logId: string, teacherId: string, timestamp: Date) => {
+        setLoading(true);
+        try {
+            await automationService.undoAutomationDeduction(logId, teacherId, timestamp);
+            await loadLogs();
+        } catch (err) {
+            console.error("خطأ أثناء إلغاء العملية:", err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // إرجاع كافة الحالات والدوال لاستخدامها في المكونات
     return {
         rules,
@@ -110,5 +126,6 @@ export const useAutomation = () => {
         updateRule,
         deleteRule,
         toggleRule,
+        undoLogAction,
     };
 };

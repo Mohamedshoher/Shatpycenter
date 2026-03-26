@@ -200,8 +200,8 @@ export default function FinanceComparisonChart() {
     const rows: Record<string, any>[] = [
       { metric: 'الإيرادات' },
       { metric: 'المصروفات' },
-      { metric: 'إجمالي العجز' },
-      { metric: 'صافي الربح' },
+      { metric: 'العجز' },
+      { metric: 'الربح' },
     ];
     chartData.forEach(d => {
       rows[0][d.label] = d.income;
@@ -251,7 +251,8 @@ export default function FinanceComparisonChart() {
         </div>
       </div>
 
-      <div className="h-[400px] w-full relative" dir="ltr">
+      <div className="w-full pb-4">
+        <div className="h-[400px] w-full relative" dir="ltr">
         {isLoading && (
           <div className="absolute inset-0 z-10 bg-white/50 backdrop-blur-sm flex items-center justify-center rounded-2xl">
             <div className="flex flex-col items-center justify-center gap-4">
@@ -272,13 +273,13 @@ export default function FinanceComparisonChart() {
               dataKey="metric"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#9CA3AF', fontSize: 13, fontWeight: 700 }}
+              tick={{ fill: '#9CA3AF', fontSize: 11, fontWeight: 700 }}
               dy={10}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#9CA3AF', fontSize: 12, fontWeight: 600 }}
+              tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 600 }}
               dx={-10}
               tickFormatter={(value) => `${value.toLocaleString()}`}
             />
@@ -314,6 +315,7 @@ export default function FinanceComparisonChart() {
             ))}
           </BarChart>
         </ResponsiveContainer>
+      </div>
       </div>
     </div>
   );

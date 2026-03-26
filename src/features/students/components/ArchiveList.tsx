@@ -17,7 +17,8 @@ import {
     ArrowRight,
     Clock,
     AlertCircle,
-    Check
+    Check,
+    MessageCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn, tieredSearchFilter } from '@/lib/utils';
@@ -48,38 +49,83 @@ export default function ArchiveList() {
 
     // جلب كافة المصروفات للطلاب المؤرشفين لفحص الدين
     const { data: allFees = [] } = useQuery({
-        queryKey: ['all-fees'],
+        queryKey: ['all-fees', students?.filter(s => s.status === 'archived').length],
         queryFn: async () => {
+            if (!students) return [];
+            const archivedIds = students.filter(s => s.status === 'archived').map(s => s.id);
+            if (archivedIds.length === 0) return [];
+
             const { supabase } = await import('@/lib/supabase');
-            const { data } = await supabase.from('fees').select('*');
-            return (data || []) as any[];
-        }
+            let allData: any[] = [];
+            
+            const chunkSize = 100;
+            for (let i = 0; i < archivedIds.length; i += chunkSize) {
+                const chunk = archivedIds.slice(i, i + chunkSize);
+                let from = 0;
+                const step = 1000;
+                while (true) {
+                    const { data, error } = await supabase.from('fees').select('*').in('student_id', chunk).range(from, from + step - 1);
+                    if (error || !data || data.length === 0) break;
+                    allData = [...allData, ...data];
+                    if (data.length < step) break;
+                    from += step;
+                }
+            }
+            return allData;
+        },
+        enabled: !!students
     });
 
     // جلب كافة سجلات الحضور لفحص استحقاق الدين
     const { data: allAttendance = [] } = useQuery({
-        queryKey: ['all-attendance'],
+        queryKey: ['all-attendance', students?.filter(s => s.status === 'archived').length],
         queryFn: async () => {
+            if (!students) return [];
+            const archivedIds = students.filter(s => s.status === 'archived').map(s => s.id);
+            if (archivedIds.length === 0) return [];
+
             const { supabase } = await import('@/lib/supabase');
-            const { data } = await supabase
-                .from('attendance')
-                .select('student_id, month_key, status, date');
-            return (data || []) as any[];
-        }
+            let allData: any[] = [];
+            
+            const chunkSize = 100;
+            for (let i = 0; i < archivedIds.length; i += chunkSize) {
+                const chunk = archivedIds.slice(i, i + chunkSize);
+                let from = 0;
+                const step = 1000;
+                while (true) {
+                    const { data, error } = await supabase
+                        .from('attendance')
+                        .select('student_id, month_key, status, date')
+                        .in('student_id', chunk)
+                        .range(from, from + step - 1);
+                    if (error || !data || data.length === 0) break;
+                    allData = [...allData, ...data];
+                    if (data.length < step) break;
+                    from += step;
+                }
+            }
+            return allData;
+        },
+        enabled: !!students
     });
 
     // منطق الدين المتطور: يعتمد على عدد أيام الحضور في الشهر
     const calculateDebt = (student: Student) => {
-        if (!student.enrollmentDate) return { isIndebted: false, label: '', amount: 0 };
+        const studentFees = allFees.filter(f => f.student_id === student.id);
+        const studentAttendance = allAttendance.filter(a => a.student_id === student.id);
 
-        const start = new Date(student.enrollmentDate);
+        let startDateStr = student.enrollmentDate;
+        if (!startDateStr && studentAttendance.length > 0) {
+            startDateStr = studentAttendance.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date;
+        }
+
+        if (!startDateStr) return { isIndebted: false, label: '', amount: 0 };
+
+        const start = new Date(startDateStr);
         const end = student.archivedDate ? new Date(student.archivedDate) : new Date();
 
         let current = new Date(start.getFullYear(), start.getMonth(), 1);
         const target = new Date(end.getFullYear(), end.getMonth(), 1);
-
-        const studentFees = allFees.filter(f => f.student_id === student.id);
-        const studentAttendance = allAttendance.filter(a => a.student_id === student.id);
 
         let totalMonthDebt = 0;
 
@@ -127,9 +173,16 @@ export default function ArchiveList() {
     const archivedStudents = useMemo(() => {
         if (!students) return [];
 
-        const baseFiltered = students.filter(student => {
-            const isArchived = student.status === 'archived';
-            const debtInfo = calculateDebt(student);
+        // حساب الدين مسبقاً لكل طالب لتجنب التكرار وللتمكن من الترتيب
+        const withDebt = students
+            .filter(student => student.status === 'archived')
+            .map(student => ({
+                ...student,
+                debtInfo: calculateDebt(student)
+            }));
+
+        const baseFiltered = withDebt.filter(student => {
+            const { debtInfo } = student;
 
             let matchesFilter = true;
             if (filter === 'indebted') {
@@ -142,7 +195,15 @@ export default function ArchiveList() {
                 matchesFilter = student.groupId === filter;
             }
 
-            return isArchived && matchesFilter;
+            return matchesFilter;
+        });
+
+        // ترتيب المدينين أولاً
+        baseFiltered.sort((a, b) => {
+            if (a.debtInfo.isIndebted && !b.debtInfo.isIndebted) return -1;
+            if (!a.debtInfo.isIndebted && b.debtInfo.isIndebted) return 1;
+            if (b.debtInfo.amount !== a.debtInfo.amount) return b.debtInfo.amount - a.debtInfo.amount;
+            return 0;
         });
 
         return tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
@@ -313,7 +374,7 @@ export default function ArchiveList() {
                 ) : (
                     archivedStudents?.map((student) => {
                         const daysInArchive = getDaysInArchive(student.archivedDate);
-                        const debtInfo = calculateDebt(student);
+                        const debtInfo = student.debtInfo;
 
                         return (
                             <div
@@ -327,10 +388,15 @@ export default function ArchiveList() {
                                         <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 shrink-0">
                                             <User size={20} />
                                         </div>
-                                        <div className="flex items-baseline gap-2 min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
                                             <h3 className="font-bold text-gray-900 truncate text-lg sm:text-xl">
                                                 {student.fullName}
                                             </h3>
+                                            {debtInfo.isIndebted && (
+                                                <span className="text-[10px] text-red-600 font-black bg-red-50 px-2 py-0.5 rounded-md border border-red-100 shrink-0">
+                                                    مدين
+                                                </span>
+                                            )}
                                             <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-lg border border-gray-100 shrink-0">
                                                 {groups?.find(g => g.id === student.groupId)?.name || 'غير محدد'}
                                             </span>
@@ -354,6 +420,22 @@ export default function ArchiveList() {
                                     </div>
 
                                     <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                                        {debtInfo.isIndebted && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    let phone = student.parentPhone || student.studentPhone || '';
+                                                    phone = phone.replace(/[^0-9]/g, '');
+                                                    if (phone.startsWith('01')) phone = '2' + phone;
+                                                    const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\nنود إعلامكم أن الطالب مدين بـ *${debtInfo.label}* كرسوم متأخرة.\nيرجى المبادرة بالسداد وشكراً لتعاونكم.`;
+                                                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+                                                }}
+                                                className="w-9 h-9 flex items-center justify-center bg-white text-green-500 rounded-lg hover:bg-green-500 hover:text-white transition-all active:scale-95 shadow-sm border border-gray-100"
+                                                title="مراسلة عبر واتساب"
+                                            >
+                                                <MessageCircle size={18} />
+                                            </button>
+                                        )}
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();

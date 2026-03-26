@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getGroups } from '@/features/groups/services/groupService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getGroups, updateGroup, deleteGroup } from '@/features/groups/services/groupService';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import { getStudents } from '@/features/students/services/studentService';
 import { getAllAttendanceForMonth } from '@/features/students/services/recordsService';
@@ -18,7 +18,11 @@ import {
     BarChart3,
     ChevronDown,
     Filter,
-    ArrowDownUp
+    ArrowDownUp,
+    Trash2,
+    Edit2,
+    Check,
+    SlidersHorizontal
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn, tieredSearchFilter } from '@/lib/utils';
@@ -26,9 +30,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 
 const AddGroupModal = dynamic(() => import('@/features/groups/components/AddGroupModal'), { ssr: false });
-const ManageGroupsModal = dynamic(() => import('@/features/groups/components/ManageGroupsModal'), { ssr: false });
 
 export default function GroupsPage() {
+    const queryClient = useQueryClient();
+
     const { data: groups, isLoading } = useQuery({
         queryKey: ['groups'],
         queryFn: getGroups
@@ -54,17 +59,56 @@ export default function GroupsPage() {
     });
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [filter, setFilter] = useState('الكل');
 
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-    const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-    const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+    const [isConfigDropdownOpen, setIsConfigDropdownOpen] = useState(false);
+    
+    // Group Edit States
+    const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+    const [editTeacherId, setEditTeacherId] = useState('');
+
     const [sortBy, setSortBy] = useState<'name' | 'studentCount' | 'attendance'>('name');
     const { toggleSidebar } = useUIStore();
     const { user } = useAuthStore();
+
+    // Mutations
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string, data: any }) => updateGroup(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['groups'] });
+            setEditingGroupId(null);
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: deleteGroup,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['groups'] });
+        }
+    });
+
+    const handleDelete = (id: string, count: number) => {
+        if (count > 0) {
+            alert('لا يمكن حذف مجموعة تحتوي على طلاب. يرجى نقل الطلاب أولاً.');
+            return;
+        }
+        if (confirm('هل أنت متأكد من حذف هذه المجموعة نهائياً؟')) {
+            deleteMutation.mutate(id);
+        }
+    };
+
+    const handleUpdateTeacher = (groupId: string) => {
+        const selectedTeacher = teachers?.find(t => t.id === editTeacherId);
+        updateMutation.mutate({
+            id: groupId,
+            data: {
+                teacherId: editTeacherId || null,
+                teacher: selectedTeacher?.fullName || 'غير محدد'
+            }
+        });
+    };
 
     // تحسين بيانات المجموعات بإضافة اسم المعلم وعدد الطلاب ولون
     const enhancedGroups = useMemo(() => {
@@ -143,6 +187,13 @@ export default function GroupsPage() {
         });
     })();
 
+    const activeSortedTeachers = useMemo(() => {
+        if (!teachers) return [];
+        return teachers
+            .filter(t => t.status === 'active')
+            .sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
+    }, [teachers]);
+
     return (
         <div className="pb-32 transition-all duration-500">
             {/* Sticky Header */}
@@ -159,165 +210,85 @@ export default function GroupsPage() {
                                 >
                                     <Plus size={22} />
                                 </button>
-                                <button
-                                    onClick={() => setIsManageModalOpen(true)}
-                                    className="w-11 h-11 bg-white border border-gray-100 text-blue-600 rounded-[16px] flex items-center justify-center hover:bg-blue-50 transition-all shadow-sm active:scale-95"
-                                    title="إدارة المجموعات"
-                                >
-                                    <Settings2 size={22} />
-                                </button>
                             </div>
                         )}
                     </div>
 
                     {/* Groups Count - Center */}
-                    {!isSearchOpen && (
-                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/50 px-4 h-11 rounded-[16px] border border-purple-100/50 shadow-sm pointer-events-none transition-all duration-300">
-                            <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest hidden sm:inline">المجموعات</span>
-                            <span className="text-xl font-black text-purple-600 font-sans">{filteredGroups?.length || 0}</span>
-                        </div>
-                    )}
+                    <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/50 px-4 h-11 rounded-[16px] border border-purple-100/50 shadow-sm pointer-events-none transition-all duration-300">
+                        <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest hidden sm:inline">المجموعات</span>
+                        <span className="text-xl font-black text-purple-600 font-sans">{filteredGroups?.length || 0}</span>
+                    </div>
 
-                    {/* Search and Filters - Right */}
+                    {/* Filters - Right */}
                     <div className="flex items-center gap-2 flex-1 justify-end max-w-2xl">
-                        <AnimatePresence mode="wait">
-                            {isSearchOpen ? (
-                                <motion.div
-                                    key="search"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                    className="relative flex-1"
-                                >
-                                    <input
-                                        autoFocus
-                                        type="text"
-                                        placeholder="بحث باسم المجموعة..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full h-11 bg-white border border-purple-100 rounded-[16px] px-10 text-right font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500/10 transition-all shadow-sm"
-                                    />
-                                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-purple-500" size={18} />
-                                    <button
-                                        onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
-                                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
-                                    >
-                                        <X size={18} />
-                                    </button>
-                                </motion.div>
-                            ) : (
                                 <div key="controls" className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setIsSearchOpen(true)}
-                                        className="w-11 h-11 bg-white border border-gray-100 rounded-[16px] flex items-center justify-center text-gray-400 hover:text-purple-600 transition-all shadow-sm active:scale-95"
-                                    >
-                                        <Search size={22} />
-                                    </button>
-
                                     {user?.role !== 'teacher' && (
-                                        <>
-                                            {/* Filter Dropdown */}
-                                            <div className="relative">
-                                                <button
-                                                    onClick={() => {
-                                                        setIsFilterDropdownOpen(!isFilterDropdownOpen);
-                                                        setIsSortDropdownOpen(false);
-                                                    }}
-                                                    className={cn(
-                                                        "h-11 px-4 bg-white border border-gray-100 rounded-[16px] flex items-center gap-2 text-gray-600 font-bold transition-all shadow-sm active:scale-95",
-                                                        isFilterDropdownOpen ? "border-purple-500" : "hover:border-purple-200"
-                                                    )}
-                                                >
-                                                    <Filter size={18} className="text-purple-500" />
-                                                    <span className="text-xs hidden sm:inline">{filter}</span>
-                                                    <ChevronDown size={14} className={cn("transition-transform duration-300", isFilterDropdownOpen && "rotate-180")} />
-                                                </button>
+                                        <div className="relative">
+                                            <button
+                                                onClick={() => setIsConfigDropdownOpen(!isConfigDropdownOpen)}
+                                                className={cn(
+                                                    "h-11 px-4 bg-white border border-gray-100 rounded-[16px] flex items-center gap-2 text-gray-600 font-bold transition-all shadow-sm active:scale-95",
+                                                    isConfigDropdownOpen ? "border-purple-500" : "hover:border-purple-200"
+                                                )}
+                                            >
+                                                <SlidersHorizontal size={18} className="text-purple-500" />
+                                                <span className="text-xs hidden sm:inline">فرز وترتيب</span>
+                                                <ChevronDown size={14} className={cn("transition-transform duration-300", isConfigDropdownOpen && "rotate-180")} />
+                                            </button>
 
-                                                <AnimatePresence>
-                                                    {isFilterDropdownOpen && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            exit={{ opacity: 0, y: 10 }}
-                                                            className="absolute top-[120%] left-0 w-40 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1"
-                                                        >
-                                                            {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
-                                                                <button
-                                                                    key={type}
-                                                                    onClick={() => {
-                                                                        setFilter(type);
-                                                                        setIsFilterDropdownOpen(false);
-                                                                    }}
-                                                                    className={cn(
-                                                                        "w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
-                                                                        filter === type ? "bg-purple-50 text-purple-600" : "text-gray-600 hover:bg-gray-50"
-                                                                    )}
-                                                                >
-                                                                    {type}
-                                                                    {filter === type && <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
-                                                                </button>
-                                                            ))}
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
+                                            <AnimatePresence>
+                                                {isConfigDropdownOpen && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, y: 10 }}
+                                                        className="absolute top-[120%] left-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-2"
+                                                    >
+                                                        <div className="px-4 py-2 text-[10px] font-black tracking-widest text-gray-400 border-b border-gray-50 uppercase">الفلترة</div>
+                                                        {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
+                                                            <button
+                                                                key={type}
+                                                                onClick={() => {
+                                                                    setFilter(type);
+                                                                }}
+                                                                className={cn(
+                                                                    "w-full px-4 py-2 text-right text-xs font-bold transition-all flex items-center justify-between",
+                                                                    filter === type ? "bg-purple-50 text-purple-600" : "text-gray-600 hover:bg-gray-50"
+                                                                )}
+                                                            >
+                                                                {type}
+                                                                {filter === type && <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
+                                                            </button>
+                                                        ))}
 
-                                            {/* Sort Dropdown */}
-                                            <div className="relative">
-                                                <button
-                                                    onClick={() => {
-                                                        setIsSortDropdownOpen(!isSortDropdownOpen);
-                                                        setIsFilterDropdownOpen(false);
-                                                    }}
-                                                    className={cn(
-                                                        "h-11 px-4 bg-white border border-gray-100 rounded-[16px] flex items-center gap-2 text-gray-600 font-bold transition-all shadow-sm active:scale-95",
-                                                        isSortDropdownOpen ? "border-blue-500" : "hover:border-blue-200"
-                                                    )}
-                                                >
-                                                    <ArrowDownUp size={18} className="text-blue-500" />
-                                                    <span className="text-xs hidden sm:inline">
-                                                        {sortBy === 'name' ? 'الاسم' : sortBy === 'studentCount' ? 'العدد' : 'الحضور'}
-                                                    </span>
-                                                    <ChevronDown size={14} className={cn("transition-transform duration-300", isSortDropdownOpen && "rotate-180")} />
-                                                </button>
-
-                                                <AnimatePresence>
-                                                    {isSortDropdownOpen && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            exit={{ opacity: 0, y: 10 }}
-                                                            className="absolute top-[120%] left-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1"
-                                                        >
-                                                            {[
-                                                                { id: 'name', label: 'الترتيب الأبجدي' },
-                                                                { id: 'studentCount', label: 'عدد الطلاب (الأكثر أولاً)' },
-                                                                { id: 'attendance', label: 'نسبة الحضور (الأعلى أولاً)' }
-                                                            ].map((sortOption) => (
-                                                                <button
-                                                                    key={sortOption.id}
-                                                                    onClick={() => {
-                                                                        setSortBy(sortOption.id as any);
-                                                                        setIsSortDropdownOpen(false);
-                                                                    }}
-                                                                    className={cn(
-                                                                        "w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
-                                                                        sortBy === sortOption.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
-                                                                    )}
-                                                                >
-                                                                    {sortOption.label}
-                                                                    {sortBy === sortOption.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
-                                                                </button>
-                                                            ))}
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        </>
+                                                        <div className="px-4 py-2 mt-1 text-[10px] font-black tracking-widest text-gray-400 border-b border-gray-50 uppercase border-t">الترتيب</div>
+                                                        {[
+                                                            { id: 'name', label: 'الترتيب الأبجدي' },
+                                                            { id: 'studentCount', label: 'عدد الطلاب' },
+                                                            { id: 'attendance', label: 'نسبة الحضور' }
+                                                        ].map((sortOption) => (
+                                                            <button
+                                                                key={sortOption.id}
+                                                                onClick={() => {
+                                                                    setSortBy(sortOption.id as any);
+                                                                    setIsConfigDropdownOpen(false);
+                                                                }}
+                                                                className={cn(
+                                                                    "w-full px-4 py-2 text-right text-xs font-bold transition-all flex items-center justify-between",
+                                                                    sortBy === sortOption.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                                )}
+                                                            >
+                                                                {sortOption.label}
+                                                                {sortBy === sortOption.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+                                                            </button>
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
                                     )}
                                 </div>
-                            )}
-                        </AnimatePresence>
                     </div>
                 </div>
             </div>
@@ -336,35 +307,71 @@ export default function GroupsPage() {
                                 key={group.id}
                                 className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-4 hover:shadow-xl hover:shadow-purple-500/5 transition-all group relative overflow-hidden"
                             >
-                                <div className="flex justify-between items-start">
-                                    <Link href={`/groups/${group.id}`} className="min-w-0 flex-1">
-                                        <h3 className="font-black text-[#1e293b] text-lg group-hover:text-purple-600 transition-colors truncate">
-                                            {group.name}
-                                        </h3>
-                                    </Link>
-                                    <div className="flex flex-col items-end gap-1 shrink-0">
-                                        <span className={cn("px-3 py-1 rounded-[10px] text-[10px] font-black uppercase tracking-wider", group.color)}>
-                                            {group.count} طلاب
-                                        </span>
+                                    <div className="flex justify-between items-start gap-2 relative">
+                                        <Link href={`/groups/${group.id}`} className="min-w-0 flex-1">
+                                            <h3 className="font-black text-[#1e293b] text-lg group-hover:text-purple-600 transition-colors truncate">
+                                                {group.name}
+                                            </h3>
+                                        </Link>
+                                        <div className="flex items-center gap-2 shrink-0 z-10">
+                                            {user?.role === 'director' && (
+                                                <div className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-100 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => {
+                                                        setEditingGroupId(group.id);
+                                                        setEditTeacherId(group.teacherId || '');
+                                                    }} className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors" title="تغيير المدرس">
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    <button onClick={() => handleDelete(group.id, group.count)} className="p-1.5 text-red-500 hover:bg-white rounded-md transition-colors" title="حذف المجموعة">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                            <span className={cn("px-2 py-0.5 rounded-[8px] text-[10px] font-black uppercase tracking-wider", group.color)}>
+                                                {group.count} طلاب
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="flex items-center justify-between mt-auto">
-                                    <div className="flex flex-col text-right min-w-0">
-                                        <span className="text-base font-bold text-gray-500 truncate leading-tight">{group.teacher}</span>
+                                    <div className="flex items-center justify-between mt-auto">
+                                        {editingGroupId === group.id ? (
+                                            <div className="flex items-center gap-1 w-full relative z-10">
+                                                <select
+                                                    value={editTeacherId}
+                                                    onChange={(e) => setEditTeacherId(e.target.value)}
+                                                    className="flex-1 h-8 bg-gray-50 border border-gray-200 rounded-lg px-2 text-right text-xs font-bold focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                >
+                                                    <option value="">اختر مدرساً</option>
+                                                    {activeSortedTeachers.map((t) => (
+                                                        <option key={t.id} value={t.id}>{t.fullName}</option>
+                                                    ))}
+                                                </select>
+                                                <button onClick={() => handleUpdateTeacher(group.id)} className="w-8 h-8 bg-green-500 text-white rounded-lg flex items-center justify-center hover:bg-green-600 transition-colors shrink-0">
+                                                    <Check size={14} />
+                                                </button>
+                                                <button onClick={() => setEditingGroupId(null)} className="w-8 h-8 bg-gray-200 text-gray-500 rounded-lg flex items-center justify-center hover:bg-gray-300 transition-colors shrink-0">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex flex-col text-right min-w-0">
+                                                    <span className="text-base font-bold text-gray-500 truncate leading-tight">{group.teacher}</span>
+                                                </div>
+
+                                                {group.count > 0 && attendanceMap && (
+                                                    <span className={cn(
+                                                        "text-[10px] font-black px-3 py-1 rounded-full border shrink-0",
+                                                        group.attendancePercentage >= 90 ? "bg-green-50 text-green-600 border-green-100" :
+                                                            group.attendancePercentage >= 75 ? "bg-blue-50 text-blue-600 border-blue-100" :
+                                                                "bg-red-50 text-red-600 border-red-100"
+                                                    )}>
+                                                        {group.attendancePercentage}% حضور
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
                                     </div>
-
-                                    {group.count > 0 && attendanceMap && (
-                                        <span className={cn(
-                                            "text-[10px] font-black px-3 py-1 rounded-full border shrink-0",
-                                            group.attendancePercentage >= 90 ? "bg-green-50 text-green-600 border-green-100" :
-                                                group.attendancePercentage >= 75 ? "bg-blue-50 text-blue-600 border-blue-100" :
-                                                    "bg-red-50 text-red-600 border-red-100"
-                                        )}>
-                                            {group.attendancePercentage}% حضور
-                                        </span>
-                                    )}
-                                </div>
                             </motion.div>
                         ))
                     )}
@@ -375,10 +382,6 @@ export default function GroupsPage() {
             <AddGroupModal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
-            />
-            <ManageGroupsModal
-                isOpen={isManageModalOpen}
-                onClose={() => setIsManageModalOpen(false)}
             />
         </div>
     );

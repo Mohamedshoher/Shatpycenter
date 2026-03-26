@@ -214,6 +214,13 @@ export default function AttendanceReportPage() {
                             className="bg-white border flex-1 border-gray-200 text-sm font-bold text-gray-700 px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                         />
                         <button onClick={() => {
+                            const d = new Date(selectedDateStr);
+                            d.setDate(d.getDate() - 1);
+                            setSelectedDateStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                        }} className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-50 text-gray-600 hover:bg-gray-200 transition-colors">
+                            السابق
+                        </button>
+                        <button onClick={() => {
                             const d = new Date();
                             setSelectedDateStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
                         }} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
@@ -229,19 +236,6 @@ export default function AttendanceReportPage() {
             </div>
 
             <main className="max-w-5xl mx-auto p-4 space-y-4">
-                {/* شريط البحث */}
-                <div className="relative group">
-                    <input
-                        type="text"
-                        placeholder="ابحث عن طالب بالاسم..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-white border border-gray-100 pr-12 pl-4 py-3 rounded-[20px] text-sm font-bold shadow-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
-                        <Users size={20} />
-                    </div>
-                </div>
 
                 {isLoading ? (
                     <div className="py-20 text-center font-black text-gray-400">جاري تحميل البيانات...</div>
