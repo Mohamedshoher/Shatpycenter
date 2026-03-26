@@ -208,7 +208,7 @@ export default function ExamsReportPage() {
     }, [groups, students, allExams, user, assignedGroupIds]);
 
     return (
-        <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans" dir="rtl">
+        <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
 
             {/* --- الهيدر (رأس الصفحة) --- */}
             <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30 px-4 md:px-6 py-3">
@@ -393,17 +393,17 @@ export default function ExamsReportPage() {
                                         onClick={() => setSelectedStudentForDetails(student)}
                                         className="bg-white rounded-[20px] p-3 flex items-center justify-between border border-gray-100 shadow-sm group cursor-pointer"
                                     >
-                                        <div className="flex items-center gap-3 overflow-hidden">
+                                        <div className="flex-1 min-w-0 flex items-center gap-3">
                                             <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
                                                 <User size={18} />
                                             </div>
-                                            <div className="text-right overflow-hidden">
+                                            <div className="text-right flex-1 min-w-0">
                                                 <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-base truncate">{student.fullName}</h3>
                                                 <span className="text-xs text-gray-400 font-bold truncate block">{student.groupName}</span>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 shrink-0">
                                             <div className="bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-2">
                                                 <span className="text-blue-600 font-black text-sm font-sans">{student.examsCount}</span>
                                                 <span className="text-xs text-blue-400 font-bold">اختبار</span>

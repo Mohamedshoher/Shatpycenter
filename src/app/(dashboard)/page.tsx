@@ -16,7 +16,8 @@ import {
     Check,
     X as CloseIcon,
     Calendar,
-    MessageSquare
+    MessageSquare,
+    Trophy
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,6 +46,12 @@ export default function DashboardOverview() {
     const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
     const queryClient = useQueryClient();
     const { archiveStudent } = useStudents();
+
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // إعادة توجيه المستخدمين بعيداً عن الصفحة الرئيسية حسب الدور
     useEffect(() => {
@@ -209,7 +216,7 @@ export default function DashboardOverview() {
                             مرحباً، {user?.displayName || 'مستخدم'} 👋
                         </h1>
                         <p className="text-base text-gray-400 font-bold mt-2">
-                            {today.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                            {mounted && today.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                     </div>
                 </div>
@@ -221,68 +228,65 @@ export default function DashboardOverview() {
                     </div>
                 ) : (
                     <>
-                        {/* Main Stats Grid - Fluid 2 to 4 columns */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 px-2">
+                        {/* Main Stats Grid - Compact Horizontal Layout */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 px-2">
                             {stats.map((stat, idx) => (
                                 <motion.div
                                     key={idx}
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: idx * 0.1 }}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.05 }}
                                     onClick={() => {
                                         if (stat.onClick) stat.onClick();
                                         else if (stat.link) router.push(stat.link);
                                     }}
-                                    className="bg-white rounded-[32px] p-6 md:p-8 shadow-sm border border-gray-50 flex flex-col items-center gap-4 cursor-pointer hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-2 transition-all group"
+                                    className="bg-white rounded-[24px] p-4 shadow-sm border border-gray-50 flex items-center gap-4 cursor-pointer hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-1 transition-all group"
                                 >
                                     <div className={cn(
-                                        "w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:rotate-6",
+                                        "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md transition-transform group-hover:rotate-6 shrink-0",
                                         stat.color,
                                         stat.onClick && isSyncing ? "animate-spin" : ""
                                     )}>
-                                        <stat.icon size={32} />
+                                        <stat.icon size={20} />
                                     </div>
-                                    <div className="text-center">
-                                        <p className="text-sm text-gray-400 font-bold mb-1">{stat.title}</p>
-                                        <p className="text-3xl font-black text-gray-900 font-sans">{stat.value}</p>
+                                    <div className="flex-1 text-right">
+                                        <p className="text-xs md:text-base font-black text-gray-800 leading-none">{stat.title}</p>
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-xl font-black text-gray-900 font-sans leading-none">{stat.value}</p>
                                     </div>
                                 </motion.div>
                             ))}
                         </div>
 
-                        {/* Recent Activity Section */}
-                        <div className="px-2 space-y-6">
+                        {/* Quick Actions Hub - New Admin Control Center */}
+                        <div className="px-2 space-y-6 pb-20">
                             <div className="flex items-center justify-between px-2">
-                                <h3 className="font-black text-gray-900 text-2xl tracking-tight">آخر التحديثات</h3>
-                                <button onClick={() => router.push('/students')} className="text-blue-600 text-sm font-bold bg-blue-50 px-6 py-2 rounded-full hover:bg-blue-100 transition-all border border-blue-100/50">
-                                    عرض السجل الكامل
-                                </button>
+                                <h3 className="font-black text-gray-900 text-2xl tracking-tight">الوصول السريع</h3>
+                                <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase">مركز التحكم</span>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2 md:gap-2">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                                 {[
-                                    { tag: 'حضور', text: `تم تسجيل حضور ${todayAttendance.length} طالباً اليوم حتى الآن`, time: 'اليوم', icon: CalendarCheck, color: 'text-orange-500', bg: 'bg-orange-50', roles: ['director', 'supervisor', 'teacher'] },
-                                    { tag: 'طلاب', text: `تم تسجيل ${myStudents.length} طالباً في أقسامك`, time: 'محدث', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50', roles: ['director', 'supervisor'] },
-                                ]
-                                    .filter(item => item.roles.includes(user?.role || ''))
-                                    .map((item, idx) => (
-                                        <motion.div
-                                            key={idx}
-                                            whileHover={{ x: -4 }}
-                                            className="bg-white rounded-[28px] p-6 shadow-sm border border-gray-50 flex items-center gap-6 hover:border-blue-100 transition-all"
-                                        >
-                                            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner", item.bg, item.color)}>
-                                                <item.icon size={26} />
-                                            </div>
-                                            <div className="flex-1 text-right min-w-0">
-                                                <div className="flex items-center justify-end gap-3 mb-2">
-                                                    <span className="text-xs text-gray-300 font-bold">{item.time}</span>
-                                                    <span className={cn("text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-wider", item.bg, item.color)}>{item.tag}</span>
-                                                </div>
-                                                <p className="text-base font-bold text-gray-700 leading-snug">{item.text}</p>
-                                            </div>
-                                        </motion.div>
-                                    ))}
+                                    { title: 'غرفة الأتمتة', desc: 'خصومات وتقارير آلي', icon: RefreshCw, color: 'text-purple-600', bg: 'bg-purple-50', link: '/automation' },
+                                    { title: 'تقارير الحضور', desc: 'متابعة الغياب اليومي', icon: CalendarCheck, color: 'text-green-600', bg: 'bg-green-50', link: '/attendance-report' },
+                                    { title: 'مركز الاختبارات', desc: 'نتائج تقييم الطلاب', icon: Trophy, color: 'text-amber-600', bg: 'bg-amber-50', link: '/exams-report' },
+                                    { title: 'إدارة المجموعات', desc: 'توزيع الطلاب والمدرسين', icon: LayoutGrid, color: 'text-blue-600', bg: 'bg-blue-50', link: '/groups' },
+                                ].map((action, idx) => (
+                                    <motion.div
+                                        key={idx}
+                                        whileHover={{ y: -5, scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => router.push(action.link)}
+                                        className="bg-white rounded-[32px] p-5 border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 transition-all cursor-pointer group flex flex-col items-center text-center"
+                                    >
+                                        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:rotate-12", action.bg, action.color)}>
+                                            <action.icon size={28} />
+                                        </div>
+                                        <h4 className="font-black text-gray-900 text-sm mb-1">{action.title}</h4>
+                                        <p className="text-[10px] text-gray-400 font-bold leading-tight">{action.desc}</p>
+                                    </motion.div>
+                                ))}
                             </div>
                         </div>
                     </>

@@ -250,9 +250,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 text-right font-sans" dir="rtl">
+    <div className="h-screen flex flex-col bg-gray-50 text-right font-sans overflow-x-hidden" dir="rtl">
       {/* Header - Optimized for Mobile & Desktop */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3 md:px-8 md:py-6 shadow-sm transition-all duration-300">
+      <div className="bg-white border-b border-gray-100 px-4 py-3 md:px-8 md:py-6 shadow-sm transition-all duration-300 overflow-x-hidden max-w-full">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-xl md:text-3xl font-black text-gray-900 tracking-tight">
@@ -275,10 +275,10 @@ export default function ChatPage() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col md:flex-row gap-0 md:gap-6 p-0 md:p-6 overflow-hidden relative">
+      <div className="flex-1 flex flex-col md:flex-row gap-0 md:gap-6 p-0 md:p-6 overflow-hidden relative max-w-full">
         {/* Conversations Sidebar */}
         <div className={cn(
-          "w-full md:w-96 flex flex-col bg-white md:rounded-[24px] shadow-sm border-x md:border border-gray-100 overflow-hidden z-10 transition-all duration-300",
+          "w-full md:w-96 flex flex-col bg-white md:rounded-[24px] shadow-sm border-x md:border border-gray-100 items-stretch overflow-x-hidden overflow-y-hidden z-10 transition-all duration-300 max-w-full",
           selectedConversation ? "hidden md:flex" : "flex"
         )}>
           {/* Tabs - Premium Segmented Control */}
@@ -331,7 +331,7 @@ export default function ChatPage() {
           </div>
 
           {/* Conversations/Contacts List */}
-          <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide max-w-full">
             {renderSideContent()}
           </div>
         </div>

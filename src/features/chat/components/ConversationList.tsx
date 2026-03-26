@@ -83,7 +83,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           <button
             key={conversation.id}
             onClick={() => onSelect(conversation)}
-            className={`w-full p-4 flex items-center gap-4 transition-all duration-200 relative group ${isSelected
+            className={`w-full p-4 flex items-center gap-4 transition-all duration-200 relative group overflow-hidden max-w-full ${isSelected
                 ? 'bg-blue-50/50'
                 : 'hover:bg-gray-50'
               }`}
@@ -102,7 +102,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 min-w-0 text-right">
+            <div className="flex-1 w-0 text-right overflow-hidden">
               <div className="flex items-center justify-between gap-2 mb-0.5">
                 <h3 className={`font-black truncate ${isSelected ? 'text-blue-900' : 'text-gray-900'} text-sm`}>
                   {otherName}

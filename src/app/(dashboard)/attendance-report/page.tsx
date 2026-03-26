@@ -201,25 +201,23 @@ export default function AttendanceReportPage() {
     }, [processedStudents]);
 
     return (
-        <div className="min-h-screen bg-gray-50/50 pb-24 text-right">
-            {/* Header */}
-            <div className="sticky top-0 z-[70] bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-2">
+        <div className="min-h-screen bg-gray-50/50 pb-24 text-right overflow-x-hidden">
+            {/* Header - Simple Stats Only */}
+            <div className="sticky top-0 z-[70] bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-2 overflow-x-hidden">
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
                     <div className="flex bg-gray-100 p-1 rounded-xl items-center gap-2">
-                        <input 
-                            type="date" 
-                            value={selectedDateStr}
-                            onChange={(e) => setSelectedDateStr(e.target.value)}
-                            max={new Date().toISOString().split('T')[0]}
-                            className="bg-white border flex-1 border-gray-200 text-sm font-bold text-gray-700 px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        />
                         <button onClick={() => {
                             const d = new Date(selectedDateStr);
                             d.setDate(d.getDate() - 1);
                             setSelectedDateStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-                        }} className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-50 text-gray-600 hover:bg-gray-200 transition-colors">
+                        }} className="px-3 py-1.5 rounded-lg text-xs font-black bg-white shadow-sm text-gray-600 hover:bg-gray-200 transition-colors">
                             السابق
                         </button>
+                        
+                        <div className="px-2 text-[10px] font-black text-gray-500 min-w-[80px] text-center">
+                            {new Date(selectedDateStr).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+                        </div>
+
                         <button onClick={() => {
                             const d = new Date();
                             setSelectedDateStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
@@ -227,6 +225,7 @@ export default function AttendanceReportPage() {
                             اليوم
                         </button>
                     </div>
+                    
                     <AttendanceStats
                         presentCount={dailyStats.p} absentCount={dailyStats.a}
                         showPresentChart={showPresentChart} setShowPresentChart={setShowPresentChart}

@@ -42,10 +42,13 @@ export default function ArchiveList() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [daysInArchiveFilter, setDaysInArchiveFilter] = useState<number>(0);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     // حالة نافذة استعادة طالب (اختيار المجموعة)
     const [restoreTarget, setRestoreTarget] = useState<Student | null>(null);
     const [targetGroupId, setTargetGroupId] = useState<string>('');
+    const [isRestoring, setIsRestoring] = useState(false);
 
     // جلب كافة المصروفات للطلاب المؤرشفين لفحص الدين
     const { data: allFees = [] } = useQuery({
@@ -195,6 +198,26 @@ export default function ArchiveList() {
                 matchesFilter = student.groupId === filter;
             }
 
+            if (matchesFilter && daysInArchiveFilter > 0) {
+                // استخدام تاريخ الأرشفة، أو تاريخ التحديث كبديل، أو تاريخ اليوم كآخر خيار
+                const archiveDateStr = student.archivedDate || (student as any).updated_at;
+                if (!archiveDateStr) {
+                    matchesFilter = false; 
+                } else {
+                    const start = new Date(archiveDateStr);
+                    const today = new Date();
+                    
+                    // تحويل كلاهما لبداية اليوم للحصول على فرق دقيق بالأيام
+                    const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                    const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    
+                    const diffTime = t.getTime() - s.getTime();
+                    const diffDays = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+                    
+                    matchesFilter = diffDays >= daysInArchiveFilter;
+                }
+            }
+
             return matchesFilter;
         });
 
@@ -207,7 +230,7 @@ export default function ArchiveList() {
         });
 
         return tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
-    }, [students, searchTerm, filter, allFees, allAttendance]);
+    }, [students, searchTerm, filter, allFees, allAttendance, daysInArchiveFilter]);
 
     // دالة حساب عدد الأيام في الأرشيف بدقة
     const getDaysInArchive = (archivedDate?: string) => {
@@ -226,12 +249,35 @@ export default function ArchiveList() {
         return `منذ ${diffDays} أيام`;
     };
 
-    const handleRestoreConfirm = () => {
+    const handleRestoreConfirm = async () => {
         if (restoreTarget && targetGroupId) {
-            restoreStudent(restoreTarget.id, targetGroupId);
-            setRestoreTarget(null);
-            setTargetGroupId('');
+            setIsRestoring(true);
+            try {
+                await restoreStudent(restoreTarget.id, targetGroupId);
+                setRestoreTarget(null);
+                setTargetGroupId('');
+            } finally {
+                setIsRestoring(false);
+            }
         }
+    };
+
+    const handleBatchDelete = async () => {
+        if (selectedIds.size === 0) return;
+        if (confirm(`هل أنت متأكد من حذف ${selectedIds.size} طلاب نهائياً؟`)) {
+            for (const id of selectedIds) {
+                await deleteStudent(id);
+            }
+            setSelectedIds(new Set());
+        }
+    };
+
+    const toggleSelect = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) newSelected.delete(id);
+        else newSelected.add(id);
+        setSelectedIds(newSelected);
     };
 
     if (isLoading) {
@@ -249,20 +295,37 @@ export default function ArchiveList() {
             {/* Sticky Header */}
             <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
                 <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
-                    <div className="flex items-center gap-2 relative z-50">
-                        <Link
-                            href="/students"
-                            className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-50 rounded-[18px] sm:rounded-[20px] border border-blue-100 flex items-center justify-center text-blue-600 hover:bg-blue-100 active:scale-95 transition-all shrink-0"
-                            title="قائمة الطلاب الحاليين"
-                        >
-                            <User size={22} />
-                        </Link>
-                        <button
-                            onClick={toggleSidebar}
-                            className="md:hidden w-11 h-11 bg-white rounded-[18px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
-                        >
-                            <Menu size={22} />
-                        </button>
+                    <div className="flex items-center gap-1.5 relative z-50">
+                        <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-[16px] border border-blue-100 min-w-[90px] shrink-0">
+                            <input 
+                                type="number" 
+                                min="0"
+                                value={daysInArchiveFilter || ''}
+                                onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    setDaysInArchiveFilter(isNaN(val) ? 0 : val);
+                                }}
+                                placeholder="0"
+                                className="w-10 h-8 bg-white border border-blue-200 rounded-lg text-center font-black text-xs text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <span className="text-[10px] font-black text-blue-400 whitespace-nowrap ml-1">يوم+</span>
+                        </div>
+                        {archivedStudents.length > 0 && user?.role === 'director' && (
+                            <button
+                                onClick={() => {
+                                    if (selectedIds.size === archivedStudents.length) setSelectedIds(new Set());
+                                    else setSelectedIds(new Set(archivedStudents.map(s => s.id)));
+                                }}
+                                className={cn(
+                                    "px-3 h-11 sm:h-12 rounded-[18px] sm:rounded-[20px] font-black text-[10px] transition-all border",
+                                    selectedIds.size === archivedStudents.length 
+                                        ? "bg-blue-600 border-blue-600 text-white shadow-lg" 
+                                        : "bg-white border-gray-100 text-gray-400 hover:text-blue-600 shadow-sm"
+                                )}
+                            >
+                                {selectedIds.size === archivedStudents.length ? 'إلغاء الكل' : 'تحديد الكل'}
+                            </button>
+                        )}
                     </div>
 
                     {!isSearchOpen && (
@@ -298,6 +361,15 @@ export default function ArchiveList() {
                                 >
                                     <Search size={22} />
                                 </button>
+                                {selectedIds.size > 0 && user?.role === 'director' && (
+                                    <button
+                                        onClick={handleBatchDelete}
+                                        className="h-11 sm:h-12 px-4 bg-red-50 text-red-600 border border-red-100 rounded-[18px] sm:rounded-[20px] flex items-center gap-2 font-black text-xs animate-in zoom-in"
+                                    >
+                                        <Trash2 size={18} />
+                                        <span>حذف ({selectedIds.size})</span>
+                                    </button>
+                                )}
                                 <div className="relative">
                                     {isFilterOpen && (
                                         <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
@@ -384,14 +456,20 @@ export default function ArchiveList() {
                             >
                                 {/* السطر الأول: الاسم والمجموعة */}
                                 <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 shrink-0">
-                                            <User size={20} />
-                                        </div>
-                                        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-                                            <h3 className="font-bold text-gray-900 truncate text-lg sm:text-xl">
-                                                {student.fullName}
-                                            </h3>
+                                        <div className="flex items-center gap-3">
+                                            <div 
+                                                onClick={(e) => toggleSelect(student.id, e)}
+                                                className={cn(
+                                                    "w-10 h-10 rounded-full flex items-center justify-center transition-all border shrink-0",
+                                                    selectedIds.has(student.id) ? "bg-red-500 border-red-600 text-white shadow-lg" : "bg-gray-50 border-gray-100 text-gray-400"
+                                                )}
+                                            >
+                                                {selectedIds.has(student.id) ? <Check size={18} strokeWidth={3} /> : <User size={20} />}
+                                            </div>
+                                            <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+                                                <h3 className="font-bold text-gray-900 truncate text-lg sm:text-xl">
+                                                    {student.fullName}
+                                                </h3>
                                             {debtInfo.isIndebted && (
                                                 <span className="text-[10px] text-red-600 font-black bg-red-50 px-2 py-0.5 rounded-md border border-red-100 shrink-0">
                                                     مدين
@@ -500,39 +578,52 @@ export default function ArchiveList() {
                                 <div className="space-y-3 pt-4">
                                     <label className="text-[12px] font-bold text-gray-400 block text-right pr-2">اختر المجموعة</label>
                                     <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
-                                        {groups?.map((group) => (
-                                            <button
-                                                key={group.id}
-                                                onClick={() => setTargetGroupId(group.id)}
-                                                className={cn(
-                                                    "w-full p-4 rounded-2xl border text-right font-bold transition-all relative group",
-                                                    targetGroupId === group.id
-                                                        ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
-                                                        : "bg-gray-50 border-gray-100 text-gray-600 hover:bg-gray-100"
-                                                )}
-                                            >
-                                                {group.name}
-                                                {targetGroupId === group.id && <Check size={18} className="absolute left-4 top-1/2 -translate-y-1/2" />}
-                                            </button>
-                                        ))}
+                                        {[...(groups || [])]
+                                            .sort((a, b) => (a.name || '').localeCompare((b.name || ''), 'ar'))
+                                            .map((group) => {
+                                                const isSelected = targetGroupId && group.id && String(targetGroupId) === String(group.id);
+                                                return (
+                                                    <button
+                                                        key={group.id}
+                                                        type="button"
+                                                        onClick={() => setTargetGroupId(group.id)}
+                                                        className={cn(
+                                                            "w-full min-h-[56px] p-4 rounded-2xl border text-right font-black transition-all relative flex items-center justify-between",
+                                                            isSelected
+                                                                ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-200"
+                                                                : "bg-white border-gray-100 text-gray-700 hover:bg-gray-50 active:scale-95"
+                                                        )}
+                                                    >
+                                                        <span className={cn("truncate ml-8", isSelected ? "text-white" : "text-gray-900")}>
+                                                            {group.name && group.name.trim() !== "" ? group.name : `مجموعة غير مسمى (${group.id.slice(0, 4)})`}
+                                                        </span>
+                                                        {isSelected && <Check size={20} strokeWidth={3} className="shrink-0" />}
+                                                    </button>
+                                                );
+                                            })}
                                     </div>
                                 </div>
 
                                 <div className="flex gap-3 pt-6">
-                                    <Button
+                                    <button
+                                        type="button"
                                         onClick={handleRestoreConfirm}
-                                        disabled={!targetGroupId}
-                                        className="flex-1 h-14 bg-green-600 hover:bg-green-700 rounded-2xl font-bold shadow-lg shadow-green-200 disabled:opacity-50"
+                                        className={cn(
+                                            "flex-1 h-14 rounded-2xl font-black flex items-center justify-center transition-all",
+                                            !targetGroupId || isRestoring
+                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                : "bg-green-600 text-white shadow-xl shadow-green-100 hover:bg-green-700 active:scale-95"
+                                        )}
                                     >
-                                        تأكيد الاستعادة
-                                    </Button>
-                                    <Button
-                                        variant="outline"
+                                        {isRestoring ? "جاري الاستعادة..." : "تأكيد الاستعادة"}
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => setRestoreTarget(null)}
-                                        className="flex-1 h-14 rounded-2xl font-bold border-gray-100"
+                                        className="flex-1 h-14 rounded-2xl font-black border border-gray-100 bg-white text-gray-500 hover:bg-gray-50 transition-all active:scale-95"
                                     >
                                         إلغاء
-                                    </Button>
+                                    </button>
                                 </div>
                             </div>
                         </motion.div>
