@@ -57,7 +57,7 @@ export default function StudentReportCard({ student, index, userRole, onArchive,
                             let phone = student.parentPhone || student.studentPhone || '';
                             phone = phone.replace(/[^0-9]/g, '');
                             if (phone.startsWith('01')) phone = '2' + phone;
-                            const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\nنود إعلامكم بغياب الطالب وتكرار ذلك. نرجو منكم تقديم عذر مقبول أو التنبيه بسرعة حضور الطالب، وإلا سنضطر آسفين لفصله وإلغاء تسجيله.\nشاكرين لكم حسن تعاونكم.`;
+                            const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\nنود إعلامكم بغياب الطالب وتكرار ذلك. نرجو منكم تقديم عذر مقبول أو التنبيه بسرعة حضور الطالب، وإلا سنضطر آسفين لفصله وإلغاء تسجيله.\nشاكرين لكم حسن تعاونكم مركز الشاطبي لتحفيظ القرآن الكريم.`;
                             window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
                         }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-xl" title="تواصل واتساب">
                             <MessageCircle size={14} />

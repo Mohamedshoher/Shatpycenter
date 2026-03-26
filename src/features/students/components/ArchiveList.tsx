@@ -57,7 +57,7 @@ export default function ArchiveList() {
 
             const { supabase } = await import('@/lib/supabase');
             let allData: any[] = [];
-            
+
             const chunkSize = 100;
             for (let i = 0; i < archivedIds.length; i += chunkSize) {
                 const chunk = archivedIds.slice(i, i + chunkSize);
@@ -86,7 +86,7 @@ export default function ArchiveList() {
 
             const { supabase } = await import('@/lib/supabase');
             let allData: any[] = [];
-            
+
             const chunkSize = 100;
             for (let i = 0; i < archivedIds.length; i += chunkSize) {
                 const chunk = archivedIds.slice(i, i + chunkSize);
@@ -427,7 +427,7 @@ export default function ArchiveList() {
                                                     let phone = student.parentPhone || student.studentPhone || '';
                                                     phone = phone.replace(/[^0-9]/g, '');
                                                     if (phone.startsWith('01')) phone = '2' + phone;
-                                                    const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\nنود إعلامكم أن الطالب مدين بـ *${debtInfo.label}* كرسوم متأخرة.\nيرجى المبادرة بالسداد وشكراً لتعاونكم.`;
+                                                    const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\nنود إعلامكم أن الطالب مدين بـ *${debtInfo.label}* كرسوم متأخرة.\nيرجى المبادرة بالسداد وشكراً لتعاونكم مركز الشاطبي لتحفيظ القرآن الكريم.`;
                                                     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
                                                 }}
                                                 className="w-9 h-9 flex items-center justify-center bg-white text-green-500 rounded-lg hover:bg-green-500 hover:text-white transition-all active:scale-95 shadow-sm border border-gray-100"
