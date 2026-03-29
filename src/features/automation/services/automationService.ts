@@ -226,7 +226,7 @@ export const getLogs = async (logLimit: number = 200): Promise<AutomationLog[]> 
 
     // 3. جلب كافة السجلات التي تنتمي لآخر يوم فحص (لكل نوع على حدة)
     let query = supabase.from('automation_logs').select('*');
-    
+
     // إذا كان التاريخان مختلفين، نستخدم الفلترة للأقدم منهما لضمان ظهور النوعين، ثم سنقوم بالفلترة النهائية في الكود
     const earliestDate = datesToFilter.reduce((a, b) => a < b ? a : b);
 
@@ -237,20 +237,22 @@ export const getLogs = async (logLimit: number = 200): Promise<AutomationLog[]> 
 
     if (error) return [];
 
-    // 4. نقوم بتصفية البيانات في الذاكرة لضمان عرض فقط أحدث يوم لكل نوع
+    // 4. نقوم بتصفية البيانات في الذاكرة لضمان عرض فقط أحدث "جلسة فحص" لكل نوع
     const finalLogs = (data || []).filter(log => {
-        const logDate = new Date(log.triggered_at).toDateString();
-        
-        // إذا كان نوع السجل "تقرير"، نتأكد أنه ينتمي لأحدث يوم سجلت فيه التقارير
+        const logTime = new Date(log.triggered_at).getTime();
+
+        // إذا كان نوع السجل "تقرير"، نتأكد أنه ينتمي لأحدث جلسة (عرض نتائج آخر فحص تم)
         if (log.rule_name.includes('تقرير') && reportLatest?.[0]) {
-            return logDate === new Date(reportLatest[0].triggered_at).toDateString();
+            const latestTime = new Date(reportLatest[0].triggered_at).getTime();
+            return Math.abs(logTime - latestTime) < 90000;
         }
-        
-        // إذا كان نوع السجل "اختبار"، نتأكد أنه ينتمي لأحدث يوم سجلت فيه الاختبارات
+
+        // إذا كان نوع السجل "اختبار"، نتأكد أنه ينتمي لأحدث جلسة
         if (log.rule_name.includes('اختبار') && examLatest?.[0]) {
-            return logDate === new Date(examLatest[0].triggered_at).toDateString();
+            const latestTime = new Date(examLatest[0].triggered_at).getTime();
+            return Math.abs(logTime - latestTime) < 90000;
         }
-        
+
         return false;
     });
 
@@ -304,6 +306,7 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
     targetDate.setDate(targetDate.getDate() - 1);
     const targetDateStr = targetDate.toLocaleDateString('en-CA');
     const dayOfWeek = targetDate.getDay();
+    const runStartTime = new Date(); // توقيت واحد لكافة سجلات هذه الجلسة
 
     // 1. تخطي العطلات (الخميس والجمعة)
     if (dayOfWeek === 4 || dayOfWeek === 5) return [];
@@ -372,7 +375,7 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
 
             // ب. تنفيذ الخصم المالي وإرسال الرسالة (إذا لم يتم الخصم مسبقاً)
             if (!alreadyDeducted) {
-                const res = await executeDeduction(teacher.id, teacher.full_name, deductionAmount, 'عدم تسليم التقرير اليومي (أتمتة)', rule.id, 'فحص التقارير', targetDateStr);
+                const res = await executeDeduction(teacher.id, teacher.full_name, deductionAmount, 'عدم تسليم التقرير اليومي (أتمتة)', rule.id, 'فحص التقارير', targetDateStr, runStartTime);
                 logsCreated.push(...res.logs);
 
                 try {
@@ -394,6 +397,7 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
     targetDate.setDate(targetDate.getDate() - 1);
     const targetDateStr = targetDate.toLocaleDateString('en-CA');
     const dayOfWeek = targetDate.getDay();
+    const runStartTime = new Date(); // توقيت واحد لكافة سجلات هذه الجلسة
 
     // تخطي العطلات (الخميس والجمعة)
     if (dayOfWeek === 4 || dayOfWeek === 5) return [];
@@ -511,7 +515,8 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
                 'عدم تسجيل الاختبارات (أتمتة)',
                 rule.id,
                 'فحص الاختبارات',
-                targetDateStr
+                targetDateStr,
+                runStartTime
             );
             logsCreated.push(...res.logs);
 
@@ -546,7 +551,8 @@ export const executeDeduction = async (
     reason: string,
     ruleId?: string,
     ruleName?: string,
-    deductionDate?: string // تاريخ الخصم (أمس مثلاً)
+    deductionDate?: string, // تاريخ الخصم (أمس مثلاً)
+    logTimestamp?: Date // توقيت تسجيل العملية (لربط السجلات بنفس الجلسة)
 ): Promise<{ deduction: any; logs: AutomationLog[] }> => {
     // الخصم المالي سيظهر فيه "البيان" الممرر في المتغير reason
     // نستخدم التاريخ الممرر أو تاريخ اليوم افتراضياً
@@ -560,16 +566,19 @@ export const executeDeduction = async (
     }
 
     if (effectiveRuleId) {
+        // نستخدم التوقيت الممرر أو توقية المعلم الحالي
+        const finalTimestamp = logTimestamp || new Date();
+
         const log = await addLog({
             ruleId: effectiveRuleId,
             ruleName: ruleName || (reason.includes('تقرير') ? 'فحص التقارير اليومية' : 'فحص الاختبارات اليومية'),
             triggeredBy: 'system',
             recipientId: teacherId,
             recipientName: teacherName,
-            messageSent: `تم تطبيق خصم تلقائي (${amount} يوم) | السبب: ${reason}`,
-            // هام: بدلاً من الوقت الحالي فقط، نقوم بتخزين تاريخ الخصم الفعلي في الـ triggered_at
-            // ليسهل استرجاعه في الـ Undo لاحقاً
-            timestamp: deductionDate ? new Date(deductionDate + 'T' + new Date().toTimeString().split(' ')[0]) : new Date(),
+            // نخزن تاريخ الخصم المستهدف في بداية الرسالة ليتمكن نظام التراجع (Undo) من استخراجه
+            messageSent: `[تاريخ الخصم: ${deductionDate || '--'}] | تم تطبيق خصم تلقائي (${amount} يوم) | السبب: ${reason}`,
+            // هام: نستخدم توقيت التشغيل الفعلي في الـ triggered_at لضمان ترتيب السجلات وتصفيتها بشكل صحيح
+            timestamp: finalTimestamp,
             status: 'success',
         });
         logsCreated.push(log);
@@ -613,9 +622,15 @@ export const triggerAutomation = async (ruleId: string, recipientId: string, rec
  * إلغاء الخصم الناتج عن عملية أتمتة
  */
 export const undoAutomationDeduction = async (logId: string, teacherId: string, timestamp: Date): Promise<void> => {
-    const dateStr = timestamp.toISOString().split('T')[0];
+    // 1. استخراج تاريخ الخصم المستهدف من سجل الأتمتة
+    const { data: logEntry } = await supabase.from('automation_logs').select('details').eq('id', logId).single();
+    if (!logEntry) throw new Error("Log entry not found");
 
-    // 1. البحث عن الخصم في جدول الخصومات
+    // استخراج التاريخ بتنسيق YYYY-MM-DD من الرسالة المخزنة [تاريخ الخصم: 2026-03-28]
+    const dateMatch = logEntry.details.match(/\[تاريخ الخصم: (\d{4}-\d{2}-\d{2})\]/);
+    const dateStr = dateMatch ? dateMatch[1] : timestamp.toISOString().split('T')[0];
+
+    // 2. البحث عن الخصم في جدول الخصومات
     const { data: deductions, error: dError } = await supabase
         .from('deductions')
         .select('id')

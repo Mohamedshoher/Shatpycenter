@@ -30,6 +30,7 @@ import { getLeaveRequests, updateLeaveRequest, LeaveRequest, getAllStudentNotesW
 import { useStudents } from '@/features/students/hooks/useStudents';
 import dynamic from 'next/dynamic';
 const StudentNotesModal = dynamic(() => import('@/features/finance/components/StudentNotesModal'), { ssr: false });
+const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
 import { supabase } from '@/lib/supabase';
 import { Student, Group, FinancialTransaction } from '@/types';
 import { useRouter } from 'next/navigation';
@@ -44,6 +45,7 @@ export default function DashboardOverview() {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
     const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+    const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<Student | null>(null);
     const queryClient = useQueryClient();
     const { archiveStudent } = useStudents();
 
@@ -390,6 +392,18 @@ export default function DashboardOverview() {
                     await markNoteAsRead(id, !currentStatus);
                     queryClient.invalidateQueries({ queryKey: ['student-notes-details'] });
                 }}
+                onStudentClick={(studentId) => {
+                    const student = students.find((s: Student) => s.id === studentId);
+                    if (student) setSelectedStudentForDetail(student);
+                }}
+            />
+
+            {/* نافذة تفاصيل الطالب */}
+            <StudentDetailModal
+                student={selectedStudentForDetail}
+                isOpen={!!selectedStudentForDetail}
+                onClose={() => setSelectedStudentForDetail(null)}
+                initialTab="notes"
             />
         </div>
     );

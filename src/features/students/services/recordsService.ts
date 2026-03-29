@@ -698,6 +698,7 @@ export const getAllStudentNotesWithDetails = async () => {
             .select(`
                 id,
                 content,
+                created_at,
                 created_by,
                 student_id,
                 is_read,

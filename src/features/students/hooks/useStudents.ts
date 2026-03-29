@@ -58,8 +58,8 @@ export const useStudents = () => {
 
     return {
         ...studentsQuery,
-        archiveStudent: (id: string) => updateStatusMutation.mutate({ id, status: 'archived' }),
-        restoreStudent: (id: string, groupId: string | null) => updateStatusMutation.mutate({ id, status: 'active', groupId }),
-        deleteStudent: (id: string) => deleteStudentMutation.mutate(id),
+        archiveStudent: (id: string) => updateStatusMutation.mutateAsync({ id, status: 'archived' }),
+        restoreStudent: (id: string, groupId: string | null) => updateStatusMutation.mutateAsync({ id, status: 'active', groupId }),
+        deleteStudent: (id: string) => deleteStudentMutation.mutateAsync(id),
     };
 };
