@@ -23,19 +23,32 @@ export default function NotesTab({ student, records }: any) {
     return (
         <div className="space-y-4">
             <div className="bg-gray-50 p-5 rounded-[24px] border border-gray-100 space-y-3">
-                <h4 className="font-bold text-sm">إضافة ملحوظة</h4>
-                <textarea value={noteText} onChange={e => setNoteText(e.target.value)} className="w-full h-24 rounded-2xl p-4 text-sm" placeholder="اكتب الملحوظة هنا..." />
+                <h4 className="font-bold text-sm text-gray-800">إضافة ملحوظة</h4>
+                <textarea 
+                    value={noteText} 
+                    onChange={e => setNoteText(e.target.value)} 
+                    className="w-full h-24 rounded-2xl p-4 text-sm bg-white text-gray-900 border-none shadow-inner" 
+                    placeholder="اكتب الملحوظة هنا..." 
+                />
                 <Button onClick={handleAdd} className="w-full bg-blue-600">تسجيل الملحوظة</Button>
             </div>
 
             <div className="space-y-3">
                 {notes.map((note: any) => (
                     <div key={note.id} className="p-4 rounded-2xl border bg-white border-gray-100 shadow-sm relative text-right">
-                        <p className="text-sm font-bold text-gray-700 leading-relaxed mb-2">{note.content}</p>
+                        <p className="text-sm font-bold text-gray-800 leading-relaxed mb-2 break-words">
+                            {note.text || note.content}
+                        </p>
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                                {user?.role === 'director' && <Trash2 size={16} className="text-gray-300 hover:text-red-500 cursor-pointer" onClick={() => deleteNote.mutate(note.id)} />}
-                                <div className="text-[10px] text-gray-400 font-bold">
+                                {user?.role === 'director' && (
+                                    <Trash2 
+                                        size={16} 
+                                        className="text-gray-300 hover:text-red-500 cursor-pointer" 
+                                        onClick={() => deleteNote.mutate(note.id)} 
+                                    />
+                                )}
+                                <div className="text-[10px] text-gray-500 font-bold">
                                     <p>بواسطة: {note.createdBy}</p>
                                     <p>{note.date}</p>
                                 </div>

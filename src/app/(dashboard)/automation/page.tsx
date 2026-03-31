@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAutomationExecution } from '@/features/automation/hooks/useAutomationExecution';
 import { useAutomation } from '@/features/automation/hooks/useAutomation';
 import { Calendar, Trash2, BookOpen, Home } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function AutomationPage() {
     const { isExecuting, isExecutingExams, executeMissingReportDeduction, executeMissingExamDeduction } = useAutomationExecution();
@@ -25,9 +26,12 @@ export default function AutomationPage() {
     const handleRunReportCheck = async () => {
         if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص التقارير اليومية وتطبيق الخصومات على المخالفين؟")) {
             const result = await executeMissingReportDeduction();
-            if (result && result.length > 0) {
-                alert(`✅ تمت العملية بنجاح! تم تسجيل ${result.length} مخالفة.`);
-                loadLogs();
+            loadLogs(); // Reload logs always to show the latest result
+
+            const violators = (result || []).filter((r: any) => r.recipientId !== 'system');
+
+            if (violators.length > 0) {
+                alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة.`);
             } else {
                 alert("✨ تم الفحص: لم يتم العثور على مخالفات جديدة اليوم.");
             }
@@ -37,9 +41,12 @@ export default function AutomationPage() {
     const handleRunExamCheck = async () => {
         if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص الاختبارات اليومية وتطبيق الخصومات على من لم يسجّل اختباراً؟")) {
             const result = await executeMissingExamDeduction();
-            if (result && result.length > 0) {
-                alert(`✅ تمت العملية بنجاح! تم تسجيل ${result.length} مخالفة.`);
-                loadLogs();
+            loadLogs(); // Reload logs always to show the latest result
+
+            const violators = (result || []).filter((r: any) => r.recipientId !== 'system');
+
+            if (violators.length > 0) {
+                alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة.`);
             } else {
                 alert("✨ تم الفحص: لم يتم العثور على مخالفات جديدة اليوم.");
             }
@@ -59,7 +66,7 @@ export default function AutomationPage() {
                     <h2 className="text-xl font-bold text-gray-900">{title}</h2>
                 </div>
                 <span className={`text-xs font-black px-3 py-1 rounded-full ${colorClass} bg-white shadow-sm border border-current/10`}>
-                    {items.length} عملية
+                    {items.filter(i => i.recipientId !== 'system').length} عملية
                 </span>
             </div>
 
@@ -68,8 +75,14 @@ export default function AutomationPage() {
             ) : items.length > 0 ? (
                 <div className="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1 custom-scrollbar">
                     {items.map((log, index) => (
-                        <div key={log.id} className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-4 border border-white/50 hover:shadow-md transition-all relative overflow-hidden group">
-                            <div className={`absolute top-0 right-0 w-1.5 h-full ${log.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <div key={log.id} className={cn(
+                            "bg-white/80 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-4 border border-white/50 hover:shadow-md transition-all relative overflow-hidden group",
+                            log.recipientId === 'system' && "bg-green-50/50 border-green-100"
+                        )}>
+                            <div className={cn(
+                                "absolute top-0 right-0 w-1.5 h-full",
+                                log.recipientId === 'system' ? 'bg-indigo-400' : log.status === 'success' ? 'bg-green-500' : 'bg-red-500'
+                            )}></div>
 
                             {/* Numbering */}
                             <div className="shrink-0 w-7 h-7 rounded-full bg-white/50 border border-gray-100 flex items-center justify-center text-[10px] font-black text-gray-400">
@@ -78,9 +91,18 @@ export default function AutomationPage() {
 
                             {/* Info Stacked - 3 Lines */}
                             <div className="flex-1 min-w-0 flex flex-col gap-1">
-                                <h3 className="font-black text-gray-900 text-sm leading-none">
+                                <h3 className={cn(
+                                    "font-black text-sm leading-tight",
+                                    log.recipientId === 'system' ? "text-indigo-700" : "text-gray-900"
+                                )}>
                                     {log.recipientName}
                                 </h3>
+
+                                {log.recipientId === 'system' && (
+                                    <p className="text-[11px] font-bold text-indigo-500/80 leading-relaxed italic pr-1">
+                                        {log.messageSent}
+                                    </p>
+                                )}
 
                                 <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
                                     <Calendar className="w-3 h-3" />
@@ -91,7 +113,7 @@ export default function AutomationPage() {
                             </div>
 
                             {/* Undo Action */}
-                            {log.status === 'success' && (
+                            {log.status === 'success' && log.recipientId !== 'system' && (
                                 <button
                                     onClick={() => handleUndo(log.id, log.recipientId, log.timestamp)}
                                     className="shrink-0 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"

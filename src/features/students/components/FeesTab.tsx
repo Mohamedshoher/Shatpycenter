@@ -77,23 +77,53 @@ export default function FeesTab({ student, records }: any) {
                     
                     return (
                         <div key={m.key} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
-                            <div>
+                            <div className="flex-1">
                                 <h5 className="font-bold text-gray-800 text-sm">{m.label}</h5>
-                                <p className={cn("text-[10px] font-bold", studentFee ? "text-green-500" : exemption ? "text-purple-500" : "text-amber-500")}>
-                                    {studentFee ? "✓ تم السداد" : exemption ? "✨ تم العفو" : "⚠ مطلوب السداد"}
-                                </p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <p className={cn("text-[10px] font-bold", studentFee ? "text-green-500" : exemption ? "text-purple-500" : "text-amber-500")}>
+                                        {studentFee ? "✓ تم السداد" : exemption ? "✨ تم العفو" : "⚠ مطلوب السداد"}
+                                    </p>
+                                    
+                                    {studentFee && (
+                                        <span className="text-[9px] bg-gray-50 px-1.5 py-0.5 rounded text-gray-600 border border-gray-100">
+                                            وصل: {studentFee.receipt} | {studentFee.date}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            <button 
-                                onClick={() => {
-                                    if (!studentFee && !exemption) {
-                                        setPaymentMonth(m.label);
-                                        setPaymentMonthKey(m.key);
-                                        setIsPaymentModalOpen(true);
-                                    }
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">
-                                {studentFee ? "تفاصيل" : "تسجيل دفع"}
-                            </button>
+                            
+                            <div className="flex items-center gap-2">
+                                {studentFee && (() => {
+                                    const paymentDate = new Date(studentFee.date);
+                                    const now = new Date();
+                                    const diffDays = Math.floor((now.getTime() - paymentDate.getTime()) / (1000 * 60 * 60 * 24));
+                                    const canDelete = isDirector || (user?.role === 'teacher' && diffDays <= 3);
+
+                                    return canDelete && (
+                                        <button 
+                                            onClick={() => {
+                                                if (confirm('هل أنت متأكد من إلغاء عملية الدفع؟ سيتم حذف العملية بالكامل')) {
+                                                    deleteFee.mutate(studentFee.id);
+                                                }
+                                            }}
+                                            className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    );
+                                })()}
+
+                                {!studentFee && !exemption && (
+                                    <button 
+                                        onClick={() => {
+                                            setPaymentMonth(m.label);
+                                            setPaymentMonthKey(m.key);
+                                            setIsPaymentModalOpen(true);
+                                        }}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">
+                                        تسجيل دفع
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     );
                 })}

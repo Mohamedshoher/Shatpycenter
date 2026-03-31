@@ -385,6 +385,22 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
             }
         }
     }
+
+    // 5. إذا لم يتم العثور على مخالفات، نسجل "سجل تلخيصي" لضمان ظهور نتيجة الفحص في التاريخ الحالي
+    if (logsCreated.length === 0) {
+        const summaryLog = await addLog({
+            ruleId: rule.id,
+            ruleName: 'فحص التقارير اليومية',
+            triggeredBy: 'system',
+            recipientId: 'system',
+            recipientName: '✅ التزام كامل',
+            messageSent: `لم يتخلف أحد عن تسليم التقرير ليوم ${dayName} الموافق ${targetDateStr}`,
+            timestamp: runStartTime,
+            status: 'success'
+        });
+        logsCreated.push(summaryLog);
+    }
+
     return logsCreated;
 };
 
@@ -533,6 +549,21 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
                 );
             } catch (e) { console.error("Chat Error:", e); }
         }
+    }
+
+    // إذا لم يتم العثور على مخالفات، نسجل "سجل تلخيصي" لضمان ظهور نتيجة الفحص في التاريخ الحالي
+    if (logsCreated.length === 0) {
+        const summaryLog = await addLog({
+            ruleId: rule.id,
+            ruleName: 'فحص الاختبارات اليومية',
+            triggeredBy: 'system',
+            recipientId: 'system',
+            recipientName: '✅ التزام كامل',
+            messageSent: `تم تسجيل جميع الاختبارات ليوم ${dayName} الموافق ${targetDateStr}`,
+            timestamp: runStartTime,
+            status: 'success'
+        });
+        logsCreated.push(summaryLog);
     }
 
     return logsCreated;
