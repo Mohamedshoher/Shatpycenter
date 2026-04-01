@@ -440,7 +440,7 @@ export default function StudentDetailParentPage() {
 
             {/* WhatsApp Floating Button for Center Support */}
             <button
-                onClick={() => window.open('https://wa.me/201234567890', '_blank')}
+                onClick={() => window.open('https://api.whatsapp.com/send?phone=201234567890', '_blank')}
                 className="fixed bottom-24 left-6 w-14 h-14 bg-teal-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-all hover:bg-teal-700"
             >
                 <MessageCircle size={28} />

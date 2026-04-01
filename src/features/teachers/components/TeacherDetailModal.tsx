@@ -5,7 +5,7 @@
 // ==========================================
 import { useState, useEffect } from 'react'; // هوكس الحالة والتأثيرات من React
 import { motion, AnimatePresence } from 'framer-motion'; // مكتبة الحركات والأنيميشن
-import { cn } from '@/lib/utils'; // وظيفة لدمج أصناف CSS بشكل ديناميكي
+import { cn, getWhatsAppUrl } from '@/lib/utils'; // وظيفة لدمج أصناف CSS بشكل ديناميكي
 import { Button } from '@/components/ui/button'; // مكون الزر الجاهز
 import { supabase } from '@/lib/supabase'; // عميل قاعدة بيانات Supabase
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'; // مكتبة إدارة جلب البيانات
@@ -437,7 +437,7 @@ export default function TeacherDetailModal({
 مركز الشاطبي
         `.trim();
 
-        const whatsappUrl = `https://wa.me/${teacher.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(report)}`;
+        const whatsappUrl = getWhatsAppUrl(teacher.phone, report);
         window.open(whatsappUrl, '_blank');
     };
 
@@ -716,7 +716,7 @@ export default function TeacherDetailModal({
                                                 <button onClick={() => onDelete?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="حذف"><Trash2 size={16} /></button>
                                                 <button onClick={() => onEdit?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="تعديل"><Edit3 size={16} /></button>
                                                 <a href={`tel:${teacher!.phone}`} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="اتصال"><Phone size={16} /></a>
-                                                <button onClick={() => window.open(`https://wa.me/${teacher!.phone.replace(/[^0-9]/g, '')}`, '_blank')} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-all" title="واتساب"><MessageCircle size={16} /></button>
+                                                <button onClick={() => window.open(getWhatsAppUrl(teacher!.phone), '_blank')} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-all" title="واتساب"><MessageCircle size={16} /></button>
                                             </div>
                                         ) : (
                                             <p className="text-blue-500 font-bold text-[10px] md:text-sm mt-0.5 whitespace-nowrap">الملف الشخصي للمدرس</p>

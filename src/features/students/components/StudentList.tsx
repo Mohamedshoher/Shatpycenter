@@ -27,7 +27,7 @@ import {
     calculateContinuousAbsence
 } from '@/lib/attendance-utils';
 
-import { cn, tieredSearchFilter } from '@/lib/utils';
+import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
 import { Student } from '@/types';
 import dynamic from 'next/dynamic';
 
@@ -203,8 +203,36 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     };
 
     const handleWhatsApp = (student: Student) => {
-        const phone = student.parentPhone.startsWith('01') ? `2${student.parentPhone}` : student.parentPhone;
-        window.open(`https://wa.me/${phone}`, '_blank');
+        window.open(getWhatsAppUrl(student.parentPhone), '_blank');
+    };
+
+    const handleWelcomeWhatsApp = (student: Student) => {
+        const phone = student.parentPhone || student.studentPhone || '';
+        const password = phone.length >= 6 ? phone.slice(-6) : phone;
+        const message = `السلام عليكم ورحمة الله وبركاته، 🌸
+أهلاً بكم في مركز الشاطبي لتحفيظ القرآن الكريم! 📖
+
+يسعدنا انضمام الطالب/ة: *${student.fullName}* إلينا. 🎉
+
+💰 *تفاصيل المصروفات:*
+قيمة الاشتراك الشهري هي *${student.monthlyAmount || 80} ج.م* للمجموعة الواحدة.
+⚠️ *تنبيه مهم:* تُستحق المصروفات مقدماً مع أول يوم من كل شهر.
+
+🚫 *الغياب والاعتذار:*
+في حال الرغبة في التغيب، لابد من إرسال اعتذار مسبق عبر رسالة على الواتساب أو من خلال موقعنا الإلكتروني.
+
+🌐 *بوابة ولي الأمر:*
+لمتابعة مستوى الطالب، تقارير الحفظ، وسجل الحضور والغياب، يرجى الدخول إلى حسابكم عبر الرابط التالي:
+🔗 https://shatpycenter-um2b.vercel.app/attendance-report
+
+📱 *طريقة الدخول:*
+- *اسم المستخدم:* رقم الهاتف المسجل لدينا (${phone}).
+- *كلمة المرور:* آخر 6 أرقام من رقم الهاتف (${password}).
+
+متابعتكم المستمرة عبر الموقع تساهم بشكل كبير في تشجيع الطالب ورفع مستواه. 🌟
+نسأل الله التوفيق لأبنائنا جميعاً. 🤲`;
+
+        window.open(getWhatsAppUrl(phone, message), '_blank');
     };
 
     const handleCall = (student: Student) => {
@@ -529,7 +557,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 {user?.role !== 'director' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 transition-colors" title="المالية"><CreditCard size={18} /></button>
                                 )}
-                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'exams'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-colors" title="الاختبارات"><BookOpen size={18} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleWelcomeWhatsApp(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-500 transition-colors" title="رسالة ترحيب"><MessageCircle size={18} /></button>
                                 {user?.role === 'teacher' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'notes'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="الملاحظات"><FileText size={18} /></button>
                                 )}

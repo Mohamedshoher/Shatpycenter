@@ -2,7 +2,7 @@ import { X, Archive, RotateCcw, Edit3, MessageCircle, Phone } from 'lucide-react
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useStudents } from '../hooks/useStudents';
 import { useGroups } from '../../../features/groups/hooks/useGroups';
-import { cn } from '../../../lib/utils';
+import { cn, getWhatsAppUrl } from '../../../lib/utils';
 
 export default function ModalHeader({ student, onClose, onEdit }: any) {
     const { user } = useAuthStore();
@@ -15,8 +15,7 @@ export default function ModalHeader({ student, onClose, onEdit }: any) {
     // وظيفة التواصل عبر واتساب
     const handleWhatsApp = () => {
         if (student?.parentPhone) {
-            const phone = student.parentPhone.startsWith('01') ? `2${student.parentPhone}` : student.parentPhone;
-            window.open(`https://wa.me/${phone}`, '_blank');
+            window.open(getWhatsAppUrl(student.parentPhone), '_blank');
         }
     };
 

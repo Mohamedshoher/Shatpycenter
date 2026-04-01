@@ -47,3 +47,25 @@ export function tieredSearchFilter<T>(items: T[], searchTerm: string, getFullNam
 
     return tier3;
 }
+
+/**
+ * دالة لتنسيق رابط الواتساب بشكل صحيح ليعمل على جميع الأجهزة
+ */
+export function getWhatsAppUrl(phone: string, message?: string) {
+    // تنظيف الرقم من أي مسافات أو رموز غير رقمية
+    let cleanPhone = phone.replace(/[^0-9]/g, '');
+
+    // إضافة كود الدولة (مصر) إذا كان الرقم يبدأ بـ 01
+    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
+        cleanPhone = '2' + cleanPhone;
+    }
+
+    // استخدام الرابط المباشر من WhatsApp API لضمان الانتقال التلقائي للدردشة
+    let url = `https://api.whatsapp.com/send?phone=${cleanPhone}`;
+    
+    if (message) {
+        url += `&text=${encodeURIComponent(message)}`;
+    }
+    
+    return url;
+}
