@@ -41,7 +41,7 @@ export default function AttendanceReportPage() {
         queryFn: async () => {
             const { supabase } = await import('@/lib/supabase');
             const { getLatestNotes } = await import('@/features/students/services/recordsService');
-            
+
             const [y, m, d] = selectedDateStr.split('-').map(Number);
             const dObj = new Date(y, m - 1, d);
             dObj.setDate(dObj.getDate() - 60); // آخر 60 يوم لحساب المتصل بدقة
@@ -57,10 +57,10 @@ export default function AttendanceReportPage() {
                         .gte('date', sinceDate)
                         .order('created_at', { ascending: false })
                         .range(from, from + step - 1);
-                    
+
                     if (error || !data || data.length === 0) break;
                     allData = [...allData, ...data];
-                    
+
                     // إذا كان الاستعلام أرجع أقل من الحد الأقصى، معناه أننا وصلنا للنهاية
                     if (data.length < step) break;
                     from += step;
@@ -103,7 +103,7 @@ export default function AttendanceReportPage() {
         const isControlRole = user?.role === 'director'
 
         const selectedDate = new Date(selectedDateStr);
-        const dayOfWeek = selectedDate.getDay(); 
+        const dayOfWeek = selectedDate.getDay();
         const diffFromSat = (dayOfWeek + 1) % 7; // الأسبوع يبدأ من السبت
         const weekStartDate = new Date(selectedDate);
         weekStartDate.setDate(selectedDate.getDate() - diffFromSat);
@@ -113,7 +113,7 @@ export default function AttendanceReportPage() {
             .filter(s => s.status === 'active' && (isControlRole || groupIds.includes(s.groupId!)))
             .map(s => {
                 const history = reportData.attendanceMap[s.id] || [];
-                
+
                 // استخراج الحالة الأحدث لكل يوم
                 const dailyStatusMap = new Map<string, string>();
                 history.forEach(h => {
@@ -123,8 +123,8 @@ export default function AttendanceReportPage() {
                 // 1. حساب الغياب المتصل تنازلياً من اليوم المختار (في حدود الأسبوع فقط)
                 const recordedDates = Array.from(dailyStatusMap.keys())
                     .filter(d => d >= wStartStr && d <= selectedDateStr)
-                    .sort((a,b) => b.localeCompare(a));
-                
+                    .sort((a, b) => b.localeCompare(a));
+
                 let continuousAbsences = 0;
                 for (const d of recordedDates) {
                     if (dailyStatusMap.get(d) === 'absent') {
@@ -174,8 +174,15 @@ export default function AttendanceReportPage() {
             // إذا لم يتم تحديد فلاتر أرقام، اظهر الغائبين اليوم فقط
             if (!cL && !tL) return s.currentStatus === 'absent';
 
-            // إذا تم تحديد أرقام، اظهر من يطابق الشرط أو الغائب اليوم
-            return s.currentStatus === 'absent' || (cL > 0 && s.continuousAbsences >= cL) || (tL > 0 && s.totalAbsences >= tL);
+            let pass = false;
+            if (cL > 0 && tL > 0) {
+                pass = s.continuousAbsences >= cL && s.totalAbsences >= tL;
+            } else if (cL > 0) {
+                pass = s.continuousAbsences >= cL;
+            } else if (tL > 0) {
+                pass = s.totalAbsences >= tL;
+            }
+            return pass;
         }).sort((a, b) => b.totalAbsences - a.totalAbsences);
 
         const getGroupStats = (list: any[]) => {
@@ -213,9 +220,19 @@ export default function AttendanceReportPage() {
                         }} className="px-3 py-1.5 rounded-lg text-xs font-black bg-white shadow-sm text-gray-600 hover:bg-gray-200 transition-colors">
                             السابق
                         </button>
-                        
-                        <div className="px-2 text-[10px] font-black text-gray-500 min-w-[80px] text-center">
-                            {new Date(selectedDateStr).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+
+                        <div className="px-2 text-[10px] font-black text-gray-500 min-w-[80px] text-center relative cursor-pointer group flex items-center justify-center">
+                            <input
+                                type="date"
+                                value={selectedDateStr}
+                                onChange={(e) => {
+                                    if (e.target.value) setSelectedDateStr(e.target.value);
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <span className="group-hover:text-blue-500 transition-colors">
+                                {new Date(selectedDateStr).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+                            </span>
                         </div>
 
                         <button onClick={() => {
@@ -225,7 +242,7 @@ export default function AttendanceReportPage() {
                             اليوم
                         </button>
                     </div>
-                    
+
                     <AttendanceStats
                         presentCount={dailyStats.p} absentCount={dailyStats.a}
                         showPresentChart={showPresentChart} setShowPresentChart={setShowPresentChart}

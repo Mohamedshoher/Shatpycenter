@@ -195,66 +195,48 @@ export const toggleRule = async (id: string): Promise<AutomationRule> => {
 // 4. خدمات السجلات (Logging)
 // ==========================================
 
-export const getLogs = async (logLimit: number = 200): Promise<AutomationLog[]> => {
-    // 1. تحديد أحدث تاريخ لعملية فحص التقارير
-    const { data: reportLatest } = await supabase
+export const getLogs = async (logLimit: number = 500, selectedDateStr?: string): Promise<AutomationLog[]> => {
+    let query = supabase
         .from('automation_logs')
-        .select('triggered_at')
-        .ilike('rule_name', '%تقرير%')
-        .order('triggered_at', { ascending: false })
-        .limit(1);
+        .select('*')
+        .order('triggered_at', { ascending: false });
 
-    // 2. تحديد أحدث تاريخ لعملية فحص الاختبارات
-    const { data: examLatest } = await supabase
-        .from('automation_logs')
-        .select('triggered_at')
-        .ilike('rule_name', '%اختبار%')
-        .order('triggered_at', { ascending: false })
-        .limit(1);
-
-    const datesToFilter: string[] = [];
-    if (reportLatest?.[0]) {
-        const d = new Date(reportLatest[0].triggered_at);
-        datesToFilter.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString());
-    }
-    if (examLatest?.[0]) {
-        const d = new Date(examLatest[0].triggered_at);
-        datesToFilter.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString());
+    if (selectedDateStr) {
+        // إذا حدد المستخدم تاريخاً، نقوم بجلب سجلات ذلك اليوم فقط (من بداية اليوم لنهايته)
+        const startDate = `${selectedDateStr}T00:00:00.000Z`;
+        const endDate = `${selectedDateStr}T23:59:59.999Z`;
+        query = query.gte('triggered_at', startDate).lte('triggered_at', endDate);
+    } else {
+        query = query.limit(logLimit);
     }
 
-    if (datesToFilter.length === 0) return [];
+    const { data, error } = await query;
+    if (error || !data) return [];
 
-    // 3. جلب كافة السجلات التي تنتمي لآخر يوم فحص (لكل نوع على حدة)
-    let query = supabase.from('automation_logs').select('*');
+    let finalLogs = data;
 
-    // إذا كان التاريخان مختلفين، نستخدم الفلترة للأقدم منهما لضمان ظهور النوعين، ثم سنقوم بالفلترة النهائية في الكود
-    const earliestDate = datesToFilter.reduce((a, b) => a < b ? a : b);
+    // إذا لم يحدد المستخدم تاريخاً، نستمر في السلوك السابق (تصفية أحدث جلسة فحص فقط)
+    if (!selectedDateStr) {
+        let latestReportTime = 0;
+        let latestExamTime = 0;
 
-    const { data, error } = await query
-        .gte('triggered_at', earliestDate)
-        .order('triggered_at', { ascending: false })
-        .limit(logLimit);
-
-    if (error) return [];
-
-    // 4. نقوم بتصفية البيانات في الذاكرة لضمان عرض فقط أحدث "جلسة فحص" لكل نوع
-    const finalLogs = (data || []).filter(log => {
-        const logTime = new Date(log.triggered_at).getTime();
-
-        // إذا كان نوع السجل "تقرير"، نتأكد أنه ينتمي لأحدث جلسة (عرض نتائج آخر فحص تم)
-        if (log.rule_name.includes('تقرير') && reportLatest?.[0]) {
-            const latestTime = new Date(reportLatest[0].triggered_at).getTime();
-            return Math.abs(logTime - latestTime) < 90000;
+        for (const log of data) {
+            const time = new Date(log.triggered_at).getTime();
+            if (log.rule_name.includes('تقرير') && latestReportTime === 0) {
+                latestReportTime = time;
+            }
+            if (log.rule_name.includes('اختبار') && latestExamTime === 0) {
+                latestExamTime = time;
+            }
         }
 
-        // إذا كان نوع السجل "اختبار"، نتأكد أنه ينتمي لأحدث جلسة
-        if (log.rule_name.includes('اختبار') && examLatest?.[0]) {
-            const latestTime = new Date(examLatest[0].triggered_at).getTime();
-            return Math.abs(logTime - latestTime) < 90000;
-        }
-
-        return false;
-    });
+        finalLogs = data.filter(log => {
+            const time = new Date(log.triggered_at).getTime();
+            if (log.rule_name.includes('تقرير')) return Math.abs(time - latestReportTime) < 120000;
+            if (log.rule_name.includes('اختبار')) return Math.abs(time - latestExamTime) < 120000;
+            return true;
+        });
+    }
 
     return finalLogs.map(row => ({
         id: row.id,
@@ -304,12 +286,21 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
     const logsCreated: AutomationLog[] = [];
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() - 1);
-    const targetDateStr = targetDate.toLocaleDateString('en-CA');
+    
+    // استخدام بناء التاريخ يدوياً لتجنب مشاكل المنطقة الزمنية
+    const yyyy = targetDate.getFullYear();
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(targetDate.getDate()).padStart(2, '0');
+    const targetDateStr = `${yyyy}-${mm}-${dd}`;
+    
     const dayOfWeek = targetDate.getDay();
     const runStartTime = new Date(); // توقيت واحد لكافة سجلات هذه الجلسة
 
     // 1. تخطي العطلات (الخميس والجمعة)
-    if (dayOfWeek === 4 || dayOfWeek === 5) return [];
+    if (dayOfWeek === 4 || dayOfWeek === 5) {
+        console.log("اليوم المستهدف عطلة (خميس/جمعة). لا توجد تقارير مطلوبة.");
+        return [];
+    }
 
     // 2. التحقق من وجود القاعدة وتفعيلها
     const rules = await getRules();
@@ -411,12 +402,21 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
     const logsCreated: AutomationLog[] = [];
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() - 1);
-    const targetDateStr = targetDate.toLocaleDateString('en-CA');
+    
+    // تحويل التاريخ يدوياً لتجنب التلاعب بالمناطق الزمنية
+    const yyyy = targetDate.getFullYear();
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(targetDate.getDate()).padStart(2, '0');
+    const targetDateStr = `${yyyy}-${mm}-${dd}`;
+    
     const dayOfWeek = targetDate.getDay();
     const runStartTime = new Date(); // توقيت واحد لكافة سجلات هذه الجلسة
 
     // تخطي العطلات (الخميس والجمعة)
-    if (dayOfWeek === 4 || dayOfWeek === 5) return [];
+    if (dayOfWeek === 4 || dayOfWeek === 5) {
+        console.log("اليوم المستهدف عطلة (خميس/جمعة). لا توجد اختبارات مطلوبة.");
+        return [];
+    }
 
     // ✅ تأكد من وجود قاعدة الاختبارات في قاعدة البيانات، وأضفها إن لم تكن موجودة
     const { data: existingRules } = await supabase
@@ -478,7 +478,7 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
         { data: allTeacherAttendance }
     ] = await Promise.all([
         supabase.from('groups').select('id, teacher_id, students(id)').in('teacher_id', teacherIds),
-        supabase.from('exams').select('student_id').gte('date', targetDateStr).lte('date', targetDateStr),
+        supabase.from('exams').select('student_id').gte('date', `${targetDateStr}T00:00:00`).lte('date', `${targetDateStr}T23:59:59.999`),
         supabase.from('deductions').select('id, teacher_id, reason').in('teacher_id', teacherIds).eq('date', targetDateStr),
         supabase.from('teacher_attendance').select('id, teacher_id, status').in('teacher_id', teacherIds).eq('date', targetDateStr),
     ]);

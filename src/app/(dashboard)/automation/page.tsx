@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAutomationExecution } from '@/features/automation/hooks/useAutomationExecution';
 import { useAutomation } from '@/features/automation/hooks/useAutomation';
@@ -11,9 +11,11 @@ export default function AutomationPage() {
     const { isExecuting, isExecutingExams, executeMissingReportDeduction, executeMissingExamDeduction } = useAutomationExecution();
     const { logs, loading: logsLoading, loadLogs, undoLogAction } = useAutomation();
 
+    const [selectedDate, setSelectedDate] = useState<string>(''); // Empty means Latest
+
     useEffect(() => {
-        loadLogs();
-    }, [loadLogs]);
+        loadLogs(selectedDate);
+    }, [loadLogs, selectedDate]);
 
     const handleUndo = async (logId: string, teacherId: string, timestamp: Date) => {
         try {
@@ -26,7 +28,8 @@ export default function AutomationPage() {
     const handleRunReportCheck = async () => {
         if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص التقارير اليومية وتطبيق الخصومات على المخالفين؟")) {
             const result = await executeMissingReportDeduction();
-            loadLogs(); // Reload logs always to show the latest result
+            setSelectedDate(''); // نعود لأحدث سجل عند التشغيل
+            loadLogs('');
 
             const violators = (result || []).filter((r: any) => r.recipientId !== 'system');
 
@@ -41,7 +44,8 @@ export default function AutomationPage() {
     const handleRunExamCheck = async () => {
         if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص الاختبارات اليومية وتطبيق الخصومات على من لم يسجّل اختباراً؟")) {
             const result = await executeMissingExamDeduction();
-            loadLogs(); // Reload logs always to show the latest result
+            setSelectedDate(''); // نعود لأحدث سجل عند التشغيل الجديد
+            loadLogs('');
 
             const violators = (result || []).filter((r: any) => r.recipientId !== 'system');
 
@@ -152,6 +156,26 @@ export default function AutomationPage() {
                         <h2 className="text-sm font-black text-gray-900 leading-none">نظام الأتمتة</h2>
                     </div>
                 </div>
+
+                <div className="flex items-center gap-2 bg-gray-50/80 px-2 py-1.5 rounded-xl border border-gray-100">
+                    <span className="text-xs font-bold text-gray-500">عرض نتائج:</span>
+                    <div className="relative">
+                        <input 
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="bg-white border border-gray-200 text-xs font-bold text-indigo-700 px-2 py-1 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        {selectedDate && (
+                            <button 
+                                onClick={() => setSelectedDate('')}
+                                className="mr-2 text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                                (الأحدث)
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Main Action Header - Just Buttons */}
@@ -180,10 +204,10 @@ export default function AutomationPage() {
             {/* Split Logs Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <div className="h-full">
-                    {renderLogList(reportLogs, "سجل فحص التقارير", Calendar, "text-indigo-600", "bg-indigo-50/40", "border-indigo-100/60")}
+                    {renderLogList(reportLogs, selectedDate ? `سجل التقارير (${new Date(selectedDate).toLocaleDateString('ar-EG', {month: 'short', day: 'numeric'})})` : "سجل التقارير الأخير", Calendar, "text-indigo-600", "bg-indigo-50/40", "border-indigo-100/60")}
                 </div>
                 <div className="h-full">
-                    {renderLogList(examLogs, "سجل فحص الاختبارات", BookOpen, "text-emerald-600", "bg-emerald-50/40", "border-emerald-100/60")}
+                    {renderLogList(examLogs, selectedDate ? `سجل الاختبارات (${new Date(selectedDate).toLocaleDateString('ar-EG', {month: 'short', day: 'numeric'})})` : "سجل الاختبارات الأخير", BookOpen, "text-emerald-600", "bg-emerald-50/40", "border-emerald-100/60")}
                 </div>
             </div>
         </div>

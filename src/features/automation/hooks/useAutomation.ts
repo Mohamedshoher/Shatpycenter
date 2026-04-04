@@ -32,11 +32,11 @@ export const useAutomation = () => {
     /**
      * جلب سجلات الأتمتة (الأحداث التي تمت)
      */
-    const loadLogs = useCallback(async () => {
+    const loadLogs = useCallback(async (selectedDate?: string) => {
         setLoading(true);
         setError(null);
         try {
-            const data = await automationService.getLogs();
+            const data = await automationService.getLogs(500, selectedDate);
             setLogs(data);
         } catch (err: any) {
             setError("فشل في تحميل السجلات");
