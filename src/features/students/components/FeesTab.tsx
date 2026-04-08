@@ -38,7 +38,7 @@ export default function FeesTab({ student, records }: any) {
 
     const handleSaveFee = async () => {
         if (!receiptNum) return alert('برجاء إدخال رقم الوصل');
-        
+
         // 1. تسجيل الرسوم للطالب
         addFee.mutate({
             studentId: student.id,
@@ -74,7 +74,7 @@ export default function FeesTab({ student, records }: any) {
                 {monthsList.map((m) => {
                     const studentFee = fees.find((f: any) => f.month === m.label || f.month === m.key);
                     const exemption = exemptions.find((e: any) => e.month === m.label || e.month === m.key);
-                    
+
                     return (
                         <div key={m.key} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
                             <div className="flex-1">
@@ -83,7 +83,7 @@ export default function FeesTab({ student, records }: any) {
                                     <p className={cn("text-[10px] font-bold", studentFee ? "text-green-500" : exemption ? "text-purple-500" : "text-amber-500")}>
                                         {studentFee ? "✓ تم السداد" : exemption ? "✨ تم العفو" : "⚠ مطلوب السداد"}
                                     </p>
-                                    
+
                                     {studentFee && (
                                         <span className="text-[9px] bg-gray-50 px-1.5 py-0.5 rounded text-gray-600 border border-gray-100">
                                             وصل: {studentFee.receipt} | {studentFee.date}
@@ -91,7 +91,7 @@ export default function FeesTab({ student, records }: any) {
                                     )}
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                                 {studentFee && (() => {
                                     const paymentDate = new Date(studentFee.date);
@@ -100,7 +100,7 @@ export default function FeesTab({ student, records }: any) {
                                     const canDelete = isDirector || (user?.role === 'teacher' && diffDays <= 3);
 
                                     return canDelete && (
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 if (confirm('هل أنت متأكد من إلغاء عملية الدفع؟ سيتم حذف العملية بالكامل')) {
                                                     deleteFee.mutate(studentFee.id);
@@ -113,7 +113,7 @@ export default function FeesTab({ student, records }: any) {
                                 })()}
 
                                 {!studentFee && !exemption && (
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             setPaymentMonth(m.label);
                                             setPaymentMonthKey(m.key);

@@ -52,9 +52,9 @@ export const useTeacherDashboard = (
             .filter(f => {
                 const student = students.find(s => s.id === f.studentId);
                 const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
-                const isCollectedByTeacher = f.createdBy === teacher.fullName || 
-                                           f.createdBy === teacher.phone || 
-                                           (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
+                const isCollectedByTeacher = f.createdBy === teacher.fullName ||
+                    f.createdBy === teacher.phone ||
+                    (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
                 return isCollectedByTeacher || (isTeacherStudent && (!f.createdBy || f.createdBy === 'غير معروف'));
             })
             .map(f => {
@@ -92,14 +92,14 @@ export const useTeacherDashboard = (
 
         // 4. الراتب
         let basicSalary = teacher.salary || 1000;
-        
+
         // إذا كان المدرس سيصفي حسابه في وسط الشهر، نحسب له الراتب الأساسي نسبة لليوم
         if (isSettlementMode) {
             basicSalary = Math.round((basicSalary / daysInMonth) * currentDay);
         }
 
         const dailyRate = (teacher.salary || 1000) / 22; // معدل اليوم يظل ثابتاً للحسابات الدقيقة
-        
+
         // خصومات تلقائية (حسب الحضور)
         const autoDeductions = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
             if (status === 'absent') return acc + dailyRate;

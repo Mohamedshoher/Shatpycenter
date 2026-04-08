@@ -57,7 +57,7 @@ export default function AutomationPage() {
         }
     };
 
-    const reportLogs = logs.filter(log => log.ruleName.includes('تقرير'));
+    const reportLogs = logs.filter(log => log.ruleName.includes('تقرير') || log.ruleName.includes('تقارير'));
     const examLogs = logs.filter(log => log.ruleName.includes('اختبار'));
 
     const renderLogList = (items: typeof logs, title: string, Icon: any, colorClass: string, bgClass: string, borderClass: string) => (
