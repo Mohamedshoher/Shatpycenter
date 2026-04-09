@@ -43,9 +43,9 @@ export default function ExamsTab({ student, records }: any) {
     const handleCancelEdit = () => setEditingExamId(null);
 
     const gradeColor = (grade: string) => {
-        if (grade === 'ممتاز') return 'bg-green-50 text-green-600';
-        if (grade === 'يعاد') return 'bg-red-50 text-red-500';
-        return 'bg-blue-50 text-blue-600';
+        if (grade === 'ممتاز') return 'bg-green-50 text-green-600 border-green-100/50';
+        if (grade === 'يعاد') return 'bg-red-50 text-red-500 border-red-100/50';
+        return 'bg-blue-50 text-blue-600 border-blue-100/50';
     };
 
     return (
@@ -85,89 +85,91 @@ export default function ExamsTab({ student, records }: any) {
             </div>
 
             {/* قائمة الاختبارات */}
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {exams.filter((e: any) => e.type === activeSubTab).map((exam: any) => (
                     <div
                         key={exam.id}
-                        className="px-4 py-3 bg-white rounded-2xl border border-gray-50 shadow-sm flex items-center justify-between gap-2"
+                        className="p-4 bg-white rounded-[24px] border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col gap-3 group"
                     >
-                        {/* يسار: أيقونات التحكم */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            {editingExamId === exam.id ? (
-                                <>
-                                    <button
-                                        onClick={() => handleSaveEdit(exam.id)}
-                                        className="w-7 h-7 bg-green-500 text-white rounded-lg flex items-center justify-center hover:bg-green-600 transition-colors"
-                                    >
-                                        <Check size={13} />
-                                    </button>
-                                    <button
-                                        onClick={handleCancelEdit}
-                                        className="w-7 h-7 bg-gray-200 text-gray-500 rounded-lg flex items-center justify-center hover:bg-gray-300 transition-colors"
-                                    >
-                                        <X size={13} />
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    {canEdit && (
+                        {/* السطر الأول: البيانات الأساسية وأزرار التحكم */}
+                        <div className="flex items-center justify-between">
+                            {/* اليمين: اسم السورة والتقدير (بعد العكس) */}
+                            <div className="flex items-center gap-2">
+                                <span className="font-black text-gray-900 text-sm">{exam.surah}</span>
+                                <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-lg border shadow-[0_2px_10px_-3px_rgba(0,0,0,0.07)]", gradeColor(exam.grade))}>
+                                    {exam.grade}
+                                </span>
+                            </div>
+
+                            {/* اليسار: أيقونات التحكم (بعد العكس) */}
+                            <div className="flex items-center gap-1 shrink-0">
+                                {editingExamId === exam.id ? (
+                                    <>
                                         <button
-                                            onClick={() => handleStartEdit(exam)}
-                                            className="w-7 h-7 text-blue-400 hover:text-blue-600 flex items-center justify-center rounded-lg hover:bg-blue-50 transition-colors"
-                                            title="تغيير النوع"
+                                            onClick={() => handleSaveEdit(exam.id)}
+                                            className="w-7 h-7 bg-green-500 text-white rounded-lg flex items-center justify-center hover:bg-green-600 transition-colors"
                                         >
-                                            <Pencil size={13} />
+                                            <Check size={13} />
                                         </button>
-                                    )}
-                                    {user?.role === 'director' && (
                                         <button
-                                            onClick={() => deleteExam.mutate(exam.id)}
-                                            className="w-7 h-7 text-gray-300 hover:text-red-500 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors"
-                                            title="حذف"
+                                            onClick={handleCancelEdit}
+                                            className="w-7 h-7 bg-gray-200 text-gray-500 rounded-lg flex items-center justify-center hover:bg-gray-300 transition-colors"
                                         >
-                                            <Trash2 size={13} />
+                                            <X size={13} />
                                         </button>
-                                    )}
-                                </>
-                            )}
+                                    </>
+                                ) : (
+                                    <>
+                                        {canEdit && (
+                                            <button
+                                                onClick={() => handleStartEdit(exam)}
+                                                className="w-7 h-7 text-blue-400 hover:text-blue-600 flex items-center justify-center rounded-lg hover:bg-blue-50 transition-colors"
+                                                title="تغيير النوع"
+                                            >
+                                                <Pencil size={13} />
+                                            </button>
+                                        )}
+                                        {user?.role === 'director' && (
+                                            <button
+                                                onClick={() => deleteExam.mutate(exam.id)}
+                                                className="w-7 h-7 text-gray-300 hover:text-red-500 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors"
+                                                title="حذف"
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
                         </div>
 
-                        {/* يمين: بيانات الاختبار */}
-                        <div className="flex items-center gap-2 flex-1 justify-end flex-wrap">
-                            {/* النوع (قابل للتعديل) */}
-                            {editingExamId === exam.id ? (
-                                <select
-                                    value={editType}
-                                    onChange={e => setEditType(e.target.value)}
-                                    autoFocus
-                                    className="text-[10px] font-bold border border-blue-200 rounded-lg px-2 py-1 bg-blue-50 text-blue-700 focus:outline-none"
-                                >
-                                    <option>جديد</option>
-                                    <option>ماضي قريب</option>
-                                    <option>ماضي بعيد</option>
-                                </select>
-                            ) : (
-                                <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-1 rounded-lg">
-                                    {exam.type}
-                                </span>
-                            )}
-
-                            {/* التقدير */}
-                            <span className={cn("text-[10px] font-bold px-2 py-1 rounded-lg", gradeColor(exam.grade))}>
-                                {exam.grade}
-                            </span>
-
-                            {/* التاريخ */}
+                        {/* السطر الثاني: النوع والتاريخ */}
+                        <div className="flex items-center justify-between pt-1 border-t border-gray-50">
+                            <div className="flex items-center gap-2">
+                                {editingExamId === exam.id ? (
+                                    <select
+                                        value={editType}
+                                        onChange={e => setEditType(e.target.value)}
+                                        autoFocus
+                                        className="text-[10px] font-bold border border-blue-200 rounded-lg px-2 py-0.5 bg-blue-50 text-blue-700 focus:outline-none"
+                                    >
+                                        <option>جديد</option>
+                                        <option>ماضي قريب</option>
+                                        <option>ماضي بعيد</option>
+                                    </select>
+                                ) : (
+                                    <span className="text-[10px] font-bold bg-gray-50 text-gray-500 px-2 py-1 rounded-lg border border-gray-100">
+                                        {exam.type}
+                                    </span>
+                                )}
+                            </div>
                             <span className="text-[10px] text-gray-400 font-bold">{exam.date}</span>
-
-                            {/* اسم السورة */}
-                            <span className="font-bold text-gray-900 text-sm">{exam.surah}</span>
                         </div>
                     </div>
                 ))}
 
                 {exams.filter((e: any) => e.type === activeSubTab).length === 0 && (
-                    <div className="text-center py-10 text-gray-400 text-xs font-bold">
+                    <div className="col-span-full text-center py-10 text-gray-400 text-xs font-bold">
                         لا توجد اختبارات في هذه الفئة
                     </div>
                 )}
