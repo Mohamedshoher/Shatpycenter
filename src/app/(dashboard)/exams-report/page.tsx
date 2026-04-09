@@ -107,8 +107,8 @@ export default function ExamsReportPage() {
                 const isReducedReq = groupName.includes('تلقين') || groupName.includes('نور بيان');
                 const requiredCount = isReducedReq ? 2 : 3;
 
-                // جلب اختبارات الطالب لهذا الشهر
-                const studentExams = allExams.filter((e: any) => e.studentId === s.id);
+                // جلب اختبارات الطالب لهذا الشهر (باستثناء "يعاد")
+                const studentExams = allExams.filter((e: any) => e.studentId === s.id && e.grade !== 'يعاد');
 
                 // حساب الأنواع الفريدة التي اختبرها الطالب (مثلاً: جديد، ماضي قريب)
                 // إذا اختبر مرتين "جديد" تحسب مرة واحدة
@@ -167,7 +167,8 @@ export default function ExamsReportPage() {
         return base.map((s: any) => {
             const studentExams = allExams.filter((e: any) =>
                 e.studentId === s.id &&
-                (!arabicType || e.type === arabicType)
+                (!arabicType || e.type === arabicType) &&
+                e.grade !== '\u064a\u0639\u0627\u062f' // استبعاد الاختبارات التي نتيجتها "يعاد"
             );
 
             return {
@@ -248,6 +249,7 @@ export default function ExamsReportPage() {
                     >
                         <Trophy size={14} />
                         الأكثر
+                        <span className={cn("text-[10px] font-black px-1.5 py-0.5 rounded-full font-sans", activeTab === 'mostTested' ? "bg-blue-100 text-blue-600" : "bg-gray-200 text-gray-500")}>{mostTestedStudents.length}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('notTested')}
@@ -258,6 +260,7 @@ export default function ExamsReportPage() {
                     >
                         <AlertCircle size={14} />
                         لم يختبروا
+                        <span className={cn("text-[10px] font-black px-1.5 py-0.5 rounded-full font-sans", activeTab === 'notTested' ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-500")}>{notTestedStudents.length}</span>
                     </button>
                 </div>
             </header>
@@ -315,6 +318,11 @@ export default function ExamsReportPage() {
                             </div>
 
                             <div className="space-y-3">
+                                {/* عداد الطلاب */}
+                                <div className="flex items-center justify-between px-1 mb-2">
+                                    <span className="text-xs font-bold text-gray-400">طلاب القائمة</span>
+                                    <span className="bg-amber-100 text-amber-700 text-xs font-black px-3 py-1 rounded-full font-sans">{notTestedStudents.length} طالب</span>
+                                </div>
                                 {notTestedStudents.map((student: any) => (
                                     <div
                                         key={student.id}
@@ -387,6 +395,11 @@ export default function ExamsReportPage() {
                             </div>
 
                             <div className="space-y-3">
+                                {/* عداد الطلاب */}
+                                <div className="flex items-center justify-between px-1 mb-2">
+                                    <span className="text-xs font-bold text-gray-400">طلاب القائمة</span>
+                                    <span className="bg-blue-100 text-blue-700 text-xs font-black px-3 py-1 rounded-full font-sans">{mostTestedStudents.length} طالب</span>
+                                </div>
                                 {mostTestedStudents.map((student: any) => (
                                     <div
                                         key={student.id}

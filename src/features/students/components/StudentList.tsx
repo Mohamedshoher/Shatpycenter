@@ -155,26 +155,6 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             } else if (filter === 'أرقام ناقصة') {
                 const phone = student.parentPhone.replace(/[^0-9]/g, '');
                 matchesFilter = phone.length < 11;
-            } else if (filter === 'غاب 3 فأكثر') {
-                const records = attendanceData.monthMap[student.id] || [];
-                matchesFilter = calculateTotalAbsence(records, currentMonthKey) >= 3;
-            } else if (filter === 'غاب 5 أيام') {
-                const records = attendanceData.monthMap[student.id] || [];
-                matchesFilter = calculateTotalAbsence(records, currentMonthKey) >= 5;
-            } else if (filter === 'غاب 3 متصلاً') {
-                const records = attendanceData.monthMap[student.id] || [];
-                matchesFilter = calculateContinuousAbsence(records) >= 3;
-            } else if (filter === 'غاب 4 متصلاً') {
-                const records = attendanceData.monthMap[student.id] || [];
-                matchesFilter = calculateContinuousAbsence(records) >= 4;
-            } else if (filter === 'غاب 5 متصلاً') {
-                const records = attendanceData.monthMap[student.id] || [];
-                matchesFilter = calculateContinuousAbsence(records) >= 5;
-            } else if (filter === 'الأكثر غياباً') {
-                const records = attendanceData.monthMap[student.id] || [];
-                matchesFilter = calculateTotalAbsence(records, currentMonthKey) > 0;
-            } else {
-                matchesFilter = student.groupId === filter;
             }
 
             const isActive = student.status === 'active';
@@ -420,73 +400,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                 >
                                                     أرقام ناقصة
                                                 </button>
-                                                <button
-                                                    onClick={() => { setFilter('غاب 3 فأكثر'); setIsFilterOpen(false); }}
-                                                    className={cn(
-                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
-                                                        filter === 'غاب 3 فأكثر' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
-                                                    )}
-                                                >
-                                                    غاب 3 فأكثر
-                                                </button>
-                                                <button
-                                                    onClick={() => { setFilter('غاب 5 أيام'); setIsFilterOpen(false); }}
-                                                    className={cn(
-                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
-                                                        filter === 'غاب 5 أيام' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
-                                                    )}
-                                                >
-                                                    غاب 5 أيام
-                                                </button>
-                                                <button
-                                                    onClick={() => { setFilter('غاب 3 متصلاً'); setIsFilterOpen(false); }}
-                                                    className={cn(
-                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
-                                                        filter === 'غاب 3 متصلاً' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
-                                                    )}
-                                                >
-                                                    غاب 3 متصلاً
-                                                </button>
-                                                <button
-                                                    onClick={() => { setFilter('غاب 4 متصلاً'); setIsFilterOpen(false); }}
-                                                    className={cn(
-                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
-                                                        filter === 'غاب 4 متصلاً' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
-                                                    )}
-                                                >
-                                                    غاب 4 متصلاً
-                                                </button>
-                                                <button
-                                                    onClick={() => { setFilter('غاب 5 متصلاً'); setIsFilterOpen(false); }}
-                                                    className={cn(
-                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
-                                                        filter === 'غاب 5 متصلاً' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
-                                                    )}
-                                                >
-                                                    غاب 5 متصلاً
-                                                </button>
-                                                <button
-                                                    onClick={() => { setFilter('الأكثر غياباً'); setIsFilterOpen(false); }}
-                                                    className={cn(
-                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
-                                                        filter === 'الأكثر غياباً' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
-                                                    )}
-                                                >
-                                                    الأكثر غياباً
-                                                </button>
-                                                <div className="h-px bg-gray-100 my-1" />
-                                                {myGroups.map((group) => (
-                                                    <button
-                                                        key={group.id}
-                                                        onClick={() => { setFilter(group.id); setIsFilterOpen(false); }}
-                                                        className={cn(
-                                                            "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors",
-                                                            filter === group.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
-                                                        )}
-                                                    >
-                                                        {group.name}
-                                                    </button>
-                                                ))}
+
                                             </div>
                                         )}
                                     </div>

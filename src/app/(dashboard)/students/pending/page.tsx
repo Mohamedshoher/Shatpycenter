@@ -41,6 +41,10 @@ export default function PendingStudentsPage() {
             return diffDays <= 2 && diffDays >= 0; // Today, yesterday, and the day before
         }
         return false;
+    }).sort((a, b) => {
+        const dateA = new Date((a as any).createdAt || a.enrollmentDate || 0).getTime();
+        const dateB = new Date((b as any).createdAt || b.enrollmentDate || 0).getTime();
+        return dateB - dateA;
     });
 
     const handleWelcomeWhatsApp = (student: Student) => {
@@ -148,74 +152,8 @@ export default function PendingStudentsPage() {
                 </div>
             </div>
 
-            {/* New Students Grid */}
-            {recentStudents.length > 0 && (
-                <div className="space-y-4 mb-8">
-                    <h2 className="text-xl font-black text-gray-900 px-2 border-r-4 border-green-500">تم قبولهم حديثاً (آخر يومين)</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {recentStudents.map((student) => (
-                            <motion.div
-                                key={student.id}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex flex-col hover:border-green-200 transition-all group"
-                            >
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-14 h-14 bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl flex items-center justify-center text-green-700 font-black text-xl shadow-inner border border-green-200/50 shrink-0">
-                                        {student.fullName[0]}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-base font-black text-gray-900 truncate">{student.fullName}</h3>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="px-2.5 py-1 text-[10px] font-black bg-green-100 text-green-700 rounded-lg border border-green-200/60">
-                                                طالب جديد
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-3 mb-5 p-3 bg-gray-50/80 rounded-2xl border border-gray-100/50">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-1.5 text-gray-400">
-                                            <Phone size={14} />
-                                            <span className="text-[10px] font-bold">ولي الأمر</span>
-                                        </div>
-                                        <span className="text-xs font-black text-gray-700 truncate" dir="ltr">{student.parentPhone}</span>
-                                    </div>
-                                    <div className="flex flex-col gap-1 border-r border-gray-200/50 pr-3">
-                                        <div className="flex items-center gap-1.5 text-gray-400">
-                                            <Calendar size={14} />
-                                            <span className="text-[10px] font-bold">تاريخ القبول</span>
-                                        </div>
-                                        <span className="text-xs font-black text-gray-700">{student.enrollmentDate}</span>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex gap-2 mt-auto">
-                                    <button
-                                        onClick={() => handleWelcomeWhatsApp(student)}
-                                        className="flex-1 h-11 rounded-xl bg-green-500 text-white hover:bg-green-600 flex items-center justify-center gap-2 transition-all shadow-md shadow-green-500/20 active:scale-95 text-sm font-bold"
-                                        title="إرسال رسالة ترحيب عبر الواتساب"
-                                    >
-                                        <MessageCircle size={18} />
-                                        رسالة ترحيب
-                                    </button>
-                                    <button
-                                        onClick={() => handleEdit(student)}
-                                        className="w-11 h-11 rounded-xl bg-gray-50 text-gray-500 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center transition-colors border border-gray-100 shrink-0"
-                                        title="تعديل بيانات الطالب"
-                                    >
-                                        <Edit2 size={18} />
-                                    </button>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             {/* Pending Students List */}
-            <div className="space-y-4">
+            <div className="space-y-4 mb-8">
                 <h2 className="text-xl font-black text-gray-900 px-2 border-r-4 border-amber-400">في انتظار الموافقة</h2>
                 {pendingStudents.length === 0 ? (
                     <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
@@ -297,6 +235,69 @@ export default function PendingStudentsPage() {
                     </div>
                 )}
             </div>
+
+            {/* New Students Grid */}
+            {recentStudents.length > 0 && (
+                <div className="space-y-4">
+                    <h2 className="text-xl font-black text-gray-900 px-2 border-r-4 border-green-500">تم قبولهم حديثاً (آخر يومين)</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {recentStudents.map((student) => (
+                            <motion.div
+                                key={student.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-3 hover:border-green-200 transition-all"
+                            >
+                                {/* السطر الأول: الاسم والتاريخ */}
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-black text-sm shrink-0">
+                                            {student.fullName[0]}
+                                        </div>
+                                        <h3 className="text-sm font-black text-gray-900 truncate">{student.fullName}</h3>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 shrink-0 bg-gray-50 px-2 py-1 rounded-lg">
+                                        <Calendar size={14} />
+                                        <span>{student.enrollmentDate}</span>
+                                    </div>
+                                </div>
+
+                                {/* السطر الثاني: رقم الهاتف والمجموعة والأزرار */}
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                                        <div className="flex items-center gap-1.5 text-gray-600 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100 shrink-0">
+                                            <Phone size={14} className="text-gray-400 shrink-0" />
+                                            <span className="text-xs font-black truncate" dir="ltr">{student.parentPhone}</span>
+                                        </div>
+                                        <div className="flex flex-1 items-center gap-1.5 text-indigo-600 bg-indigo-50 px-2 py-1.5 rounded-lg border border-indigo-100 min-w-0">
+                                            <BookOpen size={13} className="shrink-0" />
+                                            <span className="text-[10px] font-black truncate">
+                                                {groups.find(g => g.id === student.groupId)?.name || 'بدون مجموعة'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button
+                                            onClick={() => handleWelcomeWhatsApp(student)}
+                                            className="w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white flex items-center justify-center transition-all shadow-sm"
+                                            title="إرسال رسالة ترحيب عبر الواتساب"
+                                        >
+                                            <MessageCircle size={15} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleEdit(student)}
+                                            className="w-8 h-8 rounded-lg bg-gray-50 text-gray-500 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center transition-all border border-gray-100"
+                                            title="تعديل بيانات الطالب"
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Edit Modal */}
             {editingStudent && (

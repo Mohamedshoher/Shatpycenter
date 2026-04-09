@@ -293,6 +293,7 @@ export const updateExamRecord = async (id: string, data: Partial<ExamRecord>): P
     const updates: any = {};
     if (data.surah) updates.surah = data.surah;
     if (data.grade) updates.grade = data.grade;
+    if (data.type) updates.exam_type = data.type; // تحديث نوع الاختبار
     await supabase.from('exams').update(updates).eq('id', id);
 };
 

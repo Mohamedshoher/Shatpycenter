@@ -173,7 +173,13 @@ export default function GroupsPage() {
                 }
             }
 
-            const matchesFilter = filter === 'الكل' || group.name.includes(filter);
+            const matchesFilter = (() => {
+                if (filter === 'الكل') return true;
+                if (filter === 'حضور ممتاز') return group.attendancePercentage >= 90;
+                if (filter === 'حضور ضعيف') return group.attendancePercentage > 0 && group.attendancePercentage < 75;
+                return group.name.includes(filter);
+            })();
+            
             return matchesFilter;
         });
 
@@ -246,7 +252,7 @@ export default function GroupsPage() {
                                                         className="absolute top-[120%] left-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-2"
                                                     >
                                                         <div className="px-4 py-2 text-[10px] font-black tracking-widest text-gray-400 border-b border-gray-50 uppercase">الفلترة</div>
-                                                        {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء'].map((type) => (
+                                                        {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء', 'حضور ممتاز', 'حضور ضعيف'].map((type) => (
                                                             <button
                                                                 key={type}
                                                                 onClick={() => {

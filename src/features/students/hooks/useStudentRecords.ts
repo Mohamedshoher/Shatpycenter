@@ -5,6 +5,7 @@ import {
     getStudentFees,
     addAttendanceRecord,
     addExamRecord,
+    updateExamRecord,
     addFeeRecord,
     addPlanRecord,
     deleteExamRecord,
@@ -101,6 +102,13 @@ export const useStudentRecords = (studentId: string) => {
         }
     });
 
+    const updateExam = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => updateExamRecord(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['exams', studentId] });
+        }
+    });
+
     const deleteFee = useMutation({
         mutationFn: deleteFeeRecord,
         onSuccess: () => {
@@ -186,6 +194,7 @@ export const useStudentRecords = (studentId: string) => {
         addPlan,
         addLeave,
         addNote,
+        updateExam,
         deleteExam,
         deleteFee,
         deleteExemption,

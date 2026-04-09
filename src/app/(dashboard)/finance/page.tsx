@@ -9,6 +9,8 @@ import {
     Plus,
     Gift,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     Calendar,
     AlertCircle,
     X
@@ -29,7 +31,7 @@ import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
 import TeacherCollectionsModal from '@/features/finance/components/TeacherCollectionsModal';
 import TeacherDetailModal from '@/features/teachers/components/TeacherDetailModal';
-import FinanceComparisonChart from '@/features/finance/components/FinanceComparisonChart';
+
 
 interface Transaction extends TransactionData {
     id: string;
@@ -55,6 +57,7 @@ export default function FinancePage() {
     const [isReceivedDetailsOpen, setIsReceivedDetailsOpen] = useState(false);
     const [isExpenseDetailsOpen, setIsExpenseDetailsOpen] = useState(false);
     const [isExemptionsModalOpen, setIsExemptionsModalOpen] = useState(false);
+    const [isExpectedExpensesModalOpen, setIsExpectedExpensesModalOpen] = useState(false);
 
     // Get Exemptions
     const { data: exemptions = [] } = useQuery({
@@ -154,7 +157,8 @@ export default function FinancePage() {
         teacherCollections,
         totalGlobalDeficit,
         totalGlobalExpected,
-        totalGlobalExempted
+        totalGlobalExempted,
+        totalGlobalExpectedExpenses
     } = useMemo(() => {
         const incomeTransactions = filteredTransactions.filter(tr => tr.type === 'income');
         const expenseTransactions = filteredTransactions.filter(tr => tr.type === 'expense');
@@ -276,6 +280,8 @@ export default function FinancePage() {
 
         const totalGlobalDeficit = collectionsWithDeficit.reduce((sum, c) => sum + (c.deficit || 0), 0);
         const totalGlobalExpected = collectionsWithDeficit.reduce((sum, c) => sum + (c.expected || 0), 0);
+        const FIXED_MONTHLY_EXPENSES = 1700; // إيجار وكهرباء
+        const totalGlobalExpectedExpenses = teachers.filter(t => t.status !== 'inactive').reduce((sum, t) => sum + (Number(t.salary) || 0), 0) + FIXED_MONTHLY_EXPENSES;
 
         return {
             teacherFees: totalFeesByTeachers,
@@ -288,7 +294,8 @@ export default function FinancePage() {
             teacherCollections: collectionsWithDeficit,
             totalGlobalDeficit,
             totalGlobalExpected,
-            totalGlobalExempted: exemptions.reduce((sum, e: any) => sum + (Number(e.amount) || 0), 0)
+            totalGlobalExempted: exemptions.reduce((sum, e: any) => sum + (Number(e.amount) || 0), 0),
+            totalGlobalExpectedExpenses
         };
     }, [filteredTransactions, teachers, students, groups, allFees, user?.displayName, exemptions, selectedMonth]);
 
@@ -489,6 +496,77 @@ export default function FinancePage() {
                 )}
             </AnimatePresence>
 
+            {/* Expected Expenses Details Modal */}
+            <AnimatePresence>
+                {isExpectedExpensesModalOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsExpectedExpensesModalOpen(false)}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] h-fit bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col border border-gray-100 max-h-[85vh]"
+                        >
+                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                                <button
+                                    onClick={() => setIsExpectedExpensesModalOpen(false)}
+                                    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
+                                >
+                                    <X size={20} />
+                                </button>
+                                <div className="text-right">
+                                    <h2 className="text-xl font-black text-gray-900">تفاصيل المصروفات المتوقعة</h2>
+                                    <p className="text-xs font-bold text-gray-400">تحليل رواتب ومستحقات المدرسين</p>
+                                </div>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto space-y-3 no-scrollbar">
+                                {teachers.filter(t => t.status !== 'inactive').sort((a,b) => (Number(b.salary)||0) - (Number(a.salary)||0)).map(t => (
+                                    <div key={t.id} className="flex items-center justify-between p-4 bg-rose-50/50 rounded-2xl border border-rose-100/50">
+                                        <div className="text-lg font-black text-rose-600 font-sans tracking-tight">
+                                            {(Number(t.salary) || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-black text-rose-700">{t.fullName}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {teachers.filter(t => t.status !== 'inactive').length === 0 && (
+                                     <div className="py-10 text-center text-gray-400 text-sm font-bold">لا يوجد مدرسين نشطين لاستعراض تفاصيلهم.</div>
+                                )}
+
+                                {/* Fixed Expenses Row */}
+                                <div className="flex items-center justify-between p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50">
+                                    <div className="text-lg font-black text-orange-600 font-sans tracking-tight">
+                                        1,700 <span className="text-[10px]">ج.م</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-black text-orange-700">إيجار وكهرباء</p>
+                                        <p className="text-[10px] text-orange-500/70 font-bold">ثابت شهرياً</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-2xl font-black text-rose-600 font-sans">
+                                        {totalGlobalExpectedExpenses.toLocaleString()} <span className="text-sm">ج.م</span>
+                                    </div>
+                                    <p className="text-xs font-black text-gray-400">إجمالي المصروفات المتوقعة</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* Total Expenses Details Modal */}
             <AnimatePresence>
                 {isExpenseDetailsOpen && (
@@ -573,36 +651,62 @@ export default function FinancePage() {
                     </div>
 
                     {!isLoading && isClient && (
-                        <div className="absolute left-1/2 -translate-x-1/2">
+                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
                             <button
-                                onClick={() => setShowMonthPicker(!showMonthPicker)}
-                                className="h-12 px-6 bg-white border border-blue-100 rounded-[18px] flex items-center gap-3 text-blue-700 font-black shadow-md shadow-blue-500/5 hover:border-blue-300"
+                                onClick={() => {
+                                    const currentIndex = months.findIndex(m => m.value === selectedMonth);
+                                    if (currentIndex < months.length - 1) setSelectedMonth(months[currentIndex + 1].value);
+                                }}
+                                disabled={months.findIndex(m => m.value === selectedMonth) === months.length - 1}
+                                className="w-10 h-10 bg-white border border-blue-100 rounded-[16px] flex items-center justify-center text-blue-600 hover:bg-blue-50 active:scale-95 transition-all shadow-md shadow-blue-500/5 disabled:opacity-50 disabled:hover:bg-white"
+                                title="الشهر السابق"
                             >
-                                <Calendar size={20} className="text-blue-600" />
-                                <span className="text-sm whitespace-nowrap">{months.find(m => m.value === selectedMonth)?.label}</span>
-                                <ChevronDown size={16} className={cn("transition-transform duration-300", showMonthPicker && "rotate-180")} />
+                                <ChevronRight size={20} />
                             </button>
 
-                            {showMonthPicker && (
-                                <div className="absolute top-[120%] left-1/2 -translate-x-1/2 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1">
-                                    {months.map(month => (
-                                        <button
-                                            key={month.value}
-                                            onClick={() => {
-                                                setSelectedMonth(month.value);
-                                                setShowMonthPicker(false);
-                                            }}
-                                            className={cn(
-                                                "w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
-                                                selectedMonth === month.value ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            {month.label}
-                                            {selectedMonth === month.value && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowMonthPicker(!showMonthPicker)}
+                                    className="h-12 px-6 bg-white border border-blue-100 rounded-[18px] flex items-center gap-3 text-blue-700 font-black shadow-md shadow-blue-500/5 hover:border-blue-300"
+                                >
+                                    <Calendar size={20} className="text-blue-600" />
+                                    <span className="text-sm whitespace-nowrap">{months.find(m => m.value === selectedMonth)?.label}</span>
+                                    <ChevronDown size={16} className={cn("transition-transform duration-300", showMonthPicker && "rotate-180")} />
+                                </button>
+
+                                {showMonthPicker && (
+                                    <div className="absolute top-[120%] left-1/2 -translate-x-1/2 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1">
+                                        {months.map(month => (
+                                            <button
+                                                key={month.value}
+                                                onClick={() => {
+                                                    setSelectedMonth(month.value);
+                                                    setShowMonthPicker(false);
+                                                }}
+                                                className={cn(
+                                                    "w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
+                                                    selectedMonth === month.value ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                )}
+                                            >
+                                                {month.label}
+                                                {selectedMonth === month.value && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <button
+                                onClick={() => {
+                                    const currentIndex = months.findIndex(m => m.value === selectedMonth);
+                                    if (currentIndex > 0) setSelectedMonth(months[currentIndex - 1].value);
+                                }}
+                                disabled={months.findIndex(m => m.value === selectedMonth) === 0}
+                                className="w-10 h-10 bg-white border border-blue-100 rounded-[16px] flex items-center justify-center text-blue-600 hover:bg-blue-50 active:scale-95 transition-all shadow-md shadow-blue-500/5 disabled:opacity-50 disabled:hover:bg-white"
+                                title="الشهر اللاحق"
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
                         </div>
                     )}
 
@@ -628,7 +732,7 @@ export default function FinancePage() {
                 ) : (
                     <>
                         {/* Summary Grid */}
-                        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-5 sm:gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                             {/* Card: Expected */}
                             <div
                                 onClick={() => { setExpectedOnlyModal(true); setIsCollectionsModalOpen(true); }}
@@ -641,6 +745,22 @@ export default function FinancePage() {
                                     <p className="text-[11px] font-black text-gray-400 mb-1">إجمالي المتوقع</p>
                                     <h3 className="text-2xl font-black text-indigo-600 font-sans tracking-tight">
                                         {totalGlobalExpected.toLocaleString()} <span className="text-xs">ج.م</span>
+                                    </h3>
+                                </div>
+                            </div>
+
+                            {/* Card: Expected Expenses */}
+                            <div 
+                                onClick={() => setIsExpectedExpensesModalOpen(true)}
+                                className="bg-white/90 backdrop-blur-xl border border-rose-100/50 rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm hover:shadow-2xl hover:shadow-rose-500/10 hover:-translate-y-1 transition-all group cursor-pointer"
+                            >
+                                <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shadow-sm border border-rose-100/30">
+                                    <ArrowDownCircle size={24} />
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[11px] font-black text-gray-400 mb-1">المصروفات المتوقعة</p>
+                                    <h3 className="text-2xl font-black text-rose-600 font-sans tracking-tight">
+                                        {totalGlobalExpectedExpenses.toLocaleString()} <span className="text-xs">ج.م</span>
                                     </h3>
                                 </div>
                             </div>
@@ -725,9 +845,11 @@ export default function FinancePage() {
                                 </div>
                             </div>
 
+
+
                             {/* Card: Balance */}
                             <div className={cn(
-                                "backdrop-blur-xl border rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm transition-all col-span-2 sm:col-span-1",
+                                "backdrop-blur-xl border rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm transition-all",
                                 balance >= 0 ? "bg-blue-600 text-white border-blue-400/30 shadow-blue-500/20" : "bg-orange-600 text-white border-orange-400/30 shadow-orange-500/20"
                             )}>
                                 <div className={cn(
@@ -745,10 +867,7 @@ export default function FinancePage() {
                             </div>
                         </div>
 
-                        {/* Comparison Chart */}
-                        <div className="mt-8">
-                            <FinanceComparisonChart />
-                        </div>
+
                     </>
                 )}
             </div>
