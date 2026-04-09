@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { automationService, AutomationRule, AutomationLog } from '@/features/automation/services/automationService';
 
 /**
@@ -6,6 +7,8 @@ import { automationService, AutomationRule, AutomationLog } from '@/features/aut
  * يوفر الدوال اللازمة لجلب، إنشاء، تحديث، وحذف قواعد الأتمتة والسجلات
  */
 export const useAutomation = () => {
+    const queryClient = useQueryClient();
+    
     // --- حالات البيانات (Data State) ---
     const [rules, setRules] = useState<AutomationRule[]>([]); // قائمة قواعد الأتمتة
     const [logs, setLogs] = useState<AutomationLog[]>([]);   // سجلات العمليات المنفذة
@@ -106,6 +109,11 @@ export const useAutomation = () => {
         try {
             await automationService.undoAutomationDeduction(logId, teacherId, timestamp);
             await loadLogs();
+            
+            // تحديث بيانات التخزين المؤقت ليتم محوها من صفحة المدرس مباشرة
+            queryClient.invalidateQueries({ queryKey: ['deductions'] });
+            queryClient.invalidateQueries({ queryKey: ['teacher-attendance'] });
+            queryClient.invalidateQueries({ queryKey: ['all-teachers-attendance'] });
         } catch (err) {
             console.error("خطأ أثناء إلغاء العملية:", err);
             throw err;

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { teacherDeductionService } from '@/features/teachers/services/deductionService';
 import { chatService } from '@/features/chat/services/chatService';
+import { updateTeacherAttendance } from '@/features/teachers/services/attendanceService';
 
 // ==========================================
 // 1. التعريفات والأنواع (Interfaces)
@@ -176,6 +177,28 @@ export const executeDeduction = async (
     const targetDate = dDate || normalizeDate(new Date());
     const deduction = await teacherDeductionService.applyDeduction(tId, tName, amt, reason, 'system-automation', targetDate);
     
+    // ربط الخصم بشكل مباشر بصفحة جدول حضور المدرس (تقويم المعلم)
+    try {
+        const attendanceStatus = amt >= 1 ? 'absent' : (amt >= 0.5 ? 'half' : 'quarter');
+        await updateTeacherAttendance(tId, targetDate, attendanceStatus as any, `مخالفة أتمتة: ${reason}`);
+    } catch (e) {
+        console.error("Failed to post attendance to teacher profile automatically", e);
+    }
+
+    // إرسال إشعار فوري وتلقائي عبر الشات للمعلم
+    try {
+        const convo = await chatService.getOrCreateConversation(['system', tId], ['نظام الأتمتة', tName], 'system-teacher');
+        await chatService.sendMessage(
+            convo.id, 
+            'system', 
+            'نظام الأتمتة', 
+            'director', 
+            `🔔 تنبيه آلي: تم تطبيق خصم (${amt} يوم) من رصيدك الخاص. \nتاريخ الخصم: ${targetDate}\nالسبب: ${reason}`
+        );
+    } catch (e) {
+        console.error("Failed to send chat notification", e);
+    }
+
     const logs = [];
     const log = await addLog({
         ruleId: rId || 'manual', ruleName: rName || 'خصم آلي', triggeredBy: 'system', recipientId: tId, recipientName: tName,
@@ -263,17 +286,17 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
         if (studentIds.length === 0) continue;
 
         if (!studentIds.some(id => examStudents.has(id)) && !alreadyDeducted.has(t.id)) {
-            const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسجيل الاختبارات (أتمتة)', rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
+            const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسجيل الاختبارات الأسبوعية', rule.id, 'فحص الاختبارات الأسبوعية', dateStr, startTime);
             logs.push(...res.logs);
             try {
                 const conv = await chatService.getOrCreateConversation(['director', t.id], ['المدير العام', t.full_name], 'director-teacher');
-                await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم ربع يوم لعدم تسجيل اختبار ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
+                await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم ربع يوم لعدم تسليم الاختبارات ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
             } catch (e) {}
         }
     }
 
     if (logs.length === 0) {
-        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سجلوا اختبارات ليوم ${dateStr}`, timestamp: startTime, status: 'success' }));
+        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات الأسبوعية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سجلوا اختبارات ليوم ${dateStr}`, timestamp: startTime, status: 'success' }));
     }
     return logs;
 };
@@ -286,7 +309,9 @@ export const undoAutomationDeduction = async (logId: string, teacherId: string, 
     const { data: ds } = await supabase.from('deductions').select('id').eq('teacher_id', teacherId).eq('date', dateStr).eq('applied_by', 'system-automation');
     if (ds) for (const d of ds) await teacherDeductionService.removeDeduction(d.id);
     await supabase.from('automation_logs').delete().eq('id', logId);
-    await supabase.from('teacher_attendance').delete().eq('teacher_id', teacherId).eq('date', dateStr).ilike('notes', '%أتمتة%');
+    
+    // إزالة الغياب من الحضور أيضاً (يتم حذف السجل فيُعتبر حاضراً)
+    await supabase.from('teacher_attendance').delete().eq('teacher_id', teacherId).eq('date', dateStr);
 };
 
 export const triggerAutomation = async (ruleId: string, recipientId: string, recipientName: string, data: any) => {

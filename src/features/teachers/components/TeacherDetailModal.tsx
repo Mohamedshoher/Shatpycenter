@@ -651,6 +651,7 @@ export default function TeacherDetailModal({
                         setDayDetails={setDayDetails}
                         updateAttendanceAsync={updateAttendanceAsync}
                         dailyRate={dailyRate}
+                        deductions={deductions}
                     />
                 );
             // --------------------------------------------------------------------------------

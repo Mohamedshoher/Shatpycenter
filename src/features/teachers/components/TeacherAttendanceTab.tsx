@@ -25,6 +25,7 @@ interface TeacherAttendanceTabProps {
     setDayDetails: (details: any) => void;
     updateAttendanceAsync: (params: { date: string, status: TeacherAttendanceStatus, notes?: string }) => Promise<void>;
     dailyRate: number;
+    deductions?: any[];
 }
 
 export const TeacherAttendanceTab = ({
@@ -32,7 +33,7 @@ export const TeacherAttendanceTab = ({
     isTeacher, setActiveDayMenu, setTempStatus, activeDayMenu,
     handleAddDiscipline, tempStatus, tempAmount, setTempAmount,
     tempReason, setTempReason, dayDetails, setDayDetails,
-    updateAttendanceAsync, dailyRate
+    updateAttendanceAsync, dailyRate, deductions = []
 }: TeacherAttendanceTabProps) => {
 
     const weekDays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
@@ -313,6 +314,11 @@ export const TeacherAttendanceTab = ({
                                             status === 'full_reward' ? dailyRate :
                                             status === 'quarter_reward' ? (dailyRate * 0.25) : 0;
 
+                                const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
+                                const relatedDeduction = deductions.find(d => d.date === dateStr);
+                                const defaultReason = `تسجيل ${status === 'full_reward' ? 'مكافأة (يوم كامل)' : status === 'half_reward' ? 'مكافأة (نصف يوم)' : status === 'quarter_reward' ? 'مكافأة (ربع يوم)' : 'غياب'} يوم ${weekDays[(d - 1 + startOffset) % 7]}`;
+                                const displayReason = relatedDeduction?.reason || dayDetails[Number(day)]?.reason || defaultReason;
+
                                 return (
                                     <div key={day} className="bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-md transition-all relative group">
                                         <div className="flex justify-between items-start mb-2">
@@ -327,7 +333,7 @@ export const TeacherAttendanceTab = ({
 
                                         <div className="flex items-center justify-between mb-3 text-right">
                                             <h5 className="font-bold text-gray-900 text-sm">
-                                                {dayDetails[Number(day)]?.reason || `تسجيل ${status === 'full_reward' ? 'مكافأة (يوم كامل)' : status === 'half_reward' ? 'مكافأة (نصف يوم)' : status === 'quarter_reward' ? 'مكافأة (ربع يوم)' : 'غياب'} يوم ${weekDays[(d - 1 + startOffset) % 7]}`}
+                                                {displayReason}
                                             </h5>
                                             <span className="font-black font-sans text-gray-800 text-sm">{amount.toFixed(2)} ج.م</span>
                                         </div>
