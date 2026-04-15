@@ -11,41 +11,43 @@ export function cn(...inputs: ClassValue[]) {
 export function tieredSearchFilter<T>(items: T[], searchTerm: string, getFullName: (item: T) => string): T[] {
     if (!searchTerm) return items;
 
-    const search = searchTerm.toLowerCase().trim();
-    // دالة توحيد الحروف العربية للمقارنة العادلة
     const normalize = (s: string) => s
         .replace(/[أإآ]/g, 'ا')
         .replace(/ة/g, 'ه')
         .replace(/ى/g, 'ي')
         .replace(/[ءئؤ]/g, '')
         .replace(/[ًٌٍَُِّ]/g, '')
+        .toLowerCase()
         .trim();
 
-    const normSearch = normalize(search);
+    const normSearch = normalize(searchTerm);
+    if (!normSearch) return items;
 
-    const getParts = (name: string) => normalize(name).toLowerCase().split(/\s+/).filter(Boolean);
+    const scored = items.map(item => {
+        const fullName = getFullName(item);
+        const name = normalize(fullName);
+        const parts = name.split(/\s+/).filter(Boolean);
 
-    // المستوى 1: البحث في الاسم الأول
-    const tier1 = items.filter(item => {
-        const parts = getParts(getFullName(item));
-        return parts[0] && parts[0].startsWith(normSearch);
-    });
-    if (tier1.length > 0) return tier1;
+        let score = 0;
 
-    // المستوى 2: البحث في الاسم الثاني
-    const tier2 = items.filter(item => {
-        const parts = getParts(getFullName(item));
-        return parts[1] && parts[1].startsWith(normSearch);
-    });
-    if (tier2.length > 0) return tier2;
+        // الحالة 1: الاسم يبدأ تماماً بكلمة البحث (الأولوية القصوى)
+        if (name.startsWith(normSearch)) {
+            score = 100;
+        } 
+        // الحالة 2: أي من الأسماء الداخلية يبدأ بكلمة البحث (مثلاً بحثت عن اسم الأب)
+        else if (parts.some((p, i) => i > 0 && p.startsWith(normSearch))) {
+            score = 80;
+        }
+        // الحالة 3: كلمة البحث موجودة في أي مكان (احتواء جزئي)
+        else if (name.includes(normSearch)) {
+            score = 40;
+        }
 
-    // المستوى 3: البحث في باقي الأسماء (الثالث فأكثر)
-    const tier3 = items.filter(item => {
-        const parts = getParts(getFullName(item));
-        return parts.slice(2).some(part => part.startsWith(normSearch));
-    });
+        return { item, score };
+    }).filter(x => x.score > 0);
 
-    return tier3;
+    // الترتيب حسب الدرجة (الأقرب للأول يظهر أولاً)
+    return scored.sort((a, b) => b.score - a.score).map(x => x.item);
 }
 
 /**

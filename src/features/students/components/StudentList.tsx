@@ -182,6 +182,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
 
         return finalResults.sort((a, b) => {
+            if (searchTerm) return 0;
             if (filter === 'الأكثر غياباً') {
                 const absA = calculateTotalAbsence(attendanceData.monthMap[a.id] || [], currentMonthKey);
                 const absB = calculateTotalAbsence(attendanceData.monthMap[b.id] || [], currentMonthKey);
