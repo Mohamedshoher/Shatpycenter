@@ -3,7 +3,7 @@
 // ==========================================
 // 1. استيراد المكتبات والأدوات الأساسية
 // ==========================================
-import { useState, useEffect } from 'react'; // هوكس الحالة والتأثيرات من React
+import { useState, useEffect, useRef } from 'react'; // هوكس الحالة والتأثيرات من React
 import { motion, AnimatePresence } from 'framer-motion'; // مكتبة الحركات والأنيميشن
 import { cn, getWhatsAppUrl } from '@/lib/utils'; // وظيفة لدمج أصناف CSS بشكل ديناميكي
 import { Button } from '@/components/ui/button'; // مكون الزر الجاهز
@@ -565,6 +565,30 @@ export default function TeacherDetailModal({
             loadDeductions();
         }
     }, [teacher, isOpen, loadDeductions]);
+
+    // معالجة الضغط على زر الرجوع في المتصفح لإغلاق النافذة
+    const onCloseRef = useRef(onClose);
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
+
+    useEffect(() => {
+        const handlePopState = () => {
+            onCloseRef.current();
+        };
+
+        if (isOpen) {
+            window.history.pushState({ isTeacherModalOpen: true }, '');
+            window.addEventListener('popstate', handlePopState);
+            
+            return () => {
+                window.removeEventListener('popstate', handlePopState);
+                if (window.history.state?.isTeacherModalOpen) {
+                    window.history.back();
+                }
+            };
+        }
+    }, [isOpen]);
 
     // ==========================================
     // واجهة المستخدم: تعريف التبويبات

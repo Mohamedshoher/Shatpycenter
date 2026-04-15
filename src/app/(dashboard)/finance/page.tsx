@@ -58,6 +58,9 @@ export default function FinancePage() {
     const [isExpenseDetailsOpen, setIsExpenseDetailsOpen] = useState(false);
     const [isExemptionsModalOpen, setIsExemptionsModalOpen] = useState(false);
     const [isExpectedExpensesModalOpen, setIsExpectedExpensesModalOpen] = useState(false);
+    const [isManagerCollectionsOpen, setIsManagerCollectionsOpen] = useState(false);
+    const [isManagerDirectOpen, setIsManagerDirectOpen] = useState(false);
+    const [isOtherIncomeOpen, setIsOtherIncomeOpen] = useState(false);
 
     // Get Exemptions
     const { data: exemptions = [] } = useQuery({
@@ -158,7 +161,9 @@ export default function FinancePage() {
         totalGlobalDeficit,
         totalGlobalExpected,
         totalGlobalExempted,
-        totalGlobalExpectedExpenses
+        totalGlobalExpectedExpenses,
+        managerDirectFeesList,
+        otherIncomeList
     } = useMemo(() => {
         const incomeTransactions = filteredTransactions.filter(tr => tr.type === 'income');
         const expenseTransactions = filteredTransactions.filter(tr => tr.type === 'expense');
@@ -283,6 +288,19 @@ export default function FinancePage() {
         const FIXED_MONTHLY_EXPENSES = 1700; // إيجار وكهرباء
         const totalGlobalExpectedExpenses = teachers.filter(t => t.status !== 'inactive').reduce((sum, t) => sum + (Number(t.salary) || 0), 0) + FIXED_MONTHLY_EXPENSES;
 
+        const managerDirectFeesList = allFees.filter(fee => {
+            const isByTeacher = teachers.some(t =>
+                fee.createdBy === t.fullName ||
+                fee.createdBy === t.phone ||
+                (fee.createdBy && normalize(fee.createdBy) === normalize(t.fullName))
+            );
+            const isExplicitManager = fee.createdBy === user?.displayName || fee.createdBy === 'المدير' || fee.createdBy === 'admin';
+            const isNotTeacher = !isByTeacher && fee.createdBy && fee.createdBy !== 'غير معروف';
+            return isExplicitManager || isNotTeacher;
+        });
+
+        const otherIncomeList = incomeTransactions.filter(tr => tr.category === 'donation' || tr.category === 'other');
+
         return {
             teacherFees: totalFeesByTeachers,
             feesByManager: totalFeesByManagerDirect,
@@ -295,7 +313,9 @@ export default function FinancePage() {
             totalGlobalDeficit,
             totalGlobalExpected,
             totalGlobalExempted: exemptions.reduce((sum, e: any) => sum + (Number(e.amount) || 0), 0),
-            totalGlobalExpectedExpenses
+            totalGlobalExpectedExpenses,
+            managerDirectFeesList,
+            otherIncomeList
         };
     }, [filteredTransactions, teachers, students, groups, allFees, user?.displayName, exemptions, selectedMonth]);
 
@@ -567,6 +587,221 @@ export default function FinancePage() {
                 )}
             </AnimatePresence>
 
+            {/* Manager Collections from Teachers Modal */}
+            <AnimatePresence>
+                {isManagerCollectionsOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
+                            onClick={() => setIsManagerCollectionsOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20"
+                        >
+                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-600">
+                                        <Wallet size={24} />
+                                    </div>
+                                    <div className="text-right">
+                                        <h3 className="text-xl font-black text-gray-900">المُستلَم من المدرسين</h3>
+                                        <p className="text-xs font-bold text-gray-400 mt-0.5">تفاصيل المبالغ التي سلمها المدرسون للإدارة</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsManagerCollectionsOpen(false)}
+                                    className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
+                                {filteredTransactions.filter(tr => tr.type === 'income' && tr.category === 'تحصيل من مدرس').length === 0 ? (
+                                    <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                                        لا توجد مبالغ مستلمة من المدرسين هذا الشهر.
+                                    </div>
+                                ) : (
+                                    filteredTransactions.filter(tr => tr.type === 'income' && tr.category === 'تحصيل من مدرس').map((tr: any) => (
+                                        <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-sky-200 transition-all group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-right">
+                                                    <h4 className="font-black text-gray-900 group-hover:text-sky-600 transition-colors">{tr.title}</h4>
+                                                    <p className="text-[10px] text-gray-400 font-bold">التاريخ: {tr.date}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-left flex flex-col items-end">
+                                                <p className="text-lg font-black text-sky-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[10px]">ج.م</span></p>
+                                                {tr.performedBy && <p className="text-[9px] text-gray-400 mt-1">بواسطة: {tr.performedBy}</p>}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-2xl font-black text-sky-600 font-sans">
+                                        {fromTeachers.toLocaleString()} <span className="text-sm">ج.م</span>
+                                    </div>
+                                    <p className="text-xs font-black text-gray-400">إجمالي المستلم من المدرسين</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Manager Direct Collections Modal */}
+            <AnimatePresence>
+                {isManagerDirectOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
+                            onClick={() => setIsManagerDirectOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20"
+                        >
+                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                                        <Wallet size={24} />
+                                    </div>
+                                    <div className="text-right">
+                                        <h3 className="text-xl font-black text-gray-900">تحصيل الإدارة (مباشر)</h3>
+                                        <p className="text-xs font-bold text-gray-400 mt-0.5">تفاصيل المبالغ التي حصلتها الإدارة من الطلاب مباشرة</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsManagerDirectOpen(false)}
+                                    className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
+                                {managerDirectFeesList.length === 0 ? (
+                                    <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                                        لا توجد مبالغ محصلة مباشرة من الطلاب هذا الشهر.
+                                    </div>
+                                ) : (
+                                    managerDirectFeesList.map((fee: any) => {
+                                        const std = students.find((s: any) => s.id === fee.studentId);
+                                        return (
+                                        <div key={fee.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-blue-200 transition-all group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-right">
+                                                    <h4 className="font-black text-gray-900 group-hover:text-blue-600 transition-colors">{std?.fullName || fee.studentName || 'طالب غير معروف'}</h4>
+                                                    <p className="text-[10px] text-gray-400 font-bold">التاريخ: {typeof fee.date === 'string' ? fee.date.split('T')[0] : fee.date}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-left flex flex-col items-end">
+                                                <p className="text-lg font-black text-blue-600 font-sans">{Number(fee.amount?.toString().replace(/[^0-9.]/g, '') || 0).toLocaleString()} <span className="text-[10px]">ج.م</span></p>
+                                                {fee.createdBy && <p className="text-[9px] text-gray-400 mt-1">بواسطة: {fee.createdBy}</p>}
+                                            </div>
+                                        </div>
+                                    )})
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-2xl font-black text-blue-600 font-sans">
+                                        {feesByManager.toLocaleString()} <span className="text-sm">ج.م</span>
+                                    </div>
+                                    <p className="text-xs font-black text-gray-400">إجمالي تحصيل الإدارة</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Other Income Modal */}
+            <AnimatePresence>
+                {isOtherIncomeOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
+                            onClick={() => setIsOtherIncomeOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20"
+                        >
+                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-cyan-50 rounded-2xl flex items-center justify-center text-cyan-600">
+                                        <ArrowUpCircle size={24} />
+                                    </div>
+                                    <div className="text-right">
+                                        <h3 className="text-xl font-black text-gray-900">إيرادات أخرى</h3>
+                                        <p className="text-xs font-bold text-gray-400 mt-0.5">تفاصيل التبرعات والإيرادات الأخرى للصندوق</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsOtherIncomeOpen(false)}
+                                    className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
+                                {otherIncomeList.length === 0 ? (
+                                    <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                                        لا توجد إيرادات أخرى مسجلة هذا الشهر.
+                                    </div>
+                                ) : (
+                                    otherIncomeList.map((tr: any) => (
+                                        <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-cyan-200 transition-all group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-right">
+                                                    <h4 className="font-black text-gray-900 group-hover:text-cyan-600 transition-colors">{tr.title || tr.description}</h4>
+                                                    <p className="text-[10px] text-gray-400 font-bold">التاريخ: {tr.date}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-left flex flex-col items-end">
+                                                <p className="text-lg font-black text-cyan-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[10px]">ج.م</span></p>
+                                                {tr.performedBy && <p className="text-[9px] text-gray-400 mt-1">بواسطة: {tr.performedBy}</p>}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-2xl font-black text-cyan-600 font-sans">
+                                        {otherIncome.toLocaleString()} <span className="text-sm">ج.م</span>
+                                    </div>
+                                    <p className="text-xs font-black text-gray-400">إجمالي الإيرادات الأخرى</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* Total Expenses Details Modal */}
             <AnimatePresence>
                 {isExpenseDetailsOpen && (
@@ -733,6 +968,10 @@ export default function FinancePage() {
                     <>
                         {/* Summary Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                            {/* =========================================
+                              * الصف الأول: التوقعات
+                              * ========================================= */}
+
                             {/* Card: Expected */}
                             <div
                                 onClick={() => { setExpectedOnlyModal(true); setIsCollectionsModalOpen(true); }}
@@ -765,6 +1004,10 @@ export default function FinancePage() {
                                 </div>
                             </div>
 
+                            {/* =========================================
+                              * الصف الثاني: المدرسين
+                              * ========================================= */}
+
                             {/* Card: Teacher Collections */}
                             <div
                                 onClick={() => { setDeficitOnlyModal(false); setExpectedOnlyModal(false); setIsCollectionsModalOpen(true); }}
@@ -781,21 +1024,61 @@ export default function FinancePage() {
                                 </div>
                             </div>
 
-                            {/* Card: Total Received (Income) */}
+                            {/* Card: Manager Direct Collections */}
                             <div
-                                onClick={() => setIsReceivedDetailsOpen(true)}
-                                className="bg-white/90 backdrop-blur-xl border border-green-100/50 rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-1 transition-all group cursor-pointer"
+                                onClick={() => setIsManagerDirectOpen(true)}
+                                className="bg-white/90 backdrop-blur-xl border border-blue-100/50 rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all group cursor-pointer"
                             >
-                                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center shadow-sm border border-green-100/30">
-                                    <ArrowUpCircle size={24} />
+                                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-sm border border-blue-100/30">
+                                    <Wallet size={24} />
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[11px] font-black text-gray-400 mb-1">الإيرادات</p>
-                                    <h3 className="text-2xl font-black text-green-600 font-sans tracking-tight">
-                                        {totalReceived.toLocaleString()} <span className="text-xs">ج.م</span>
+                                    <p className="text-[11px] font-black text-gray-400 mb-1">ما حصله المدير مباشر</p>
+                                    <h3 className="text-2xl font-black text-blue-600 font-sans tracking-tight">
+                                        {feesByManager.toLocaleString()} <span className="text-xs">ج.م</span>
                                     </h3>
                                 </div>
                             </div>
+
+                            {/* =========================================
+                              * الصف الثالث: التسليم والإيرادات الأخرى
+                              * ========================================= */}
+
+                            {/* Card: Manager Received from Teachers */}
+                            <div
+                                onClick={() => setIsManagerCollectionsOpen(true)}
+                                className="bg-white/90 backdrop-blur-xl border border-sky-100/50 rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm hover:shadow-2xl hover:shadow-sky-500/10 hover:-translate-y-1 transition-all group cursor-pointer"
+                            >
+                                <div className="w-12 h-12 bg-sky-50 text-sky-600 rounded-2xl flex items-center justify-center shadow-sm border border-sky-100/30">
+                                    <Wallet size={24} />
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[11px] font-black text-gray-400 mb-1">ما استلمه المدير من المدرسين</p>
+                                    <h3 className="text-2xl font-black text-sky-600 font-sans tracking-tight">
+                                        {fromTeachers.toLocaleString()} <span className="text-xs">ج.م</span>
+                                    </h3>
+                                </div>
+                            </div>
+
+                            {/* Card: Other Income */}
+                            <div
+                                onClick={() => setIsOtherIncomeOpen(true)}
+                                className="bg-white/90 backdrop-blur-xl border border-cyan-100/50 rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1 transition-all group cursor-pointer"
+                            >
+                                <div className="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-2xl flex items-center justify-center shadow-sm border border-cyan-100/30">
+                                    <ArrowUpCircle size={24} />
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[11px] font-black text-gray-400 mb-1">إيرادات أخرى</p>
+                                    <h3 className="text-2xl font-black text-cyan-600 font-sans tracking-tight">
+                                        {otherIncome.toLocaleString()} <span className="text-xs">ج.م</span>
+                                    </h3>
+                                </div>
+                            </div>
+
+                            {/* =========================================
+                              * الصف الرابع: العجز والإعفاءات
+                              * ========================================= */}
 
                             {/* Card: Deficit */}
                             <div
@@ -829,6 +1112,26 @@ export default function FinancePage() {
                                 </div>
                             </div>
 
+                            {/* =========================================
+                              * الصف الخامس: الصندوق (إيرادات ومصروفات)
+                              * ========================================= */}
+
+                            {/* Card: Total Received (Income) */}
+                            <div
+                                onClick={() => setIsReceivedDetailsOpen(true)}
+                                className="bg-white/90 backdrop-blur-xl border border-green-100/50 rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-1 transition-all group cursor-pointer"
+                            >
+                                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center shadow-sm border border-green-100/30">
+                                    <ArrowUpCircle size={24} />
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[11px] font-black text-gray-400 mb-1">إجمالي الإيرادات</p>
+                                    <h3 className="text-2xl font-black text-green-600 font-sans tracking-tight">
+                                        {totalReceived.toLocaleString()} <span className="text-xs">ج.م</span>
+                                    </h3>
+                                </div>
+                            </div>
+
                             {/* Card: Expenses */}
                             <div
                                 onClick={() => setIsExpenseDetailsOpen(true)}
@@ -838,18 +1141,20 @@ export default function FinancePage() {
                                     <ArrowDownCircle size={24} />
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[11px] font-black text-gray-400 mb-1">المصروفات</p>
+                                    <p className="text-[11px] font-black text-gray-400 mb-1">إجمالي المصروفات</p>
                                     <h3 className="text-2xl font-black text-red-600 font-sans tracking-tight">
                                         {totalExpenses.toLocaleString()} <span className="text-xs">ج.م</span>
                                     </h3>
                                 </div>
                             </div>
 
-
+                            {/* =========================================
+                              * الصف السادس: صافي الربح والخسارة (بعرض كامل)
+                              * ========================================= */}
 
                             {/* Card: Balance */}
                             <div className={cn(
-                                "backdrop-blur-xl border rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm transition-all",
+                                "backdrop-blur-xl border rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm transition-all md:col-span-2",
                                 balance >= 0 ? "bg-blue-600 text-white border-blue-400/30 shadow-blue-500/20" : "bg-orange-600 text-white border-orange-400/30 shadow-orange-500/20"
                             )}>
                                 <div className={cn(
@@ -858,11 +1163,14 @@ export default function FinancePage() {
                                 )}>
                                     <Wallet size={24} />
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[11px] font-black text-white/70 mb-1">{balance >= 0 ? 'صافي الربح' : 'صافي الخسارة'}</p>
-                                    <h3 className="text-2xl font-black font-sans tracking-tight">
-                                        {balance >= 0 ? '+' : ''}{balance.toLocaleString()} <span className="text-xs text-white/80">ج.م</span>
-                                    </h3>
+                                <div className="text-right flex items-end justify-between w-full mt-4">
+                                     <div />
+                                     <div>
+                                        <p className="text-sm font-bold text-white/80 mb-1">{balance >= 0 ? 'صافي الربح النهائي' : 'صافي الخسارة'}</p>
+                                        <h3 className="text-4xl md:text-5xl font-black font-sans tracking-tight drop-shadow-md">
+                                            {balance >= 0 ? '+' : ''}{balance.toLocaleString()} <span className="text-lg md:text-xl text-white/80 font-bold">ج.م</span>
+                                        </h3>
+                                     </div>
                                 </div>
                             </div>
                         </div>

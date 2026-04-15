@@ -73,7 +73,8 @@ export default function StudentReportCard({ student, index, userRole, onArchive,
 نرجو متابعة تقرير الطالب ومستواه عبر بوابة ولي الأمر:
 🔗 https://shatpycenter-um2b.vercel.app/attendance-report
 
-(المستخدم: ${phone} / المرور: ${password})
+(المستخدم: ${phone} 
+/ المرور: ${password})
 
 إدارة مركز الشاطبي للقرآن وعلومه 🌷`;
                             window.open(getWhatsAppUrl(phone, message), '_blank');
