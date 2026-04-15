@@ -16,7 +16,7 @@ interface ModalProps {
 export default function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
 
-    // Close on Escape key
+    // إغلاق عند Escape ومنع التمرير خلف النافذة
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -29,7 +29,20 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
             document.removeEventListener('keydown', handleEscape);
             document.body.style.overflow = 'unset';
         };
-    }, [isOpen, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
+
+    // دعم زر الرجوع في الهاتف لإغلاق النافذة
+    useEffect(() => {
+        if (!isOpen) return;
+        window.history.pushState({ modalOpen: true }, '');
+        const handlePopState = () => onClose();
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     return (
         <AnimatePresence>

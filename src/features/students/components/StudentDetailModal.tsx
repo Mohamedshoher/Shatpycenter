@@ -39,6 +39,20 @@ export default function StudentDetailModal({
         if (isOpen && initialTab) setActiveTab(initialTab);
     }, [isOpen, initialTab]);
 
+    // دعم زر الرجوع في الهاتف لإغلاق المودال
+    useEffect(() => {
+        if (!isOpen) return;
+
+        window.history.pushState({ studentModalOpen: true }, '');
+        const handlePopState = () => onClose();
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
+
     if (!student || !isOpen) return null;
 
     // تعريف التبويبات (الأزرار العلوية)

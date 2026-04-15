@@ -15,6 +15,7 @@ import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useAuthStore } from '@/store/useAuthStore';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';
+import EditStudentModal from '@/features/students/components/EditStudentModal';
 
 export default function AttendanceReportPage() {
     const { data: students, archiveStudent } = useStudents();
@@ -34,6 +35,8 @@ export default function AttendanceReportPage() {
     const [showAbsentChart, setShowAbsentChart] = useState(false);
     const [showPresentChart, setShowPresentChart] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [studentToEdit, setStudentToEdit] = useState<any>(null);
 
     // 1. جلب بيانات الغياب والملحوظات
     const { data: reportData, isLoading } = useQuery({
@@ -288,7 +291,26 @@ export default function AttendanceReportPage() {
             <AttendanceChartModal isOpen={showAbsentChart} onClose={() => setShowAbsentChart(false)} type="absent" title="توزيع الغياب" data={chartData.absent} />
             <AttendanceChartModal isOpen={showPresentChart} onClose={() => setShowPresentChart(false)} type="present" title="توزيع الحضور" data={chartData.present} />
 
-            <StudentDetailModal student={selectedStudent} isOpen={!!selectedStudent} onClose={() => setSelectedStudent(null)} initialTab="attendance" />
+            <StudentDetailModal 
+                student={selectedStudent} 
+                isOpen={!!selectedStudent} 
+                onClose={() => setSelectedStudent(null)} 
+                initialTab="attendance" 
+                onEdit={(s: any) => {
+                    setSelectedStudent(null);
+                    setStudentToEdit(s);
+                    setIsEditModalOpen(true);
+                }}
+            />
+
+            <EditStudentModal
+                student={studentToEdit}
+                isOpen={isEditModalOpen}
+                onClose={() => {
+                    setIsEditModalOpen(false);
+                    setStudentToEdit(null);
+                }}
+            />
         </div>
     );
 }

@@ -127,10 +127,13 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
 
             const selectedDayMap: Record<string, 'present' | 'absent'> = {};
             students.forEach(student => {
-                // استخدام تحويل النوع لضمان المطابقة
                 const studentIdStr = String(student.id);
-                const records = attendanceCurrent[studentIdStr] || [];
-                const dayRec = records.find(r => Number(r.day) === dayNum);
+                const records = mergedMap[studentIdStr] || [];
+
+                // استخراج السجلات المطابقة للشهر واليوم المحددين
+                const dayRecords = records.filter(r => r.month === monthKey && Number(r.day) === dayNum);
+                const dayRec = dayRecords.length > 0 ? dayRecords[dayRecords.length - 1] : null;
+
                 if (dayRec) {
                     selectedDayMap[studentIdStr] = dayRec.status;
                 }
