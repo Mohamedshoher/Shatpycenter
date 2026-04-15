@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 export default function AttendanceTab({ student, records }: any) {
     const { user } = useAuthStore();
     const queryClient = useQueryClient();
-    const canEditAttendance = user?.role === 'director' || user?.role === 'supervisor';
+    const canEditAttendance = user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'teacher';
     const [currentDisplayDate, setCurrentDisplayDate] = useState(new Date());
 
     // ثوابت التقويم

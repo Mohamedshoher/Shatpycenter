@@ -20,7 +20,8 @@ import {
     SlidersHorizontal,
     X,
     User,
-    BookOpen
+    BookOpen,
+    Calendar
 } from 'lucide-react';
 import {
     calculateTotalAbsence,
@@ -80,26 +81,35 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-    // تبسيط مفتاح الكاش ليكون مستقلاً عن قائمة الطلاب
-    const todayDate = new Date();
-    const todayKey = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
-    const currentMonthKey = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`;
+    const [selectedDate, setSelectedDate] = useState(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
 
-    const { data: attendanceData = { today: {}, monthMap: {} } as any } = useQuery({
-        queryKey: ['attendance-context', todayKey],
+    const isToday = useMemo(() => {
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        return selectedDate === todayStr;
+    }, [selectedDate]);
+
+    const currentMonthKey = useMemo(() => {
+        const [y, m] = selectedDate.split('-');
+        return `${y}-${m}`;
+    }, [selectedDate]);
+
+    const { data: attendanceData = { today: {}, monthMap: {} } as any, isFetching: isAttendanceFetching } = useQuery({
+        queryKey: ['attendance-context', selectedDate],
         queryFn: async () => {
             if (!students || students.length === 0) return { today: {}, monthMap: {} };
             const { getAllAttendanceForMonth } = await import('../services/recordsService');
 
-            const today = new Date();
-            const dayNum = today.getDate();
-            const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+            const dateParts = selectedDate.split('-').map(Number);
+            const dayNum = dateParts[2];
+            const monthKey = `${dateParts[0]}-${String(dateParts[1]).padStart(2, '0')}`;
 
-            // حساب مفتاح الشهر السابق
-            const prevDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const prevDate = new Date(dateParts[0], dateParts[1] - 2, 1);
             const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
 
-            // جلب بيانات الحضور للشهر الحالي والسابق
             const [attendanceCurrent, attendancePrev] = await Promise.all([
                 getAllAttendanceForMonth(monthKey),
                 getAllAttendanceForMonth(prevMonthKey)
@@ -115,21 +125,28 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 ];
             });
 
-            const todayMap: Record<string, 'present' | 'absent'> = {};
+            const selectedDayMap: Record<string, 'present' | 'absent'> = {};
             students.forEach(student => {
-                const todayRec = (attendanceCurrent[student.id] || []).find(r => r.day === dayNum);
-                if (todayRec) {
-                    todayMap[student.id] = todayRec.status;
+                // استخدام تحويل النوع لضمان المطابقة
+                const studentIdStr = String(student.id);
+                const records = attendanceCurrent[studentIdStr] || [];
+                const dayRec = records.find(r => Number(r.day) === dayNum);
+                if (dayRec) {
+                    selectedDayMap[studentIdStr] = dayRec.status;
                 }
             });
 
-            return { today: todayMap, monthMap: mergedMap };
+            return { today: selectedDayMap, monthMap: mergedMap };
         },
         enabled: !!(students && students.length > 0),
-        staleTime: 1000 * 60 * 5 // 5 minutes cache
+        staleTime: 1000 * 30, // 30 seconds to stay fresh
     });
 
-    const attendanceState = attendanceData.today;
+    const attendanceState = useMemo(() => attendanceData.today, [attendanceData.today]);
+
+    const isManagement = useMemo(() => {
+        return user?.role === 'director' || user?.role === 'supervisor';
+    }, [user]);
 
     const getGroupName = useCallback((groupId: string | null) => {
         if (!groupId) return '';
@@ -227,18 +244,17 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     };
 
     const handleAttendance = useCallback(async (student: Student, status: 'present' | 'absent') => {
-        const today = new Date();
-        const day = today.getDate();
-        const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-        const todayStrKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const dateParts = selectedDate.split('-').map(Number);
+        const day = dateParts[2];
+        const monthKey = `${dateParts[0]}-${String(dateParts[1]).padStart(2, '0')}`;
+        const dateStrKey = selectedDate;
 
         // 1. التحديث الفوري للكاش (Optimistic Update)
         queryClient.setQueryData(
-            ['attendance-context', todayStrKey],
+            ['attendance-context', dateStrKey],
             (old: any) => {
                 const newToday = { ...(old?.today || {}), [student.id]: status };
                 // تحديث الـ monthMap أيضاً لضمان دقة الفلاتر فوراً
-                const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
                 const newRecords = [...(old?.monthMap?.[student.id] || [])];
                 const dayIndex = newRecords.findIndex(r => r.day === day && r.month === monthKey);
                 if (dayIndex > -1) {
@@ -279,7 +295,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         } catch (error) {
             console.error('Error saving attendance:', error);
         }
-    }, [queryClient]);
+    }, [queryClient, selectedDate]);
 
     const handleEdit = (student: Student) => {
         setStudentToEdit(student);
@@ -321,9 +337,40 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                     </div>
 
                     {!isSearchOpen && (
-                        <h1 className="text-lg sm:text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
-                            {customTitle || 'الطلاب'} <span className="text-blue-500 font-black">({filteredStudents?.length || 0})</span>
-                        </h1>
+                        <div className={cn(
+                            "flex flex-col items-center absolute left-1/2 -translate-x-1/2",
+                            isManagement ? "pointer-events-auto" : "pointer-events-none"
+                        )}>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-base sm:text-xl font-bold text-gray-900 whitespace-nowrap flex items-center gap-2">
+                                    {customTitle || 'الطلاب'}
+                                    <span className={cn(
+                                        "px-2 py-0.5 rounded-lg text-sm transition-colors",
+                                        isToday ? "text-blue-500 font-black" : "bg-blue-600 text-white"
+                                    )}>
+                                        ({filteredStudents?.length || 0})
+                                    </span>
+                                </h1>
+
+                                {isManagement && (
+                                    <div className="relative group w-8 h-8 flex items-center justify-center bg-white rounded-xl border border-gray-100 shadow-sm hover:border-blue-200 transition-all cursor-pointer">
+                                        <Calendar size={16} className={cn(isToday ? "text-gray-400" : "text-blue-600")} />
+                                        <input
+                                            type="date"
+                                            className="absolute inset-0 opacity-0 cursor-pointer z-50 w-full h-full"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            max={new Date().toISOString().split('T')[0]}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                            {!isToday && (
+                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1 animate-pulse">
+                                    تاريخ: {new Date(selectedDate).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })}
+                                </span>
+                            )}
+                        </div>
                     )}
 
                     <div className={cn(
@@ -439,8 +486,11 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-1 sm:gap-2 pt-2 overflow-x-auto no-scrollbar relative">
-                            <div className="flex gap-1 shrink-0">
+                        <div className="flex items-center gap-1 sm:gap-2 pt-2 overflow-x-auto no-scrollbar relative w-full">
+                            <div className={cn(
+                                "flex gap-1 shrink-0 transition-opacity duration-300",
+                                isAttendanceFetching ? "opacity-40 pointer-events-none" : "opacity-100"
+                            )}>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
                                     className={cn(
@@ -464,6 +514,12 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     غياب
                                 </button>
                             </div>
+
+                            {isAttendanceFetching && (
+                                <div className="absolute inset-y-0 right-0 left-0 flex items-center justify-center pointer-events-none">
+                                    <div className="w-5 h-5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+                                </div>
+                            )}
 
                             <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
 
@@ -510,7 +566,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 onClose={() => setSelectedStudent(null)}
                 initialTab={selectedTab}
                 currentAttendance={selectedStudent ? attendanceState[selectedStudent.id] : undefined}
-                onEdit={(s:any) => {
+                onEdit={(s: any) => {
                     setSelectedStudent(null);
                     setStudentToEdit(s);
                     setIsEditModalOpen(true);

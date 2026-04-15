@@ -117,7 +117,7 @@ export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record
             .select('*')
             .or(`month_key.eq.${monthKey},and(date.gte.${startDate},date.lte.${endDate})`)
             .order('created_at', { ascending: true })
-            .limit(30000); 
+            .limit(30000);
 
         if (error) {
             console.error("Supabase error fetching month attendance:", error);
