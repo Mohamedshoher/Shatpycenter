@@ -62,7 +62,20 @@ export default function StudentReportCard({ student, index, userRole, onArchive,
                         <button onClick={(e) => {
                             e.stopPropagation();
                             const phone = student.parentPhone || student.studentPhone || '';
-                            const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\nنود إعلامكم بغياب الطالب وتكرار ذلك. نرجو منكم تقديم عذر مقبول أو التنبيه بسرعة حضور الطالب، وإلا سنضطر آسفين لفصله وإلغاء تسجيله.\nشاكرين لكم حسن تعاونكم مركز الشاطبي لتحفيظ القرآن الكريم.`;
+                            const password = phone.length >= 6 ? phone.slice(-6) : phone;
+                            const message = `السلام عليكم ورحمة الله،
+ولي أمر الطالب/ة: *${student.fullName}*
+
+نود تنبيهكم لغياب الطالب المتكرر:
+- إجمالي الغياب هذا الأسبوع: ${student.totalAbsences} يوم
+- الغياب المتصل: ${student.continuousAbsences} يوم
+
+نرجو متابعة تقرير الطالب ومستواه عبر بوابة ولي الأمر:
+🔗 https://shatpycenter-um2b.vercel.app/attendance-report
+
+(المستخدم: ${phone} / المرور: ${password})
+
+إدارة مركز الشاطبي للقرآن وعلومه 🌷`;
                             window.open(getWhatsAppUrl(phone, message), '_blank');
                         }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-xl" title="تواصل واتساب">
                             <MessageCircle size={14} />
