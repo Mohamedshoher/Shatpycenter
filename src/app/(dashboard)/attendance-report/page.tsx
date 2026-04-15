@@ -278,7 +278,18 @@ export default function AttendanceReportPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {displayStudents.length > 0 ? (
                                 displayStudents.map((s, i) => (
-                                    <StudentReportCard key={s.id} student={s} index={i} userRole={user?.role} onArchive={archiveStudent} onOpenDetails={setSelectedStudent} />
+                                    <StudentReportCard 
+                                        key={s.id} 
+                                        student={s} 
+                                        index={i} 
+                                        userRole={user?.role} 
+                                        onArchive={archiveStudent} 
+                                        onOpenDetails={setSelectedStudent} 
+                                        onEdit={(s: any) => {
+                                            setStudentToEdit(s);
+                                            setIsEditModalOpen(true);
+                                        }}
+                                    />
                                 ))
                             ) : (
                                 <div className="col-span-full py-20 text-center bg-white rounded-[32px] border-2 border-dashed border-gray-100 text-gray-400 font-bold">لا توجد بيانات غياب مطابقة للبحث</div>

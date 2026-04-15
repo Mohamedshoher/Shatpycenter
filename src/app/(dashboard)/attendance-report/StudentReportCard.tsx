@@ -1,6 +1,6 @@
 "use client";
 import { motion } from 'framer-motion';
-import { Archive, FileText, MessageCircle, Phone } from 'lucide-react';
+import { Archive, FileText, MessageCircle, Phone, Edit3 } from 'lucide-react';
 import { getWhatsAppUrl } from '@/lib/utils';
 
 interface StudentReportCardProps {
@@ -9,9 +9,10 @@ interface StudentReportCardProps {
     userRole?: string;
     onArchive: (id: string) => void;
     onOpenDetails: (student: any) => void;
+    onEdit?: (student: any) => void;
 }
 
-export default function StudentReportCard({ student, index, userRole, onArchive, onOpenDetails }: StudentReportCardProps) {
+export default function StudentReportCard({ student, index, userRole, onArchive, onOpenDetails, onEdit }: StudentReportCardProps) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -48,6 +49,11 @@ export default function StudentReportCard({ student, index, userRole, onArchive,
 
                     {/* أزرار التواصل */}
                     <div className="flex items-center gap-1">
+                        {(userRole === 'director' || userRole === 'supervisor') && onEdit && (
+                            <button onClick={(e) => { e.stopPropagation(); onEdit(student); }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl" title="تعديل بيانات الطالب">
+                                <Edit3 size={14} />
+                            </button>
+                        )}
                         {userRole !== 'teacher' && (
                             <button onClick={(e) => { e.stopPropagation(); onArchive(student.id); }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl" title="أرشفة الطالب">
                                 <Archive size={14} />
