@@ -507,6 +507,39 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                     أرقام ناقصة
                                                 </button>
 
+                                                {/* --- مدمج: فلتر الوقت --- */}
+                                                {availableTimes.length > 0 && (
+                                                    <div className="mt-2 pt-2 border-t border-gray-50 space-y-1">
+                                                        <div className="px-3 py-1 flex items-center justify-between">
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase">مواعيد {currentDayName}</span>
+                                                            <Clock size={10} className="text-gray-400" />
+                                                        </div>
+                                                        <button
+                                                            onClick={() => { setScheduleFilterTime('الكل'); setIsFilterOpen(false); }}
+                                                            className={cn(
+                                                                "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors",
+                                                                scheduleFilterTime === 'الكل' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                            )}
+                                                        >
+                                                            كل الأوقات
+                                                        </button>
+                                                        {availableTimes.map(time => (
+                                                            <button
+                                                                key={time}
+                                                                onClick={() => {
+                                                                    setScheduleFilterTime(time);
+                                                                    setIsFilterOpen(false);
+                                                                }}
+                                                                className={cn(
+                                                                    "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors",
+                                                                    scheduleFilterTime === time ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                                )}
+                                                            >
+                                                                ساعة {time}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -516,43 +549,6 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                     </div>
                 </div>
             </div>
-
-            {/* فلتر وقت الموعد - يظهر لجميع الأدوار عندما توجد مواعيد في هذا اليوم */}
-            {availableTimes.length > 0 && (
-                <div className="px-3 sm:px-6 pt-3 pb-1">
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                        <div className="flex items-center gap-1 text-gray-400 shrink-0">
-                            <Clock size={14} />
-                            <span className="text-[10px] font-bold">{currentDayName}</span>
-                        </div>
-                        <button
-                            onClick={() => setScheduleFilterTime('الكل')}
-                            className={cn(
-                                "px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all border",
-                                scheduleFilterTime === 'الكل'
-                                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                                    : "bg-white text-gray-500 border-gray-100 hover:border-blue-200"
-                            )}
-                        >
-                            الكل
-                        </button>
-                        {availableTimes.map(time => (
-                            <button
-                                key={time}
-                                onClick={() => setScheduleFilterTime(scheduleFilterTime === time ? 'الكل' : time)}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all border",
-                                    scheduleFilterTime === time
-                                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                                        : "bg-white text-gray-500 border-gray-100 hover:border-blue-200"
-                                )}
-                            >
-                                {time}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-3 sm:px-6 mt-4">
                 {filteredStudents?.map((student, index) => (
