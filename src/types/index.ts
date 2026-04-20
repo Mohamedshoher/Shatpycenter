@@ -56,6 +56,7 @@ export interface Group {
   schedule: string; // Free text or structured
   count?: number; // عدد الطلاب في المجموعة
   color?: string; // لون المجموعة للعرض
+  maxStudentsPerHour?: number; // الحد الأقصى لعدد الطلاب في الساعة
 }
 
 export interface AttendanceRecord {

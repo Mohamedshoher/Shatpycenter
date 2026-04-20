@@ -292,21 +292,15 @@ export const TeacherAttendanceTab = ({
                             const firstDay = new Date(parseInt(year), parseInt(month) - 1, 1);
                             const startOffset = (firstDay.getDay() + 1) % 7;
 
-                            const records = Object.entries(attendanceData)
-                                .filter(([day, status]: [string, TeacherAttendanceStatus]) => {
-                                    const d = Number(day);
-                                    const weekDayIdx = (d - 1 + startOffset) % 7;
-                                    const isWeekend = weekDayIdx === 5 || weekDayIdx === 6;
-                                    return status !== 'present' && !isWeekend;
-                                });
+                            const mergedRecords: any[] = [];
 
-                            if (records.length === 0) {
-                                return <div className="col-span-full py-8 text-center text-gray-400 text-sm font-bold bg-white rounded-3xl border border-gray-100 md:col-span-2">لا توجد سجلات انضباط أو خصومات لهذا الشهر</div>
-                            }
-
-                            return records.map(([day, status]: [string, TeacherAttendanceStatus]) => {
+                            // 1. إضافة سجلات تقويم الحضور
+                            Object.entries(attendanceData).forEach(([day, status]: [string, TeacherAttendanceStatus]) => {
                                 const d = Number(day);
                                 const weekDayIdx = (d - 1 + startOffset) % 7;
+                                const isWeekend = weekDayIdx === 5 || weekDayIdx === 6;
+                                if (status === 'present' || isWeekend) return;
+
                                 const amount = status === 'absent' ? dailyRate :
                                     status === 'half' ? (dailyRate * 0.5) :
                                         status === 'quarter' ? (dailyRate * 0.25) :
@@ -315,39 +309,86 @@ export const TeacherAttendanceTab = ({
                                             status === 'quarter_reward' ? (dailyRate * 0.25) : 0;
 
                                 const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
-                                const relatedDeduction = deductions.find(d => d.date === dateStr);
-                                const defaultReason = `تسجيل ${status === 'full_reward' ? 'مكافأة (يوم كامل)' : status === 'half_reward' ? 'مكافأة (نصف يوم)' : status === 'quarter_reward' ? 'مكافأة (ربع يوم)' : 'غياب'} يوم ${weekDays[(d - 1 + startOffset) % 7]}`;
+                                const relatedDeduction = deductions.find(dd => dd.date === dateStr || (dd.appliedDate && new Date(dd.appliedDate).toISOString().startsWith(dateStr)));
+                                let actionText = 'غياب';
+                                if (status === 'full_reward') actionText = 'مكافأة (يوم كامل)';
+                                else if (status === 'half_reward') actionText = 'مكافأة (نصف يوم)';
+                                else if (status === 'quarter_reward') actionText = 'مكافأة (ربع يوم)';
+                                else if (status === 'absent') actionText = 'غياب اليوم كاملاً';
+                                else if (status === 'half') actionText = 'غياب نصف يوم';
+                                else if (status === 'quarter') actionText = 'غياب ربع يوم';
+                                
+                                const defaultReason = `تسجيل ${actionText} يوم ${weekDays[(d - 1 + startOffset) % 7]}`;
                                 const displayReason = relatedDeduction?.reason || dayDetails[Number(day)]?.reason || defaultReason;
 
+                                mergedRecords.push({
+                                    id: `att-${day}`,
+                                    day: d,
+                                    dateStr,
+                                    isReward: status?.includes('reward'),
+                                    amount,
+                                    displayReason,
+                                    canDelete: true,
+                                });
+                            });
+
+                            // 2. إضافة الخصومات اليدوية (من جدول deductions وتجنب الأتمتة المضافة بالتقويم مسبقاً)
+                            deductions.forEach((d: any) => {
+                                if (d.appliedBy === 'system-automation') return;
+
+                                const dDate = new Date(d.appliedDate);
+                                const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
+                                if (dMonthRaw !== selectedMonthRaw) return;
+
+                                const day = dDate.getDate();
+                                mergedRecords.push({
+                                    id: `ded-${d.id}`,
+                                    day,
+                                    dateStr: `${dMonthRaw}-${String(day).padStart(2, '0')}`,
+                                    isReward: d.reason.startsWith('مكافأة:'),
+                                    amount: Math.abs(d.amount),
+                                    displayReason: d.reason,
+                                    canDelete: false,
+                                });
+                            });
+
+                            mergedRecords.sort((a, b) => b.day - a.day);
+
+                            if (mergedRecords.length === 0) {
+                                return <div className="col-span-full py-8 text-center text-gray-400 text-sm font-bold bg-white rounded-3xl border border-gray-100 md:col-span-2">لا توجد سجلات انضباط أو خصومات لهذا الشهر</div>
+                            }
+
+                            return mergedRecords.map((rec: any) => {
                                 return (
-                                    <div key={day} className="bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-md transition-all relative group">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className={cn(
-                                                "px-2 py-1 rounded-lg text-[10px] font-bold",
-                                                status?.includes('reward') ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
-                                            )}>
-                                                {status?.includes('reward') ? 'مكافأة' : 'خصم'}
-                                            </span>
-                                            <span className="text-xs font-black text-gray-400 font-sans">{day} {selectedMonth.split(' ')[0]}</span>
+                                    <div key={rec.id} className="bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-md transition-all relative group flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className={cn(
+                                                    "px-2 py-1 rounded-lg text-[10px] font-bold shrink-0",
+                                                    rec.isReward ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
+                                                )}>
+                                                    {rec.isReward ? 'مكافأة' : 'خصم'}
+                                                </span>
+                                                <span className="text-xs font-black text-gray-400 font-sans">{rec.day} {selectedMonth.split(' ')[0]}</span>
+                                            </div>
+
+                                            <div className="flex items-center justify-between mb-3 text-right">
+                                                <h5 className="font-bold text-gray-900 text-sm">
+                                                    {rec.displayReason}
+                                                </h5>
+                                                <span className="font-black font-sans text-gray-800 text-sm mr-2 shrink-0">{rec.amount.toFixed(2)} ج.م</span>
+                                            </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between mb-3 text-right">
-                                            <h5 className="font-bold text-gray-900 text-sm">
-                                                {displayReason}
-                                            </h5>
-                                            <span className="font-black font-sans text-gray-800 text-sm">{amount.toFixed(2)} ج.م</span>
-                                        </div>
-
-                                        {!isTeacher && (
+                                        {!isTeacher && rec.canDelete && (
                                             <button
                                                 onClick={async () => {
-                                                    const date = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
-                                                    await updateAttendanceAsync({ date, status: 'present' });
+                                                    await updateAttendanceAsync({ date: rec.dateStr, status: 'present' });
                                                 }}
-                                                className="w-full py-2 mt-1 bg-red-50 text-red-500 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                                                className="w-full py-2 mt-auto bg-red-50 text-red-500 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
                                             >
                                                 <Trash2 size={14} />
-                                                حذف السجل
+                                                حذف السجل من التقويم
                                             </button>
                                         )}
                                     </div>

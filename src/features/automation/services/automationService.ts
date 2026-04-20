@@ -226,7 +226,7 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
 
     const teacherIds = teachers.map(t => t.id);
     const [ { data: allDeductions }, { data: allGroups }, { data: allAttendance } ] = await Promise.all([
-        supabase.from('deductions').select('teacher_id').in('teacher_id', teacherIds).eq('date', dateStr),
+        supabase.from('deductions').select('teacher_id').in('teacher_id', teacherIds).eq('date', dateStr).eq('applied_by', 'system-automation'),
         supabase.from('groups').select('teacher_id, students(id)').in('teacher_id', teacherIds),
         supabase.from('attendance').select('student_id').gte('date', `${dateStr}T00:00:00`).lte('date', `${dateStr}T23:59:59`)
     ]);
@@ -274,11 +274,11 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
     const [ { data: allGroups }, { data: allExams }, { data: allDeductions } ] = await Promise.all([
         supabase.from('groups').select('teacher_id, students(id)').in('teacher_id', teacherIds),
         supabase.from('exams').select('student_id').gte('date', `${dateStr}T00:00:00`).lte('date', `${dateStr}T23:59:59`),
-        supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).eq('date', dateStr)
+        supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).eq('date', dateStr).eq('applied_by', 'system-automation')
     ]);
 
     const examStudents = new Set(allExams?.map(e => e.student_id));
-    const alreadyDeducted = new Set(allDeductions?.filter(d => d.reason?.includes('اختبار')).map(d => d.teacher_id));
+    const alreadyDeducted = new Set(allDeductions?.map(d => d.teacher_id));
     const logs = [];
 
     for (const t of teachers) {

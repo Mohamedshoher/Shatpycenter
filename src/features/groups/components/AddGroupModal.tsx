@@ -39,8 +39,9 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
 
     // 2. إدارة حالة البيانات داخل النموذج (State Management)
     const [name, setName] = useState('');
-    const [teacherId, setTeacherId] = useState(''); // تم التحسين: استخدام الـ ID بدلاً من الاسم
+    const [teacherId, setTeacherId] = useState('');
     const [type, setType] = useState<keyof typeof GROUP_COLORS>('قرآن');
+    const [maxStudentsPerHour, setMaxStudentsPerHour] = useState(5);
 
     // 3. إعداد عملية الإضافة (Mutation) لإرسال البيانات للخادم
     const addMutation = useMutation({
@@ -65,12 +66,13 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
         
         // تنفيذ طلب الإضافة وإرسال البيانات المجمعة
         addMutation.mutate({
-            name: `${type} (${name})`, // دمج نوع المجموعة مع اسمها (مثال: قرآن (أ))
+            name: `${type} (${name})`,
             teacherId: selectedTeacher?.id || null,
-            teacher: selectedTeacher?.fullName || '', // إرسال اسم المدرس إن وجد
+            teacher: selectedTeacher?.fullName || '',
             schedule: '',
             count: 0,
-            color: GROUP_COLORS[type] || 'bg-gray-100 text-gray-600'
+            color: GROUP_COLORS[type] || 'bg-gray-100 text-gray-600',
+            maxStudentsPerHour: maxStudentsPerHour || 5
         });
     };
 
@@ -130,6 +132,22 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
                             </option>
                         ))}
                     </select>
+                </div>
+
+                {/* --- حقل: أقصى عدد طلاب في الساعة --- */}
+                <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-600 block">أقصى عدد طلاب في الساعة</label>
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="number"
+                            min="1"
+                            max="30"
+                            value={maxStudentsPerHour}
+                            onChange={(e) => setMaxStudentsPerHour(Number(e.target.value))}
+                            className="w-24 h-12 bg-gray-50 border border-gray-100 rounded-xl px-4 text-center font-black text-lg focus:outline-none focus:ring-2 focus:ring-purple-500/10"
+                        />
+                        <p className="text-xs text-gray-400 font-bold">لا يمكن للمدرس تجديد موعد طالب في ساعة تجاوز هذا العدد</p>
+                    </div>
                 </div>
 
                 {/* --- زر الإرسال والحفظ --- */}

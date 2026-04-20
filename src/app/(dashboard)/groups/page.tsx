@@ -30,6 +30,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 
 const AddGroupModal = dynamic(() => import('@/features/groups/components/AddGroupModal'), { ssr: false });
+const EditGroupModal = dynamic(() => import('@/features/groups/components/EditGroupModal'), { ssr: false });
+const ManageGroupsModal = dynamic(() => import('@/features/groups/components/ManageGroupsModal'), { ssr: false });
+
 
 export default function GroupsPage() {
     const queryClient = useQueryClient();
@@ -63,9 +66,11 @@ export default function GroupsPage() {
 
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isManageModalOpen, setIsManageModalOpen] = useState(false);
     const [isConfigDropdownOpen, setIsConfigDropdownOpen] = useState(false);
     
     // Group Edit States
+    const [selectedGroupToEdit, setSelectedGroupToEdit] = useState<any | null>(null);
     const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
     const [editTeacherId, setEditTeacherId] = useState('');
 
@@ -212,9 +217,16 @@ export default function GroupsPage() {
                                 <button
                                     onClick={() => setIsAddModalOpen(true)}
                                     className="w-11 h-11 bg-purple-600 text-white rounded-[16px] flex items-center justify-center hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20 active:scale-95"
-                                    title="إضافة مجموعة"
+                                    title="إضافة مجموعة جديدة"
                                 >
                                     <Plus size={22} />
+                                </button>
+                                <button
+                                    onClick={() => setIsManageModalOpen(true)}
+                                    className="w-11 h-11 bg-white text-purple-600 border border-purple-100 rounded-[16px] flex items-center justify-center hover:bg-purple-50 transition-all shadow-sm active:scale-95"
+                                    title="إدارة المجموعات (تعديل كامل)"
+                                >
+                                    <Settings2 size={20} />
                                 </button>
                             </div>
                         )}
@@ -321,14 +333,19 @@ export default function GroupsPage() {
                                         </Link>
                                         <div className="flex items-center gap-2 shrink-0 z-10">
                                             {user?.role === 'director' && (
-                                                <div className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-100 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => {
-                                                        setEditingGroupId(group.id);
-                                                        setEditTeacherId(group.teacherId || '');
-                                                    }} className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors" title="تغيير المدرس">
+                                                <div className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-100 shadow-sm transition-all">
+                                                    <button 
+                                                        onClick={() => setSelectedGroupToEdit(group)} 
+                                                        className="p-1.5 text-blue-600 hover:bg-white rounded-md transition-colors" 
+                                                        title="تعديل بيانات المجموعة"
+                                                    >
                                                         <Edit2 size={14} />
                                                     </button>
-                                                    <button onClick={() => handleDelete(group.id, group.count)} className="p-1.5 text-red-500 hover:bg-white rounded-md transition-colors" title="حذف المجموعة">
+                                                    <button 
+                                                        onClick={() => handleDelete(group.id, group.count)} 
+                                                        className="p-1.5 text-red-500 hover:bg-white rounded-md transition-colors" 
+                                                        title="حذف المجموعة"
+                                                    >
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
@@ -388,6 +405,15 @@ export default function GroupsPage() {
             <AddGroupModal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
+            />
+            <ManageGroupsModal
+                isOpen={isManageModalOpen}
+                onClose={() => setIsManageModalOpen(false)}
+            />
+            <EditGroupModal
+                isOpen={!!selectedGroupToEdit}
+                onClose={() => setSelectedGroupToEdit(null)}
+                group={selectedGroupToEdit}
             />
         </div>
     );

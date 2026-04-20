@@ -86,7 +86,7 @@ export default function FeesTab({ student, records }: any) {
 
                                     {studentFee && (
                                         <span className="text-[9px] bg-gray-50 px-1.5 py-0.5 rounded text-gray-600 border border-gray-100">
-                                            وصل: {studentFee.receipt} | {studentFee.date}
+                                            المبلغ: {studentFee.amount} | وصل: {studentFee.receipt} | {studentFee.date}
                                         </span>
                                     )}
                                 </div>

@@ -21,7 +21,8 @@ import {
     X,
     User,
     BookOpen,
-    Calendar
+    Calendar,
+    Clock
 } from 'lucide-react';
 import {
     calculateTotalAbsence,
@@ -80,6 +81,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [scheduleFilterTime, setScheduleFilterTime] = useState('الكل');
 
     const [selectedDate, setSelectedDate] = useState(() => {
         const d = new Date();
@@ -92,10 +94,46 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         return selectedDate === todayStr;
     }, [selectedDate]);
 
+    const weekDaysNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const currentDayName = useMemo(() => {
+        return weekDaysNames[new Date(selectedDate).getDay()];
+    }, [selectedDate]);
+
+    useEffect(() => {
+        setScheduleFilterTime('الكل');
+    }, [selectedDate, groupId]);
+
+
     const currentMonthKey = useMemo(() => {
         const [y, m] = selectedDate.split('-');
         return `${y}-${m}`;
     }, [selectedDate]);
+
+    const availableTimes = useMemo(() => {
+        if (!students) return [];
+        const times = new Set<string>();
+        students.forEach(student => {
+             if (student.status !== 'active') return;
+             if (groupId && student.groupId !== groupId) return;
+             if (user?.role === 'teacher' && (!student.groupId || !myGroupsIds.includes(student.groupId))) return;
+             if (user?.role === 'supervisor' && (!student.groupId || !myGroupsIds.includes(student.groupId))) return;
+
+             if (student.appointment) {
+                 student.appointment.split(',').forEach((p: string) => {
+                     const parts = p.split(':');
+                     if (parts.length >= 2) {
+                         const d = parts[0].trim();
+                         const t = parts.slice(1).join(':').trim();
+                         if (d === currentDayName && t) {
+                             times.add(t);
+                         }
+                     }
+                 });
+             }
+        });
+        return Array.from(times).sort();
+    }, [students, currentDayName, groupId, user, myGroupsIds]);
+
 
     const { data: attendanceData = { today: {}, monthMap: {} } as any, isFetching: isAttendanceFetching } = useQuery({
         queryKey: ['attendance-context', selectedDate],
@@ -177,6 +215,23 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 matchesFilter = phone.length < 11;
             }
 
+            if (scheduleFilterTime !== 'الكل') {
+                let hasTime = false;
+                if (student.appointment) {
+                    student.appointment.split(',').forEach((p: string) => {
+                        const parts = p.split(':');
+                        if (parts.length >= 2) {
+                            const d = parts[0].trim();
+                            const t = parts.slice(1).join(':').trim();
+                            if (d === currentDayName && t === scheduleFilterTime) {
+                                hasTime = true;
+                            }
+                        }
+                    });
+                }
+                if (!hasTime) matchesFilter = false;
+            }
+
             const isActive = student.status === 'active';
             return matchesFilter && isActive;
         });
@@ -196,7 +251,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             if (groupA !== groupB) return groupA.localeCompare(groupB, 'ar');
             return a.fullName.localeCompare(b.fullName, 'ar');
         });
-    }, [students, user, myGroupsIds, searchTerm, filter, groupId, getGroupName]);
+    }, [students, user, myGroupsIds, searchTerm, filter, scheduleFilterTime, currentDayName, groupId, getGroupName]);
 
     const handleOpenModal = (student: Student, tab: string = 'attendance') => {
         setSelectedTab(tab);
@@ -462,6 +517,43 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 </div>
             </div>
 
+            {/* فلتر وقت الموعد - يظهر لجميع الأدوار عندما توجد مواعيد في هذا اليوم */}
+            {availableTimes.length > 0 && (
+                <div className="px-3 sm:px-6 pt-3 pb-1">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                        <div className="flex items-center gap-1 text-gray-400 shrink-0">
+                            <Clock size={14} />
+                            <span className="text-[10px] font-bold">{currentDayName}</span>
+                        </div>
+                        <button
+                            onClick={() => setScheduleFilterTime('الكل')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all border",
+                                scheduleFilterTime === 'الكل'
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                    : "bg-white text-gray-500 border-gray-100 hover:border-blue-200"
+                            )}
+                        >
+                            الكل
+                        </button>
+                        {availableTimes.map(time => (
+                            <button
+                                key={time}
+                                onClick={() => setScheduleFilterTime(scheduleFilterTime === time ? 'الكل' : time)}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all border",
+                                    scheduleFilterTime === time
+                                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                        : "bg-white text-gray-500 border-gray-100 hover:border-blue-200"
+                                )}
+                            >
+                                {time}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-3 sm:px-6 mt-4">
                 {filteredStudents?.map((student, index) => (
                     <div
@@ -491,10 +583,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                         </div>
 
                         <div className="flex items-center gap-1 sm:gap-2 pt-2 overflow-x-auto no-scrollbar relative w-full">
-                            <div className={cn(
-                                "flex gap-1 shrink-0 transition-opacity duration-300",
-                                isAttendanceFetching ? "opacity-40 pointer-events-none" : "opacity-100"
-                            )}>
+                            <div className="flex gap-1 shrink-0 transition-opacity duration-300 opacity-100">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
                                     className={cn(
@@ -519,11 +608,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 </button>
                             </div>
 
-                            {isAttendanceFetching && (
-                                <div className="absolute inset-y-0 right-0 left-0 flex items-center justify-center pointer-events-none">
-                                    <div className="w-5 h-5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
-                                </div>
-                            )}
+
 
                             <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
 

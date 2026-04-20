@@ -86,7 +86,7 @@ export default function ExamsTab({ student, records }: any) {
 
             {/* قائمة الاختبارات */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {exams.filter((e: any) => e.type === activeSubTab).map((exam: any) => (
+                {exams.filter((e: any) => e.type === activeSubTab).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((exam: any) => (
                     <div
                         key={exam.id}
                         className="p-4 bg-white rounded-[24px] border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col gap-3 group"

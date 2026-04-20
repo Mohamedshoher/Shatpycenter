@@ -18,6 +18,7 @@ export const getGroups = async (): Promise<Group[]> => {
             name: row.name,
             teacherId: row.teacher_id,
             schedule: row.schedule || '',
+            maxStudentsPerHour: row.max_students_per_hour || 5, // افتراضي 5 لو مفيش
             // Add defaults for UI-only fields if they exist in type but not DB
             students: [],
         } as unknown as Group));
@@ -45,6 +46,7 @@ export const getGroupById = async (groupId: string): Promise<Group | null> => {
             name: data.name,
             teacherId: data.teacher_id,
             schedule: data.schedule || '',
+            maxStudentsPerHour: data.max_students_per_hour || 5,
             students: [],
         } as unknown as Group;
     } catch (error) {
@@ -61,7 +63,8 @@ export const addGroup = async (group: Omit<Group, 'id'>): Promise<string> => {
             .insert([{
                 name: group.name,
                 teacher_id: group.teacherId, // Map to snake_case
-                schedule: group.schedule
+                schedule: group.schedule,
+                max_students_per_hour: group.maxStudentsPerHour || 5,
             }])
             .select('id')
             .single();
@@ -81,6 +84,7 @@ export const updateGroup = async (id: string, data: Partial<Group>): Promise<voi
         if (data.name) updates.name = data.name;
         if (data.teacherId !== undefined) updates.teacher_id = data.teacherId;
         if (data.schedule) updates.schedule = data.schedule;
+        if (data.maxStudentsPerHour !== undefined) updates.max_students_per_hour = data.maxStudentsPerHour;
 
         const { error } = await supabase
             .from('groups')
@@ -127,6 +131,7 @@ export const getGroupsByTeacherId = async (teacherId: string): Promise<Group[]> 
             name: row.name,
             teacherId: row.teacher_id,
             schedule: row.schedule || '',
+            maxStudentsPerHour: row.max_students_per_hour || 5,
             students: [],
         } as unknown as Group));
     } catch (error) {

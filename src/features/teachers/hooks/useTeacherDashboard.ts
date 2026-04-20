@@ -130,7 +130,7 @@ export const useTeacherDashboard = (
             .filter(d => {
                 const dDate = new Date(d.appliedDate);
                 const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
-                return dMonthRaw === selectedMonthRaw && !d.reason.startsWith('مكافأة:');
+                return dMonthRaw === selectedMonthRaw && !d.reason.startsWith('مكافأة:') && d.appliedBy !== 'system-automation';
             })
             .reduce((acc: number, curr) => acc + curr.amount, 0);
 
