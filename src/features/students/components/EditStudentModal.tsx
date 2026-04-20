@@ -136,7 +136,7 @@ export default function EditStudentModal({ student, isOpen, onClose }: EditStude
                             required
                         >
                             <option value="">اختر المجموعة</option>
-                            {groups?.map((group: Group) => (
+                            {[...(groups || [])].sort((a, b) => a.name.localeCompare(b.name, 'ar')).map((group: Group) => (
                                 <option key={group.id} value={group.id}>{group.name}</option>
                             ))}
                         </select>

@@ -713,14 +713,14 @@ export default function TeacherDetailModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                     {/* خلفية النافذة (Backdrop) */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200]"
+                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
                     />
 
                     {/* جسم النافذة المنبثقة (Modal Body) */}
@@ -728,7 +728,7 @@ export default function TeacherDetailModal({
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-6xl h-[95vh] bg-white rounded-[40px] md:rounded-[56px] shadow-2xl z-[201] overflow-hidden flex flex-col border border-white/20"
+                        className="relative w-[95vw] max-w-6xl h-[95vh] bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20"
                     >
                         {/* رأس النافذة (Header) */}
                         <div className="p-5 md:p-8 relative bg-white border-b border-gray-50 shrink-0">
@@ -836,7 +836,7 @@ export default function TeacherDetailModal({
                         handleExemptStudent={handleExemptStudent}
                         handleRemoveExemption={handleRemoveExemption}
                     />
-                </>
+                </div>
             )}
         </AnimatePresence>
     );

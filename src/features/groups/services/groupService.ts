@@ -6,7 +6,8 @@ export const getGroups = async (): Promise<Group[]> => {
     try {
         const { data, error } = await supabase
             .from('groups')
-            .select('*');
+            .select('*')
+            .order('name', { ascending: true });
 
         if (error) {
             console.error("Supabase error fetching groups:", error);
@@ -119,7 +120,8 @@ export const getGroupsByTeacherId = async (teacherId: string): Promise<Group[]> 
         const { data, error } = await supabase
             .from('groups')
             .select('*')
-            .eq('teacher_id', teacherId);
+            .eq('teacher_id', teacherId)
+            .order('name', { ascending: true });
 
         if (error) {
             console.error("Supabase error fetching teacher groups:", error);
