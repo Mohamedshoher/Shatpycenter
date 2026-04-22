@@ -708,6 +708,7 @@ export const getAllStudentNotesWithDetails = async () => {
                     full_name,
                     group_id,
                     status,
+                    parent_phone,
                     groups (
                         id,
                         name,
@@ -731,6 +732,7 @@ export const getAllStudentNotesWithDetails = async () => {
             createdBy: n.created_by,
             studentId: n.student_id,
             studentName: n.students?.full_name || 'غير معروف',
+            parentPhone: n.students?.parent_phone || '',
             groupName: n.students?.groups?.name || 'بدون مجموعة',
             teacherName: n.students?.groups?.teachers?.full_name || 'غير معروف',
             isRead: n.is_read || false

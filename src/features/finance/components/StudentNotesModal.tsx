@@ -1,8 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageSquare, Users, User, Archive, Trash2, CheckCircle2, Circle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { X, MessageSquare, Users, User, Archive, Trash2, CheckCircle2, Circle, MessageCircle } from 'lucide-react';
+import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { useState } from 'react';
 
 interface StudentNote {
@@ -12,6 +12,7 @@ interface StudentNote {
     createdBy: string;
     studentId: string;
     studentName: string;
+    parentPhone?: string;
     groupName: string;
     teacherName: string;
     isRead: boolean;
@@ -134,6 +135,18 @@ export default function StudentNotesModal({
                                                 </div>
 
                                                 <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-2xl">
+                                                    {note.parentPhone && (
+                                                        <button
+                                                            onClick={() => {
+                                                                const text = `السلام عليكم ورحمة الله وبركاته\n\nنود إحاطتكم علماً بملحوظة بخصوص الطالب/ة *${note.studentName}*:\n\n"${note.content}"\n\nمع تحيات إدارة مركز الشاطبي 🌹`;
+                                                                window.open(getWhatsAppUrl(note.parentPhone || '', text), '_blank');
+                                                            }}
+                                                            className="w-9 h-9 flex items-center justify-center text-green-600 hover:text-green-700 hover:bg-white rounded-xl transition-all shadow-sm shadow-transparent hover:shadow-green-500/10"
+                                                            title="إرسال عبر واتساب"
+                                                        >
+                                                            <MessageCircle size={18} />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => onDeleteNote(note.id)}
                                                         className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white rounded-xl transition-all shadow-sm shadow-transparent hover:shadow-red-500/10"

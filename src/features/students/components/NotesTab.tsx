@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { FileText, Trash2, User } from 'lucide-react';
+import { FileText, Trash2, User, MessageCircle } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import { cn } from '../../../lib/utils';
+import { cn, getWhatsAppUrl } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
 
 export default function NotesTab({ student, records }: any) {
@@ -40,19 +40,30 @@ export default function NotesTab({ student, records }: any) {
                             {note.text || note.content}
                         </p>
                         <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                                {user?.role === 'director' && (
-                                    <Trash2 
-                                        size={16} 
-                                        className="text-gray-300 hover:text-red-500 cursor-pointer" 
-                                        onClick={() => deleteNote.mutate(note.id)} 
-                                    />
-                                )}
-                                <div className="text-[10px] text-gray-500 font-bold">
-                                    <p>بواسطة: {note.createdBy}</p>
-                                    <p>{note.date}</p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const content = note.text || note.content;
+                                            const text = `السلام عليكم ورحمة الله وبركاته\n\nنود إحاطتكم علماً بملحوظة بخصوص الطالب/ة *${student.fullName}*:\n\n"${content}"\n\nمع تحيات إدارة مركز الشاطبي 🌹`;
+                                            window.open(getWhatsAppUrl(student.parentPhone || '', text), '_blank');
+                                        }}
+                                        className="w-8 h-8 flex items-center justify-center text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                        title="إرسال عبر واتساب"
+                                    >
+                                        <MessageCircle size={16} />
+                                    </button>
+                                    {user?.role === 'director' && (
+                                        <Trash2 
+                                            size={16} 
+                                            className="text-gray-300 hover:text-red-500 cursor-pointer" 
+                                            onClick={() => deleteNote.mutate(note.id)} 
+                                        />
+                                    )}
+                                    <div className="text-[10px] text-gray-500 font-bold">
+                                        <p>بواسطة: {note.createdBy}</p>
+                                        <p>{note.date}</p>
+                                    </div>
                                 </div>
-                            </div>
                         </div>
                     </div>
                 ))}

@@ -78,8 +78,8 @@ export default function StudentReportCard({ student, index, userRole, onArchive,
 
 إدارة مركز الشاطبي للقرآن وعلومه 🌷`;
                             window.open(getWhatsAppUrl(phone, message), '_blank');
-                        }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-xl" title="تواصل واتساب">
-                            <MessageCircle size={14} />
+                        }} className="w-8 h-8 flex items-center justify-center text-green-600 hover:bg-white rounded-xl transition-all shadow-sm border border-green-50" title="تواصل واتساب">
+                            <MessageCircle size={16} />
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${student.parentPhone}`; }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl" title="اتصال">
                             <Phone size={14} />

@@ -15,6 +15,11 @@ import ScheduleTab from './ScheduleTab';
 import FeesTab from './FeesTab';
 import ExamsTab from './ExamsTab';
 import NotesTab from './NotesTab';
+import { useGroups } from '@/features/groups/hooks/useGroups';
+import dynamic from 'next/dynamic';
+
+const IqraCoursesTab = dynamic(() => import('../../iqra/components/IqraCoursesTab'), { ssr: false });
+const IqraFollowupsTab = dynamic(() => import('../../iqra/components/IqraFollowupsTab'), { ssr: false });
 
 export default function StudentDetailModal({ 
     student: initialStudent, 
@@ -33,6 +38,9 @@ export default function StudentDetailModal({
 
     // استدعاء الهوك الخاص بسجلات الطالب (حضور، مصروفات، اختبارات، ملحوظات)
     const studentRecords = useStudentRecords(student?.id || '');
+    
+    // جلب المجموعات للتحقق من نوع المجموعة
+    const { data: groups } = useGroups();
 
     // تحديث التبويب النشط عند فتح المودال
     useEffect(() => {
@@ -55,13 +63,20 @@ export default function StudentDetailModal({
 
     if (!student || !isOpen) return null;
 
+    const studentGroup = groups?.find((g: any) => g.id === student?.groupId);
+    const isIqraStudent = studentGroup?.name?.includes('إقراء') || studentGroup?.name?.includes('اقراء');
+
     // تعريف التبويبات (الأزرار العلوية)
     const tabs = [
         { id: 'attendance', label: 'سجل الحضور', icon: Calendar },
         { id: 'schedule', label: 'مواعيد الحضور', icon: Clock },
         { id: 'fees', label: 'سجل المصروفات', icon: CreditCard },
-        { id: 'exams', label: 'سجل الاختبارات', icon: BookOpen },
+        ...(!isIqraStudent ? [{ id: 'exams', label: 'سجل الاختبارات', icon: BookOpen }] : []),
         { id: 'notes', label: 'سجل الملحوظات', icon: FileText },
+        ...(isIqraStudent ? [
+            { id: 'iqra_courses', label: 'سجل الدورات', icon: BookOpen },
+            { id: 'iqra_logs', label: 'سجل المتابعات', icon: Clock }
+        ] : []),
     ];
 
     return (
@@ -98,11 +113,13 @@ export default function StudentDetailModal({
 
                     {/* 3. محتوى التبويبات (يتم استدعاء المكون بناءً على التبويب النشط) */}
                     <div className="flex-1 overflow-y-auto p-5 md:p-6 text-right">
-                        {activeTab === 'attendance' && <AttendanceTab student={student} records={studentRecords} />}
+                        {activeTab === 'attendance' && <AttendanceTab student={student} records={studentRecords} isIqraStudent={isIqraStudent} />}
                         {activeTab === 'schedule' && <ScheduleTab student={student} />}
                         {activeTab === 'fees' && <FeesTab student={student} records={studentRecords} />}
-                        {activeTab === 'exams' && <ExamsTab student={student} records={studentRecords} />}
+                        {activeTab === 'exams' && !isIqraStudent && <ExamsTab student={student} records={studentRecords} />}
                         {activeTab === 'notes' && <NotesTab student={student} records={studentRecords} />}
+                        {activeTab === 'iqra_courses' && <IqraCoursesTab student={student} />}
+                        {activeTab === 'iqra_logs' && <IqraFollowupsTab student={student} />}
                     </div>
                 </motion.div>
             </div>

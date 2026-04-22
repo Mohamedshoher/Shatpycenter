@@ -58,15 +58,15 @@ export function getWhatsAppUrl(phone: string, message?: string) {
     let cleanPhone = phone.replace(/[^0-9]/g, '');
 
     // إضافة كود الدولة (مصر) إذا كان الرقم يبدأ بـ 01
-    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
+    if (cleanPhone.startsWith('01')) {
         cleanPhone = '2' + cleanPhone;
     }
 
-    // استخدام الرابط المباشر من WhatsApp API لضمان الانتقال التلقائي للدردشة
-    let url = `https://api.whatsapp.com/send?phone=${cleanPhone}`;
+    // استخدام الرابط المباشر wa.me لضمان الانتقال التلقائي للدردشة بسرعة
+    let url = `https://wa.me/${cleanPhone}`;
     
     if (message) {
-        url += `&text=${encodeURIComponent(message)}`;
+        url += `?text=${encodeURIComponent(message)}`;
     }
     
     return url;

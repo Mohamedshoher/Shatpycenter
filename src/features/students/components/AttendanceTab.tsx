@@ -4,7 +4,7 @@ import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useQueryClient } from '@tanstack/react-query';
 
-export default function AttendanceTab({ student, records }: any) {
+export default function AttendanceTab({ student, records, isIqraStudent }: any) {
     const { user } = useAuthStore();
     const queryClient = useQueryClient();
     const canEditAttendance = user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'teacher';
@@ -53,7 +53,7 @@ export default function AttendanceTab({ student, records }: any) {
                     const day = i + 1;
                     const dateObj = new Date(currentYear, currentMonth, day);
                     const dayOfWeek = dateObj.getDay();
-                    const isWeekend = dayOfWeek === 4 || dayOfWeek === 5; // الخميس والجمعة
+                    const isWeekend = !isIqraStudent && (dayOfWeek === 4 || dayOfWeek === 5); // الخميس والجمعة لغير طلاب الإقراء
                     const status = attendanceRecordsMap[day];
                     const isFuture = dateObj > new Date();
 
