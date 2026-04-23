@@ -252,7 +252,7 @@ function CourseForm({ initialData, onSave, onCancel, isSubmitting }: any) {
             const endDate = new Date(startDate.getTime() + (totalDays * 24 * 60 * 60 * 1000));
             
             // تحديث التاريخ فقط إذا كان فارغاً أو إذا كان المستخدم يعدل في الخانات المؤثرة
-            setData(prev => ({ ...prev, full_exam_date: endDate.toISOString().split('T')[0] }));
+            setData((prev: any) => ({ ...prev, full_exam_date: endDate.toISOString().split('T')[0] }));
         }
     }, [data.total_lectures, data.start_date, lecturesPerWeek]);
 
