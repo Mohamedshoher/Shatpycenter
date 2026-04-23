@@ -45,10 +45,10 @@ export default function IqraCoursesTab({ student }: IqraCoursesTabProps) {
     // دالة لجلب اسم المعلم/المشرف للدورة
     const getSupervisingSheikh = () => {
         if (user?.role === 'director') {
-            return `المدير: ${user?.name || 'محمد مصطفى شكر'}`;
+            return `المدير: ${user?.displayName || 'محمد مصطفى شكر'}`;
         }
         const group = groups?.find((g: any) => g.id === student?.groupId);
-        return group?.teacher?.name || user?.name || '---';
+        return group?.teacher?.name || user?.displayName || '---';
     };
 
     // دالة لحساب التقدير المتوسط بذكاء
