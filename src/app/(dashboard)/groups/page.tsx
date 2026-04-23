@@ -62,7 +62,7 @@ export default function GroupsPage() {
     });
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [filter, setFilter] = useState('الكل');
+    const [filters, setFilters] = useState<string[]>(['الكل']);
 
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -179,10 +179,13 @@ export default function GroupsPage() {
             }
 
             const matchesFilter = (() => {
-                if (filter === 'الكل') return true;
-                if (filter === 'حضور ممتاز') return group.attendancePercentage >= 90;
-                if (filter === 'حضور ضعيف') return group.attendancePercentage > 0 && group.attendancePercentage < 75;
-                return group.name.includes(filter);
+                if (filters.includes('الكل')) return true;
+                
+                return filters.some(f => {
+                    if (f === 'حضور ممتاز') return group.attendancePercentage >= 90;
+                    if (f === 'حضور ضعيف') return group.attendancePercentage > 0 && group.attendancePercentage < 75;
+                    return group.name.includes(f);
+                });
             })();
             
             return matchesFilter;
@@ -267,16 +270,29 @@ export default function GroupsPage() {
                                                         {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء', 'حضور ممتاز', 'حضور ضعيف'].map((type) => (
                                                             <button
                                                                 key={type}
-                                                                onClick={() => {
-                                                                    setFilter(type);
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (type === 'الكل') {
+                                                                        setFilters(['الكل']);
+                                                                    } else {
+                                                                        setFilters(prev => {
+                                                                            const newFilters = prev.filter(f => f !== 'الكل');
+                                                                            if (newFilters.includes(type)) {
+                                                                                const updated = newFilters.filter(f => f !== type);
+                                                                                return updated.length === 0 ? ['الكل'] : updated;
+                                                                            } else {
+                                                                                return [...newFilters, type];
+                                                                            }
+                                                                        });
+                                                                    }
                                                                 }}
                                                                 className={cn(
                                                                     "w-full px-4 py-2 text-right text-xs font-bold transition-all flex items-center justify-between",
-                                                                    filter === type ? "bg-purple-50 text-purple-600" : "text-gray-600 hover:bg-gray-50"
+                                                                    filters.includes(type) ? "bg-purple-50 text-purple-600" : "text-gray-600 hover:bg-gray-50"
                                                                 )}
                                                             >
                                                                 {type}
-                                                                {filter === type && <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
+                                                                {filters.includes(type) && <div className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
                                                             </button>
                                                         ))}
 

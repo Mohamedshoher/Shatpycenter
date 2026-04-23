@@ -14,6 +14,7 @@ import {
     getStudentExemptions,
     deleteExemptionRecord
 } from "../services/recordsService";
+import { getAllIqraProgress, getIqraLogs } from "../../iqra/services/iqraService";
 
 export const useStudentRecords = (studentId: string) => {
     const queryClient = useQueryClient();
@@ -175,6 +176,18 @@ export const useStudentRecords = (studentId: string) => {
         }
     });
 
+    const iqraProgressQuery = useQuery({
+        queryKey: ['iqra-courses', studentId],
+        queryFn: () => getAllIqraProgress(studentId),
+        enabled: !!studentId
+    });
+
+    const iqraLogsQuery = useQuery({
+        queryKey: ['iqra-logs-all', studentId],
+        queryFn: () => getIqraLogs(studentId),
+        enabled: !!studentId
+    });
+
     return {
         attendance: attendanceQuery.data || [],
         isLoadingAttendance: attendanceQuery.isLoading,
@@ -188,6 +201,10 @@ export const useStudentRecords = (studentId: string) => {
         isLoadingPlans: plansQuery.isLoading,
         notes: notesQuery.data || [],
         isLoadingNotes: notesQuery.isLoading,
+        iqraProgress: iqraProgressQuery.data || [],
+        isLoadingIqraProgress: iqraProgressQuery.isLoading,
+        iqraLogs: iqraLogsQuery.data || [],
+        isLoadingIqraLogs: iqraLogsQuery.isLoading,
         addAttendance,
         addExam,
         addFee,

@@ -83,7 +83,6 @@ export default function StudentDetailModal({
         { id: 'iqra_courses', label: 'سجل الدورات', icon: BookOpen },
         { id: 'attendance', label: 'سجل الحضور', icon: Calendar },
         { id: 'schedule', label: 'مواعيد الحضور', icon: Clock },
-        { id: 'fees', label: 'سجل المصروفات', icon: CreditCard },
         { id: 'notes', label: 'سجل الملحوظات', icon: FileText },
     ] : [
         { id: 'attendance', label: 'سجل الحضور', icon: Calendar },

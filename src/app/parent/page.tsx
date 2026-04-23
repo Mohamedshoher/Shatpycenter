@@ -369,7 +369,8 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
     const totalAttendance = attendance.length;
 
     // التحقق من وجود مصروفات غير مدفوعة
-    const hasUnpaidFees = fees.length === 0;
+    const isIqra = group?.name?.includes('إقراء') || group?.name?.includes('اقراء');
+    const hasUnpaidFees = fees.length === 0 && !isIqra;
 
     return (
         <motion.div

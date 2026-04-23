@@ -170,52 +170,95 @@ export default function IqraCoursesTab({ student }: IqraCoursesTabProps) {
                                                     <span>{course.total_lectures || 0} محاضرة</span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                <button onClick={() => setEditingId(course.id)} className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit3 size={18} /></button>
-                                                <button 
-                                                    onClick={() => { if(confirm('حذف هذه الدورة؟')) deleteMutation.mutate(course.id); }} 
-                                                    className="w-9 h-9 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+                                            <div className="flex items-center gap-3">
+                                                {(() => {
+                                                    const examDate = course.full_exam_date ? new Date(course.full_exam_date) : null;
+                                                    const today = new Date();
+                                                    const remainingDays = examDate ? Math.max(0, Math.ceil((examDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+                                                    return remainingDays > 0 && !isFinished && (
+                                                        <div className="bg-orange-50 text-orange-600 px-3 py-1.5 rounded-xl border border-orange-100 flex flex-col items-center">
+                                                            <span className="text-[8px] font-black uppercase">متبقي</span>
+                                                            <span className="text-xs font-black">{remainingDays} يوم</span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                    <button onClick={() => setEditingId(course.id)} className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit3 size={18} /></button>
+                                                    <button 
+                                                        onClick={() => { if(confirm('حذف هذه الدورة؟')) deleteMutation.mutate(course.id); }} 
+                                                        className="w-9 h-9 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* شريط التقدم */}
-                                        <div className="mb-6 space-y-2">
-                                            <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
-                                                <span>نسبة التقدم</span>
-                                                <span>{progress}%</span>
+                                        {/* أشرطة التقدم */}
+                                        <div className="space-y-5 mb-8">
+                                            {/* Progress Bar - Achievement */}
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
+                                                    <span>نسبة إنجاز المحاضرات</span>
+                                                    <span>{progress}%</span>
+                                                </div>
+                                                <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden border border-gray-100/50">
+                                                    <motion.div 
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${progress}%` }}
+                                                        className={cn("h-full", isFinished ? "bg-green-500" : "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]")}
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden">
-                                                <motion.div 
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${progress}%` }}
-                                                    className={cn("h-full", isFinished ? "bg-green-500" : "bg-blue-500")}
-                                                />
-                                            </div>
+
+                                            {/* Progress Bar - Time */}
+                                            {(() => {
+                                                const startDate = course.start_date ? new Date(course.start_date) : null;
+                                                const examDate = course.full_exam_date ? new Date(course.full_exam_date) : null;
+                                                const today = new Date();
+                                                if (startDate && examDate && !isFinished) {
+                                                    const totalTime = examDate.getTime() - startDate.getTime();
+                                                    const passedTime = today.getTime() - startDate.getTime();
+                                                    const timeProgress = Math.min(100, Math.max(0, Math.round((passedTime / (totalTime || 1)) * 100)));
+                                                    return (
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
+                                                                <span>التقدم الزمني للموعد المحدد</span>
+                                                                <span>{timeProgress}%</span>
+                                                            </div>
+                                                            <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden border border-gray-100/50">
+                                                                <motion.div 
+                                                                    initial={{ width: 0 }}
+                                                                    animate={{ width: `${timeProgress}%` }}
+                                                                    className={cn("h-full", timeProgress > 90 ? "bg-red-500" : "bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]")}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                         </div>
                                         
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                            <InfoCard label="الحالة" value={course.received_from_sheikh ? 'تم الاستلام' : 'لم يستلم'} color={course.received_from_sheikh ? 'green' : 'gray'} />
-                                            <InfoCard label="النوع" value={course.is_free ? 'مجاني' : 'بثمنه'} color={course.is_free ? 'blue' : 'amber'} />
-                                            <InfoCard label="الاختبار" value={course.full_exam_date || 'غير محدد'} color="purple" />
-                                            <InfoCard label="منجز" value={`${latestLecture} محاضرة`} color="blue" />
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                                            <InfoCard label="موعد الاختبار" value={course.full_exam_date || 'غير محدد'} color="purple" />
+                                            <InfoCard label="المحاضرات الأسبوعية" value={`${course.weekly_target || 0} محاضرة`} color="indigo" />
+                                            <InfoCard label="المنجز" value={`${latestLecture} محاضرة`} color="blue" />
                                         </div>
-
+                                        
                                         {/* بيانات ذكية محسوبة */}
                                         <div className="pt-4 border-t border-dashed border-gray-100 flex flex-wrap gap-4">
                                             {completionDate && (
-                                                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 bg-gray-50 px-3 py-1.5 rounded-xl">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 bg-gray-50 px-3 py-1.5 rounded-xl">
                                                     <Calendar size={14} className="text-blue-500" />
-                                                    آخر متابعة: <span className="text-gray-900">{completionDate}</span>
+                                                    أحدث متابعة: <span className="text-gray-900">{completionDate}</span>
                                                 </div>
                                             )}
-                                            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 bg-amber-50 px-3 py-1.5 rounded-xl">
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 bg-amber-50 px-3 py-1.5 rounded-xl">
                                                 <Award size={14} className="text-amber-500" />
                                                 التقدير العام: <span className="text-amber-900">{avgGrade}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 bg-green-50 px-3 py-1.5 rounded-xl">
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 bg-green-50 px-3 py-1.5 rounded-xl">
                                                 <User size={14} className="text-green-500" />
                                                 إشراف: <span className="text-green-900">{sheikhName}</span>
                                             </div>
@@ -232,16 +275,18 @@ export default function IqraCoursesTab({ student }: IqraCoursesTabProps) {
 }
 
 function CourseForm({ initialData, onSave, onCancel, isSubmitting }: any) {
-    const [lecturesPerWeek, setLecturesPerWeek] = useState(2);
     const [data, setData] = useState(initialData || {
         book_name: '',
         start_date: new Date().toISOString().split('T')[0],
         total_lectures: 0,
+        weekly_target: 2,
         received_from_sheikh: false,
         is_free: true,
         full_exam_date: '',
         completed_courses: 0
     });
+
+    const [lecturesPerWeek, setLecturesPerWeek] = useState(data.weekly_target || 2);
 
     // حساب موعد الاختبار تلقائياً عند تغيير عدد المحاضرات أو التاريخ
     useEffect(() => {
@@ -251,8 +296,12 @@ function CourseForm({ initialData, onSave, onCancel, isSubmitting }: any) {
             const startDate = new Date(data.start_date);
             const endDate = new Date(startDate.getTime() + (totalDays * 24 * 60 * 60 * 1000));
             
-            // تحديث التاريخ فقط إذا كان فارغاً أو إذا كان المستخدم يعدل في الخانات المؤثرة
-            setData((prev: any) => ({ ...prev, full_exam_date: endDate.toISOString().split('T')[0] }));
+            // تحديث التاريخ والمقدر
+            setData((prev: any) => ({ 
+                ...prev, 
+                full_exam_date: endDate.toISOString().split('T')[0],
+                weekly_target: lecturesPerWeek
+            }));
         }
     }, [data.total_lectures, data.start_date, lecturesPerWeek]);
 

@@ -11,6 +11,7 @@ export interface IqraProgress {
     end_date?: string; // تاريخ الانتهاء
     total_lectures: number;
     full_exam_date: string;
+    weekly_target?: number; // المقدر الأسبوعي
     final_grade?: string; // التقدير النهائي
     supervising_sheikh?: string; // إشراف الشيخ
     completed_courses: number;
