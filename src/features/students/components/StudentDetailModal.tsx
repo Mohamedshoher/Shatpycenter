@@ -32,15 +32,27 @@ export default function StudentDetailModal({
     // تحديد التبويب النشط (الافتراضي هو الحضور)
     const [activeTab, setActiveTab] = useState(initialTab);
 
+    // جلب المجموعات للتحقق من نوع المجموعة
+    const { data: groups } = useGroups();
+    
     // جلب بيانات الطلاب وتحديد الطالب الحالي لضمان تحديث البيانات فورياً
     const { data: students } = useStudents();
     const student = students?.find((s: any) => s.id === initialStudent?.id) || initialStudent;
 
+    const studentGroup = groups?.find((g: any) => g.id === student?.groupId);
+    const isIqraStudent = studentGroup?.name?.includes('إقراء') || studentGroup?.name?.includes('اقراء');
+
+    // تحديث التبويب النشط إذا كان طالباً في الإقراء
+    useEffect(() => {
+        if (isIqraStudent && activeTab === 'attendance' && initialTab === 'attendance') {
+            setActiveTab('iqra_logs');
+        }
+    }, [isIqraStudent]);
+
     // استدعاء الهوك الخاص بسجلات الطالب (حضور، مصروفات، اختبارات، ملحوظات)
     const studentRecords = useStudentRecords(student?.id || '');
     
-    // جلب المجموعات للتحقق من نوع المجموعة
-    const { data: groups } = useGroups();
+
 
     // تحديث التبويب النشط عند فتح المودال
     useEffect(() => {
@@ -63,20 +75,22 @@ export default function StudentDetailModal({
 
     if (!student || !isOpen) return null;
 
-    const studentGroup = groups?.find((g: any) => g.id === student?.groupId);
-    const isIqraStudent = studentGroup?.name?.includes('إقراء') || studentGroup?.name?.includes('اقراء');
+
 
     // تعريف التبويبات (الأزرار العلوية)
-    const tabs = [
+    const tabs = isIqraStudent ? [
+        { id: 'iqra_logs', label: 'سجل المتابعات', icon: Clock },
+        { id: 'iqra_courses', label: 'سجل الدورات', icon: BookOpen },
         { id: 'attendance', label: 'سجل الحضور', icon: Calendar },
         { id: 'schedule', label: 'مواعيد الحضور', icon: Clock },
         { id: 'fees', label: 'سجل المصروفات', icon: CreditCard },
-        ...(!isIqraStudent ? [{ id: 'exams', label: 'سجل الاختبارات', icon: BookOpen }] : []),
         { id: 'notes', label: 'سجل الملحوظات', icon: FileText },
-        ...(isIqraStudent ? [
-            { id: 'iqra_courses', label: 'سجل الدورات', icon: BookOpen },
-            { id: 'iqra_logs', label: 'سجل المتابعات', icon: Clock }
-        ] : []),
+    ] : [
+        { id: 'attendance', label: 'سجل الحضور', icon: Calendar },
+        { id: 'schedule', label: 'مواعيد الحضور', icon: Clock },
+        { id: 'fees', label: 'سجل المصروفات', icon: CreditCard },
+        { id: 'exams', label: 'سجل الاختبارات', icon: BookOpen },
+        { id: 'notes', label: 'سجل الملحوظات', icon: FileText },
     ];
 
     return (

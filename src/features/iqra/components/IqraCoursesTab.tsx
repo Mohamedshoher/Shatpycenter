@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllIqraProgress, createIqraProgress, updateIqraProgress, deleteIqraProgress, getIqraLogs, IqraProgress } from '../services/iqraService';
 import { Book, Plus, Trash2, Edit3, X, Calendar, User, Award, CheckCircle } from 'lucide-react';
@@ -232,6 +232,7 @@ export default function IqraCoursesTab({ student }: IqraCoursesTabProps) {
 }
 
 function CourseForm({ initialData, onSave, onCancel, isSubmitting }: any) {
+    const [lecturesPerWeek, setLecturesPerWeek] = useState(2);
     const [data, setData] = useState(initialData || {
         book_name: '',
         start_date: new Date().toISOString().split('T')[0],
@@ -242,12 +243,26 @@ function CourseForm({ initialData, onSave, onCancel, isSubmitting }: any) {
         completed_courses: 0
     });
 
+    // حساب موعد الاختبار تلقائياً عند تغيير عدد المحاضرات أو التاريخ
+    useEffect(() => {
+        if (data.total_lectures > 0 && data.start_date && lecturesPerWeek > 0) {
+            const totalWeeks = data.total_lectures / lecturesPerWeek;
+            const totalDays = Math.ceil(totalWeeks * 7);
+            const startDate = new Date(data.start_date);
+            const endDate = new Date(startDate.getTime() + (totalDays * 24 * 60 * 60 * 1000));
+            
+            // تحديث التاريخ فقط إذا كان فارغاً أو إذا كان المستخدم يعدل في الخانات المؤثرة
+            setData(prev => ({ ...prev, full_exam_date: endDate.toISOString().split('T')[0] }));
+        }
+    }, [data.total_lectures, data.start_date, lecturesPerWeek]);
+
     return (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-blue-50/50 rounded-[32px] p-6 border border-blue-100 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-right">
                 <Input label="اسم الكتاب" value={data.book_name} onChange={(v: string) => setData({...data, book_name: v})} />
                 <Input label="تاريخ البدء" type="date" value={data.start_date} onChange={(v: string) => setData({...data, start_date: v})} />
-                <Input label="عدد المحاضرات" type="number" value={data.total_lectures} onChange={(v: string) => setData({...data, total_lectures: parseInt(v) || 0})} />
+                <Input label="إجمالي المحاضرات" type="number" value={data.total_lectures} onChange={(v: string) => setData({...data, total_lectures: parseInt(v) || 0})} />
+                <Input label="المحاضرات في الأسبوع" type="number" value={lecturesPerWeek} onChange={(v: string) => setLecturesPerWeek(parseInt(v) || 1)} />
                 <Input label="موعد الاختبار النهائي" type="date" value={data.full_exam_date} onChange={(v: string) => setData({...data, full_exam_date: v})} />
                 
                 <div className="flex flex-col gap-2">
