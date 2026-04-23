@@ -45,7 +45,7 @@ export default function IqraFollowupsTab({ student }: IqraFollowupsTabProps) {
 
     // تحديد اسم المسؤول للعرض في السجل
     const supervisorName = useMemo(() => {
-        if (user?.role === 'admin' || user?.role === 'super_admin') {
+        if (user?.role === 'director') {
             return `المدير: ${user?.name || 'محمد مصطفى شكر'}`;
         }
         const group = groups?.find((g: any) => g.id === student?.groupId);
