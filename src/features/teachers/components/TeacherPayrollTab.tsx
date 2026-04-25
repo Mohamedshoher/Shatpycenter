@@ -225,18 +225,9 @@ export const TeacherPayrollTab = ({
                         <button
                             onClick={() => handlePaySalary(remainingToPay, 'صرف نهائي')}
                             disabled={remainingToPay <= 0}
-                            className="h-14 bg-blue-600 text-white rounded-[24px] font-black shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                            className="h-14 bg-blue-600 text-white rounded-[24px] font-black shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 md:col-span-2"
                         >
                             صرف المتبقي ({remainingToPay.toLocaleString()} ج.م) نهائياً 💸
-                        </button>
-                    )}
-                    {!isTeacher && (
-                        <button
-                            onClick={handleSendReport}
-                            className="h-14 bg-green-50 text-green-700 border border-green-100 rounded-[24px] font-black hover:bg-green-100 transition-all text-sm flex items-center justify-center gap-2"
-                        >
-                            <MessageCircle size={18} />
-                            إرسال التقرير للمدرس 💬
                         </button>
                     )}
                 </div>

@@ -94,9 +94,10 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         return selectedDate === todayStr;
     }, [selectedDate]);
 
-    const weekDaysNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const weekDaysNames = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
     const currentDayName = useMemo(() => {
-        return weekDaysNames[new Date(selectedDate).getDay()];
+        // (getDay() + 1) % 7 يرفع الرقم 1 (ليصبح السبت 0 بدلاً من 6 والأحد 1 بدلاً من 0)
+        return weekDaysNames[(new Date(selectedDate).getDay() + 1) % 7];
     }, [selectedDate]);
 
     useEffect(() => {
@@ -109,9 +110,28 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         return `${y}-${m}`;
     }, [selectedDate]);
 
+    const normalizeTime = (t: string) => {
+        if (!t) return '';
+        // تنظيف النص الأساسي
+        let clean = t.replace(/الساعة|ساعة/g, '').trim();
+        
+        // استخراج الأرقام (ساعة ودقائق)
+        const timeMatch = clean.match(/(\d+)(?::(\d+))?/);
+        if (!timeMatch) return t;
+        
+        let hours = parseInt(timeMatch[1]);
+        let minutes = timeMatch[2] || "00";
+        
+        // استخراج الفترة أو استنتاجها (من ١ لـ ١١ تعتبر عصراً في هذا المركز)
+        const periodMatch = t.match(/عصراً|صباحاً/);
+        const period = periodMatch ? periodMatch[0] : (hours < 12 && hours >= 1 ? 'عصراً' : 'صباحاً');
+        
+        return `الساعة ${hours}:${minutes.padStart(2, '0')} ${period}`;
+    };
+
     const availableTimes = useMemo(() => {
         if (!students) return [];
-        const times = new Set<string>();
+        const timesMap = new Map<string, string>(); // Map for normalized -> original
         students.forEach(student => {
              if (student.status !== 'active') return;
              if (groupId && student.groupId !== groupId) return;
@@ -125,13 +145,17 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                          const d = parts[0].trim();
                          const t = parts.slice(1).join(':').trim();
                          if (d === currentDayName && t) {
-                             times.add(t);
+                             const norm = normalizeTime(t);
+                             if (!timesMap.has(norm)) {
+                                 timesMap.set(norm, t);
+                             }
                          }
                      }
                  });
              }
         });
-        return Array.from(times).sort();
+        // نقوم بترتيب المواعيد بناءً على الوقت الموحد
+        return Array.from(timesMap.values()).sort((a, b) => normalizeTime(a).localeCompare(normalizeTime(b), undefined, { numeric: true }));
     }, [students, currentDayName, groupId, user, myGroupsIds]);
 
 
@@ -218,12 +242,13 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             if (scheduleFilterTime !== 'الكل') {
                 let hasTime = false;
                 if (student.appointment) {
+                    const normFilter = normalizeTime(scheduleFilterTime);
                     student.appointment.split(',').forEach((p: string) => {
                         const parts = p.split(':');
                         if (parts.length >= 2) {
                             const d = parts[0].trim();
                             const t = parts.slice(1).join(':').trim();
-                            if (d === currentDayName && t === scheduleFilterTime) {
+                            if (d === currentDayName && normalizeTime(t) === normFilter) {
                                 hasTime = true;
                             }
                         }
@@ -535,7 +560,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                                     scheduleFilterTime === time ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
                                                                 )}
                                                             >
-                                                                ساعة {time}
+                                                                {time.includes('الساعة') ? time : `ساعة ${time}`}
                                                             </button>
                                                         ))}
                                                     </div>
@@ -612,8 +637,17 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 {user?.role !== 'director' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 transition-colors" title="المالية"><CreditCard size={18} /></button>
                                 )}
-                                <button onClick={(e) => { e.stopPropagation(); handleWhatsApp(student); }} className="w-8 h-8 flex items-center justify-center text-green-600 hover:bg-white rounded-lg transition-all" title="تواصل واتساب"><MessageCircle size={18} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleWelcomeWhatsApp(student); }} className="w-8 h-8 flex items-center justify-center text-amber-600 hover:text-amber-700 hover:bg-white rounded-lg transition-all" title="رسالة ترحيب"><MessageCircle size={18} /></button>
+                                <button 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        const isIqra = groups?.find((g: any) => g.id === student.groupId)?.name?.match(/إقراء|اقراء/);
+                                        handleOpenModal(student, isIqra ? 'iqra_courses' : 'exams'); 
+                                    }} 
+                                    className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-white rounded-lg transition-all" 
+                                    title="الاختبارات"
+                                >
+                                    <BookOpen size={18} />
+                                </button>
                                 {user?.role === 'teacher' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'notes'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="الملاحظات"><FileText size={18} /></button>
                                 )}

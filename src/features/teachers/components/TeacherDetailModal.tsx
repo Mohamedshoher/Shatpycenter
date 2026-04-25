@@ -741,7 +741,6 @@ export default function TeacherDetailModal({
                                                 <button onClick={() => onDelete?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="حذف"><Trash2 size={16} /></button>
                                                 <button onClick={() => onEdit?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="تعديل"><Edit3 size={16} /></button>
                                                 <a href={`tel:${teacher!.phone}`} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="اتصال"><Phone size={16} /></a>
-                                                <button onClick={() => window.open(getWhatsAppUrl(teacher!.phone), '_blank')} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-all" title="واتساب"><MessageCircle size={16} /></button>
                                             </div>
                                         ) : (
                                             <p className="text-blue-500 font-bold text-[10px] md:text-sm mt-0.5 whitespace-nowrap">الملف الشخصي للمدرس</p>
