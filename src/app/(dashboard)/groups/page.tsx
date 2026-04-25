@@ -179,7 +179,10 @@ export default function GroupsPage() {
             }
 
             const matchesFilter = (() => {
-                if (filters.includes('الكل')) return true;
+                if (filters.includes('الكل')) {
+                    // إخفاء مجموعات الإقراء من الوضع الافتراضي (الكل) بناءً على طلب المستخدم
+                    return !group.name.includes('إقراء');
+                }
                 
                 return filters.some(f => {
                     if (f === 'حضور ممتاز') return group.attendancePercentage >= 90;

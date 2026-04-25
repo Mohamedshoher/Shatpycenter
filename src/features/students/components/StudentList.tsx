@@ -637,17 +637,31 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 {user?.role !== 'director' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 transition-colors" title="المالية"><CreditCard size={18} /></button>
                                 )}
-                                <button 
-                                    onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        const isIqra = groups?.find((g: any) => g.id === student.groupId)?.name?.match(/إقراء|اقراء/);
-                                        handleOpenModal(student, isIqra ? 'iqra_courses' : 'exams'); 
-                                    }} 
-                                    className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-white rounded-lg transition-all" 
-                                    title="الاختبارات"
-                                >
-                                    <BookOpen size={18} />
-                                </button>
+                                {isManagement ? (
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            const phone = student.parentPhone.replace(/[^0-9]/g, '');
+                                            window.open(`https://wa.me/2${phone}`, '_blank');
+                                        }} 
+                                        className="w-8 h-8 flex items-center justify-center text-green-600 hover:bg-white rounded-lg transition-all" 
+                                        title="واتساب"
+                                    >
+                                        <MessageCircle size={18} />
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            const isIqra = groups?.find((g: any) => g.id === student.groupId)?.name?.match(/إقراء|اقراء/);
+                                            handleOpenModal(student, isIqra ? 'iqra_courses' : 'exams'); 
+                                        }} 
+                                        className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-white rounded-lg transition-all" 
+                                        title="الاختبارات"
+                                    >
+                                        <BookOpen size={18} />
+                                    </button>
+                                )}
                                 {user?.role === 'teacher' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'notes'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="الملاحظات"><FileText size={18} /></button>
                                 )}
