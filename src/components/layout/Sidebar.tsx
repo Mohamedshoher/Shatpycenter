@@ -19,7 +19,8 @@ import {
     Archive,
     MessageCircle,
     Zap,
-    UserCheck
+    UserCheck,
+    CalendarClock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logout } from '@/features/auth/services/authService';
@@ -79,6 +80,12 @@ export default function Sidebar() {
             href: '/finance',
             icon: Wallet,
             roles: ['director']
+        },
+        {
+            label: 'تحليل المواعيد',
+            href: '/schedules',
+            icon: CalendarClock,
+            roles: ['director', 'supervisor', 'teacher']
         },
         {
             label: 'تقارير الحضور',

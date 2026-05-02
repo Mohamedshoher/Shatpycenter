@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Clock, Trash2, Edit2, Loader2 } from 'lucide-react';
+import { Clock, Trash2, Edit2, Loader2, ArrowRightLeft, X } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { updateStudent, getStudents } from '../services/studentService';
@@ -11,6 +11,11 @@ export default function ScheduleTab({ student }: any) {
     const [selectedSchedules, setSelectedSchedules] = useState<Record<string, string>>({});
     const [showSaveSuccess, setShowSaveSuccess] = useState(false);
     const weekDaysNames = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+    const [swapState, setSwapState] = useState<{ day: string, time: string } | null>(null);
+    const [selectedSwapStudentId, setSelectedSwapStudentId] = useState<string>('');
+    const [selectedSlotKey, setSelectedSlotKey] = useState<string>('');
+    const [isSwapping, setIsSwapping] = useState(false);
 
     // جلب بيانات الطلاب والمجموعات للتحقق من السعة
     const { data: allStudents } = useQuery({ queryKey: ['students'], queryFn: getStudents });
@@ -127,6 +132,108 @@ export default function ScheduleTab({ student }: any) {
             
         updateMutation.mutate(appointmentString);
     };
+
+    const updateAppointmentDay = (appointmentStr: string, targetDay: string, newTime: string) => {
+        const finalSchedules: Record<string, string> = {};
+        if (appointmentStr) {
+            appointmentStr.split(',').forEach((p: string) => {
+                const parts = p.split(':');
+                if (parts.length < 2) return;
+                const d = parts[0].trim();
+                const t = parts.slice(1).join(':').trim();
+                if (d) finalSchedules[d] = t;
+            });
+        }
+        finalSchedules[targetDay] = newTime;
+        return Object.keys(finalSchedules)
+            .sort((a, b) => weekDaysNames.indexOf(a) - weekDaysNames.indexOf(b))
+            .map(day => `${day}: ${finalSchedules[day]}`).join(', ');
+    };
+
+    const handleSwapConfirm = async () => {
+        if (!swapState || !selectedSwapStudentId || !allStudents || !selectedSlotKey) return;
+        
+        const selectedSlotData = allGroupSlots.find(slot => slot.time === selectedSlotKey);
+        if (!selectedSlotData) return;
+
+        const targetDay = selectedSlotData.day;
+        const targetTime = selectedSlotData.time;
+
+        const targetStudent = allStudents.find(s => s.id === selectedSwapStudentId);
+        if (!targetStudent) return;
+
+        const replaceAppointmentSlot = (appointmentStr: string, oldDay: string, oldTime: string, newDay: string, newTime: string) => {
+            const finalSchedules: Record<string, string> = {};
+            if (appointmentStr) {
+                appointmentStr.split(',').forEach((p: string) => {
+                    const parts = p.split(':');
+                    if (parts.length >= 2) {
+                        const d = parts[0].trim();
+                        const t = parts.slice(1).join(':').trim();
+                        if (d === oldDay && t === oldTime) {
+                            // استبعاد الموعد القديم
+                        } else {
+                            finalSchedules[d] = t;
+                        }
+                    }
+                });
+            }
+            finalSchedules[newDay] = newTime;
+            return Object.keys(finalSchedules)
+                .sort((a, b) => weekDaysNames.indexOf(a) - weekDaysNames.indexOf(b))
+                .map(day => `${day}: ${finalSchedules[day]}`).join(', ');
+        };
+
+        const myNewAppointment = replaceAppointmentSlot(student.appointment, swapState.day, swapState.time, targetDay, targetTime);
+        const targetNewAppointment = replaceAppointmentSlot(targetStudent.appointment, targetDay, targetTime, swapState.day, swapState.time);
+
+        setIsSwapping(true);
+        try {
+            await Promise.all([
+                updateStudent(student.id, { appointment: myNewAppointment }),
+                updateStudent(targetStudent.id, { appointment: targetNewAppointment })
+            ]);
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            setSwapState(null);
+            setSelectedSwapStudentId('');
+            setSelectedSlotKey('');
+            setShowSaveSuccess(true);
+            setTimeout(() => setShowSaveSuccess(false), 2000);
+        } catch (e) {
+            alert('حدث خطأ أثناء التبديل');
+        } finally {
+            setIsSwapping(false);
+        }
+    };
+
+    const allGroupSlots = useMemo(() => {
+        if (!swapState || !allStudents || !student.groupId) return [];
+        const slotsMap = new Map<string, { day: string, time: string, students: any[] }>();
+        
+        allStudents.forEach(s => {
+            if (s.id !== student.id && s.groupId === student.groupId && s.status === 'active' && s.appointment) {
+                s.appointment.split(',').forEach((p: string) => {
+                    const parts = p.split(':');
+                    if (parts.length >= 2) {
+                        const d = parts[0].trim();
+                        const t = parts.slice(1).join(':').trim();
+                        
+                        // استبعاد المواعيد في أيام أخرى، وكذلك استبعاد نفس الموعد الذي نحاول استبداله
+                        if (d !== swapState.day) return;
+                        if (t === swapState.time) return;
+                        
+                        const key = t; // نكتفي بالوط فقط لأن اليوم معروف
+                        if (!slotsMap.has(key)) {
+                            slotsMap.set(key, { day: d, time: t, students: [] });
+                        }
+                        slotsMap.get(key)!.students.push(s);
+                    }
+                });
+            }
+        });
+        
+        return Array.from(slotsMap.values()).sort((a, b) => a.time.localeCompare(b.time));
+    }, [swapState, allStudents, student.id, student.groupId]);
 
     // وظيفة بدء تعديل موعد موجود
     const handleEditSchedule = (day: string, timeStr: string) => {
@@ -364,6 +471,13 @@ export default function ScheduleTab({ student }: any) {
                                 </div>
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                     <button 
+                                        onClick={() => { setSwapState({ day, time }); setSelectedSlotKey(''); setSelectedSwapStudentId(''); }}
+                                        className="w-8 h-8 flex items-center justify-center text-purple-500 hover:bg-purple-50 rounded-lg transition-colors"
+                                        title="استبدال الموعد مع طالب آخر"
+                                    >
+                                        <ArrowRightLeft size={16} />
+                                    </button>
+                                    <button 
                                         onClick={() => handleEditSchedule(day, time)}
                                         className="w-8 h-8 flex items-center justify-center text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                                         title="تعديل الوقت"
@@ -390,6 +504,109 @@ export default function ScheduleTab({ student }: any) {
                     )}
                 </div>
             </div>
+
+            {/* نافذة التبديل */}
+            {swapState && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-gradient-to-br from-purple-600 to-purple-700 p-6 text-white flex justify-between items-center relative overflow-hidden">
+                            <ArrowRightLeft className="absolute -right-4 -top-4 w-24 h-24 opacity-10 rotate-12" />
+                            <div>
+                                <h3 className="font-black text-xl mb-1 relative z-10">استبدال الموعد</h3>
+                                <p className="text-purple-100 text-xs font-bold relative z-10">
+                                    تبديل موعد يوم {swapState.day} ({swapState.time})
+                                </p>
+                            </div>
+                            <button onClick={() => setSwapState(null)} className="relative z-10 w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6">
+                            {allGroupSlots.length === 0 ? (
+                                <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                    <p className="font-bold">لا يوجد مواعيد أخرى في هذه المجموعة يوم {swapState.day} للتبديل.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {/* الخطوة الأولى: اختيار الموعد */}
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                            <span className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-black">1</span>
+                                            اختر الموعد الذي تود نقل الطالب إليه:
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {allGroupSlots.map(slot => {
+                                                const key = slot.time;
+                                                return (
+                                                    <button
+                                                        key={key}
+                                                        onClick={() => { setSelectedSlotKey(key); setSelectedSwapStudentId(''); }}
+                                                        className={cn("px-4 py-2 rounded-xl text-xs font-black border-2 transition-all duration-300", 
+                                                            selectedSlotKey === key 
+                                                                ? "bg-purple-600 text-white border-purple-600 shadow-md" 
+                                                                : "bg-purple-50 text-purple-700 border-purple-200 hover:border-purple-400"
+                                                        )}
+                                                    >
+                                                        {key}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* الخطوة الثانية: اختيار الطالب */}
+                                    {selectedSlotKey && (
+                                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                                <span className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-black">2</span>
+                                                اختر الطالب المراد التبديل معه:
+                                            </p>
+                                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                                {allGroupSlots.find(slot => slot.time === selectedSlotKey)?.students.map(candidate => (
+                                                    <div 
+                                                        key={candidate.id}
+                                                        onClick={() => setSelectedSwapStudentId(candidate.id)}
+                                                        className={cn("p-3 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between",
+                                                            selectedSwapStudentId === candidate.id 
+                                                                ? 'border-purple-500 bg-purple-50' 
+                                                                : 'border-gray-100 bg-gray-50 hover:border-purple-200'
+                                                        )}
+                                                    >
+                                                        <span className="font-black text-sm text-gray-800">{candidate.fullName}</span>
+                                                        <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                                                            selectedSwapStudentId === candidate.id ? 'border-purple-500' : 'border-gray-300'
+                                                        )}>
+                                                            {selectedSwapStudentId === candidate.id && <div className="w-2.5 h-2.5 bg-purple-500 rounded-full" />}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            
+                            <div className="mt-6 flex gap-3">
+                                <Button 
+                                    onClick={handleSwapConfirm}
+                                    disabled={!selectedSwapStudentId || isSwapping}
+                                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-xl py-6"
+                                >
+                                    {isSwapping ? <Loader2 className="w-5 h-5 animate-spin" /> : 'تأكيد التبديل'}
+                                </Button>
+                                <Button 
+                                    onClick={() => setSwapState(null)}
+                                    variant="outline"
+                                    className="flex-1 font-black rounded-xl py-6"
+                                >
+                                    إلغاء
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
