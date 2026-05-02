@@ -29,7 +29,7 @@ export default function SchedulesDashboard() {
         // فلترة المجموعات بناءً على الصلاحيات والبحث
         let filteredGroups = allGroups;
         if (user?.role === 'teacher') {
-            filteredGroups = filteredGroups.filter(g => g.teacher === user.displayName || g.teacherId === user.id);
+            filteredGroups = filteredGroups.filter(g => g.teacher === user.displayName || g.teacherId === user.teacherId || g.teacherId === user.uid);
         }
 
         if (searchGroup) {
