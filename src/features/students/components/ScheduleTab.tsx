@@ -162,7 +162,7 @@ export default function ScheduleTab({ student }: any) {
         const targetStudent = allStudents.find(s => s.id === selectedSwapStudentId);
         if (!targetStudent) return;
 
-        const replaceAppointmentSlot = (appointmentStr: string, oldDay: string, oldTime: string, newDay: string, newTime: string) => {
+        const replaceAppointmentSlot = (appointmentStr: string | undefined, oldDay: string, oldTime: string, newDay: string, newTime: string) => {
             const finalSchedules: Record<string, string> = {};
             if (appointmentStr) {
                 appointmentStr.split(',').forEach((p: string) => {
