@@ -29,11 +29,11 @@ export default function SchedulesDashboard() {
         // فلترة المجموعات بناءً على الصلاحيات والبحث
         let filteredGroups = allGroups;
         if (user?.role === 'teacher') {
-            filteredGroups = filteredGroups.filter(g => g.teacherName === user.displayName || g.teacherId === user.id);
+            filteredGroups = filteredGroups.filter(g => g.teacher === user.displayName || g.teacherId === user.id);
         }
 
         if (searchGroup) {
-            filteredGroups = filteredGroups.filter(g => g.name.includes(searchGroup) || g.teacherName?.includes(searchGroup));
+            filteredGroups = filteredGroups.filter(g => g.name.includes(searchGroup) || g.teacher?.includes(searchGroup));
         }
 
         const groupsData = filteredGroups.map(group => {
@@ -201,7 +201,7 @@ export default function SchedulesDashboard() {
                                         <h3 className="font-black text-base md:text-lg text-gray-900">{group.name}</h3>
                                         <div className="flex flex-wrap items-center gap-2 md:gap-3 text-[10px] md:text-xs font-bold text-gray-500 mt-1">
                                             <span className="flex items-center gap-1">
-                                                <Users size={14} /> المعلم: {group.teacherName || 'غير محدد'}
+                                                <Users size={14} /> المعلم: {group.teacher || 'غير محدد'}
                                             </span>
                                             <span className="hidden sm:block w-1 h-1 rounded-full bg-gray-300" />
                                             <span>السعة القصوى: {group.maxStudentsPerHour || 5} طلاب/ساعة</span>
