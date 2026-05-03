@@ -38,43 +38,70 @@ export default function AttendanceReportPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [studentToEdit, setStudentToEdit] = useState<any>(null);
 
+    // 0. تحديد الطلاب المسموح للمستخدم رؤيتهم
+    const relevantStudentIds = useMemo(() => {
+        if (!students || !groups || !user) return [];
+        const filteredGroups = groups.filter(g => {
+            if (user.role === 'teacher') return g.teacherId === user.teacherId;
+            if (user.role === 'supervisor') {
+                const sections = user.responsibleSections || [];
+                return sections.some(section => g.name.includes(section));
+            }
+            return true;
+        });
+        const gIds = filteredGroups.map(g => g.id);
+        return students.filter(s => s.status === 'active' && (user.role === 'director' || gIds.includes(s.groupId!))).map(s => s.id);
+    }, [students, groups, user]);
+
+    const groupIdsForQuery = useMemo(() => {
+        if (user?.role === 'director') return 'all';
+        return groups?.filter(g => {
+            if (user?.role === 'teacher') return g.teacherId === user.teacherId;
+            if (user?.role === 'supervisor') return (user.responsibleSections || []).some(sec => g.name.includes(sec));
+            return false;
+        }).map(g => g.id).join(',') || 'none';
+    }, [groups, user]);
+
     // 1. جلب بيانات الغياب والملحوظات
     const { data: reportData, isLoading } = useQuery({
-        queryKey: ['attendance-report-data-v6', selectedDateStr],
+        queryKey: ['attendance-report-v7', selectedDateStr, groupIdsForQuery],
         queryFn: async () => {
             const { supabase } = await import('@/lib/supabase');
-            const { getLatestNotes } = await import('@/features/students/services/recordsService');
 
             const [y, m, d] = selectedDateStr.split('-').map(Number);
             const dObj = new Date(y, m - 1, d);
-            dObj.setDate(dObj.getDate() - 60); // آخر 60 يوم لحساب المتصل بدقة
+            dObj.setDate(dObj.getDate() - 14); // تقليل الفترة لـ 14 يوم فقط بناءً على طلب المستخدم لتسريع التحميل القصوى
             const sinceDate = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
 
             const fetchAllAtt = async () => {
                 let allData: any[] = [];
                 let from = 0;
-                const step = 1000; // Supabase enforced max-rows is usually 1000
+                const step = 1000;
+                
                 while (true) {
-                    const { data, error } = await supabase.from('attendance')
-                        .select('student_id, date, status, created_at')
-                        .gte('date', sinceDate)
-                        .order('created_at', { ascending: false })
+                    let query = supabase.from('attendance')
+                        .select('student_id, date, status')
+                        .gte('date', sinceDate);
+
+                    // فلترة البيانات على السيرفر بدلاً من جلب الكل
+                    if (user?.role !== 'director' && relevantStudentIds.length > 0) {
+                        query = query.in('student_id', relevantStudentIds);
+                    }
+
+                    const { data, error } = await query
+                        .order('date', { ascending: false })
                         .range(from, from + step - 1);
 
                     if (error || !data || data.length === 0) break;
                     allData = [...allData, ...data];
 
-                    // إذا كان الاستعلام أرجع أقل من الحد الأقصى، معناه أننا وصلنا للنهاية
                     if (data.length < step) break;
                     from += step;
                 }
                 return allData;
             };
 
-            const [attData, notes] = await Promise.all([
-                fetchAllAtt(),
-                getLatestNotes()
-            ]);
+            const attData = await fetchAllAtt();
 
             const map: Record<string, any[]> = {};
             (attData || []).forEach(row => {
@@ -85,9 +112,9 @@ export default function AttendanceReportPage() {
                 });
             });
 
-            return { attendanceMap: map, notes };
+            return { attendanceMap: map };
         },
-        enabled: !!students
+        enabled: !!students && (user?.role === 'director' || relevantStudentIds.length > 0)
     });
 
     // 2. معالجة البيانات وحساب الغياب المتصل والكلي
@@ -157,9 +184,7 @@ export default function AttendanceReportPage() {
                     continuousAbsences,
                     absencePercentage,
                     presencePercentage,
-                    currentStatus: dailyStatusMap.get(selectedDateStr) || 'not_recorded',
-                    lastNote: reportData.notes[s.id]?.text || "لا توجد ملحوظات",
-                    lastNoteDate: reportData.notes[s.id]?.date ? new Date(reportData.notes[s.id].date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' }) : ""
+                    currentStatus: dailyStatusMap.get(selectedDateStr) || 'not_recorded'
                 };
             });
     }, [students, reportData, groups, user, selectedDateStr]);

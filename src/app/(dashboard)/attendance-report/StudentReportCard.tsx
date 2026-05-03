@@ -100,11 +100,7 @@ export default function StudentReportCard({ student, index, userRole, onArchive,
                 </div>
             </div>
 
-            {/* الملحوظة الأخيرة */}
-            <div className="bg-gray-50/60 rounded-xl p-2 border border-gray-100 text-right min-h-[38px] flex items-center relative">
-                {student.lastNoteDate && <span className="absolute left-2 top-0.5 text-[7px] text-gray-300 font-bold">{student.lastNoteDate}</span>}
-                <p className="text-[10px] font-bold text-gray-500 leading-tight line-clamp-1 pr-1">{student.lastNote}</p>
-            </div>
+            {/* تم حذف قسم الملحوظات بناءً على طلب المستخدم لزيادة السرعة */}
         </motion.div>
     );
 }
