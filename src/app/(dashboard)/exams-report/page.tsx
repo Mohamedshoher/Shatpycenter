@@ -8,6 +8,7 @@ import {
     Bell,
     Share2,
     ChevronRight,
+    ChevronLeft,
     User,
     AlertCircle,
     Calendar
@@ -62,11 +63,12 @@ export default function ExamsReportPage() {
 
     // --- 4. إدارة الوقت والتاريخ ---
     const [selectedDate, setSelectedDate] = useState(new Date()); // التاريخ المختار للتقارير الشهرية
+    const [selectedHalf, setSelectedHalf] = useState<1 | 2>(new Date().getDate() <= 15 ? 1 : 2); // نصف الشهر المختار
     const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<any>(null); // الطالب المختار لعرض تفاصيله
 
     // تحويل التاريخ إلى مفتاح (مثل 2023-10) لجلب بيانات الاختبارات من السيرفر
     const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-    const { data: allExams = [] } = useAllExams(monthKey);
+    const { data: allExams = [] } = useAllExams(monthKey, selectedHalf);
 
     // تسميات الشهور باللغة العربية
     const currentMonthLabel = selectedDate.toLocaleDateString('ar-EG', { month: 'long' });
@@ -76,6 +78,12 @@ export default function ExamsReportPage() {
     const goToPreviousMonth = () => {
         const d = new Date(selectedDate);
         d.setMonth(d.getMonth() - 1);
+        setSelectedDate(d);
+    };
+
+    const goToNextMonth = () => {
+        const d = new Date(selectedDate);
+        d.setMonth(d.getMonth() + 1);
         setSelectedDate(d);
     };
 
@@ -104,18 +112,18 @@ export default function ExamsReportPage() {
 
                 // تحديد عدد الاختبارات المطلوبة حسب نوع المجموعة
                 // تلقين/نور بيان: 2، قرآن (الافتراضي): 3
-                const isReducedReq = groupName.includes('تلقين') || groupName.includes('نور بيان');
+                const isReducedReq = groupName.includes('تلقين') || groupName.includes('نور بيان') || groupName.includes('نور البيان');
                 const requiredCount = isReducedReq ? 2 : 3;
 
-                // جلب اختبارات الطالب لهذا الشهر (باستثناء "يعاد")
-                const studentExams = allExams.filter((e: any) => e.studentId === s.id && e.grade !== 'يعاد');
+                // جلب اختبارات الطالب لهذا النصف (باستثناء "يعاد")
+                const studentExams = allExams.filter((e: any) => e.studentId === s.id && e.grade?.trim() !== 'يعاد');
 
                 // حساب الأنواع الفريدة التي اختبرها الطالب (مثلاً: جديد، ماضي قريب)
                 // إذا اختبر مرتين "جديد" تحسب مرة واحدة
-                const completedTypes = Array.from(new Set(studentExams.map((e: any) => e.type)));
+                const completedTypes = Array.from(new Set(studentExams.map((e: any) => e.type?.trim())));
 
                 // هل اختبر النوع المحدد في الفلتر؟
-                const hasDoneSelected = completedTypes.includes(selectedArabicType);
+                const hasDoneSelected = completedTypes.includes(selectedArabicType.trim());
 
                 // هل استوفى النصاب المطلوب؟
                 const hasMetQuota = completedTypes.length >= requiredCount;
@@ -167,8 +175,8 @@ export default function ExamsReportPage() {
         return base.map((s: any) => {
             const studentExams = allExams.filter((e: any) =>
                 e.studentId === s.id &&
-                (!arabicType || e.type === arabicType) &&
-                e.grade !== '\u064a\u0639\u0627\u062f' // استبعاد الاختبارات التي نتيجتها "يعاد"
+                (!arabicType || e.type?.trim() === arabicType.trim()) &&
+                e.grade?.trim() !== 'يعاد' // استبعاد الاختبارات التي نتيجتها "يعاد"
             );
 
             return {
@@ -218,11 +226,23 @@ export default function ExamsReportPage() {
                         تقارير الاختبارات <span className="md:inline hidden">({currentMonthLabel})</span>
                     </h1>
 
-                    {/* زر اختيار الشهر */}
-                    <div className="flex bg-gray-100/50 p-1 rounded-xl items-center gap-1 border border-gray-100">
-                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm justify-center cursor-pointer" onClick={goToPreviousMonth}>
-                            <Calendar size={12} className="text-blue-500" />
-                            <span className="text-xs font-black text-gray-700">{monthLabelWithYear}</span>
+                    {/* زر اختيار الشهر والنصف */}
+                    <div className="flex bg-gray-100/50 p-1 rounded-xl items-center gap-1 border border-gray-100 flex-row-reverse">
+                        <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm flex-row-reverse">
+                            <button onClick={() => setSelectedHalf(1)} className={cn("px-2 py-1 text-[10px] md:text-xs font-bold rounded whitespace-nowrap", selectedHalf === 1 ? "bg-blue-50 text-blue-600" : "text-gray-500")}>النصف الأول</button>
+                            <button onClick={() => setSelectedHalf(2)} className={cn("px-2 py-1 text-[10px] md:text-xs font-bold rounded whitespace-nowrap", selectedHalf === 2 ? "bg-blue-50 text-blue-600" : "text-gray-500")}>النصف الثاني</button>
+                        </div>
+                        <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-gray-200 shadow-sm justify-center">
+                            <button onClick={goToNextMonth} className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded text-gray-600 transition-colors">
+                                <ChevronLeft size={16} />
+                            </button>
+                            <div className="flex items-center gap-1.5 px-2">
+                                <Calendar size={12} className="text-blue-500" />
+                                <span className="text-[10px] md:text-xs font-black text-gray-700 whitespace-nowrap">{monthLabelWithYear}</span>
+                            </div>
+                            <button onClick={goToPreviousMonth} className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded text-gray-600 transition-colors">
+                                <ChevronRight size={16} />
+                            </button>
                         </div>
                     </div>
                 </div>

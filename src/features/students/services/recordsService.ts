@@ -238,15 +238,24 @@ export const getStudentExams = async (studentId: string): Promise<ExamRecord[]> 
     }
 };
 
-export const getAllExams = async (monthKey?: string): Promise<ExamRecord[]> => {
+export const getAllExams = async (monthKey?: string, periodHalf?: 1 | 2): Promise<ExamRecord[]> => {
     try {
         let query = supabase.from('exams').select('*');
 
         if (monthKey) {
             // نفترض أن monthKey بصيغة YYYY-MM
-            const lastDay = new Date(parseInt(monthKey.split('-')[0]), parseInt(monthKey.split('-')[1]), 0).getDate();
-            query = query.gte('date', `${monthKey}-01`).lte('date', `${monthKey}-${lastDay}`);
+            if (periodHalf === 1) {
+                query = query.gte('date', `${monthKey}-01`).lte('date', `${monthKey}-15`);
+            } else if (periodHalf === 2) {
+                const lastDay = new Date(parseInt(monthKey.split('-')[0]), parseInt(monthKey.split('-')[1]), 0).getDate();
+                query = query.gte('date', `${monthKey}-16`).lte('date', `${monthKey}-${lastDay}`);
+            } else {
+                const lastDay = new Date(parseInt(monthKey.split('-')[0]), parseInt(monthKey.split('-')[1]), 0).getDate();
+                query = query.gte('date', `${monthKey}-01`).lte('date', `${monthKey}-${lastDay}`);
+            }
         }
+
+        query = query.limit(30000);
 
         const { data, error } = await query;
         if (error) {
