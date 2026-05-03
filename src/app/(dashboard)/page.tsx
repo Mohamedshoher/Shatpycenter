@@ -65,14 +65,26 @@ export default function DashboardOverview() {
     }, [user, router]);
 
     // جلب البيانات الحقيقية
-    const { data: students = [] as Student[], isLoading: loadingStudents } = useQuery({
-        queryKey: ['students'],
-        queryFn: getStudents
-    });
-
     const { data: groups = [] as Group[], isLoading: loadingGroups } = useQuery({
         queryKey: ['groups'],
         queryFn: getGroups
+    });
+
+    // تصفية البيانات حسب دور المستخدم
+    const myGroups = useMemo(() => {
+        if (!groups) return [];
+        return user?.role === 'teacher'
+            ? groups.filter((g: Group) => g.teacherId === user.teacherId)
+            : user?.role === 'supervisor'
+                ? groups.filter((g: Group) => (user.responsibleSections || []).some(section => g.name.includes(section)))
+                : groups;
+    }, [groups, user]);
+
+    const myGroupsIds = useMemo(() => myGroups.map(g => g.id), [myGroups]);
+
+    const { data: students = [] as Student[], isLoading: loadingStudents } = useQuery({
+        queryKey: ['students', myGroupsIds?.length],
+        queryFn: () => getStudents(myGroupsIds)
     });
 
     const { data: transactions = [] as FinancialTransaction[], isLoading: loadingFinance } = useQuery({
@@ -88,19 +100,10 @@ export default function DashboardOverview() {
             return data || [];
         }
     });
-
-    // تصفية البيانات حسب دور المستخدم
-    const myGroups = user?.role === 'teacher'
-        ? groups.filter((g: Group) => g.teacherId === user.teacherId)
-        : user?.role === 'supervisor'
-            ? groups.filter((g: Group) => (user.responsibleSections || []).some(section => g.name.includes(section)))
-            : groups;
-
-    const myGroupsIds = myGroups.map((g: Group) => g.id);
     // استبعاد الطلاب المؤرشفين من العد الإجمالي
     const activeStudents = students.filter((s: Student) => s.status !== 'archived');
     const myStudents = (user?.role === 'teacher' || user?.role === 'supervisor')
-        ? activeStudents.filter((s: Student) => myGroupsIds.includes(s.groupId || ''))
+        ? activeStudents
         : activeStudents;
 
     const myAttendanceCount = (user?.role === 'teacher' || user?.role === 'supervisor')

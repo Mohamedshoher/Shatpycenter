@@ -1,11 +1,17 @@
 import { Student } from "@/types";
 import { supabase } from "@/lib/supabase";
 
-export const getStudents = async (): Promise<Student[]> => {
+export const getStudents = async (groupIds?: string[]): Promise<Student[]> => {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('students')
             .select('*');
+
+        if (groupIds && groupIds.length > 0) {
+            query = query.in('group_id', groupIds);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error("Supabase error fetching students:", error.message || error);

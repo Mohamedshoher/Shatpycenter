@@ -43,27 +43,37 @@ interface StudentListProps {
 }
 
 export default function StudentList({ groupId, customTitle }: StudentListProps) {
-    const { data: students, isLoading } = useStudents();
     const { data: groups } = useGroups();
-    const { data: teachers } = useTeachers();
-    const { toggleSidebar } = useUIStore();
     const { user } = useAuthStore();
+    const { toggleSidebar } = useUIStore();
     const queryClient = useQueryClient();
 
-    const myGroups = useMemo(() => {
-        return groups?.filter(g => {
+    const myGroupsIds = useMemo(() => {
+        if (!groups) return undefined;
+        return groups.filter(g => {
             if (user?.role === 'teacher') return g.teacherId === user.teacherId;
             if (user?.role === 'supervisor') {
                 const sections = user.responsibleSections || [];
-                if (sections.length > 0) {
-                    return sections.some(section => g.name.includes(section));
-                }
+                return sections.some(section => g.name.includes(section));
             }
             return true;
-        }) || [];
+        }).map(g => g.id);
     }, [groups, user]);
 
-    const myGroupsIds = useMemo(() => myGroups.map(g => g.id), [myGroups]);
+    const { data: students, isLoading } = useStudents(myGroupsIds);
+    const { data: teachers } = useTeachers();
+
+    const myGroups = useMemo(() => {
+        if (!groups) return [];
+        return groups.filter(g => {
+            if (user?.role === 'teacher') return g.teacherId === user.teacherId;
+            if (user?.role === 'supervisor') {
+                const sections = user.responsibleSections || [];
+                return sections.some(section => g.name.includes(section));
+            }
+            return true;
+        });
+    }, [groups, user]);
 
     const groupsMap = useMemo(() => {
         return (groups || []).reduce((acc, g) => {

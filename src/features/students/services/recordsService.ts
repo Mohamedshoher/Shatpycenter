@@ -238,7 +238,7 @@ export const getStudentExams = async (studentId: string): Promise<ExamRecord[]> 
     }
 };
 
-export const getAllExams = async (monthKey?: string, periodHalf?: 1 | 2): Promise<ExamRecord[]> => {
+export const getAllExams = async (monthKey?: string, periodHalf?: 1 | 2, studentIds?: string[]): Promise<ExamRecord[]> => {
     try {
         let query = supabase.from('exams').select('*');
 
@@ -255,7 +255,11 @@ export const getAllExams = async (monthKey?: string, periodHalf?: 1 | 2): Promis
             }
         }
 
-        query = query.limit(30000);
+        if (studentIds && studentIds.length > 0) {
+            query = query.in('student_id', studentIds);
+        }
+
+        query = query.limit(10000); // 10000 is usually enough for a month's exams
 
         const { data, error } = await query;
         if (error) {
@@ -701,7 +705,7 @@ export const getLatestNotes = async () => {
     }
 };
 
-export const getAllStudentNotesWithDetails = async () => {
+export const getAllStudentNotesWithDetails = async (limit: number = 20) => {
     try {
         const { data, error } = await supabase
             .from('student_notes')
@@ -730,7 +734,8 @@ export const getAllStudentNotesWithDetails = async () => {
                 )
             `)
             .eq('students.status', 'active')
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(limit);
 
         if (error) throw error;
 
