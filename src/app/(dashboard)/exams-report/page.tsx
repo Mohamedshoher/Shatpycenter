@@ -224,7 +224,7 @@ export default function ExamsReportPage() {
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
 
             {/* --- الهيدر (رأس الصفحة) --- */}
-            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30 px-10 md:px-6 py-3">
+            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30 px-4 md:px-6 py-3">
                 <div className="flex items-center justify-between max-w-5xl mx-auto gap-4">
                     <h1 className="text-lg font-black text-gray-800">
                     الاختبارات <span className="md:inline hidden">({currentMonthLabel})</span>
@@ -252,7 +252,7 @@ export default function ExamsReportPage() {
                 </div>
 
                 {/* --- شريط التنقل بين التبويبات --- */}
-                <div className="max-w-5xl mx-auto mt-4 flex bg-gray-100/80 p-1 rounded-xl gap-1 overflow-x-auto no-scrollbar px-10 md:px-0">
+                <div className="max-w-5xl mx-auto mt-4 flex bg-gray-100/80 p-1 rounded-xl gap-1 overflow-x-auto no-scrollbar px-4 md:px-0">
 
                     <button
                         onClick={() => setActiveTab('performance')}
@@ -289,7 +289,7 @@ export default function ExamsReportPage() {
                 </div>
             </header>
 
-            <main className="max-w-5xl mx-auto px-10 py-4 md:p-6 space-y-6">
+            <main className="max-w-5xl mx-auto px-4 py-4 md:p-6 space-y-6">
                 <AnimatePresence mode="wait">
 
                     {/* --- التبويب 1: قائمة الطلاب الذين لم يختبروا (الباقي) --- */}
