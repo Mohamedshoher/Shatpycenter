@@ -5,15 +5,25 @@ import { useQuery } from '@tanstack/react-query';
 import { getStudents } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Clock, Users, ArrowRight, Loader2, CalendarClock, TrendingUp, Filter } from 'lucide-react';
+import { Clock, Users, ArrowRight, Loader2, CalendarClock, TrendingUp, Filter, UserMinus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import StudentDetailModal from '@/features/students/components/StudentDetailModal';
 
 export default function SchedulesDashboard() {
     const { user } = useAuthStore();
     const [selectedDay, setSelectedDay] = useState<string>('الأحد');
     const [searchGroup, setSearchGroup] = useState<string>('');
     const [expandedSlotId, setExpandedSlotId] = useState<string | null>(null);
+    const [expandedUnscheduledGroupId, setExpandedUnscheduledGroupId] = useState<string | null>(null);
+    const [expandedGroupSlotsIds, setExpandedGroupSlotsIds] = useState<string[]>([]);
+    const [selectedStudentForModal, setSelectedStudentForModal] = useState<any | null>(null);
+
+    const toggleGroupSlots = (groupId: string) => {
+        setExpandedGroupSlotsIds(prev => 
+            prev.includes(groupId) ? prev.filter(id => id !== groupId) : [...prev, groupId]
+        );
+    };
 
     const weekDaysNames = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
@@ -41,23 +51,28 @@ export default function SchedulesDashboard() {
             
             // استخراج المواعيد الخاصة بهذه المجموعة في اليوم المحدد
             const slotsMap = new Map<string, any[]>();
+            const studentsWithoutSchedule: any[] = [];
 
             allStudents.forEach(s => {
-                if (s.groupId === group.id && s.status === 'active' && s.appointment) {
-                    s.appointment.split(',').forEach((p: string) => {
-                        const parts = p.split(':');
-                        if (parts.length >= 2) {
-                            const d = parts[0].trim();
-                            const t = parts.slice(1).join(':').trim();
-                            
-                            if (d === selectedDay) {
-                                if (!slotsMap.has(t)) {
-                                    slotsMap.set(t, []);
+                if (s.groupId === group.id && s.status === 'active') {
+                    if (s.appointment) {
+                        s.appointment.split(',').forEach((p: string) => {
+                            const parts = p.split(':');
+                            if (parts.length >= 2) {
+                                const d = parts[0].trim();
+                                const t = parts.slice(1).join(':').trim();
+                                
+                                if (d === selectedDay) {
+                                    if (!slotsMap.has(t)) {
+                                        slotsMap.set(t, []);
+                                    }
+                                    slotsMap.get(t)!.push(s);
                                 }
-                                slotsMap.get(t)!.push(s);
                             }
-                        }
-                    });
+                        });
+                    } else {
+                        studentsWithoutSchedule.push(s);
+                    }
                 }
             });
 
@@ -103,7 +118,8 @@ export default function SchedulesDashboard() {
             return {
                 ...group,
                 slots,
-                totalStudentsToday: slots.reduce((sum, slot) => sum + slot.count, 0)
+                totalStudentsToday: slots.reduce((sum, slot) => sum + slot.count, 0),
+                studentsWithoutSchedule
             };
         });
 
@@ -130,7 +146,7 @@ export default function SchedulesDashboard() {
                         تحليل ومراقبة المواعيد
                     </h1>
                     <p className="text-gray-500 text-sm mt-1 font-bold">
-                        راقب توزيع الطلاب على المجموعات والساعات لتحديد أوقات الضغط والفراغ
+                        راقب توزيع الطلاب على المجموعات
                     </p>
                 </div>
                 
@@ -209,19 +225,80 @@ export default function SchedulesDashboard() {
                                     </div>
                                 </div>
                                 
-                                <div className="bg-white px-3 md:px-4 py-2 rounded-xl border border-gray-100 shadow-sm flex items-center gap-2 w-fit">
-                                    <TrendingUp size={16} className={group.totalStudentsToday > 0 ? "text-blue-500" : "text-gray-400"} />
-                                    <span className="text-[10px] md:text-xs font-bold text-gray-600">إجمالي طلاب اليوم:</span>
-                                    <span className="font-black text-blue-600 text-sm md:text-base">{group.totalStudentsToday}</span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {group.studentsWithoutSchedule?.length > 0 && (
+                                        <button 
+                                            onClick={() => setExpandedUnscheduledGroupId(expandedUnscheduledGroupId === group.id ? null : group.id)}
+                                            className={cn(
+                                                "px-3 md:px-4 py-2 rounded-xl border shadow-sm flex items-center gap-2 w-fit transition-colors",
+                                                expandedUnscheduledGroupId === group.id 
+                                                    ? "bg-red-100 text-red-700 border-red-200" 
+                                                    : "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
+                                            )}
+                                        >
+                                            <UserMinus size={16} />
+                                            <span className="text-[10px] md:text-xs font-bold">بدون موعد:</span>
+                                            <span className="font-black text-sm md:text-base">{group.studentsWithoutSchedule.length}</span>
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={() => toggleGroupSlots(group.id)}
+                                        className={cn(
+                                            "px-3 md:px-4 py-2 rounded-xl border shadow-sm flex items-center gap-2 w-fit transition-all duration-300",
+                                            expandedGroupSlotsIds.includes(group.id)
+                                                ? "bg-blue-50 border-blue-200"
+                                                : "bg-white border-gray-100 hover:bg-gray-50 hover:border-gray-200"
+                                        )}
+                                    >
+                                        <TrendingUp size={16} className={group.totalStudentsToday > 0 ? "text-blue-500" : "text-gray-400"} />
+                                        <span className="text-[10px] md:text-xs font-bold text-gray-600">إجمالي طلاب اليوم:</span>
+                                        <span className="font-black text-blue-600 text-sm md:text-base">{group.totalStudentsToday}</span>
+                                    </button>
                                 </div>
                             </div>
 
+                            {/* Unscheduled Students List */}
+                            <AnimatePresence>
+                                {expandedUnscheduledGroupId === group.id && group.studentsWithoutSchedule?.length > 0 && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="overflow-hidden bg-red-50/30 border-b border-red-100/50"
+                                    >
+                                        <div className="p-4 md:p-5">
+                                            <p className="text-xs font-bold text-red-600 mb-3">الطلاب الذين لم يسجلوا مواعيد بعد (انقر على اسم الطالب لتسجيل موعد):</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {group.studentsWithoutSchedule.map((st: any) => (
+                                                    <button
+                                                        key={st.id}
+                                                        onClick={() => setSelectedStudentForModal(st)}
+                                                        className="text-xs font-bold text-gray-700 bg-white px-3 py-2 rounded-lg border border-red-200 flex items-center gap-2 hover:bg-red-50 hover:text-red-700 hover:shadow-sm transition-all"
+                                                    >
+                                                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                                                        {st.fullName}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             {/* Time Slots */}
-                            <div className="p-5">
-                                {group.slots.length === 0 ? (
-                                    <div className="text-center py-6 text-gray-400 font-bold text-sm bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                                        لا توجد مواعيد مسجلة في هذه المجموعة يوم {selectedDay}
-                                    </div>
+                            <AnimatePresence>
+                                {expandedGroupSlotsIds.includes(group.id) && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="overflow-hidden"
+                                    >
+                                        <div className="p-5 border-t border-gray-100">
+                                            {group.slots.length === 0 ? (
+                                                <div className="text-center py-6 text-gray-400 font-bold text-sm bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                                                    لا توجد مواعيد مسجلة في هذه المجموعة يوم {selectedDay}
+                                                </div>
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {group.slots.map((slot, idx) => {
@@ -287,13 +364,26 @@ export default function SchedulesDashboard() {
                                             </div>
                                             );
                                         })}
-                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
                                 )}
-                            </div>
+                            </AnimatePresence>
                         </motion.div>
                     ))
                 )}
             </div>
+
+            {/* Student Detail Modal for Schedule Update */}
+            {selectedStudentForModal && (
+                <StudentDetailModal
+                    student={selectedStudentForModal}
+                    isOpen={!!selectedStudentForModal}
+                    onClose={() => setSelectedStudentForModal(null)}
+                    initialTab="schedule"
+                />
+            )}
         </div>
     );
 }

@@ -223,7 +223,7 @@ export default function ExamsReportPage() {
             <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30 px-4 md:px-6 py-3">
                 <div className="flex items-center justify-between max-w-5xl mx-auto gap-4">
                     <h1 className="text-lg font-black text-gray-800">
-                        تقارير الاختبارات <span className="md:inline hidden">({currentMonthLabel})</span>
+                    الاختبارات <span className="md:inline hidden">({currentMonthLabel})</span>
                     </h1>
 
                     {/* زر اختيار الشهر والنصف */}
