@@ -11,9 +11,10 @@ import {
     ChevronLeft,
     User,
     AlertCircle,
-    Calendar
+    Calendar,
+    MessageCircle
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- استيراد الـ Hooks والـ Stores الخاصة بالتطبيق ---
@@ -186,6 +187,7 @@ export default function ExamsReportPage() {
             return {
                 ...s,
                 examsCount: studentExams.length,
+                examsList: studentExams.map((e: any) => `${e.part || e.courseName} (${e.type || 'اختبار'})`).join(' - '),
                 groupName: groups?.find((g: any) => g.id === s.groupId)?.name || 'غير محدد'
             };
         })
@@ -445,6 +447,23 @@ export default function ExamsReportPage() {
                                                 <span className="text-blue-600 font-black text-sm font-sans">{student.examsCount}</span>
                                                 <span className="text-xs text-blue-400 font-bold">اختبار</span>
                                             </div>
+                                            
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const phone = student.parentPhone || student.studentPhone || '';
+                                                    const cleanPhone = phone.replace(/[^0-9]/g, '');
+                                                    const last6Digits = cleanPhone.slice(-6);
+                                                    
+                                                    const message = `السلام عليكم ورحمة الله وبركاته 🌹\nنزف إليكم سعادة وفرحاً بتفوق الطالب/ة: *${student.fullName}*\nلقد أتم اختباراته بنجاح لهذا الشهر (${currentMonthLabel}) 🌟\n\nما تم اختباره:\n- ${student.examsList}\n\nنتمنى له/لها دوام التوفيق والنجاح.\n\nيمكنكم متابعة النتائج والتسجيل في الحلقات عبر رابط موقعنا:\n🔗 https://shatpycenter-um2b.vercel.app/\n\n🔐 بيانات الدخول:\nاسم المستخدم: *رقم الهاتف المسجل*\nالباسورد: *آخر 6 أرقام (${last6Digits})*\n\nمع تحيات إدارة مركز الشاطبي 🏛️`;
+                                                    window.open(getWhatsAppUrl(phone, message), '_blank');
+                                                }}
+                                                className="w-9 h-9 bg-green-50 text-green-600 rounded-xl flex items-center justify-center hover:bg-green-600 hover:text-white transition-all shadow-sm border border-green-100"
+                                                title="إرسال التهنئة عبر واتساب"
+                                            >
+                                                <MessageCircle size={18} />
+                                            </button>
+
                                             <button className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
                                                 <ChevronRight size={16} />
                                             </button>

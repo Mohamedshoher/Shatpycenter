@@ -225,19 +225,24 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
     if (!teachers?.length) return [];
 
     const teacherIds = teachers.map(t => t.id);
-    const [ { data: allDeductions }, { data: allGroups }, { data: allAttendance } ] = await Promise.all([
+    const [ { data: allDeductions }, { data: allGroups }, { data: allAttendance }, { data: teacherAttendance } ] = await Promise.all([
         supabase.from('deductions').select('teacher_id').in('teacher_id', teacherIds).eq('date', dateStr).eq('applied_by', 'system-automation'),
         supabase.from('groups').select('teacher_id, students(id)').in('teacher_id', teacherIds),
-        supabase.from('attendance').select('student_id').gte('date', `${dateStr}T00:00:00`).lte('date', `${dateStr}T23:59:59`)
+        supabase.from('attendance').select('student_id').gte('date', `${dateStr}T00:00:00`).lte('date', `${dateStr}T23:59:59`),
+        supabase.from('teacher_attendance').select('teacher_id, status').in('teacher_id', teacherIds).eq('date', dateStr)
     ]);
 
     const alreadyDeducted = new Set(allDeductions?.map(d => d.teacher_id));
     const submittedStudents = new Set(allAttendance?.map(a => a.student_id));
+    const absentTeachers = new Set(teacherAttendance?.filter(a => a.status === 'absent').map(a => a.teacher_id));
     const logs = [];
 
     for (const t of teachers) {
         const studentIds = (allGroups?.filter(g => g.teacher_id === t.id) || []).flatMap(g => (g.students as any[] || []).map(s => s.id));
         if (studentIds.length === 0) continue;
+
+        // تخطي المعلم إذا كان غائباً (لأن الخصم يطبق يدوياً عند الغياب)
+        if (absentTeachers.has(t.id)) continue;
 
         if (!studentIds.some(id => submittedStudents.has(id)) && !alreadyDeducted.has(t.id)) {
             const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسليم التقرير اليومي (أتمتة)', rule.id, 'فحص التقارير اليومية', dateStr, startTime);
@@ -271,19 +276,24 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
     if (!teachers?.length) return [];
 
     const teacherIds = teachers.map(t => t.id);
-    const [ { data: allGroups }, { data: allExams }, { data: allDeductions } ] = await Promise.all([
+    const [ { data: allGroups }, { data: allExams }, { data: allDeductions }, { data: teacherAttendance } ] = await Promise.all([
         supabase.from('groups').select('teacher_id, students(id)').in('teacher_id', teacherIds),
         supabase.from('exams').select('student_id').gte('date', `${dateStr}T00:00:00`).lte('date', `${dateStr}T23:59:59`),
-        supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).eq('date', dateStr).eq('applied_by', 'system-automation')
+        supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).eq('date', dateStr).eq('applied_by', 'system-automation'),
+        supabase.from('teacher_attendance').select('teacher_id, status').in('teacher_id', teacherIds).eq('date', dateStr)
     ]);
 
     const examStudents = new Set(allExams?.map(e => e.student_id));
     const alreadyDeducted = new Set(allDeductions?.map(d => d.teacher_id));
+    const absentTeachers = new Set(teacherAttendance?.filter(a => a.status === 'absent').map(a => a.teacher_id));
     const logs = [];
 
     for (const t of teachers) {
         const studentIds = (allGroups?.filter(g => g.teacher_id === t.id) || []).flatMap(g => (g.students as any[] || []).map(s => s.id));
         if (studentIds.length === 0) continue;
+
+        // تخطي المعلم إذا كان غائباً (لأن الخصم يطبق يدوياً عند الغياب)
+        if (absentTeachers.has(t.id)) continue;
 
         if (!studentIds.some(id => examStudents.has(id)) && !alreadyDeducted.has(t.id)) {
             const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسجيل الاختبارات الأسبوعية', rule.id, 'فحص الاختبارات الأسبوعية', dateStr, startTime);

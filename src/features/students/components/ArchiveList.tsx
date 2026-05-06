@@ -18,7 +18,9 @@ import {
     Clock,
     AlertCircle,
     Check,
-    MessageCircle
+    MessageCircle,
+    Gift,
+    Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
@@ -112,6 +114,25 @@ export default function ArchiveList() {
         enabled: !!students
     });
 
+    // جلب كافة الإعفاءات للطلاب المؤرشفين
+    const { data: allExemptions = [], refetch: refetchExemptions } = useQuery({
+        queryKey: ['all-exemptions', students?.filter(s => s.status === 'archived').length],
+        queryFn: async () => {
+            if (!students) return [];
+            const archivedIds = students.filter(s => s.status === 'archived').map(s => s.id);
+            if (archivedIds.length === 0) return [];
+
+            const { supabase } = await import('@/lib/supabase');
+            const { data, error } = await supabase
+                .from('free_exemptions')
+                .select('*')
+                .in('student_id', archivedIds);
+            
+            return data || [];
+        },
+        enabled: !!students
+    });
+
     // منطق الدين المتطور: يعتمد على عدد أيام الحضور في الشهر
     const calculateDebt = (student: Student) => {
         const studentFees = allFees.filter(f => f.student_id === student.id);
@@ -131,6 +152,7 @@ export default function ArchiveList() {
         const target = new Date(end.getFullYear(), end.getMonth(), 1);
 
         let totalMonthDebt = 0;
+        const unpaidMonths: string[] = [];
 
         while (current <= target) {
             const monthLabel = current.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
@@ -153,8 +175,11 @@ export default function ArchiveList() {
 
             if (monthDebtAmount > 0) {
                 const isPaid = studentFees.some(f => f.month === monthLabel || f.month === monthKey);
-                if (!isPaid) {
+                const isExempted = allExemptions.some(e => e.student_id === student.id && (e.month === monthLabel || e.month === monthKey));
+                
+                if (!isPaid && !isExempted) {
                     totalMonthDebt += monthDebtAmount;
+                    unpaidMonths.push(monthLabel);
                 }
             }
 
@@ -169,8 +194,40 @@ export default function ArchiveList() {
         return {
             isIndebted: totalMonthDebt > 0,
             amount: totalMonthDebt,
-            label
+            label,
+            unpaidMonths
         };
+    };
+
+    const [isExempting, setIsExempting] = useState<string | null>(null);
+    const handleExemptAll = async (student: Student, debtInfo: any) => {
+        if (!debtInfo.isIndebted) return;
+        if (!confirm(`هل أنت متأكد من العفو عن كافة المتأخرات للطالب ${student.fullName}؟`)) return;
+
+        setIsExempting(student.id);
+        try {
+            const { supabase } = await import('@/lib/supabase');
+            const exemptionsToInsert = (debtInfo.unpaidMonths || []).map((month: string) => ({
+                student_id: student.id,
+                student_name: student.fullName,
+                month: month,
+                amount: student.monthlyAmount || 100,
+                exempted_by: user?.displayName || 'المدير',
+                created_at: new Date().toISOString()
+            }));
+
+            if (exemptionsToInsert.length > 0) {
+                const { error } = await supabase.from('free_exemptions').insert(exemptionsToInsert);
+                if (error) throw error;
+                await refetchExemptions();
+                alert('تم العفو عن المتأخرات بنجاح');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('حدث خطأ أثناء تنفيذ العفو');
+        } finally {
+            setIsExempting(null);
+        }
     };
 
     const archivedStudents = useMemo(() => {
@@ -214,7 +271,7 @@ export default function ArchiveList() {
                     const diffTime = t.getTime() - s.getTime();
                     const diffDays = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
                     
-                    matchesFilter = diffDays >= daysInArchiveFilter;
+                    matchesFilter = diffDays <= daysInArchiveFilter;
                 }
             }
 
@@ -470,11 +527,6 @@ export default function ArchiveList() {
                                                 <h3 className="font-bold text-gray-900 truncate text-lg sm:text-xl">
                                                     {student.fullName}
                                                 </h3>
-                                            {debtInfo.isIndebted && (
-                                                <span className="text-[10px] text-red-600 font-black bg-red-50 px-2 py-0.5 rounded-md border border-red-100 shrink-0">
-                                                    مدين
-                                                </span>
-                                            )}
                                             <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-lg border border-gray-100 shrink-0">
                                                 {groups?.find(g => g.id === student.groupId)?.name || 'غير محدد'}
                                             </span>
@@ -499,18 +551,38 @@ export default function ArchiveList() {
 
                                     <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-xl border border-gray-100">
                                         {debtInfo.isIndebted && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const phone = student.parentPhone || student.studentPhone || '';
-                                                    const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\nنود إعلامكم أن الطالب مدين بـ *${debtInfo.label}* كرسوم متأخرة.\nيرجى المبادرة بالسداد وشكراً لتعاونكم مركز الشاطبي لتحفيظ القرآن الكريم.`;
-                                                    window.open(getWhatsAppUrl(phone, message), '_blank');
-                                                }}
-                                                className="w-9 h-9 flex items-center justify-center bg-white text-green-500 rounded-lg hover:bg-green-500 hover:text-white transition-all active:scale-95 shadow-sm border border-gray-100"
-                                                title="مراسلة عبر واتساب"
-                                            >
-                                                <MessageCircle size={18} />
-                                            </button>
+                                            <>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const phone = student.parentPhone || student.studentPhone || '';
+                                                        const monthlyAmount = student.monthlyAmount || 100;
+                                                        const totalAmount = debtInfo.amount * monthlyAmount;
+                                                        const monthsText = (debtInfo.unpaidMonths || []).join('، ');
+                                                        
+                                                        const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\n\nنود إعلامكم أن الطالب مدين بـ *${debtInfo.label}* كرسوم متأخرة.\n🗓️ الأشهر المستحقة: (${monthsText})\n💰 المبلغ المطلوب: *${totalAmount} جنيه*\n\n💳 رقم الهاتف للدفع (كاش أو إنستا): *01064116467*\n\nونأسف لو في أي خطأ ويسعدنا خدمتكم في أي وقت.`;
+                                                        window.open(getWhatsAppUrl(phone, message), '_blank');
+                                                    }}
+                                                    className="w-9 h-9 flex items-center justify-center bg-white text-green-500 rounded-lg hover:bg-green-500 hover:text-white transition-all active:scale-95 shadow-sm border border-gray-100"
+                                                    title="مراسلة عبر واتساب"
+                                                >
+                                                    <MessageCircle size={18} />
+                                                </button>
+
+                                                {user?.role === 'director' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleExemptAll(student, debtInfo);
+                                                        }}
+                                                        disabled={isExempting === student.id}
+                                                        className="w-9 h-9 flex items-center justify-center bg-white text-amber-500 rounded-lg hover:bg-amber-500 hover:text-white transition-all active:scale-95 shadow-sm border border-gray-100 disabled:opacity-50"
+                                                        title="العفو عن المتأخرات"
+                                                    >
+                                                        {isExempting === student.id ? <Loader2 size={18} className="animate-spin" /> : <Gift size={18} />}
+                                                    </button>
+                                                )}
+                                            </>
                                         )}
                                         <button
                                             onClick={(e) => {
