@@ -17,12 +17,12 @@ export default function PendingStudentsPage() {
 
     const { data: allStudents = [], isLoading } = useQuery({
         queryKey: ['students'],
-        queryFn: getStudents
+        queryFn: () => getStudents()
     });
 
     const { data: groups = [] } = useQuery({
         queryKey: ['groups'],
-        queryFn: getGroups
+        queryFn: () => getGroups()
     });
 
     const pendingStudents = allStudents.filter(s => s.status === 'pending');

@@ -34,7 +34,7 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
     // 1. جلب بيانات المدرسين باستخدام React Query
     const { data: teachers } = useQuery({
         queryKey: ['teachers'],
-        queryFn: getTeachers
+        queryFn: () => getTeachers()
     });
 
     // 2. إدارة حالة البيانات داخل النموذج (State Management)

@@ -34,7 +34,7 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
 
     const { data: groups } = useQuery({
         queryKey: ['groups'],
-        queryFn: getGroups
+        queryFn: () => getGroups()
     });
 
     const myGroups = (groups?.filter((g: Group) => {

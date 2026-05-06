@@ -27,8 +27,8 @@ export default function SchedulesDashboard() {
 
     const weekDaysNames = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
-    const { data: allStudents, isLoading: isStudentsLoading } = useQuery({ queryKey: ['students'], queryFn: getStudents });
-    const { data: allGroups, isLoading: isGroupsLoading } = useQuery({ queryKey: ['groups'], queryFn: getGroups });
+    const { data: allStudents, isLoading: isStudentsLoading } = useQuery({ queryKey: ['students'], queryFn: () => getStudents() });
+    const { data: allGroups, isLoading: isGroupsLoading } = useQuery({ queryKey: ['groups'], queryFn: () => getGroups() });
 
     const isLoading = isStudentsLoading || isGroupsLoading;
 

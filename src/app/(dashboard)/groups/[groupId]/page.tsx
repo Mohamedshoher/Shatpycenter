@@ -17,17 +17,17 @@ export default function GroupDetailPage() {
 
     const { data: groups } = useQuery({
         queryKey: ['groups'],
-        queryFn: getGroups
+        queryFn: () => getGroups()
     });
 
     const { data: teachers } = useQuery({
         queryKey: ['teachers'],
-        queryFn: getTeachers
+        queryFn: () => getTeachers()
     });
 
     const { data: students } = useQuery({
         queryKey: ['students'],
-        queryFn: getStudents
+        queryFn: () => getStudents()
     });
 
     const group = useMemo(() => {

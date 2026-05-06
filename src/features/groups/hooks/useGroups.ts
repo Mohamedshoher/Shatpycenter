@@ -5,7 +5,7 @@ import { Group } from '@/types';
 export const useGroups = () => {
     return useQuery({
         queryKey: ['groups'],
-        queryFn: getGroups,
+        queryFn: () => getGroups(),
     });
 };
 

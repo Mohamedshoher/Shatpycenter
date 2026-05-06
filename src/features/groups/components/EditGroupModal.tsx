@@ -15,7 +15,7 @@ interface EditGroupModalProps {
 
 export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModalProps) {
     const queryClient = useQueryClient();
-    const { data: teachers } = useQuery({ queryKey: ['teachers'], queryFn: getTeachers });
+    const { data: teachers } = useQuery({ queryKey: ['teachers'], queryFn: () => getTeachers() });
 
     const [editGroupName, setEditGroupName] = useState('');
     const [editTeacherId, setEditTeacherId] = useState('');

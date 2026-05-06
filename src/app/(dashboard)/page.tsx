@@ -67,7 +67,7 @@ export default function DashboardOverview() {
     // جلب البيانات الحقيقية
     const { data: groups = [] as Group[], isLoading: loadingGroups } = useQuery({
         queryKey: ['groups'],
-        queryFn: getGroups
+        queryFn: () => getGroups()
     });
 
     // تصفية البيانات حسب دور المستخدم
@@ -119,7 +119,7 @@ export default function DashboardOverview() {
 
     const { data: leaveRequests = [], refetch: refetchLeaves } = useQuery({
         queryKey: ['leave-requests'],
-        queryFn: getLeaveRequests,
+        queryFn: () => getLeaveRequests(),
         enabled: user?.role === 'director' || user?.role === 'supervisor'
     });
 
@@ -127,7 +127,7 @@ export default function DashboardOverview() {
 
     const { data: studentNotes = [] } = useQuery({
         queryKey: ['student-notes-details'],
-        queryFn: getAllStudentNotesWithDetails,
+        queryFn: () => getAllStudentNotesWithDetails(),
         enabled: user?.role === 'director' || user?.role === 'supervisor'
     });
 

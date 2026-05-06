@@ -35,7 +35,7 @@ export default function EditStudentModal({ student, isOpen, onClose }: EditStude
 
     const { data: groups } = useQuery({
         queryKey: ['groups'],
-        queryFn: getGroups
+        queryFn: () => getGroups()
     });
 
     // مراقبة التغيير في الطالب المختار لتعبئة النموذج ببياناته تلقائياً عند الفتح

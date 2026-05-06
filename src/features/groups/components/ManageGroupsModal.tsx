@@ -32,9 +32,9 @@ export default function ManageGroupsModal({ isOpen, onClose }: ManageGroupsModal
     const queryClient = useQueryClient();
 
     // 1. جلب البيانات الأساسية باستخدام React Query
-    const { data: groups } = useQuery({ queryKey: ['groups'], queryFn: getGroups });
-    const { data: teachers } = useQuery({ queryKey: ['teachers'], queryFn: getTeachers });
-    const { data: students } = useQuery({ queryKey: ['students'], queryFn: getStudents });
+    const { data: groups } = useQuery({ queryKey: ['groups'], queryFn: () => getGroups() });
+    const { data: teachers } = useQuery({ queryKey: ['teachers'], queryFn: () => getTeachers() });
+    const { data: students } = useQuery({ queryKey: ['students'], queryFn: () => getStudents() });
 
     const [selectedGroupToEdit, setSelectedGroupToEdit] = useState<any | null>(null);
 

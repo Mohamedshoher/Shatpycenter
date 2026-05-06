@@ -18,8 +18,8 @@ export default function ScheduleTab({ student }: any) {
     const [isSwapping, setIsSwapping] = useState(false);
 
     // جلب بيانات الطلاب والمجموعات للتحقق من السعة
-    const { data: allStudents } = useQuery({ queryKey: ['students'], queryFn: getStudents });
-    const { data: allGroups } = useQuery({ queryKey: ['groups'], queryFn: getGroups });
+    const { data: allStudents } = useQuery({ queryKey: ['students'], queryFn: () => getStudents() });
+    const { data: allGroups } = useQuery({ queryKey: ['groups'], queryFn: () => getGroups() });
 
     const myGroup = allGroups?.find(g => g.id === student.groupId);
     const maxPerHour = myGroup?.maxStudentsPerHour || 5;
