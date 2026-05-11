@@ -261,7 +261,11 @@ export default function TeacherDetailModal({
             totalPaid: 0,
             totalEntitlement: 0,
             remainingToPay: 0,
-            dailyRate: 0
+            dailyRate: 0,
+            isPartnership: false,
+            partnershipPercentage: 0,
+            totalCollectedForGroup: 0,
+            expectedPartnershipSalary: 0
         }
     } = dashboard || {};
 
@@ -277,7 +281,8 @@ export default function TeacherDetailModal({
         dailyRate,
         isPartnership,
         partnershipPercentage,
-        totalCollectedForGroup
+        totalCollectedForGroup,
+        expectedPartnershipSalary
     } = salaryStats;
 
     // ==========================================
