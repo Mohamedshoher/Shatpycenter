@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import {
@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useStudentRecords } from '../hooks/useStudentRecords';
 import { Group, Teacher } from '@/types';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface ParentStudentDetailModalProps {
     isOpen: boolean;

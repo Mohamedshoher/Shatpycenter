@@ -1,8 +1,9 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '../../../components/ui/button';
 import { CreditCard, Trash2, Calendar, FileText, User } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export default function FeesTab({ student, records }: any) {
     const { user } = useAuthStore();

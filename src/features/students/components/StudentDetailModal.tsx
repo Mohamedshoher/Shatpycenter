@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from 'react';
 import { X, Calendar, CreditCard, BookOpen, FileText, Clock } from 'lucide-react';
@@ -16,7 +16,7 @@ import ExamsTab from './ExamsTab';
 import NotesTab from './NotesTab';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import dynamic from 'next/dynamic';
-
+import { AnimatePresence, motion } from 'framer-motion';
 
 
 export default function StudentDetailModal({ 
