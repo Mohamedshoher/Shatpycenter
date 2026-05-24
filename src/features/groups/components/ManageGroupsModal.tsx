@@ -23,7 +23,6 @@ const getGroupColor = (name: string) => {
     if (name.includes('قرآن')) return 'bg-blue-100 text-blue-600';
     if (name.includes('تلقين')) return 'bg-green-100 text-green-600';
     if (name.includes('نور بيان')) return 'bg-orange-100 text-orange-600';
-    if (name.includes('إقراء')) return 'bg-red-100 text-red-600';
     return 'bg-gray-100 text-gray-600'; // اللون الافتراضي
 };
 

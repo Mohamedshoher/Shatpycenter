@@ -14,8 +14,7 @@ import { cn } from '@/lib/utils';
 const GROUP_COLORS = {
     'قرآن': 'bg-blue-100 text-blue-600',
     'تلقين': 'bg-green-100 text-green-600',
-    'نور بيان': 'bg-orange-100 text-orange-600',
-    'إقراء': 'bg-red-100 text-red-600'
+    'نور بيان': 'bg-orange-100 text-orange-600'
 } as const;
 
 // استخراج أنواع المجموعات من كائن الألوان

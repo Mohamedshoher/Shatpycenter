@@ -253,7 +253,7 @@ export default function TeacherList() {
                                                     <div className="space-y-2 border-t border-gray-50 pt-3">
                                                         <p className="text-[10px] font-black text-gray-400 uppercase text-right mr-1">القسم</p>
                                                         <div className="flex flex-wrap gap-2 justify-end">
-                                                            {['الكل', 'قرآن', 'نور بيان', 'تلقين', 'إقراء'].map((s) => (
+                                                            {['الكل', 'قرآن', 'نور بيان', 'تلقين'].map((s) => (
                                                                 <button
                                                                     key={s}
                                                                     onClick={() => setSectionFilter(s)}

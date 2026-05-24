@@ -26,8 +26,8 @@ import { useRouter } from 'next/navigation';
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
 import { Student } from '@/types';
 import StudentDetailModal from './StudentDetailModal';
+import { AnimatePresence, motion } from 'framer-motion';
 import EditStudentModal from './EditStudentModal';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
 export default function ArchiveList() {

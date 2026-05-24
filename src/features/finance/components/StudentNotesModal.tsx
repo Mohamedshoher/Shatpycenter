@@ -1,9 +1,9 @@
 "use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquare, Users, User, Archive, Trash2, CheckCircle2, Circle, MessageCircle, ArrowRightLeft } from 'lucide-react';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface StudentNote {
     id: string;

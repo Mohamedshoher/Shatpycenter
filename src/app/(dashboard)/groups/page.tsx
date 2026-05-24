@@ -148,7 +148,7 @@ export default function GroupsPage() {
             if (group.name.includes('قرآن')) color = 'bg-blue-100 text-blue-600';
             else if (group.name.includes('تلقين')) color = 'bg-green-100 text-green-600';
             else if (group.name.includes('نور بيان')) color = 'bg-orange-100 text-orange-600';
-            else if (group.name.includes('إقراء')) color = 'bg-red-100 text-red-600';
+
 
             return {
                 ...group,
@@ -180,8 +180,7 @@ export default function GroupsPage() {
 
             const matchesFilter = (() => {
                 if (filters.includes('الكل')) {
-                    // إخفاء مجموعات الإقراء من الوضع الافتراضي (الكل) بناءً على طلب المستخدم
-                    return !group.name.includes('إقراء');
+                    return true;
                 }
                 
                 return filters.some(f => {
@@ -270,7 +269,7 @@ export default function GroupsPage() {
                                                         className="absolute top-[120%] left-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-2"
                                                     >
                                                         <div className="px-4 py-2 text-[10px] font-black tracking-widest text-gray-400 border-b border-gray-50 uppercase">الفلترة</div>
-                                                        {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'إقراء', 'حضور ممتاز', 'حضور ضعيف'].map((type) => (
+                                                        {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'حضور ممتاز', 'حضور ضعيف'].map((type) => (
                                                             <button
                                                                 key={type}
                                                                 onClick={(e) => {

@@ -1,7 +1,6 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
     X,
     Calendar,
@@ -33,7 +32,7 @@ interface ParentStudentDetailModalProps {
     teacher?: Teacher;
 }
 
-type TabType = 'attendance' | 'exams' | 'fees' | 'plan' | 'schedule' | 'iqra';
+type TabType = 'attendance' | 'exams' | 'fees' | 'plan' | 'schedule';
 
 export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> = ({
     isOpen,
@@ -43,41 +42,27 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
     teacher
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>(
-        group?.name?.includes('إقراء') ? 'iqra' : 'attendance'
+        'attendance'
     );
     const {
         attendance,
         exams,
         fees,
         plans,
-        iqraProgress,
-        iqraLogs,
         isLoadingAttendance,
         isLoadingExams,
         isLoadingFees,
         isLoadingPlans,
-        isLoadingIqraProgress
     } = useStudentRecords(student?.id || '');
 
     if (!student) return null;
 
-    const isIqra = iqraProgress.length > 0 || group?.name?.includes('إقراء');
-
-    const tabs: { id: TabType; label: string; icon: any; color: string }[] = [];
-
-    if (isIqra) {
-        tabs.push({ id: 'iqra', label: 'الدورات', icon: Book, color: 'text-blue-600' });
-    }
-
-    tabs.push(
+    const tabs: { id: TabType; label: string; icon: any; color: string }[] = [
         { id: 'schedule', label: 'المواعيد', icon: Clock, color: 'text-indigo-600' },
         { id: 'attendance', label: 'الحضور', icon: Calendar, color: 'text-blue-600' },
-        { id: 'exams', label: 'الاختبارات', icon: BookOpen, color: 'text-teal-600' }
-    );
-
-    if (!isIqra) {
-        tabs.push({ id: 'fees', label: 'المصروفات', icon: CreditCard, color: 'text-purple-600' });
-    }
+        { id: 'exams', label: 'الاختبارات', icon: BookOpen, color: 'text-teal-600' },
+        { id: 'fees', label: 'المصروفات', icon: CreditCard, color: 'text-purple-600' }
+    ];
 
     const renderAttendance = () => {
         const presentCount = attendance.filter(a => a.status === 'present').length;
@@ -290,141 +275,7 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
         </div>
     );
 
-    const renderIqra = () => (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-                {iqraProgress.length === 0 ? (
-                    <div className="py-20 text-center bg-white rounded-[40px] border-2 border-dashed border-gray-100 italic text-gray-400 font-black">
-                        لا توجد دورات مسجلة بعد
-                    </div>
-                ) : (
-                    iqraProgress.map((course: any) => {
-                        const courseLogs = iqraLogs.filter((l: any) => l.course_id === course.id);
-                        const latestLecture = courseLogs.length > 0 ? Math.max(...courseLogs.map((l: any) => l.lecture_number)) : 0;
-                        const progress = Math.min(Math.round((latestLecture / (course.total_lectures || 1)) * 100), 100);
-                        const isFinished = progress >= 100;
 
-                        // حساب الوقت المتبقي والتقدم الزمني
-                        const startDate = course.start_date ? new Date(course.start_date) : null;
-                        const examDate = course.full_exam_date ? new Date(course.full_exam_date) : null;
-                        const today = new Date();
-                        
-                        let timeProgress = 0;
-                        let remainingDays = 0;
-                        
-                        if (startDate && examDate) {
-                            const totalTime = examDate.getTime() - startDate.getTime();
-                            const passedTime = today.getTime() - startDate.getTime();
-                            timeProgress = Math.min(100, Math.max(0, Math.round((passedTime / (totalTime || 1)) * 100)));
-                            remainingDays = Math.max(0, Math.ceil((examDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
-                        }
-
-                        return (
-                            <div key={course.id} className={cn(
-                                "bg-white rounded-[32px] p-6 border transition-all shadow-sm",
-                                isFinished ? "border-green-100 bg-green-50/10" : "border-gray-100"
-                            )}>
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="text-xl font-black text-gray-900">{course.book_name}</h4>
-                                            {isFinished && <CheckCircle size={18} className="text-green-500" />}
-                                        </div>
-                                        <div className="flex items-center gap-3 text-xs text-gray-500 font-bold">
-                                            <span>بدأ في: {course.start_date || '---'}</span>
-                                            <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                                            <span>{course.total_lectures || 0} محاضرة</span>
-                                        </div>
-                                    </div>
-                                    {remainingDays > 0 && !isFinished && (
-                                        <div className="bg-orange-50 text-orange-600 px-4 py-2 rounded-2xl border border-orange-100">
-                                            <p className="text-[10px] font-black uppercase text-center">متبقي</p>
-                                            <p className="text-sm font-black text-center">{remainingDays} يوم</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="space-y-6 mb-8">
-                                    {/* Progress Bar - Achievement */}
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
-                                            <span>نسبة إنجاز المحاضرات</span>
-                                            <span>{progress}%</span>
-                                        </div>
-                                        <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden border border-gray-100/50">
-                                            <motion.div 
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${progress}%` }}
-                                                className={cn("h-full", isFinished ? "bg-green-500" : "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]")}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Progress Bar - Time */}
-                                    {!isFinished && (
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
-                                                <span>التقدم الزمني (للموعد المحدد)</span>
-                                                <span>{timeProgress}%</span>
-                                            </div>
-                                            <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden border border-gray-100/50">
-                                                <motion.div 
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${timeProgress}%` }}
-                                                    className={cn("h-full", timeProgress > 90 ? "bg-red-500" : "bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]")}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 text-center">
-                                        <p className="text-[9px] font-black text-gray-400 uppercase">موعد الاختبار</p>
-                                        <p className="text-xs font-black text-purple-600">{course.full_exam_date || 'غير محدد'}</p>
-                                    </div>
-                                    <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 text-center">
-                                        <p className="text-[9px] font-black text-gray-400 uppercase">المقدر الأسبوعي</p>
-                                        <p className="text-xs font-black text-indigo-600">{course.weekly_target || 0} محاضرة</p>
-                                    </div>
-                                    <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 text-center">
-                                        <p className="text-[9px] font-black text-gray-400 uppercase">الختم المتوقع</p>
-                                        <p className="text-xs font-black text-gray-700">
-                                            {(() => {
-                                                const remainingLectures = Math.max(0, (course.total_lectures || 0) - latestLecture);
-                                                const weeklyTarget = course.weekly_target || 1;
-                                                const weeksLeft = remainingLectures / weeklyTarget;
-                                                const daysLeft = Math.ceil(weeksLeft * 7);
-                                                const expectedDate = new Date(today.getTime() + (daysLeft * 24 * 60 * 60 * 1000));
-                                                return expectedDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'numeric', day: 'numeric' });
-                                            })()}
-                                        </p>
-                                    </div>
-                                    <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 text-center">
-                                        <p className="text-[9px] font-black text-gray-400 uppercase">المنجز</p>
-                                        <p className="text-xs font-black text-blue-600">{latestLecture} محاضرة</p>
-                                    </div>
-                                </div>
-
-                                {courseLogs.length > 0 && (
-                                    <div className="mt-4 pt-4 border-t border-dashed border-gray-100 flex flex-wrap gap-4">
-                                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 bg-amber-50 px-3 py-1.5 rounded-xl">
-                                            <Award size={14} className="text-amber-500" />
-                                            أحدث تقدير: <span className="text-amber-900">{courseLogs[0].sheikh_follow_up_grade}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 bg-green-50 px-3 py-1.5 rounded-xl">
-                                            <User size={14} className="text-green-500" />
-                                            إشراف: <span className="text-green-900">{teacher?.fullName || 'غير محدد'}</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })
-                )}
-            </div>
-        </div>
-    );
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" dir="rtl">
@@ -459,7 +310,7 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
                                             مفصول لحين مراجعة الإدارة
                                         </span>
                                     )}
-                                    {fees.length === 0 && !isIqra && (
+                                    {fees.length === 0 && (
                                         <span className="bg-orange-600 text-white px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black shadow-lg whitespace-nowrap">
                                             لحين سداد الرسوم
                                         </span>
@@ -505,7 +356,7 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
                             {activeTab === 'exams' && renderExams()}
                             {activeTab === 'fees' && renderFees()}
                             {activeTab === 'plan' && renderPlan()}
-                            {activeTab === 'iqra' && renderIqra()}
+
                         </motion.div>
                     </AnimatePresence>
                 </div>

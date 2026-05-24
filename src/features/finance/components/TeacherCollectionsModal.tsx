@@ -1,9 +1,9 @@
 "use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, ArrowUpCircle, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Teacher } from '@/types';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface TeacherCollection {
     teacherId: string;

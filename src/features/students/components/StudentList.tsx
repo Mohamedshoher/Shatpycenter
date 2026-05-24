@@ -663,8 +663,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     <button 
                                         onClick={(e) => { 
                                             e.stopPropagation(); 
-                                            const isIqra = groups?.find((g: any) => g.id === student.groupId)?.name?.match(/إقراء|اقراء/);
-                                            handleOpenModal(student, isIqra ? 'iqra_courses' : 'exams'); 
+                                            handleOpenModal(student, 'exams'); 
                                         }} 
                                         className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-white rounded-lg transition-all" 
                                         title="الاختبارات"
