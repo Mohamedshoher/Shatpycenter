@@ -61,6 +61,11 @@ export function getWhatsAppUrl(phone: string, message?: string) {
         cleanPhone = cleanPhone.slice(2);
     }
 
+    // إذا الرقم يبدأ بـ 02 ومتبوع برقم محمول (مثلاً 02010...) نزيل مفتاح المنطقة
+    if (cleanPhone.startsWith('02') && cleanPhone.length > 11) {
+        cleanPhone = cleanPhone.slice(2);
+    }
+
     // إذا الرقم يبدأ بصفر، نحدد التعامل بناءً على ثاني رقم
     if (cleanPhone.startsWith('0')) {
         if (cleanPhone.startsWith('01')) {
