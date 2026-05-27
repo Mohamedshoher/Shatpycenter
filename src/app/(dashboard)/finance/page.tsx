@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowUpCircle,
     ArrowDownCircle,
@@ -25,6 +24,7 @@ import { getTransactionsByMonth } from '@/features/finance/services/financeServi
 import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import type { TransactionData } from '@/features/finance/components/AddTransactionModal';
 import type { FinancialTransaction, Teacher } from '@/types';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
@@ -65,6 +65,7 @@ export default function FinancePage() {
     const [isManagerDirectOpen, setIsManagerDirectOpen] = useState(false);
     const [isOtherIncomeOpen, setIsOtherIncomeOpen] = useState(false);
     const [isDeductionsModalOpen, setIsDeductionsModalOpen] = useState(false);
+    const [isSalaryStatusOpen, setIsSalaryStatusOpen] = useState(false);
 
     // Get Exemptions
     const { data: exemptions = [] } = useQuery({
@@ -436,6 +437,52 @@ export default function FinancePage() {
         return breakdown;
     }, [filteredTransactions]);
 
+    // رواتب المدرسين: من قبض ومن لم يقبض
+    const salaryPaymentsThisMonth = useMemo(() => {
+        return filteredTransactions.filter(tr => tr.type === 'expense' && tr.category === 'salary');
+    }, [filteredTransactions]);
+
+    const teacherPaymentStatus = useMemo(() => {
+        const paidMap = new Map<string, number>();
+        salaryPaymentsThisMonth.forEach(p => {
+            if (p.relatedUserId) {
+                paidMap.set(p.relatedUserId, (paidMap.get(p.relatedUserId) || 0) + p.amount);
+            }
+        });
+
+        const deductionMap = new Map<string, number>();
+        deductionsBreakdown.forEach((d: any) => {
+            deductionMap.set(d.teacherId, d.totalAmount || 0);
+        });
+
+        const activeTeachers = teachers.filter(t => t.status !== 'inactive');
+
+        const allTeachersWithStatus = activeTeachers.map(t => {
+            const paidAmount = paidMap.get(t.id) || 0;
+            const entitlement = Number(t.salary) || 0;
+            const deduction = deductionMap.get(t.id) || 0;
+            const afterDeduction = Math.max(0, entitlement - deduction);
+            const remaining = Math.max(0, afterDeduction - paidAmount);
+            return { teacher: t, paidAmount, entitlement, deduction, afterDeduction, remaining };
+        });
+
+        const paid = allTeachersWithStatus.filter(t => t.paidAmount > 0);
+        const unpaid = allTeachersWithStatus.filter(t => t.paidAmount === 0);
+        const totalPaidAmount = allTeachersWithStatus.reduce((sum, t) => sum + t.paidAmount, 0);
+        const totalRemaining = allTeachersWithStatus.reduce((sum, t) => sum + t.remaining, 0);
+
+        return {
+            all: allTeachersWithStatus,
+            paid,
+            unpaid,
+            totalPaidAmount,
+            totalRemaining,
+            paidCount: paid.length,
+            unpaidCount: unpaid.length,
+            totalCount: activeTeachers.length,
+        };
+    }, [teachers, salaryPaymentsThisMonth, deductionsBreakdown]);
+
     const handleAddTransaction = (data: TransactionData) => {
         setIsModalOpen(false);
         queryClient.invalidateQueries({ queryKey: ['transactions', selectedMonth] });
@@ -474,313 +521,239 @@ export default function FinancePage() {
             />
 
             {/* Total Received Details Modal */}
-            <AnimatePresence>
-                {isReceivedDetailsOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsReceivedDetailsOpen(false)}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
-                        />
+            <FadeIn show={isReceivedDetailsOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsReceivedDetailsOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            </FadeIn>
+            <SlideIn show={isReceivedDetailsOpen} className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] h-fit bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col border border-gray-100">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <button
+                        onClick={() => setIsReceivedDetailsOpen(false)}
+                        className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
+                    >
+                        <X size={20} />
+                    </button>
+                    <div className="text-right">
+                        <h2 className="text-xl font-black text-gray-900">تفاصيل الإيرادات</h2>
+                        <p className="text-xs font-bold text-gray-400">تحليل مبالغ الصندوق الواردة</p>
+                    </div>
+                </div>
 
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] h-fit bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col border border-gray-100"
-                        >
-                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
-                                <button
-                                    onClick={() => setIsReceivedDetailsOpen(false)}
-                                    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
-                                >
-                                    <X size={20} />
-                                </button>
-                                <div className="text-right">
-                                    <h2 className="text-xl font-black text-gray-900">تفاصيل الإيرادات</h2>
-                                    <p className="text-xs font-bold text-gray-400">تحليل مبالغ الصندوق الواردة</p>
-                                </div>
+                <div className="p-8 space-y-6">
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-green-50/50 rounded-2xl border border-green-100/50">
+                            <div className="text-lg font-black text-green-600 font-sans tracking-tight">
+                                {feesByManager.toLocaleString()} <span className="text-[10px]">ج.م</span>
                             </div>
-
-                            <div className="p-8 space-y-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 bg-green-50/50 rounded-2xl border border-green-100/50">
-                                        <div className="text-lg font-black text-green-600 font-sans tracking-tight">
-                                            {feesByManager.toLocaleString()} <span className="text-[10px]">ج.م</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs font-black text-green-700">المحصل من المدير مباشر</p>
-                                            <p className="text-[10px] font-bold text-green-600/60">رسوم ومبالغ تم تسليمها للإدارة مباشرة</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-                                        <div className="text-lg font-black text-blue-600 font-sans tracking-tight">
-                                            {fromTeachers.toLocaleString()} <span className="text-[10px]">ج.م</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs font-black text-blue-700">المحصل من المدرسين</p>
-                                            <p className="text-[10px] font-bold text-blue-600/60">مجموع المبالغ الذي أخذها المدير من المدرسين</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50">
-                                        <div className="text-lg font-black text-purple-600 font-sans tracking-tight">
-                                            {otherIncome.toLocaleString()} <span className="text-[10px]">ج.م</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs font-black text-purple-700">الإيرادات الأخرى</p>
-                                            <p className="text-[10px] font-bold text-purple-600/60">تبرعات ومصادر دخل متنوعة</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
-                                    <div className="text-2xl font-black text-gray-900 font-sans tracking-tight">
-                                        {totalReceived.toLocaleString()} <span className="text-sm">ج.م</span>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-xs font-black text-gray-400">إجمالي الصندوق للفترة</p>
-                                    </div>
-                                </div>
+                            <div className="text-right">
+                                <p className="text-xs font-black text-green-700">المحصل من المدير مباشر</p>
+                                <p className="text-[10px] font-bold text-green-600/60">رسوم ومبالغ تم تسليمها للإدارة مباشرة</p>
                             </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                            <div className="text-lg font-black text-blue-600 font-sans tracking-tight">
+                                {fromTeachers.toLocaleString()} <span className="text-[10px]">ج.م</span>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs font-black text-blue-700">المحصل من المدرسين</p>
+                                <p className="text-[10px] font-bold text-blue-600/60">مجموع المبالغ الذي أخذها المدير من المدرسين</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50">
+                            <div className="text-lg font-black text-purple-600 font-sans tracking-tight">
+                                {otherIncome.toLocaleString()} <span className="text-[10px]">ج.م</span>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs font-black text-purple-700">الإيرادات الأخرى</p>
+                                <p className="text-[10px] font-bold text-purple-600/60">تبرعات ومصادر دخل متنوعة</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
+                        <div className="text-2xl font-black text-gray-900 font-sans tracking-tight">
+                            {totalReceived.toLocaleString()} <span className="text-sm">ج.م</span>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs font-black text-gray-400">إجمالي الصندوق للفترة</p>
+                        </div>
+                    </div>
+                </div>
+            </SlideIn>
 
             {/* Exemptions Details Modal */}
-            <AnimatePresence>
-                {isExemptionsModalOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
-                            onClick={() => setIsExemptionsModalOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20"
-                        >
-                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600">
-                                        <Gift size={24} />
-                                    </div>
+            <FadeIn show={isExemptionsModalOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsExemptionsModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isExemptionsModalOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600">
+                            <Gift size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">تفاصيل الإعفاءات المالية</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">لشهر {months.find(m => m.value === selectedMonth)?.label}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsExemptionsModalOpen(false)}
+                        className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
+                    {exemptions.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد إعفاءات مسجلة لهذا الشهر.
+                        </div>
+                    ) : (
+                        exemptions.map((ex: any) => (
+                            <div key={ex.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-teal-200 transition-all group">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center font-black text-xs">كلي</div>
                                     <div className="text-right">
-                                        <h3 className="text-xl font-black text-gray-900">تفاصيل الإعفاءات المالية</h3>
-                                        <p className="text-xs font-bold text-gray-400 mt-0.5">لشهر {months.find(m => m.value === selectedMonth)?.label}</p>
+                                        <h4 className="font-black text-gray-900 group-hover:text-teal-600 transition-colors">{ex.student_name}</h4>
+                                        <p className="text-[10px] text-gray-400 font-bold">بواسطة: {ex.exempted_by}</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => setIsExemptionsModalOpen(false)}
-                                    className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
-                                {exemptions.length === 0 ? (
-                                    <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
-                                        لا توجد إعفاءات مسجلة لهذا الشهر.
-                                    </div>
-                                ) : (
-                                    exemptions.map((ex: any) => (
-                                        <div key={ex.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-teal-200 transition-all group">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center font-black text-xs">كلي</div>
-                                                <div className="text-right">
-                                                    <h4 className="font-black text-gray-900 group-hover:text-teal-600 transition-colors">{ex.student_name}</h4>
-                                                    <p className="text-[10px] text-gray-400 font-bold">بواسطة: {ex.exempted_by}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="text-lg font-black text-teal-600 font-sans">{Number(ex.amount).toLocaleString()} <span className="text-[10px]">ج.م</span></p>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
-                                <div className="flex items-center justify-between">
-                                    <div className="text-2xl font-black text-teal-600 font-sans">
-                                        {totalGlobalExempted.toLocaleString()} <span className="text-sm">ج.م</span>
-                                    </div>
-                                    <p className="text-xs font-black text-gray-400">إجمالي المبلغ المعفي عنه</p>
+                                <div className="text-left">
+                                    <p className="text-lg font-black text-teal-600 font-sans">{Number(ex.amount).toLocaleString()} <span className="text-[10px]">ج.م</span></p>
                                 </div>
                             </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                        ))
+                    )}
+                </div>
+
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-teal-600 font-sans">
+                            {totalGlobalExempted.toLocaleString()} <span className="text-sm">ج.م</span>
+                        </div>
+                        <p className="text-xs font-black text-gray-400">إجمالي المبلغ المعفي عنه</p>
+                    </div>
+                </div>
+            </SlideIn>
 
             {/* Expected Expenses Details Modal */}
-            <AnimatePresence>
-                {isExpectedExpensesModalOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsExpectedExpensesModalOpen(false)}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
-                        />
+            <FadeIn show={isExpectedExpensesModalOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsExpectedExpensesModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            </FadeIn>
+            <SlideIn show={isExpectedExpensesModalOpen} className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] h-fit bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col border border-gray-100 max-h-[85vh]">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <button
+                        onClick={() => setIsExpectedExpensesModalOpen(false)}
+                        className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
+                    >
+                        <X size={20} />
+                    </button>
+                    <div className="text-right">
+                        <h2 className="text-xl font-black text-gray-900">تفاصيل المصروفات المتوقعة</h2>
+                        <p className="text-xs font-bold text-gray-400">تحليل رواتب ومستحقات المدرسين</p>
+                    </div>
+                </div>
 
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] h-fit bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col border border-gray-100 max-h-[85vh]"
-                        >
-                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
-                                <button
-                                    onClick={() => setIsExpectedExpensesModalOpen(false)}
-                                    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
-                                >
-                                    <X size={20} />
-                                </button>
-                                <div className="text-right">
-                                    <h2 className="text-xl font-black text-gray-900">تفاصيل المصروفات المتوقعة</h2>
-                                    <p className="text-xs font-bold text-gray-400">تحليل رواتب ومستحقات المدرسين</p>
-                                </div>
+                <div className="p-6 overflow-y-auto space-y-3 no-scrollbar">
+                    {teachers.filter(t => t.status !== 'inactive').sort((a,b) => (Number(b.salary)||0) - (Number(a.salary)||0)).map(t => (
+                        <div key={t.id} className="flex items-center justify-between p-4 bg-rose-50/50 rounded-2xl border border-rose-100/50">
+                            <div className="text-lg font-black text-rose-600 font-sans tracking-tight">
+                                {(Number(t.salary) || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
                             </div>
-
-                            <div className="p-6 overflow-y-auto space-y-3 no-scrollbar">
-                                {teachers.filter(t => t.status !== 'inactive').sort((a,b) => (Number(b.salary)||0) - (Number(a.salary)||0)).map(t => (
-                                    <div key={t.id} className="flex items-center justify-between p-4 bg-rose-50/50 rounded-2xl border border-rose-100/50">
-                                        <div className="text-lg font-black text-rose-600 font-sans tracking-tight">
-                                            {(Number(t.salary) || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-sm font-black text-rose-700">{t.fullName}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                                {teachers.filter(t => t.status !== 'inactive').length === 0 && (
-                                     <div className="py-10 text-center text-gray-400 text-sm font-bold">لا يوجد مدرسين نشطين لاستعراض تفاصيلهم.</div>
-                                )}
-
-                                {/* Fixed Expenses Row */}
-                                <div className="flex items-center justify-between p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50">
-                                    <div className="text-lg font-black text-orange-600 font-sans tracking-tight">
-                                        1,700 <span className="text-[10px]">ج.م</span>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-black text-orange-700">إيجار وكهرباء</p>
-                                        <p className="text-[10px] text-orange-500/70 font-bold">ثابت شهرياً</p>
-                                    </div>
-                                </div>
+                            <div className="text-right">
+                                <p className="text-sm font-black text-rose-700">{t.fullName}</p>
                             </div>
+                        </div>
+                    ))}
+                    {teachers.filter(t => t.status !== 'inactive').length === 0 && (
+                         <div className="py-10 text-center text-gray-400 text-sm font-bold">لا يوجد مدرسين نشطين لاستعراض تفاصيلهم.</div>
+                    )}
 
-                            <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
-                                <div className="flex items-center justify-between">
-                                    <div className="text-2xl font-black text-rose-600 font-sans">
-                                        {totalGlobalExpectedExpenses.toLocaleString()} <span className="text-sm">ج.م</span>
-                                    </div>
-                                    <p className="text-xs font-black text-gray-400">إجمالي المصروفات المتوقعة</p>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                    {/* Fixed Expenses Row */}
+                    <div className="flex items-center justify-between p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50">
+                        <div className="text-lg font-black text-orange-600 font-sans tracking-tight">
+                            1,700 <span className="text-[10px]">ج.م</span>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-sm font-black text-orange-700">إيجار وكهرباء</p>
+                            <p className="text-[10px] text-orange-500/70 font-bold">ثابت شهرياً</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-rose-600 font-sans">
+                            {totalGlobalExpectedExpenses.toLocaleString()} <span className="text-sm">ج.م</span>
+                        </div>
+                        <p className="text-xs font-black text-gray-400">إجمالي المصروفات المتوقعة</p>
+                    </div>
+                </div>
+            </SlideIn>
 
             {/* Manager Collections from Teachers Modal */}
-            <AnimatePresence>
-                {isManagerCollectionsOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
-                            onClick={() => setIsManagerCollectionsOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20"
-                        >
-                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-600">
-                                        <Wallet size={24} />
-                                    </div>
+            <FadeIn show={isManagerCollectionsOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsManagerCollectionsOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isManagerCollectionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-600">
+                            <Wallet size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">المُستلَم من المدرسين</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">تفاصيل المبالغ التي سلمها المدرسون للإدارة</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsManagerCollectionsOpen(false)}
+                        className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
+                    {filteredTransactions.filter(tr => tr.type === 'income' && tr.category === 'تحصيل من مدرس').length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد مبالغ مستلمة من المدرسين هذا الشهر.
+                        </div>
+                    ) : (
+                        filteredTransactions.filter(tr => tr.type === 'income' && tr.category === 'تحصيل من مدرس').map((tr: any) => (
+                            <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-sky-200 transition-all group">
+                                <div className="flex items-center gap-4">
                                     <div className="text-right">
-                                        <h3 className="text-xl font-black text-gray-900">المُستلَم من المدرسين</h3>
-                                        <p className="text-xs font-bold text-gray-400 mt-0.5">تفاصيل المبالغ التي سلمها المدرسون للإدارة</p>
+                                        <h4 className="font-black text-gray-900 group-hover:text-sky-600 transition-colors">{tr.title}</h4>
+                                        <p className="text-[10px] text-gray-400 font-bold">التاريخ: {tr.date}</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => setIsManagerCollectionsOpen(false)}
-                                    className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
-                                {filteredTransactions.filter(tr => tr.type === 'income' && tr.category === 'تحصيل من مدرس').length === 0 ? (
-                                    <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
-                                        لا توجد مبالغ مستلمة من المدرسين هذا الشهر.
-                                    </div>
-                                ) : (
-                                    filteredTransactions.filter(tr => tr.type === 'income' && tr.category === 'تحصيل من مدرس').map((tr: any) => (
-                                        <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-sky-200 transition-all group">
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-right">
-                                                    <h4 className="font-black text-gray-900 group-hover:text-sky-600 transition-colors">{tr.title}</h4>
-                                                    <p className="text-[10px] text-gray-400 font-bold">التاريخ: {tr.date}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-left flex flex-col items-end">
-                                                <p className="text-lg font-black text-sky-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[10px]">ج.م</span></p>
-                                                {tr.performedBy && <p className="text-[9px] text-gray-400 mt-1">بواسطة: {tr.performedBy}</p>}
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
-                                <div className="flex items-center justify-between">
-                                    <div className="text-2xl font-black text-sky-600 font-sans">
-                                        {fromTeachers.toLocaleString()} <span className="text-sm">ج.م</span>
-                                    </div>
-                                    <p className="text-xs font-black text-gray-400">إجمالي المستلم من المدرسين</p>
+                                <div className="text-left flex flex-col items-end">
+                                    <p className="text-lg font-black text-sky-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[10px]">ج.م</span></p>
+                                    {tr.performedBy && <p className="text-[9px] text-gray-400 mt-1">بواسطة: {tr.performedBy}</p>}
                                 </div>
                             </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                        ))
+                    )}
+                </div>
+
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-sky-600 font-sans">
+                            {fromTeachers.toLocaleString()} <span className="text-sm">ج.م</span>
+                        </div>
+                        <p className="text-xs font-black text-gray-400">إجمالي المستلم من المدرسين</p>
+                    </div>
+                </div>
+            </SlideIn>
 
             {/* Manager Direct Collections Modal */}
-            <AnimatePresence>
-                {isManagerDirectOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
-                            onClick={() => setIsManagerDirectOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20"
-                        >
+            <FadeIn show={isManagerDirectOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsManagerDirectOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isManagerDirectOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                             <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
@@ -832,99 +805,69 @@ export default function FinancePage() {
                                     <p className="text-xs font-black text-gray-400">إجمالي تحصيل الإدارة</p>
                                 </div>
                             </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                            </SlideIn>
 
             {/* Other Income Modal */}
-            <AnimatePresence>
-                {isOtherIncomeOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
-                            onClick={() => setIsOtherIncomeOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20"
-                        >
-                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-cyan-50 rounded-2xl flex items-center justify-center text-cyan-600">
-                                        <ArrowUpCircle size={24} />
-                                    </div>
+            <FadeIn show={isOtherIncomeOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsOtherIncomeOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isOtherIncomeOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-cyan-50 rounded-2xl flex items-center justify-center text-cyan-600">
+                            <ArrowUpCircle size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">إيرادات أخرى</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">تفاصيل التبرعات والإيرادات الأخرى للصندوق</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsOtherIncomeOpen(false)}
+                        className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
+                    {otherIncomeList.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد إيرادات أخرى مسجلة هذا الشهر.
+                        </div>
+                    ) : (
+                        otherIncomeList.map((tr: any) => (
+                            <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-cyan-200 transition-all group">
+                                <div className="flex items-center gap-4">
                                     <div className="text-right">
-                                        <h3 className="text-xl font-black text-gray-900">إيرادات أخرى</h3>
-                                        <p className="text-xs font-bold text-gray-400 mt-0.5">تفاصيل التبرعات والإيرادات الأخرى للصندوق</p>
+                                        <h4 className="font-black text-gray-900 group-hover:text-cyan-600 transition-colors">{tr.title || tr.description}</h4>
+                                        <p className="text-[10px] text-gray-400 font-bold">التاريخ: {tr.date}</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => setIsOtherIncomeOpen(false)}
-                                    className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            <div className="p-6 overflow-y-auto no-scrollbar space-y-4">
-                                {otherIncomeList.length === 0 ? (
-                                    <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
-                                        لا توجد إيرادات أخرى مسجلة هذا الشهر.
-                                    </div>
-                                ) : (
-                                    otherIncomeList.map((tr: any) => (
-                                        <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:border-cyan-200 transition-all group">
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-right">
-                                                    <h4 className="font-black text-gray-900 group-hover:text-cyan-600 transition-colors">{tr.title || tr.description}</h4>
-                                                    <p className="text-[10px] text-gray-400 font-bold">التاريخ: {tr.date}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-left flex flex-col items-end">
-                                                <p className="text-lg font-black text-cyan-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[10px]">ج.م</span></p>
-                                                {tr.performedBy && <p className="text-[9px] text-gray-400 mt-1">بواسطة: {tr.performedBy}</p>}
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
-                                <div className="flex items-center justify-between">
-                                    <div className="text-2xl font-black text-cyan-600 font-sans">
-                                        {otherIncome.toLocaleString()} <span className="text-sm">ج.م</span>
-                                    </div>
-                                    <p className="text-xs font-black text-gray-400">إجمالي الإيرادات الأخرى</p>
+                                <div className="text-left flex flex-col items-end">
+                                    <p className="text-lg font-black text-cyan-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[10px]">ج.م</span></p>
+                                    {tr.performedBy && <p className="text-[9px] text-gray-400 mt-1">بواسطة: {tr.performedBy}</p>}
                                 </div>
                             </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                        ))
+                    )}
+                </div>
+
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-cyan-600 font-sans">
+                            {otherIncome.toLocaleString()} <span className="text-sm">ج.م</span>
+                        </div>
+                        <p className="text-xs font-black text-gray-400">إجمالي الإيرادات الأخرى</p>
+                    </div>
+                </div>
+            </SlideIn>
 
             {/* Deductions Breakdown Modal */}
-            <AnimatePresence>
-                {isDeductionsModalOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
-                            onClick={() => setIsDeductionsModalOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20"
-                        >
+            <FadeIn show={isDeductionsModalOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsDeductionsModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isDeductionsModalOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                             <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600">
@@ -1049,81 +992,144 @@ export default function FinancePage() {
                                     <p className="text-xs font-black text-gray-400">صافي قيمة الخصومات</p>
                                 </div>
                             </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+            </SlideIn>
+
+            {/* Salary Status Modal */}
+            <FadeIn show={isSalaryStatusOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsSalaryStatusOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isSalaryStatusOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
+                            <Wallet size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">حالة صرف الرواتب</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">المدرسين الذين قبضوا والذين لم يقبضوا</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsSalaryStatusOpen(false)}
+                        className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-6">
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="text-sm font-black text-green-700 bg-green-50 px-3 py-1 rounded-full">✅ تم الصرف: {teacherPaymentStatus.paidCount}</div>
+                        </div>
+                        <div className="space-y-2">
+                            {teacherPaymentStatus.paid.length === 0 ? (
+                                <p className="text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">لم يتم صرف راتب أي مدرس هذا الشهر.</p>
+                            ) : (
+                                teacherPaymentStatus.paid.map(t => (
+                                    <div key={t.teacher.id} className="flex items-center justify-between p-3 bg-green-50/50 rounded-2xl border border-green-100/50">
+                                        <div className="text-right">
+                                            <span className="font-black text-green-700 text-sm block">{t.teacher.fullName}</span>
+                                            {t.remaining > 0 && <span className="text-[10px] font-bold text-amber-500">بقي: {t.remaining.toLocaleString()} ج.م</span>}
+                                        </div>
+                                        <div className="text-left">
+                                            <span className="font-black text-green-600 text-sm font-sans block">صرف: {t.paidAmount.toLocaleString()} ج.م</span>
+                                            <span className="text-[9px] text-gray-400 font-bold">صافي: {t.afterDeduction.toLocaleString()} ج.م</span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="text-sm font-black text-amber-700 bg-amber-50 px-3 py-1 rounded-full">⏳ لم يصرف بعد: {teacherPaymentStatus.unpaidCount}</div>
+                        </div>
+                        <div className="space-y-2">
+                            {teacherPaymentStatus.unpaid.length === 0 ? (
+                                <p className="text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">تم صرف رواتب جميع المدرسين لهذا الشهر.</p>
+                            ) : (
+                                teacherPaymentStatus.unpaid.map(t => (
+                                    <div key={t.teacher.id} className="flex items-center justify-between p-3 bg-amber-50/50 rounded-2xl border border-amber-100/50">
+                                        <span className="font-black text-amber-700 text-sm">{t.teacher.fullName}</span>
+                                        <div className="text-left">
+                                            <span className="font-black text-amber-600 text-sm font-sans block">بقي: {t.remaining.toLocaleString()} ج.م</span>
+                                            <span className="text-[9px] text-gray-400 font-bold">صافي بعد الخصم: {t.afterDeduction.toLocaleString()} ج.م</span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0 space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span className="font-black text-emerald-600 font-sans">{teacherPaymentStatus.totalPaidAmount.toLocaleString()} ج.م</span>
+                        <span className="text-xs font-black text-gray-400">المبلغ المصروف</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="font-black text-amber-600 font-sans">{teacherPaymentStatus.totalRemaining.toLocaleString()} ج.م</span>
+                        <span className="text-xs font-black text-gray-400">المبلغ المتبقي للصرف</span>
+                    </div>
+                </div>
+            </SlideIn>
 
             {/* Total Expenses Details Modal */}
-            <AnimatePresence>
-                {isExpenseDetailsOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsExpenseDetailsOpen(false)}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
-                        />
+            <FadeIn show={isExpenseDetailsOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsExpenseDetailsOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            </FadeIn>
+            <SlideIn show={isExpenseDetailsOpen} className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] h-fit bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col border border-gray-100">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <button
+                        onClick={() => setIsExpenseDetailsOpen(false)}
+                        className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
+                    >
+                        <X size={20} />
+                    </button>
+                    <div className="text-right">
+                        <h2 className="text-xl font-black text-gray-900">تفاصيل المصروفات</h2>
+                        <p className="text-xs font-bold text-gray-400">تحليل المبالغ الخارجة</p>
+                    </div>
+                </div>
 
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] h-fit bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col border border-gray-100"
-                        >
-                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
-                                <button
-                                    onClick={() => setIsExpenseDetailsOpen(false)}
-                                    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
-                                >
-                                    <X size={20} />
-                                </button>
-                                <div className="text-right">
-                                    <h2 className="text-xl font-black text-gray-900">تفاصيل المصروفات</h2>
-                                    <p className="text-xs font-bold text-gray-400">تحليل المبالغ الخارجة</p>
-                                </div>
+                <div className="p-8 space-y-6">
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50">
+                            <div className="text-lg font-black text-orange-600 font-sans tracking-tight">
+                                {(expenseBreakdown['salary'] || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
                             </div>
-
-                            <div className="p-8 space-y-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50">
-                                        <div className="text-lg font-black text-orange-600 font-sans tracking-tight">
-                                            {(expenseBreakdown['salary'] || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
-                                        </div>
-                                        <p className="text-xs font-black text-orange-700">رواتب ومستحقات</p>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-                                        <div className="text-lg font-black text-blue-600 font-sans tracking-tight">
-                                            {(expenseBreakdown['utilities'] || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
-                                        </div>
-                                        <p className="text-xs font-black text-blue-700">مرافق وصيانة</p>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 bg-red-50/50 rounded-2xl border border-red-100/50">
-                                        <div className="text-lg font-black text-red-600 font-sans tracking-tight">
-                                            {(expenseBreakdown['fees'] || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
-                                        </div>
-                                        <p className="text-xs font-black text-red-700">رسوم وعمولات</p>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100/50">
-                                        <div className="text-lg font-black text-gray-600 font-sans tracking-tight">
-                                            {(expenseBreakdown['other'] || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
-                                        </div>
-                                        <p className="text-xs font-black text-gray-700">مصروفات أخرى</p>
-                                    </div>
-                                </div>
-
-                                <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
-                                    <div className="text-2xl font-black text-gray-900 font-sans tracking-tight">
-                                        {totalExpenses.toLocaleString()} <span className="text-sm">ج.م</span>
-                                    </div>
-                                    <p className="text-xs font-black text-gray-400">إجمالي المصروفات</p>
-                                </div>
+                            <p className="text-xs font-black text-orange-700">رواتب ومستحقات</p>
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                            <div className="text-lg font-black text-blue-600 font-sans tracking-tight">
+                                {(expenseBreakdown['utilities'] || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
                             </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                            <p className="text-xs font-black text-blue-700">مرافق وصيانة</p>
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-red-50/50 rounded-2xl border border-red-100/50">
+                            <div className="text-lg font-black text-red-600 font-sans tracking-tight">
+                                {(expenseBreakdown['fees'] || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
+                            </div>
+                            <p className="text-xs font-black text-red-700">رسوم وعمولات</p>
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100/50">
+                            <div className="text-lg font-black text-gray-600 font-sans tracking-tight">
+                                {(expenseBreakdown['other'] || 0).toLocaleString()} <span className="text-[10px]">ج.م</span>
+                            </div>
+                            <p className="text-xs font-black text-gray-700">مصروفات أخرى</p>
+                        </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
+                        <div className="text-2xl font-black text-gray-900 font-sans tracking-tight">
+                            {totalExpenses.toLocaleString()} <span className="text-sm">ج.م</span>
+                        </div>
+                        <p className="text-xs font-black text-gray-400">إجمالي المصروفات</p>
+                    </div>
+                </div>
+            </SlideIn>
 
             {/* Sticky Header */}
             <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
@@ -1380,6 +1386,24 @@ export default function FinancePage() {
                                 </div>
                             </div>
 
+                            {/* Card: Salary Status */}
+                            <div
+                                onClick={() => setIsSalaryStatusOpen(true)}
+                                className="bg-white/90 backdrop-blur-xl border border-emerald-100/50 rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all group cursor-pointer"
+                            >
+                                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-sm border border-emerald-100/30">
+                                    <Wallet size={24} />
+                                </div>
+                                <div className="text-right space-y-1">
+                                    <p className="text-[11px] font-black text-gray-400 mb-1">حالة الرواتب</p>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full">✅ {teacherPaymentStatus.paidCount}</span>
+                                        <span className="text-xs font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">⏳ {teacherPaymentStatus.unpaidCount}</span>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-gray-400">المتبقي: <span className="font-black text-amber-600 font-sans">{teacherPaymentStatus.totalRemaining.toLocaleString()} ج.م</span></p>
+                                </div>
+                            </div>
+
                             {/* =========================================
                               * الصف الخامس: الصندوق (إيرادات ومصروفات)
                               * ========================================= */}
@@ -1423,7 +1447,7 @@ export default function FinancePage() {
                             {/* Card: Balance */}
                             <div className={cn(
                                 "backdrop-blur-xl border rounded-[32px] p-6 flex flex-col justify-between min-h-[160px] shadow-sm transition-all md:col-span-2",
-                                balance >= 0 ? "bg-blue-600 text-white border-blue-400/30 shadow-blue-500/20" : "bg-orange-600 text-white border-orange-400/30 shadow-orange-500/20"
+                                balance >= 0 ? "bg-green-700 text-white border-green-400/30 shadow-green-600/20" : "bg-red-700 text-white border-red-400/30 shadow-red-600/20"
                             )}>
                                 <div className={cn(
                                     "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm border",

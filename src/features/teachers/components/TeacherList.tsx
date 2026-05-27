@@ -19,7 +19,7 @@ import {
     XCircle,
     TrendingDown
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Teacher } from '@/types';
 import { updateTeacherAttendance } from '../services/attendanceService';
@@ -292,10 +292,10 @@ export default function TeacherList() {
             {/* شبكة المدرسين */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 mt-2 max-w-7xl mx-auto">
                 {filteredTeachers?.map((teacher) => (
-                    <motion.div
+                    <div
                         key={teacher.id}
                         onClick={() => handleOpenDetail(teacher)}
-                        className="bg-white rounded-[32px] p-5 shadow-sm border border-gray-50 flex flex-col gap-4 relative group cursor-pointer hover:border-teal-200 transition-all hover:shadow-md"
+                        className="bg-white rounded-[32px] p-5 shadow-sm border border-gray-50 flex flex-col gap-4 relative group cursor-pointer hover:border-teal-200 transition-all hover:shadow-md animate-[fadeIn_0.3s_ease-out]"
                     >
                         {/* الجزء العلوي */}
                         <div className="flex items-center justify-between group/card">
@@ -375,7 +375,7 @@ export default function TeacherList() {
                                 }
                             })()}
                         </div>
-                    </motion.div>
+                    </div>
                 ))}
             </div>
             

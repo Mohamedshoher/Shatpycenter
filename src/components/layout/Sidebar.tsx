@@ -22,7 +22,7 @@ import {
     UserCheck,
     CalendarClock
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn } from '@/components/ui/transition';
 import { logout } from '@/features/auth/services/authService';
 import { useRouter } from 'next/navigation';
 
@@ -121,39 +121,13 @@ export default function Sidebar() {
     return (
         <>
             {/* Mobile Overlay */}
-            <AnimatePresence>
-                {isSidebarOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setSidebarOpen(false)}
-                        className="fixed inset-0 bg-black/50 z-40 md:hidden"
-                    />
-                )}
-            </AnimatePresence>
+            <FadeIn show={isSidebarOpen} className="fixed inset-0 z-40 md:hidden">
+                <div onClick={() => setSidebarOpen(false)} className="absolute inset-0 bg-black/50" />
+            </FadeIn>
 
             {/* Swipe Area - منطقة السحب من اليمين لفتح السيدبار */}
             {!isSidebarOpen && (
-                <motion.div
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.3}
-                    onDragStart={() => {
-                        // يمكن إضافة ردود فعل بصرية عند بدء السحب
-                    }}
-                    onDrag={(e, info) => {
-                        // يمكن إضافة تأثيرات أثناء السحب
-                        if (info.offset.x < -20) {
-                            // بدأ المستخدم بالسحب بشكل ملحوظ
-                        }
-                    }}
-                    onDragEnd={(e, info) => {
-                        // إذا سحب من اليمين لليسار بمسافة كافية، افتح السيدبار
-                        if (info.offset.x < -60) {
-                            setSidebarOpen(true);
-                        }
-                    }}
+                <div
                     className="fixed top-0 right-0 h-screen w-12 z-30 md:hidden"
                     style={{
                         touchAction: 'pan-y',
@@ -162,19 +136,11 @@ export default function Sidebar() {
                 >
                     {/* مؤشر بصري خفيف */}
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-blue-400/20 rounded-l-full" />
-                </motion.div>
+                </div>
             )}
 
             {/* Sidebar Container */}
-            <motion.aside
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                onDragEnd={(e, info) => {
-                    // إذا سحب المستخدم لليمين بقوة (في RTL هذا يعني الإغلاق)
-                    if (info.offset.x > 100) setSidebarOpen(false);
-                    // إذا سحب لليسار بقوة (في RTL هذا يعني الفتح، لكنه مفتوح أصلاً هنا)
-                    if (info.offset.x < -100) setSidebarOpen(true);
-                }}
+            <aside
                 className={cn(
                     "fixed top-0 right-0 z-[120] h-screen w-64 bg-white border-l border-gray-100 shadow-xl transition-transform duration-300 md:translate-x-0",
                     !isSidebarOpen && "translate-x-full"
@@ -259,7 +225,7 @@ export default function Sidebar() {
                         </button>
                     </div>
                 </div>
-            </motion.aside>
+            </aside>
         </>
     );
 }

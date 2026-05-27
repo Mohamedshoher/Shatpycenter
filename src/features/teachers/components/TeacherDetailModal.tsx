@@ -4,7 +4,7 @@
 // 1. استيراد المكتبات والأدوات الأساسية
 // ==========================================
 import { useState, useEffect, useRef } from 'react'; // هوكس الحالة والتأثيرات من React
-import { motion, AnimatePresence } from 'framer-motion'; // مكتبة الحركات والأنيميشن
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { cn, getWhatsAppUrl } from '@/lib/utils'; // وظيفة لدمج أصناف CSS بشكل ديناميكي
 import { Button } from '@/components/ui/button'; // مكون الزر الجاهز
 import { supabase } from '@/lib/supabase'; // عميل قاعدة بيانات Supabase
@@ -723,90 +723,74 @@ export default function TeacherDetailModal({
     // ==========================================
     // واجهة المستخدم: الهيكل الرئيسي (Main Return JSX)
     // ==========================================
+    if (!teacher) return null;
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-                    {/* خلفية النافذة (Backdrop) */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-                    />
-
-                    {/* جسم النافذة المنبثقة (Modal Body) */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-[95vw] max-w-6xl h-[95vh] bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20"
-                    >
-                        {/* رأس النافذة (Header) */}
-                        <div className="p-5 md:p-8 relative bg-white border-b border-gray-50 shrink-0">
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex flex-row-reverse items-center gap-3">
-                                    <div className="text-right min-w-0">
-                                            <h2 className="text-lg md:text-2xl font-black text-slate-900 truncate leading-tight">{teacher!.fullName}</h2>
-                                        {isDirector ? (
-                                            <div className="flex flex-row-reverse items-center justify-end gap-1 mt-1">
-                                                <button onClick={() => onDelete?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="حذف"><Trash2 size={16} /></button>
-                                                <button onClick={() => onEdit?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="تعديل"><Edit3 size={16} /></button>
-                                                <a href={`tel:${teacher!.phone}`} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="اتصال"><Phone size={16} /></a>
-                                            </div>
-                                        ) : (
-                                            <p className="text-blue-500 font-bold text-[10px] md:text-sm mt-0.5 whitespace-nowrap">الملف الشخصي للمدرس</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-1.5 md:gap-3">
-
-                                    <button onClick={onClose} className="w-10 h-10 md:w-12 md:h-12 bg-slate-100/80 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-all">
-                                        <X size={20} />
-                                    </button>
+        <>
+            <FadeIn show={isOpen} className="fixed inset-0 z-[200]">
+                <div onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isOpen}
+                className="relative w-[95vw] max-w-6xl h-[95vh] bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20 fixed inset-0 z-[200] flex items-center justify-center p-4"
+            >
+                <div className="bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20 w-full h-full">
+                    {/* رأس النافذة (Header) */}
+                    <div className="p-5 md:p-8 relative bg-white border-b border-gray-50 shrink-0">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex flex-row-reverse items-center gap-3">
+                                <div className="text-right min-w-0">
+                                        <h2 className="text-lg md:text-2xl font-black text-slate-900 truncate leading-tight">{teacher!.fullName}</h2>
+                                    {isDirector ? (
+                                        <div className="flex flex-row-reverse items-center justify-end gap-1 mt-1">
+                                            <button onClick={() => onDelete?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="حذف"><Trash2 size={16} /></button>
+                                            <button onClick={() => onEdit?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="تعديل"><Edit3 size={16} /></button>
+                                            <a href={`tel:${teacher!.phone}`} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="اتصال"><Phone size={16} /></a>
+                                        </div>
+                                    ) : (
+                                        <p className="text-blue-500 font-bold text-[10px] md:text-sm mt-0.5 whitespace-nowrap">الملف الشخصي للمدرس</p>
+                                    )}
                                 </div>
                             </div>
-                        </div>
 
-                        {/* شريط التبويبات (Navigation Tabs) */}
-                        <div className="flex flex-row border-b border-gray-50 px-2 md:px-8 bg-white sticky top-0 z-10 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap md:justify-start justify-around">
-                            {tabs.map((tab) => {
-                                const Icon = tab.icon;
-                                const isActive = activeTab === tab.id;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={cn(
-                                            "flex flex-row items-center gap-1 md:gap-2 px-4 md:px-6 py-4 md:py-6 text-[11px] md:text-[13px] font-black transition-all relative shrink-0",
-                                            isActive ? "text-blue-600 scale-105" : "text-slate-400 hover:text-slate-600"
-                                        )}
-                                    >
-                                        <Icon size={18} className={cn(isActive ? "text-blue-600" : "text-slate-300")} />
-                                        <span className="hidden md:inline">{tab.label}</span>
-                                        {isActive && (
-                                            <motion.div layoutId="teacherTab" className="absolute bottom-0 left-0 right-0 h-[4px] bg-blue-600 rounded-t-full" />
-                                        )}
-                                    </button>
-                                );
-                            })}
+                            <div className="flex items-center gap-1.5 md:gap-3">
+                                <button onClick={onClose} className="w-10 h-10 md:w-12 md:h-12 bg-slate-100/80 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-all">
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
+                    </div>
 
-                        {/* مساحة عرض المحتوى (Main Content Area) */}
-                        <div className="flex-1 overflow-y-auto bg-[#FBFDFF] p-4 md:p-10 no-scrollbar">
-                            <motion.div
-                                key={activeTab}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="max-w-5xl mx-auto"
-                            >
-                                {renderTabContent()}
-                            </motion.div>
+                    {/* شريط التبويبات (Navigation Tabs) */}
+                    <div className="flex flex-row border-b border-gray-50 px-2 md:px-8 bg-white sticky top-0 z-10 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap md:justify-start justify-around">
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={cn(
+                                        "flex flex-row items-center gap-1 md:gap-2 px-4 md:px-6 py-4 md:py-6 text-[11px] md:text-[13px] font-black transition-all relative shrink-0",
+                                        isActive ? "text-blue-600 scale-105" : "text-slate-400 hover:text-slate-600"
+                                    )}
+                                >
+                                    <Icon size={18} className={cn(isActive ? "text-blue-600" : "text-slate-300")} />
+                                    <span className="hidden md:inline">{tab.label}</span>
+                                    {isActive && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-[4px] bg-blue-600 rounded-t-full" />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* مساحة عرض المحتوى (Main Content Area) */}
+                    <div className="flex-1 overflow-y-auto bg-[#FBFDFF] p-4 md:p-10 no-scrollbar">
+                        <div className="max-w-5xl mx-auto">
+                            {renderTabContent()}
                         </div>
-                    </motion.div>
+                    </div>
+                </div>
+            </SlideIn>
 
                     {/* ========================================== */}
                     {/* النوافذ الفرعية (Sub-modals for details) */}
@@ -848,8 +832,6 @@ export default function TeacherDetailModal({
                         handleExemptStudent={handleExemptStudent}
                         handleRemoveExemption={handleRemoveExemption}
                     />
-                </div>
-            )}
-        </AnimatePresence>
+        </>
     );
 }

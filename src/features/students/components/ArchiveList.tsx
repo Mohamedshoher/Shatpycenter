@@ -26,7 +26,7 @@ import { useRouter } from 'next/navigation';
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
 import { Student } from '@/types';
 import StudentDetailModal from './StudentDetailModal';
-import { AnimatePresence, motion } from 'framer-motion';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import EditStudentModal from './EditStudentModal';
 import { Button } from '@/components/ui/button';
 
@@ -618,88 +618,73 @@ export default function ArchiveList() {
             </div>
 
             {/* نافذة اختيار المجموعة عند الاستعادة */}
-            <AnimatePresence>
-                {restoreTarget && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
-                            onClick={() => setRestoreTarget(null)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-[40px] p-8 shadow-2xl z-[201]"
+            <FadeIn show={!!restoreTarget} className="fixed inset-0 z-[200]">
+                <div onClick={() => setRestoreTarget(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            </FadeIn>
+            <SlideIn show={!!restoreTarget} className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-[40px] p-8 shadow-2xl z-[201]">
+                <div className="text-center space-y-4">
+                    <div className="w-20 h-20 bg-green-50 rounded-[30px] flex items-center justify-center text-green-600 mx-auto">
+                        <RotateCcw size={40} />
+                    </div>
+                    <div className="space-y-2">
+                        <h2 className="text-xl font-bold text-gray-900">استعادة الطالب</h2>
+                        <p className="text-sm text-gray-500 font-medium px-4">
+                            يرجى اختيار المجموعة التي سيتم إرجاع الطالب <span className="text-green-600 font-bold">{restoreTarget?.fullName}</span> إليها
+                        </p>
+                    </div>
+
+                    <div className="space-y-3 pt-4">
+                        <label className="text-[12px] font-bold text-gray-400 block text-right pr-2">اختر المجموعة</label>
+                        <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
+                            {[...(groups || [])]
+                                .sort((a, b) => (a.name || '').localeCompare((b.name || ''), 'ar'))
+                                .map((group) => {
+                                    const isSelected = targetGroupId && group.id && String(targetGroupId) === String(group.id);
+                                    return (
+                                        <button
+                                            key={group.id}
+                                            type="button"
+                                            onClick={() => setTargetGroupId(group.id)}
+                                            className={cn(
+                                                "w-full min-h-[56px] p-4 rounded-2xl border text-right font-black transition-all relative flex items-center justify-between",
+                                                isSelected
+                                                    ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-200"
+                                                    : "bg-white border-gray-100 text-gray-700 hover:bg-gray-50 active:scale-95"
+                                            )}
+                                        >
+                                            <span className={cn("truncate ml-8", isSelected ? "text-white" : "text-gray-900")}>
+                                                {group.name && group.name.trim() !== "" ? group.name : `مجموعة غير مسمى (${group.id.slice(0, 4)})`}
+                                            </span>
+                                            {isSelected && <Check size={20} strokeWidth={3} className="shrink-0" />}
+                                        </button>
+                                    );
+                                })}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-6">
+                        <button
+                            type="button"
+                            onClick={handleRestoreConfirm}
+                            className={cn(
+                                "flex-1 h-14 rounded-2xl font-black flex items-center justify-center transition-all",
+                                !targetGroupId || isRestoring
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-green-600 text-white shadow-xl shadow-green-100 hover:bg-green-700 active:scale-95"
+                            )}
                         >
-                            <div className="text-center space-y-4">
-                                <div className="w-20 h-20 bg-green-50 rounded-[30px] flex items-center justify-center text-green-600 mx-auto">
-                                    <RotateCcw size={40} />
-                                </div>
-                                <div className="space-y-2">
-                                    <h2 className="text-xl font-bold text-gray-900">استعادة الطالب</h2>
-                                    <p className="text-sm text-gray-500 font-medium px-4">
-                                        يرجى اختيار المجموعة التي سيتم إرجاع الطالب <span className="text-green-600 font-bold">{restoreTarget.fullName}</span> إليها
-                                    </p>
-                                </div>
-
-                                <div className="space-y-3 pt-4">
-                                    <label className="text-[12px] font-bold text-gray-400 block text-right pr-2">اختر المجموعة</label>
-                                    <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
-                                        {[...(groups || [])]
-                                            .sort((a, b) => (a.name || '').localeCompare((b.name || ''), 'ar'))
-                                            .map((group) => {
-                                                const isSelected = targetGroupId && group.id && String(targetGroupId) === String(group.id);
-                                                return (
-                                                    <button
-                                                        key={group.id}
-                                                        type="button"
-                                                        onClick={() => setTargetGroupId(group.id)}
-                                                        className={cn(
-                                                            "w-full min-h-[56px] p-4 rounded-2xl border text-right font-black transition-all relative flex items-center justify-between",
-                                                            isSelected
-                                                                ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-200"
-                                                                : "bg-white border-gray-100 text-gray-700 hover:bg-gray-50 active:scale-95"
-                                                        )}
-                                                    >
-                                                        <span className={cn("truncate ml-8", isSelected ? "text-white" : "text-gray-900")}>
-                                                            {group.name && group.name.trim() !== "" ? group.name : `مجموعة غير مسمى (${group.id.slice(0, 4)})`}
-                                                        </span>
-                                                        {isSelected && <Check size={20} strokeWidth={3} className="shrink-0" />}
-                                                    </button>
-                                                );
-                                            })}
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3 pt-6">
-                                    <button
-                                        type="button"
-                                        onClick={handleRestoreConfirm}
-                                        className={cn(
-                                            "flex-1 h-14 rounded-2xl font-black flex items-center justify-center transition-all",
-                                            !targetGroupId || isRestoring
-                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                                : "bg-green-600 text-white shadow-xl shadow-green-100 hover:bg-green-700 active:scale-95"
-                                        )}
-                                    >
-                                        {isRestoring ? "جاري الاستعادة..." : "تأكيد الاستعادة"}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setRestoreTarget(null)}
-                                        className="flex-1 h-14 rounded-2xl font-black border border-gray-100 bg-white text-gray-500 hover:bg-gray-50 transition-all active:scale-95"
-                                    >
-                                        إلغاء
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                            {isRestoring ? "جاري الاستعادة..." : "تأكيد الاستعادة"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setRestoreTarget(null)}
+                            className="flex-1 h-14 rounded-2xl font-black border border-gray-100 bg-white text-gray-500 hover:bg-gray-50 transition-all active:scale-95"
+                        >
+                            إلغاء
+                        </button>
+                    </div>
+                </div>
+            </SlideIn>
 
             <EditStudentModal
                 student={studentToEdit}

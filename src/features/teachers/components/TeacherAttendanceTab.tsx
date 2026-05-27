@@ -1,6 +1,6 @@
 "use client";// غياب المدرسين وحضورهم 
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { Calendar, ChevronRight, ChevronLeft, X, CheckCircle2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -196,85 +196,70 @@ export const TeacherAttendanceTab = ({
                                     </button>
                                     {isToday && <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />}
 
-                                    <AnimatePresence>
-                                        {activeDayMenu === day && !isTeacher && (
-                                            <>
-                                                <motion.div
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    exit={{ opacity: 0 }}
-                                                    className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm"
-                                                    onClick={() => setActiveDayMenu(null)}
-                                                />
-                                                <motion.div
-                                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[340px] bg-white rounded-[32px] shadow-2xl border border-gray-100 p-6 z-[201] space-y-4"
-                                                >
-                                                    <div className="flex flex-row-reverse items-center justify-between border-b border-gray-50 pb-3">
-                                                        <h5 className="font-black text-gray-800 text-base">تعديل سجل يوم {day}</h5>
-                                                        <button onClick={() => setActiveDayMenu(null)} className="text-gray-400 hover:bg-gray-50 p-1 rounded-full transition-all"><X size={20} /></button>
-                                                    </div>
+                                    <FadeIn show={activeDayMenu === day && !isTeacher} className="fixed inset-0 z-[200]">
+                                        <div onClick={() => setActiveDayMenu(null)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+                                    </FadeIn>
+                                    <SlideIn show={activeDayMenu === day && !isTeacher}
+                                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[340px] bg-white rounded-[32px] shadow-2xl border border-gray-100 p-6 z-[201] space-y-4"
+                                    >
+                                        <div className="flex flex-row-reverse items-center justify-between border-b border-gray-50 pb-3">
+                                            <h5 className="font-black text-gray-800 text-base">تعديل سجل يوم {day}</h5>
+                                            <button onClick={() => setActiveDayMenu(null)} className="text-gray-400 hover:bg-gray-50 p-1 rounded-full transition-all"><X size={20} /></button>
+                                        </div>
 
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        {/* اختيارات الحالة الرئيسية */}
-                                                        {[
-                                                            { id: 'present', label: 'حاضر', color: 'bg-green-500' },
-                                                            { id: 'absent', label: 'غائب', color: 'bg-red-500' },
-                                                            { id: 'discipline', label: 'خصم', color: 'bg-orange-500' },
-                                                            { id: 'reward', label: 'مكافأة', color: 'bg-teal-500' }
-                                                        ].map(opt => (
-                                                            <button
-                                                                key={opt.id}
-                                                                onClick={() => setTempStatus(opt.id as any)}
-                                                                className={cn(
-                                                                    "h-10 rounded-xl text-[10px] font-bold border transition-all",
-                                                                    tempStatus === opt.id ? `${opt.color} text-white border-transparent shadow-lg shadow-${opt.id}-500/20` : "bg-gray-50 text-gray-500 border-gray-100"
-                                                                )}
-                                                            >
-                                                                {opt.label}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-
-                                                    {/* تفاصيل إضافية في حال اختيار خصم أو مكافأة */}
-                                                    {(tempStatus === 'discipline' || tempStatus === 'reward') && (
-                                                        <div className="space-y-3 pt-2">
-                                                            <div className="flex flex-row-reverse items-center gap-2">
-                                                                {['day', 'half', 'quarter'].map(amt => (
-                                                                    <button
-                                                                        key={amt}
-                                                                        onClick={() => setTempAmount(amt as any)}
-                                                                        className={cn(
-                                                                            "flex-1 h-8 rounded-lg text-[9px] font-bold border transition-all",
-                                                                            tempAmount === amt ? "bg-gray-900 text-white border-transparent" : "bg-white text-gray-400 border-gray-100"
-                                                                        )}
-                                                                    >
-                                                                        {amt === 'day' ? 'يوم' : amt === 'half' ? 'نصف' : 'ربع'}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                            <div className="text-right space-y-1">
-                                                                <label className="text-[9px] font-bold text-gray-400 mr-1">السبب / التفاصيل</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={tempReason}
-                                                                    onChange={(e) => setTempReason(e.target.value)}
-                                                                    placeholder="ادخل السبب هنا..."
-                                                                    className="w-full h-10 bg-gray-50 border border-gray-100 rounded-xl px-3 text-right text-xs focus:ring-2 focus:ring-teal-500/10 outline-none"
-                                                                />
-                                                            </div>
-                                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[
+                                                { id: 'present', label: 'حاضر', color: 'bg-green-500' },
+                                                { id: 'absent', label: 'غائب', color: 'bg-red-500' },
+                                                { id: 'discipline', label: 'خصم', color: 'bg-orange-500' },
+                                                { id: 'reward', label: 'مكافأة', color: 'bg-teal-500' }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.id}
+                                                    onClick={() => setTempStatus(opt.id as any)}
+                                                    className={cn(
+                                                        "h-10 rounded-xl text-[10px] font-bold border transition-all",
+                                                        tempStatus === opt.id ? `${opt.color} text-white border-transparent shadow-lg shadow-${opt.id}-500/20` : "bg-gray-50 text-gray-500 border-gray-100"
                                                     )}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
 
-                                                    <Button onClick={handleAddDiscipline} className="w-full h-10 bg-gray-900 text-white rounded-xl text-xs font-bold shadow-lg shadow-gray-900/20">
-                                                        حفظ التعديلات
-                                                    </Button>
-                                                </motion.div>
-                                            </>
+                                        {(tempStatus === 'discipline' || tempStatus === 'reward') && (
+                                            <div className="space-y-3 pt-2">
+                                                <div className="flex flex-row-reverse items-center gap-2">
+                                                    {['day', 'half', 'quarter'].map(amt => (
+                                                        <button
+                                                            key={amt}
+                                                            onClick={() => setTempAmount(amt as any)}
+                                                            className={cn(
+                                                                "flex-1 h-8 rounded-lg text-[9px] font-bold border transition-all",
+                                                                tempAmount === amt ? "bg-gray-900 text-white border-transparent" : "bg-white text-gray-400 border-gray-100"
+                                                            )}
+                                                        >
+                                                            {amt === 'day' ? 'يوم' : amt === 'half' ? 'نصف' : 'ربع'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="text-right space-y-1">
+                                                    <label className="text-[9px] font-bold text-gray-400 mr-1">السبب / التفاصيل</label>
+                                                    <input
+                                                        type="text"
+                                                        value={tempReason}
+                                                        onChange={(e) => setTempReason(e.target.value)}
+                                                        placeholder="ادخل السبب هنا..."
+                                                        className="w-full h-10 bg-gray-50 border border-gray-100 rounded-xl px-3 text-right text-xs focus:ring-2 focus:ring-teal-500/10 outline-none"
+                                                    />
+                                                </div>
+                                            </div>
                                         )}
-                                    </AnimatePresence>
+
+                                        <Button onClick={handleAddDiscipline} className="w-full h-10 bg-gray-900 text-white rounded-xl text-xs font-bold shadow-lg shadow-gray-900/20">
+                                            حفظ التعديلات
+                                        </Button>
+                                    </SlideIn>
                                 </div>
                             );
                         });

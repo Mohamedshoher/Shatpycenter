@@ -20,7 +20,7 @@ import {
     Trophy
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getStudents } from '@/features/students/services/studentService';
@@ -238,16 +238,14 @@ export default function DashboardOverview() {
                         {/* Main Stats Grid - Compact Horizontal Layout */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 px-2">
                             {stats.map((stat, idx) => (
-                                <motion.div
+                                <div
                                     key={idx}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.05 }}
+                                    style={{ animationDelay: `${idx * 50}ms` }}
                                     onClick={() => {
                                         if (stat.onClick) stat.onClick();
                                         else if (stat.link) router.push(stat.link);
                                     }}
-                                    className="bg-white rounded-[24px] p-4 shadow-sm border border-gray-50 flex items-center gap-4 cursor-pointer hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-1 transition-all group"
+                                    className="bg-white rounded-[24px] p-4 shadow-sm border border-gray-50 flex items-center gap-4 cursor-pointer hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-1 transition-all group animate-[fadeIn_0.4s_ease-out_both]"
                                 >
                                     <div className={cn(
                                         "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md transition-transform group-hover:rotate-6 shrink-0",
@@ -262,7 +260,7 @@ export default function DashboardOverview() {
                                     <div className="text-left">
                                         <p className="text-xl font-black text-gray-900 font-sans leading-none">{stat.value}</p>
                                     </div>
-                                </motion.div>
+                                </div>
                             ))}
                         </div>
 
@@ -280,19 +278,17 @@ export default function DashboardOverview() {
                                     { title: 'مركز الاختبارات', desc: 'نتائج تقييم الطلاب', icon: Trophy, color: 'text-amber-600', bg: 'bg-amber-50', link: '/exams-report' },
                                     { title: 'إدارة المجموعات', desc: 'توزيع الطلاب والمدرسين', icon: LayoutGrid, color: 'text-blue-600', bg: 'bg-blue-50', link: '/groups' },
                                 ].map((action, idx) => (
-                                    <motion.div
+                                    <div
                                         key={idx}
-                                        whileHover={{ y: -5, scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
                                         onClick={() => router.push(action.link)}
-                                        className="bg-white rounded-[32px] p-5 border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 transition-all cursor-pointer group flex flex-col items-center text-center"
+                                        className="bg-white rounded-[32px] p-5 border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 transition-all cursor-pointer group flex flex-col items-center text-center hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]"
                                     >
                                         <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:rotate-12", action.bg, action.color)}>
                                             <action.icon size={28} />
                                         </div>
                                         <h4 className="font-black text-gray-900 text-sm mb-1">{action.title}</h4>
                                         <p className="text-[10px] text-gray-400 font-bold leading-tight">{action.desc}</p>
-                                    </motion.div>
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -302,79 +298,66 @@ export default function DashboardOverview() {
 
 
             {/* نافذة إدارة طلبات الإجازة */}
-            <AnimatePresence>
-                {isLeaveModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsLeaveModalOpen(false)}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white rounded-[40px] w-full max-w-2xl max-h-[80vh] overflow-hidden relative z-10 shadow-2xl flex flex-col"
-                        >
-                            <div className="p-8 border-b border-gray-100 flex items-center justify-between shrink-0">
-                                <h2 className="text-2xl font-black text-gray-900 border-r-4 border-orange-500 pr-4">طلبات الإجازة المعلقة</h2>
-                                <button onClick={() => setIsLeaveModalOpen(false)} className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400">
-                                    <CloseIcon size={24} />
-                                </button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto p-8 space-y-4">
-                                {pendingLeaves.length === 0 ? (
-                                    <div className="text-center py-12 text-gray-400 font-bold">
-                                        لا توجد طلبات إجازة معلقة حالياً
-                                    </div>
-                                ) : (
-                                    pendingLeaves.map((req: LeaveRequest) => (
-                                        <div key={req.id} className="bg-gray-50 rounded-3xl p-6 border border-gray-100">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div>
-                                                    <h3 className="font-black text-gray-900 text-lg">{req.studentName}</h3>
-                                                    <p className="text-xs text-blue-600 font-bold">
-                                                        من {req.startDate} إلى {req.endDate}
-                                                    </p>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={async () => {
-                                                            await updateLeaveRequest(req.id, { status: 'approved' });
-                                                            refetchLeaves();
-                                                        }}
-                                                        className="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center hover:bg-green-600 hover:text-white transition-all"
-                                                        title="موافقة"
-                                                    >
-                                                        <Check size={20} />
-                                                    </button>
-                                                    <button
-                                                        onClick={async () => {
-                                                            await updateLeaveRequest(req.id, { status: 'rejected' });
-                                                            refetchLeaves();
-                                                        }}
-                                                        className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
-                                                        title="رفض"
-                                                    >
-                                                        <CloseIcon size={20} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="bg-white rounded-2xl p-4 text-sm text-gray-600 font-bold shadow-sm">
-                                                <p className="text-[10px] text-gray-400 mb-1">السبب:</p>
-                                                {req.reason}
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </motion.div>
+            <FadeIn show={isLeaveModalOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsLeaveModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            </FadeIn>
+            <SlideIn show={isLeaveModalOpen} className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="bg-white rounded-[40px] w-full max-w-2xl max-h-[80vh] overflow-hidden relative z-10 shadow-2xl flex flex-col">
+                    <div className="p-8 border-b border-gray-100 flex items-center justify-between shrink-0">
+                        <h2 className="text-2xl font-black text-gray-900 border-r-4 border-orange-500 pr-4">طلبات الإجازة المعلقة</h2>
+                        <button onClick={() => setIsLeaveModalOpen(false)} className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400">
+                            <CloseIcon size={24} />
+                        </button>
                     </div>
-                )}
-            </AnimatePresence>
+
+                    <div className="flex-1 overflow-y-auto p-8 space-y-4">
+                        {pendingLeaves.length === 0 ? (
+                            <div className="text-center py-12 text-gray-400 font-bold">
+                                لا توجد طلبات إجازة معلقة حالياً
+                            </div>
+                        ) : (
+                            pendingLeaves.map((req: LeaveRequest) => (
+                                <div key={req.id} className="bg-gray-50 rounded-3xl p-6 border border-gray-100">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <h3 className="font-black text-gray-900 text-lg">{req.studentName}</h3>
+                                            <p className="text-xs text-blue-600 font-bold">
+                                                من {req.startDate} إلى {req.endDate}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={async () => {
+                                                    await updateLeaveRequest(req.id, { status: 'approved' });
+                                                    refetchLeaves();
+                                                }}
+                                                className="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center hover:bg-green-600 hover:text-white transition-all"
+                                                title="موافقة"
+                                            >
+                                                <Check size={20} />
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    await updateLeaveRequest(req.id, { status: 'rejected' });
+                                                    refetchLeaves();
+                                                }}
+                                                className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                                                title="رفض"
+                                            >
+                                                <CloseIcon size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-2xl p-4 text-sm text-gray-600 font-bold shadow-sm">
+                                        <p className="text-[10px] text-gray-400 mb-1">السبب:</p>
+                                        {req.reason}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </SlideIn>
 
             {/* نافذة ملحوظات الطلاب */}
             <StudentNotesModal

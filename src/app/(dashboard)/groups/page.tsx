@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn, tieredSearchFilter } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn } from '@/components/ui/transition';
 import dynamic from 'next/dynamic';
 
 const AddGroupModal = dynamic(() => import('@/features/groups/components/AddGroupModal'), { ssr: false });
@@ -260,14 +260,8 @@ export default function GroupsPage() {
                                                 <ChevronDown size={14} className={cn("transition-transform duration-300", isConfigDropdownOpen && "rotate-180")} />
                                             </button>
 
-                                            <AnimatePresence>
-                                                {isConfigDropdownOpen && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        exit={{ opacity: 0, y: 10 }}
-                                                        className="absolute top-[120%] left-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-2"
-                                                    >
+                                            <FadeIn show={isConfigDropdownOpen}>
+                                                <div className="absolute top-[120%] left-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-2">
                                                         <div className="px-4 py-2 text-[10px] font-black tracking-widest text-gray-400 border-b border-gray-50 uppercase">الفلترة</div>
                                                         {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'حضور ممتاز', 'حضور ضعيف'].map((type) => (
                                                             <button
@@ -319,9 +313,8 @@ export default function GroupsPage() {
                                                                 {sortBy === sortOption.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                                                             </button>
                                                         ))}
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
+                                                    </div>
+                                            </FadeIn>
                                         </div>
                                     )}
                                 </div>
@@ -338,8 +331,7 @@ export default function GroupsPage() {
                         ))
                     ) : (
                         filteredGroups?.map((group) => (
-                            <motion.div
-                                layout
+                            <div
                                 key={group.id}
                                 className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-50 flex flex-col gap-4 hover:shadow-xl hover:shadow-purple-500/5 transition-all group relative overflow-hidden"
                             >
@@ -413,7 +405,7 @@ export default function GroupsPage() {
                                             </>
                                         )}
                                     </div>
-                            </motion.div>
+                            </div>
                         ))
                     )}
                 </div>

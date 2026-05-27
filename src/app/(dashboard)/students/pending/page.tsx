@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStudents, updateStudent, deleteStudent } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { UserCheck, UserX, Edit2, Trash2, Users, Calendar, Phone, MapPin, CreditCard, MessageSquare, BookOpen, MessageCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { Student, Group } from '@/types';
 
@@ -165,11 +165,9 @@ export default function PendingStudentsPage() {
                 ) : (
                     <div className="grid gap-4">
                         {pendingStudents.map((student) => (
-                            <motion.div
+                            <div
                                 key={student.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="bg-white rounded-3xl p-6 shadow-sm border border-amber-100 hover:shadow-xl transition-all"
+                                className="bg-white rounded-3xl p-6 shadow-sm border border-amber-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
                             >
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="flex items-center gap-4">
@@ -230,209 +228,53 @@ export default function PendingStudentsPage() {
                                         </div>
                                     )}
                                 </div>
-                            </motion.div>
+                            </div>
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* New Students Grid */}
-            {recentStudents.length > 0 && (
-                <div className="space-y-4">
-                    <h2 className="text-xl font-black text-gray-900 px-2 border-r-4 border-green-500">تم قبولهم حديثاً (آخر يومين)</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {recentStudents.map((student) => (
-                            <motion.div
-                                key={student.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-3 hover:border-green-200 transition-all"
-                            >
-                                {/* السطر الأول: الاسم والتاريخ */}
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-black text-sm shrink-0">
-                                            {student.fullName[0]}
-                                        </div>
-                                        <h3 className="text-sm font-black text-gray-900 truncate">{student.fullName}</h3>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 shrink-0 bg-gray-50 px-2 py-1 rounded-lg">
-                                        <Calendar size={14} />
-                                        <span>{student.enrollmentDate}</span>
-                                    </div>
-                                </div>
-
-                                {/* السطر الثاني: رقم الهاتف والمجموعة والأزرار */}
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex flex-1 items-center gap-2 min-w-0">
-                                        <div className="flex items-center gap-1.5 text-gray-600 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100 shrink-0">
-                                            <Phone size={14} className="text-gray-400 shrink-0" />
-                                            <span className="text-xs font-black truncate" dir="ltr">{student.parentPhone}</span>
-                                        </div>
-                                        <div className="flex flex-1 items-center gap-1.5 text-indigo-600 bg-indigo-50 px-2 py-1.5 rounded-lg border border-indigo-100 min-w-0">
-                                            <BookOpen size={13} className="shrink-0" />
-                                            <span className="text-[10px] font-black truncate">
-                                                {groups.find(g => g.id === student.groupId)?.name || 'بدون مجموعة'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                        <button
-                                            onClick={() => handleWelcomeWhatsApp(student)}
-                                            className="w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white flex items-center justify-center transition-all shadow-sm"
-                                            title="إرسال رسالة ترحيب عبر الواتساب"
-                                        >
-                                            <MessageCircle size={15} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleEdit(student)}
-                                            className="w-8 h-8 rounded-lg bg-gray-50 text-gray-500 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center transition-all border border-gray-100"
-                                            title="تعديل بيانات الطالب"
-                                        >
-                                            <Edit2 size={14} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Edit Modal */}
-            {editingStudent && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setEditingStudent(null)}>
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl"
+            {/* Reject Modal */}
+            {showRejectModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRejectModal(null)}>
+                    <div
+                        className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl animate-[slideUp_0.2s_ease-out]"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h2 className="text-2xl font-black text-gray-900 mb-6">تعديل بيانات الطالب</h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">الاسم الكامل</label>
-                                <input
-                                    type="text"
-                                    value={editingStudent.fullName}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, fullName: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">رقم ولي الأمر</label>
-                                <input
-                                    type="text"
-                                    value={editingStudent.parentPhone}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, parentPhone: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                                />
-                            </div>
-                            <div className="flex items-center justify-between bg-orange-50/50 border border-orange-100 p-3 rounded-xl">
-                                <label className="text-sm font-bold text-gray-700">هل الطالب يتيم؟</label>
-                                <input
-                                    type="checkbox"
-                                    checked={editingStudent.isOrphan || false}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, isOrphan: e.target.checked })}
-                                    className="w-5 h-5 rounded-md border-gray-300 text-purple-600 focus:ring-purple-500"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">تاريخ الالتحاق</label>
-                                <input
-                                    type="date"
-                                    value={editingStudent.enrollmentDate || ''}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, enrollmentDate: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">الرسوم الشهرية</label>
-                                <input
-                                    type="number"
-                                    value={editingStudent.monthlyAmount || 0}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, monthlyAmount: Number(e.target.value) })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">المجموعة</label>
-                                <select
-                                    value={editingStudent.groupId || ''}
-                                    onChange={(e) => setEditingStudent({ ...editingStudent, groupId: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
-                                >
-                                    <option value="">بدون مجموعة</option>
-                                    {groups.map(g => (
-                                        <option key={g.id} value={g.id}>{g.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                        <h2 className="text-2xl font-black text-red-600 mb-4">رفض الطالب</h2>
+                        <p className="text-gray-600 mb-4">
+                            هل أنت متأكد من رفض طلب <span className="font-bold">{showRejectModal.fullName}</span>؟
+                        </p>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">سبب الرفض</label>
+                            <textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-500 outline-none"
+                                rows={3}
+                                placeholder="يرجى توضيح سبب الرفض..."
+                            />
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button
-                                onClick={() => updateMutation.mutate({ id: editingStudent.id, updates: editingStudent })}
-                                className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors"
+                                onClick={confirmReject}
+                                className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors"
                             >
-                                حفظ التعديلات
+                                تأكيد الرفض
                             </button>
                             <button
-                                onClick={() => setEditingStudent(null)}
+                                onClick={() => {
+                                    setShowRejectModal(null);
+                                    setRejectReason('');
+                                }}
                                 className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
                             >
                                 إلغاء
                             </button>
                         </div>
-                    </motion.div>
-                </div >
-            )
-            }
-
-            {/* Reject Modal */}
-            {
-                showRejectModal && (
-                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRejectModal(null)}>
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <h2 className="text-2xl font-black text-red-600 mb-4">رفض الطالب</h2>
-                            <p className="text-gray-600 mb-4">
-                                هل أنت متأكد من رفض طلب <span className="font-bold">{showRejectModal.fullName}</span>؟
-                            </p>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">سبب الرفض</label>
-                                <textarea
-                                    value={rejectReason}
-                                    onChange={(e) => setRejectReason(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-500 outline-none"
-                                    rows={3}
-                                    placeholder="يرجى توضيح سبب الرفض..."
-                                />
-                            </div>
-                            <div className="flex gap-3 mt-6">
-                                <button
-                                    onClick={confirmReject}
-                                    className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors"
-                                >
-                                    تأكيد الرفض
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowRejectModal(null);
-                                        setRejectReason('');
-                                    }}
-                                    className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-                                >
-                                    إلغاء
-                                </button>
-                            </div>
-                        </motion.div>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 }

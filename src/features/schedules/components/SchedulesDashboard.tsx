@@ -7,7 +7,7 @@ import { getGroups } from '@/features/groups/services/groupService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Clock, Users, ArrowRight, Loader2, CalendarClock, TrendingUp, Filter, UserMinus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn } from '@/components/ui/transition';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';
 
 export default function SchedulesDashboard() {
@@ -179,12 +179,7 @@ export default function SchedulesDashboard() {
                             )}
                         >
                             {selectedDay === day && (
-                                <motion.div 
-                                    layoutId="activeDay" 
-                                    className="absolute inset-0 bg-white/20" 
-                                    initial={false}
-                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                />
+                                <div className="absolute inset-0 bg-white/20" />
                             )}
                             <span className="relative z-10">{day}</span>
                         </button>
@@ -201,12 +196,7 @@ export default function SchedulesDashboard() {
                     </div>
                 ) : (
                     dashboardData.map((group) => (
-                        <motion.div 
-                            key={group.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden"
-                        >
+                        <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
                             {/* Group Header */}
                             <div className="bg-gray-50/80 p-4 md:p-5 border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between md:items-center">
                                 <div className="flex items-center gap-4">
@@ -258,119 +248,96 @@ export default function SchedulesDashboard() {
                             </div>
 
                             {/* Unscheduled Students List */}
-                            <AnimatePresence>
-                                {expandedUnscheduledGroupId === group.id && group.studentsWithoutSchedule?.length > 0 && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="overflow-hidden bg-red-50/30 border-b border-red-100/50"
-                                    >
-                                        <div className="p-4 md:p-5">
-                                            <p className="text-xs font-bold text-red-600 mb-3">الطلاب الذين لم يسجلوا مواعيد بعد (انقر على اسم الطالب لتسجيل موعد):</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {group.studentsWithoutSchedule.map((st: any) => (
-                                                    <button
-                                                        key={st.id}
-                                                        onClick={() => setSelectedStudentForModal(st)}
-                                                        className="text-xs font-bold text-gray-700 bg-white px-3 py-2 rounded-lg border border-red-200 flex items-center gap-2 hover:bg-red-50 hover:text-red-700 hover:shadow-sm transition-all"
-                                                    >
-                                                        <div className="w-2 h-2 rounded-full bg-red-500" />
-                                                        {st.fullName}
-                                                    </button>
-                                                ))}
-                                            </div>
+                            <FadeIn show={expandedUnscheduledGroupId === group.id && group.studentsWithoutSchedule?.length > 0}>
+                                <div className="bg-red-50/30 border-b border-red-100/50">
+                                    <div className="p-4 md:p-5">
+                                        <p className="text-xs font-bold text-red-600 mb-3">الطلاب الذين لم يسجلوا مواعيد بعد (انقر على اسم الطالب لتسجيل موعد):</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {group.studentsWithoutSchedule.map((st: any) => (
+                                                <button
+                                                    key={st.id}
+                                                    onClick={() => setSelectedStudentForModal(st)}
+                                                    className="text-xs font-bold text-gray-700 bg-white px-3 py-2 rounded-lg border border-red-200 flex items-center gap-2 hover:bg-red-50 hover:text-red-700 hover:shadow-sm transition-all"
+                                                >
+                                                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                                                    {st.fullName}
+                                                </button>
+                                            ))}
                                         </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                                    </div>
+                                </div>
+                            </FadeIn>
 
                             {/* Time Slots */}
-                            <AnimatePresence>
-                                {expandedGroupSlotsIds.includes(group.id) && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="overflow-hidden"
-                                    >
-                                        <div className="p-5 border-t border-gray-100">
-                                            {group.slots.length === 0 ? (
-                                                <div className="text-center py-6 text-gray-400 font-bold text-sm bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                                                    لا توجد مواعيد مسجلة في هذه المجموعة يوم {selectedDay}
+                            <FadeIn show={expandedGroupSlotsIds.includes(group.id)}>
+                                <div>
+                                    <div className="p-5 border-t border-gray-100">
+                                        {group.slots.length === 0 ? (
+                                            <div className="text-center py-6 text-gray-400 font-bold text-sm bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                                                لا توجد مواعيد مسجلة في هذه المجموعة يوم {selectedDay}
+                                            </div>
+                                    ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {group.slots.map((slot, idx) => {
+                                        const slotId = `${group.id}-${slot.time}`;
+                                        const isExpanded = expandedSlotId === slotId;
+                                        return (
+                                        <div 
+                                            key={idx} 
+                                            onClick={() => setExpandedSlotId(isExpanded ? null : slotId)}
+                                            className={cn("p-4 rounded-2xl border transition-all duration-300 cursor-pointer hover:shadow-md", slot.statusBg, slot.percentage >= 100 ? "border-red-100" : "border-transparent hover:border-gray-200 bg-gray-50/50")}
+                                        >
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <Clock size={16} className="text-gray-400" />
+                                                    <span className="font-black text-gray-800 text-sm">{slot.time}</span>
                                                 </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {group.slots.map((slot, idx) => {
-                                            const slotId = `${group.id}-${slot.time}`;
-                                            const isExpanded = expandedSlotId === slotId;
-                                            return (
-                                            <div 
-                                                key={idx} 
-                                                onClick={() => setExpandedSlotId(isExpanded ? null : slotId)}
-                                                className={cn("p-4 rounded-2xl border transition-all duration-300 cursor-pointer hover:shadow-md", slot.statusBg, slot.percentage >= 100 ? "border-red-100" : "border-transparent hover:border-gray-200 bg-gray-50/50")}
-                                            >
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <Clock size={16} className="text-gray-400" />
-                                                        <span className="font-black text-gray-800 text-sm">{slot.time}</span>
-                                                    </div>
-                                                    <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-full", slot.statusBg, slot.statusText)}>
-                                                        {slot.statusLabel}
+                                                <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-full", slot.statusBg, slot.statusText)}>
+                                                    {slot.statusLabel}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-xs font-bold">
+                                                    <span className="text-gray-500">العدد المسجل</span>
+                                                    <span className={cn("font-black", slot.statusText)}>
+                                                        {slot.count} / {group.maxStudentsPerHour || 5}
                                                     </span>
                                                 </div>
                                                 
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between text-xs font-bold">
-                                                        <span className="text-gray-500">العدد المسجل</span>
-                                                        <span className={cn("font-black", slot.statusText)}>
-                                                            {slot.count} / {group.maxStudentsPerHour || 5}
-                                                        </span>
-                                                    </div>
-                                                    
-                                                    {/* Progress Bar */}
-                                                    <div className="h-2.5 w-full bg-gray-200/60 rounded-full overflow-hidden">
-                                                        <div 
-                                                            className={cn("h-full rounded-full transition-all duration-1000", slot.statusColor)}
-                                                            style={{ width: `${slot.percentage}%` }}
-                                                        />
-                                                    </div>
+                                                {/* Progress Bar */}
+                                                <div className="h-2.5 w-full bg-gray-200/60 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className={cn("h-full rounded-full transition-all duration-1000", slot.statusColor)}
+                                                        style={{ width: `${slot.percentage}%` }}
+                                                    />
                                                 </div>
-
-                                                {/* Expanded Students Details */}
-                                                <AnimatePresence>
-                                                    {isExpanded && (
-                                                        <motion.div
-                                                            initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                                                            animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
-                                                            exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                                                            className="overflow-hidden"
-                                                        >
-                                                            <div className="pt-3 border-t border-gray-200/50 space-y-2">
-                                                                <p className="text-[11px] font-black text-gray-500 mb-2">الطلاب المسجلين:</p>
-                                                                {slot.students.map((st: any) => (
-                                                                    <div key={st.id} className="text-xs font-bold text-gray-800 bg-white/50 px-3 py-2 rounded-lg border border-gray-100 flex items-center gap-2">
-                                                                        <div className={cn("w-2 h-2 rounded-full", slot.statusColor)} />
-                                                                        {st.fullName}
-                                                                    </div>
-                                                                ))}
-                                                                {slot.students.length === 0 && (
-                                                                    <p className="text-xs text-gray-400">لا يوجد طلاب</p>
-                                                                )}
-                                                            </div>
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
                                             </div>
-                                            );
-                                        })}
+
+                                            {/* Expanded Students Details */}
+                                            <FadeIn show={isExpanded}>
+                                                <div className="pt-3 border-t border-gray-200/50 space-y-2">
+                                                    <p className="text-[11px] font-black text-gray-500 mb-2">الطلاب المسجلين:</p>
+                                                    {slot.students.map((st: any) => (
+                                                        <div key={st.id} className="text-xs font-bold text-gray-800 bg-white/50 px-3 py-2 rounded-lg border border-gray-100 flex items-center gap-2">
+                                                            <div className={cn("w-2 h-2 rounded-full", slot.statusColor)} />
+                                                            {st.fullName}
+                                                        </div>
+                                                    ))}
+                                                    {slot.students.length === 0 && (
+                                                        <p className="text-xs text-gray-400">لا يوجد طلاب</p>
+                                                    )}
                                                 </div>
-                                            )}
+                                            </FadeIn>
                                         </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
+                                        );
+                                    })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </FadeIn>
+                        </div>
                     ))
                 )}
             </div>

@@ -22,7 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 import { logout } from "@/features/auth/services/authService";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { Button } from "@/components/ui/button";
 import { PresenceTracker } from "@/components/PresenceTracker";
 import { useChatStore } from "@/store/useChatStore";
@@ -147,11 +147,7 @@ export default function ParentDashboard() {
 
             <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
                 {/* قسم رسالة الترحيب بولي الأمر - خطوط مرنة */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-12 md:mb-16 text-center sm:text-right"
-                >
+                <div className="mb-12 md:mb-16 text-center sm:text-right">
                     <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-tight">
                         {myKids.length > 0
                             ? `مرحباً ولي أمر ${myKids.map(k => k.fullName.split(' ')[0]).join(' و ')} 👋`
@@ -160,7 +156,7 @@ export default function ParentDashboard() {
                     <p className="text-base md:text-xl text-gray-400 font-bold mt-4 max-w-2xl">
                         نسعد بمتابعتك المستمرة لرحلة أبنائك التعليمية في مركز الشاطبي وتطورهم في حفظ القرآن الكريم.
                     </p>
-                </motion.div>
+                </div>
 
                 {/* عنوان القسم والشبكة المرنة */}
                 <div className="flex items-center justify-between mb-8">
@@ -201,38 +197,32 @@ export default function ParentDashboard() {
             </main>
 
             {/* نافذة تفاصيل الطالب المنبثقة */}
-            <AnimatePresence>
-                {selectedKidForDetail && (
-                    <ParentStudentDetailModal
-                        isOpen={!!selectedKidForDetail}
-                        onClose={() => setSelectedKidForDetail(null)}
-                        student={selectedKidForDetail}
-                        group={groups?.find(g => g.id === selectedKidForDetail.groupId)}
-                        teacher={teachers?.find(t => t.id === groups?.find(g => g.id === selectedKidForDetail.groupId)?.teacherId)}
-                    />
-                )}
-            </AnimatePresence>
+            {selectedKidForDetail && (
+                <ParentStudentDetailModal
+                    isOpen={!!selectedKidForDetail}
+                    onClose={() => setSelectedKidForDetail(null)}
+                    student={selectedKidForDetail}
+                    group={groups?.find(g => g.id === selectedKidForDetail.groupId)}
+                    teacher={teachers?.find(t => t.id === groups?.find(g => g.id === selectedKidForDetail.groupId)?.teacherId)}
+                />
+            )}
 
             {/* نافذة طلب الإجازة المنبثقة */}
-            <AnimatePresence>
-                {selectedKidForLeave && (
-                    <LeaveRequestModal
-                        kid={selectedKidForLeave}
-                        onClose={() => setSelectedKidForLeave(null)}
-                    />
-                )}
-            </AnimatePresence>
+            {selectedKidForLeave && (
+                <LeaveRequestModal
+                    kid={selectedKidForLeave}
+                    onClose={() => setSelectedKidForLeave(null)}
+                />
+            )}
 
             {/* نافذة المراسلة المنبثقة */}
-            <AnimatePresence>
-                {isChatOpen && (
-                    <ParentChatModal
-                        isOpen={isChatOpen}
-                        onClose={() => setIsChatOpen(false)}
-                        contacts={contacts}
-                    />
-                )}
-            </AnimatePresence>
+            {isChatOpen && (
+                <ParentChatModal
+                    isOpen={isChatOpen}
+                    onClose={() => setIsChatOpen(false)}
+                    contacts={contacts}
+                />
+            )}
 
             {/* زر المراسلة الداخلية العائم */}
             <button
@@ -287,19 +277,10 @@ function LeaveRequestModal({ kid, onClose }: { kid: any, onClose: () => void }) 
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" dir="rtl">
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={onClose}
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="bg-white rounded-[40px] w-full max-w-md p-8 relative z-10 shadow-2xl"
-            >
+            <FadeIn show={true}>
+                <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            </FadeIn>
+            <SlideIn show={true} className="bg-white rounded-[40px] w-full max-w-md p-8 relative z-10 shadow-2xl">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-black text-gray-900 border-r-4 border-orange-500 pr-3">طلب إجازة</h2>
                     <button onClick={onClose} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
@@ -352,7 +333,7 @@ function LeaveRequestModal({ kid, onClose }: { kid: any, onClose: () => void }) 
                         {addLeave.isPending ? 'جاري الإرسال...' : 'إرسال الطلب'}
                     </Button>
                 </form>
-            </motion.div>
+            </SlideIn>
         </div>
     );
 }
@@ -372,9 +353,7 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
     const hasUnpaidFees = fees.length === 0;
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+        <div
             onClick={onSelect}
             className="bg-white rounded-3xl md:rounded-[40px] p-4 md:p-6 shadow-sm border border-gray-100 hover:shadow-2xl hover:shadow-blue-500/10 transition-all group relative overflow-hidden cursor-pointer active:scale-[0.98]"
         >
@@ -450,7 +429,7 @@ function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid:
                     </button>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }
 

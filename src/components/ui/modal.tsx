@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { SlideIn, FadeIn } from './transition';
 import { cn } from '@/lib/utils';
 
 interface ModalProps {
@@ -16,7 +16,6 @@ interface ModalProps {
 export default function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
 
-    // إغلاق عند Escape ومنع التمرير خلف النافذة
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -32,7 +31,6 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
-    // دعم زر الرجوع في الهاتف لإغلاق النافذة
     useEffect(() => {
         if (!isOpen) return;
         window.history.pushState({ modalOpen: true }, '');
@@ -45,41 +43,30 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
     }, [isOpen]);
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className={cn(
-                            "relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]",
-                            className
-                        )}
-                    >
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                            <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-                            <button
-                                onClick={onClose}
-                                className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
+        <>
+            <FadeIn show={isOpen} className="fixed inset-0 z-[200]" duration={300}>
+                <div onClick={onClose} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            </FadeIn>
+            <SlideIn show={isOpen} className="fixed inset-0 z-[201] flex items-center justify-center p-4" duration={300}>
+                <div ref={modalRef} className={cn(
+                    "relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]",
+                    className
+                )}>
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-12 text-right">
-                            {children}
-                        </div>
-                    </motion.div>
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-12 text-right">
+                        {children}
+                    </div>
                 </div>
-            )}
-        </AnimatePresence>
+            </SlideIn>
+        </>
     );
 }

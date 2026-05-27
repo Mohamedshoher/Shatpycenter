@@ -3,7 +3,7 @@
 import { X, MessageSquare, Users, User, Archive, Trash2, CheckCircle2, Circle, MessageCircle, ArrowRightLeft } from 'lucide-react';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 
 interface StudentNote {
     id: string;
@@ -45,80 +45,67 @@ export default function StudentNotesModal({
     const filteredNotes = notes.filter(n => activeTab === 'read' ? n.isRead : !n.isRead);
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+        <>
+            <FadeIn show={isOpen} className="fixed inset-0 z-[100]">
+                <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            </FadeIn>
+            <SlideIn show={isOpen} className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[700px] max-h-[85vh] bg-white rounded-[40px] shadow-2xl z-[150] overflow-hidden flex flex-col border border-gray-100">
+                {/* Header */}
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="text-right">
+                        <h2 className="text-xl font-black text-gray-900">ملحوظات الطلاب</h2>
+                        <p className="text-xs font-bold text-gray-400">سجل الملحوظات الإدارية والتعليمية</p>
+                    </div>
+                    <button
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
-                    />
-
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[700px] max-h-[85vh] bg-white rounded-[40px] shadow-2xl z-[150] overflow-hidden flex flex-col border border-gray-100"
+                        className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
                     >
-                        {/* Header */}
-                        <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
-                            <div className="text-right">
-                                <h2 className="text-xl font-black text-gray-900">ملحوظات الطلاب</h2>
-                                <p className="text-xs font-bold text-gray-400">سجل الملحوظات الإدارية والتعليمية</p>
-                            </div>
-                            <button
-                                onClick={onClose}
-                                className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
+                        <X size={20} />
+                    </button>
+                </div>
 
-                        {/* Tabs */}
-                        <div className="px-6 py-2 border-b border-gray-50 flex gap-4 bg-gray-50/30 shrink-0">
-                            <button
-                                onClick={() => setActiveTab('unread')}
-                                className={cn(
-                                    "px-6 py-2 rounded-full text-xs font-black transition-all relative",
-                                    activeTab === 'unread' ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-gray-400 hover:bg-gray-100"
-                                )}
-                            >
-                                ملحوظات جديدة
-                                {notes.filter(n => !n.isRead).length > 0 && (
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white">
-                                        {notes.filter(n => !n.isRead).length}
-                                    </span>
-                                )}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('read')}
-                                className={cn(
-                                    "px-6 py-2 rounded-full text-xs font-black transition-all",
-                                    activeTab === 'read' ? "bg-green-600 text-white shadow-lg shadow-green-500/20" : "text-gray-400 hover:bg-gray-100"
-                                )}
-                            >
-                                ملحوظات مقروءة
-                            </button>
-                        </div>
+                {/* Tabs */}
+                <div className="px-6 py-2 border-b border-gray-50 flex gap-4 bg-gray-50/30 shrink-0">
+                    <button
+                        onClick={() => setActiveTab('unread')}
+                        className={cn(
+                            "px-6 py-2 rounded-full text-xs font-black transition-all relative",
+                            activeTab === 'unread' ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-gray-400 hover:bg-gray-100"
+                        )}
+                    >
+                        ملحوظات جديدة
+                        {notes.filter(n => !n.isRead).length > 0 && (
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white">
+                                {notes.filter(n => !n.isRead).length}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('read')}
+                        className={cn(
+                            "px-6 py-2 rounded-full text-xs font-black transition-all",
+                            activeTab === 'read' ? "bg-green-600 text-white shadow-lg shadow-green-500/20" : "text-gray-400 hover:bg-gray-100"
+                        )}
+                    >
+                        ملحوظات مقروءة
+                    </button>
+                </div>
 
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar bg-gray-50/20">
-                            {filteredNotes.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-20 text-gray-400 opacity-60">
-                                    <MessageSquare size={48} className="mb-4" />
-                                    <p className="font-bold">
-                                        {activeTab === 'read' ? 'لا توجد ملحوظات مقروءة' : 'لا توجد ملحوظات جديدة'}
-                                    </p>
-                                </div>
-                            ) : (
-                                filteredNotes.map((note) => (
-                                    <motion.div
-                                        key={note.id}
-                                        layout
-                                        className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group relative overflow-hidden"
-                                    >
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar bg-gray-50/20">
+                    {filteredNotes.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-gray-400 opacity-60">
+                            <MessageSquare size={48} className="mb-4" />
+                            <p className="font-bold">
+                                {activeTab === 'read' ? 'لا توجد ملحوظات مقروءة' : 'لا توجد ملحوظات جديدة'}
+                            </p>
+                        </div>
+                    ) : (
+                        filteredNotes.map((note) => (
+                            <div
+                                key={note.id}
+                                className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group relative overflow-hidden"
+                            >
                                         <div className="flex flex-col gap-4">
                                             {/* Top Row: Actions and Student Info */}
                                             <div className="flex items-start justify-between">
@@ -215,13 +202,11 @@ export default function StudentNotesModal({
                                                 </div>
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 ))
                             )}
-                        </div>
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
+                    </div>
+                </SlideIn>
+        </>
     );
 }

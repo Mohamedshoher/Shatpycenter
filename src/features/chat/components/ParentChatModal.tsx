@@ -8,7 +8,7 @@ import { MessageInput } from './MessageInput';
 import { X, Search, UserPlus, MessageCircle, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { chatService } from '../services/chatService';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { cn } from '@/lib/utils';
 import { useStudents } from '@/features/students/hooks/useStudents';
 
@@ -78,20 +78,11 @@ export const ParentChatModal: React.FC<ParentChatModalProps> = ({ isOpen, onClos
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" dir="rtl">
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={onClose}
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
+            <FadeIn show={true}>
+                <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            </FadeIn>
 
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="bg-white rounded-[40px] w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden relative z-10 shadow-2xl"
-            >
+            <SlideIn show={true} className="bg-white rounded-[40px] w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden relative z-10 shadow-2xl">
                 {/* Header */}
                 <div className="bg-white border-b border-gray-100 p-6 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
@@ -236,7 +227,7 @@ export const ParentChatModal: React.FC<ParentChatModalProps> = ({ isOpen, onClos
                         )}
                     </div>
                 </div>
-            </motion.div>
+            </SlideIn>
         </div>
     );
 };

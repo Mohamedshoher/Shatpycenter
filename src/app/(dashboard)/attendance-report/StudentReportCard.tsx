@@ -1,5 +1,4 @@
 "use client";
-import { motion } from 'framer-motion';
 import { Archive, FileText, MessageCircle, Phone, Edit3 } from 'lucide-react';
 import { getWhatsAppUrl } from '@/lib/utils';
 
@@ -14,10 +13,8 @@ interface StudentReportCardProps {
 
 export default function StudentReportCard({ student, index, userRole, onArchive, onOpenDetails, onEdit }: StudentReportCardProps) {
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-[24px] p-3.5 shadow-sm border border-gray-100 flex flex-col gap-1.5 relative group hover:shadow-md transition-all cursor-pointer"
+        <div
+            className="bg-white rounded-[24px] p-3.5 shadow-sm border border-gray-100 flex flex-col gap-1.5 relative group hover:shadow-md transition-all cursor-pointer animate-[fadeIn_0.3s_ease-out]"
             onClick={() => onOpenDetails(student)}
         >
             {/* الاسم والمجموعة */}
@@ -101,6 +98,6 @@ export default function StudentReportCard({ student, index, userRole, onArchive,
             </div>
 
             {/* تم حذف قسم الملحوظات بناءً على طلب المستخدم لزيادة السرعة */}
-        </motion.div>
+        </div>
     );
 }

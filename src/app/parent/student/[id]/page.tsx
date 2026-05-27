@@ -19,7 +19,7 @@ import {
     Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 
 type TabType = "exams" | "fees" | "attendance" | "plan";
 
@@ -276,11 +276,7 @@ export default function StudentDetailParentPage() {
                             >
                                 <span className="relative z-20">{t}</span>
                                 {activeExamSubTab === t && (
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="absolute inset-0 bg-blue-600 rounded-2xl z-10"
-                                    />
+                                    <div className="absolute inset-0 bg-blue-600 rounded-2xl z-10" />
                                 )}
                             </button>
                         ))}
@@ -288,69 +284,52 @@ export default function StudentDetailParentPage() {
                 </div>
 
                 <div className="px-4 pb-20 space-y-4">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={activeExamSubTab}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                            className="space-y-4"
-                        >
-                            <div className="bg-white rounded-[32px] border border-gray-100 p-6 space-y-4">
-                                <div className="flex items-center gap-2 text-teal-600 mb-2">
-                                    <TrendingUp size={18} />
-                                    <h4 className="text-sm font-black">مستوى الطالب في آخر 10 اختبارات</h4>
-                                </div>
-                                {/* Placeholder for chart */}
-                                <div className="h-40 w-full bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center p-4">
-                                    <p className="text-[10px] text-gray-400 font-bold mb-2">الرسم البياني لمستوى التقدم - {activeExamSubTab}</p>
-                                    <div className="flex items-end gap-2 h-20 w-full justify-around px-4">
-                                        {[40, 70, 55, 90, 85, 100].map((h, i) => (
-                                            <motion.div
-                                                key={i}
-                                                initial={{ height: 0 }}
-                                                animate={{ height: `${h}%` }}
-                                                className="w-4 bg-teal-500/20 rounded-t-lg relative"
-                                            >
-                                                {h > 90 && <div className="absolute top-0 left-0 right-0 h-2 bg-teal-500 rounded-t-lg" />}
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                    <div className="flex justify-between w-full mt-2 px-2 text-[8px] font-bold text-gray-300">
-                                        <span>الأحد</span>
-                                        <span>الخميس</span>
-                                    </div>
-                                </div>
+                    <div className="space-y-4">
+                        <div className="bg-white rounded-[32px] border border-gray-100 p-6 space-y-4">
+                            <div className="flex items-center gap-2 text-teal-600 mb-2">
+                                <TrendingUp size={18} />
+                                <h4 className="text-sm font-black">مستوى الطالب في آخر 10 اختبارات</h4>
                             </div>
-
-                            <div className="space-y-3">
-                                {filteredExams.map((exam, i) => (
-                                    <motion.div
-                                        key={i}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: i * 0.05 }}
-                                        className="bg-white p-5 rounded-3xl border border-gray-50 shadow-sm flex items-center justify-between"
-                                    >
-                                        <div className="space-y-1">
-                                            <h5 className="text-sm font-black text-gray-900">{exam.surah}</h5>
-                                            <p className="text-[10px] text-gray-400 font-bold">{exam.date}</p>
+                            {/* Placeholder for chart */}
+                            <div className="h-40 w-full bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center p-4">
+                                <p className="text-[10px] text-gray-400 font-bold mb-2">الرسم البياني لمستوى التقدم - {activeExamSubTab}</p>
+                                <div className="flex items-end gap-2 h-20 w-full justify-around px-4">
+                                    {[40, 70, 55, 90, 85, 100].map((h, i) => (
+                                        <div key={i} className="w-4 bg-teal-500/20 rounded-t-lg relative" style={{ height: `${h}%` }}>
+                                            {h > 90 && <div className="absolute top-0 left-0 right-0 h-2 bg-teal-500 rounded-t-lg" />}
                                         </div>
-                                        <span className={cn(
-                                            "px-3 py-1.5 rounded-full text-[10px] font-black",
-                                            exam.grade === "ممتاز" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"
-                                        )}>
-                                            {exam.grade}
-                                        </span>
-                                    </motion.div>
-                                ))}
-                                {filteredExams.length === 0 && (
-                                    <div className="text-center py-10 text-gray-400 text-xs font-bold">لا توجد اختبارات مسجلة في هذا القسم</div>
-                                )}
+                                    ))}
+                                </div>
+                                <div className="flex justify-between w-full mt-2 px-2 text-[8px] font-bold text-gray-300">
+                                    <span>الأحد</span>
+                                    <span>الخميس</span>
+                                </div>
                             </div>
-                        </motion.div>
-                    </AnimatePresence>
+                        </div>
+
+                        <div className="space-y-3">
+                            {filteredExams.map((exam, i) => (
+                                <div
+                                    key={i}
+                                    className="bg-white p-5 rounded-3xl border border-gray-50 shadow-sm flex items-center justify-between"
+                                >
+                                    <div className="space-y-1">
+                                        <h5 className="text-sm font-black text-gray-900">{exam.surah}</h5>
+                                        <p className="text-[10px] text-gray-400 font-bold">{exam.date}</p>
+                                    </div>
+                                    <span className={cn(
+                                        "px-3 py-1.5 rounded-full text-[10px] font-black",
+                                        exam.grade === "ممتاز" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"
+                                    )}>
+                                        {exam.grade}
+                                    </span>
+                                </div>
+                            ))}
+                            {filteredExams.length === 0 && (
+                                <div className="text-center py-10 text-gray-400 text-xs font-bold">لا توجد اختبارات مسجلة في هذا القسم</div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -365,12 +344,10 @@ export default function StudentDetailParentPage() {
 
             <div className="space-y-4 pb-20">
                 {plans.map((p, idx) => (
-                    <motion.div
+                    <div
                         key={p.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
                         className="bg-white rounded-[32px] border border-gray-100 p-6 shadow-sm space-y-4 relative overflow-hidden"
+                        style={{ animationDelay: `${idx * 0.1}s` }}
                     >
                         <div className="flex items-center justify-between pb-4 border-b border-gray-50">
                             <span className="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-xl">{p.date}</span>
@@ -405,7 +382,7 @@ export default function StudentDetailParentPage() {
                                 <p className="text-[10px] font-bold leading-relaxed">{p.notes}</p>
                             </div>
                         )}
-                    </motion.div>
+                    </div>
                 ))}
 
                 {plans.length === 0 && (

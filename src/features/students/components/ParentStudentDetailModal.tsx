@@ -23,7 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useStudentRecords } from '../hooks/useStudentRecords';
 import { Group, Teacher } from '@/types';
-import { AnimatePresence, motion } from 'framer-motion';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 
 interface ParentStudentDetailModalProps {
     isOpen: boolean;
@@ -279,93 +279,85 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
 
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" dir="rtl">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                className="bg-gray-50 w-full max-w-5xl h-[90vh] rounded-[48px] overflow-hidden flex flex-col relative shadow-2xl border border-white/20"
-            >
-                <div className="bg-white p-6 pb-4 shrink-0 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
+        <>
+            <FadeIn show={isOpen} className="fixed inset-0 z-[100]">
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            </FadeIn>
+            <SlideIn show={isOpen}>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" dir="rtl">
+                    <div className="bg-gray-50 w-full max-w-5xl h-[90vh] rounded-[48px] overflow-hidden flex flex-col relative shadow-2xl border border-white/20"
+                        onClick={(e) => e.stopPropagation()}>
+                        <div className="bg-white p-6 pb-4 shrink-0 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
 
-                    <div className="flex justify-between items-center relative z-10">
-                        <div className="flex items-center gap-4 min-w-0">
-                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-600 rounded-[22px] sm:rounded-[28px] flex items-center justify-center text-white shadow-xl shadow-blue-500/20 shrink-0">
-                                <User size={32} />
-                            </div>
-                            <div className="min-w-0 flex-1 space-y-1">
-                                <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight truncate" title={student.fullName}>
-                                    {student.fullName}
-                                </h2>
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black border border-blue-100 flex items-center gap-1 whitespace-nowrap">
-                                        <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-                                        {group?.name || 'بدون مجموعة'}
-                                    </span>
-                                    <span className="bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black border border-teal-100 flex items-center gap-1 whitespace-nowrap">
-                                        أستاذ / {teacher?.fullName || 'غير محدد'}
-                                    </span>
-                                    {student.status === 'archived' && (
-                                        <span className="bg-red-600 text-white px-3 py-1 rounded-full text-[10px] sm:text-xs font-black shadow-lg whitespace-nowrap">
-                                            مفصول لحين مراجعة الإدارة
-                                        </span>
-                                    )}
-                                    {fees.length === 0 && (
-                                        <span className="bg-orange-600 text-white px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black shadow-lg whitespace-nowrap">
-                                            لحين سداد الرسوم
-                                        </span>
-                                    )}
+                            <div className="flex justify-between items-center relative z-10">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-600 rounded-[22px] sm:rounded-[28px] flex items-center justify-center text-white shadow-xl shadow-blue-500/20 shrink-0">
+                                        <User size={32} />
+                                    </div>
+                                    <div className="min-w-0 flex-1 space-y-1">
+                                        <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight truncate" title={student.fullName}>
+                                            {student.fullName}
+                                        </h2>
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black border border-blue-100 flex items-center gap-1 whitespace-nowrap">
+                                                <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+                                                {group?.name || 'بدون مجموعة'}
+                                            </span>
+                                            <span className="bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black border border-teal-100 flex items-center gap-1 whitespace-nowrap">
+                                                أستاذ / {teacher?.fullName || 'غير محدد'}
+                                            </span>
+                                            {student.status === 'archived' && (
+                                                <span className="bg-red-600 text-white px-3 py-1 rounded-full text-[10px] sm:text-xs font-black shadow-lg whitespace-nowrap">
+                                                    مفصول لحين مراجعة الإدارة
+                                                </span>
+                                            )}
+                                            {fees.length === 0 && (
+                                                <span className="bg-orange-600 text-white px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black shadow-lg whitespace-nowrap">
+                                                    لحين سداد الرسوم
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
+                                <button onClick={onClose} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-6 bg-gray-50 p-1 rounded-[20px] overflow-x-auto no-scrollbar">
+                                {tabs.map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={cn(
+                                            "flex-1 md:min-w-[120px] py-4 rounded-2xl flex items-center justify-center gap-3 text-sm font-black transition-all",
+                                            activeTab === tab.id
+                                                ? "bg-white text-blue-600 shadow-md scale-[1.02]"
+                                                : "text-gray-400 hover:bg-white/50 hover:text-gray-600"
+                                        )}
+                                    >
+                                        <tab.icon size={20} className={cn(activeTab === tab.id ? tab.color : "text-gray-300")} />
+                                        <span className="hidden md:inline">{tab.label}</span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm">
-                            <X size={20} />
-                        </button>
-                    </div>
 
-                    <div className="flex items-center gap-2 mt-6 bg-gray-50 p-1 rounded-[20px] overflow-x-auto no-scrollbar">
-                        {tabs.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={cn(
-                                    "flex-1 md:min-w-[120px] py-4 rounded-2xl flex items-center justify-center gap-3 text-sm font-black transition-all",
-                                    activeTab === tab.id
-                                        ? "bg-white text-blue-600 shadow-md scale-[1.02]"
-                                        : "text-gray-400 hover:bg-white/50 hover:text-gray-600"
-                                )}
-                            >
-                                <tab.icon size={20} className={cn(activeTab === tab.id ? tab.color : "text-gray-300")} />
-                                <span className="hidden md:inline">{tab.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={activeTab}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                        >
+                        <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar">
                             {activeTab === 'attendance' && renderAttendance()}
                             {activeTab === 'schedule' && renderSchedule()}
                             {activeTab === 'exams' && renderExams()}
                             {activeTab === 'fees' && renderFees()}
                             {activeTab === 'plan' && renderPlan()}
+                        </div>
 
-                        </motion.div>
-                    </AnimatePresence>
+                        <div className="p-6 bg-white border-t border-gray-100 shrink-0 text-center">
+                            <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">نظام إدارة مركز الشاطبي التعليمي • 2026</p>
+                        </div>
+                    </div>
                 </div>
-
-                <div className="p-6 bg-white border-t border-gray-100 shrink-0 text-center">
-                    <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">نظام إدارة مركز الشاطبي التعليمي • 2026</p>
-                </div>
-            </motion.div>
-        </div>
+            </SlideIn>
+        </>
     );
 };

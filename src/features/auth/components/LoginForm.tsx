@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, UserCircle, Users, GraduationCap, Phone, Lock, Briefcase, UserCheck } from 'lucide-react';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn } from '@/components/ui/transition';
 
 /** 
  * --- الأنواع (Types) ---
@@ -130,15 +130,8 @@ export default function LoginForm() {
                 
                 {renderMainTabs()}
 
-                <AnimatePresence mode="wait">
-                    {mainTab === 'admin' ? (
-                        <motion.div
-                            key="admin-content"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="space-y-6"
-                        >
+                {mainTab === 'admin' ? (
+                        <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
                             {/* تبويبات الأدوار داخل الإدارة */}
                             <div className="flex bg-[#f1f3f5] p-1 rounded-2xl justify-between shadow-inner">
                                 {[
@@ -231,13 +224,9 @@ export default function LoginForm() {
                                 </div>
 
                                 {error && (
-                                    <motion.div
-                                        initial={{ scale: 0.9, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        className="p-3 bg-red-50 text-red-600 text-xs rounded-xl text-center border border-red-100 font-bold"
-                                    >
+                                    <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl text-center border border-red-100 font-bold animate-[fadeIn_0.3s_ease-out]">
                                         {error}
-                                    </motion.div>
+                                    </div>
                                 )}
 
                                 <Button
@@ -257,15 +246,9 @@ export default function LoginForm() {
                                     )}
                                 </Button>
                             </form>
-                        </motion.div>
+                        </div>
                     ) : (
-                        <motion.div
-                            key="parent-content"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="space-y-6 md:space-y-8"
-                        >
+                        <div className="space-y-6 md:space-y-8 animate-[fadeIn_0.3s_ease-out]">
                             {/* أيقونة وعنوان ولي الأمر */}
                             <div className="flex flex-col items-center gap-4 py-2">
                                 <div className="w-14 h-14 md:w-16 md:h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
@@ -321,9 +304,8 @@ export default function LoginForm() {
                                     {loading ? <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin mx-auto" /> : 'دخول كولي أمر'}
                                 </Button>
                             </form>
-                        </motion.div>
+                        </div>
                     )}
-                </AnimatePresence>
             </div>
 
             {/* تذييل الصفحة */}

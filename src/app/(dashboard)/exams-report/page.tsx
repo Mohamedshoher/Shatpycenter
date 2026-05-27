@@ -15,7 +15,7 @@ import {
     MessageCircle
 } from 'lucide-react';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn } from '@/components/ui/transition';
 
 // --- استيراد الـ Hooks والـ Stores الخاصة بالتطبيق ---
 import { useStudents } from '@/features/students/hooks/useStudents';
@@ -226,119 +226,113 @@ export default function ExamsReportPage() {
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
 
             {/* --- الهيدر (رأس الصفحة) --- */}
-            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30 px-4 md:px-6 py-3">
-                <div className="flex items-center justify-between max-w-5xl mx-auto gap-4">
-                    <h1 className="text-lg font-black text-gray-800">
+            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30 px-2 md:px-6 py-3">
+                <div className="flex items-center justify-between max-w-4xl mx-auto gap-2 md:gap-4">
+                    <h1 className="text-sm md:text-lg font-black text-gray-800">
                     الاختبارات <span className="md:inline hidden">({currentMonthLabel})</span>
                     </h1>
 
                     {/* زر اختيار الشهر والنصف */}
                     <div className="flex bg-gray-100/50 p-1 rounded-xl items-center gap-1 border border-gray-100 flex-row-reverse">
-                        <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm flex-row-reverse">
-                            <button onClick={() => setSelectedHalf(1)} className={cn("px-2 py-1 text-[10px] md:text-xs font-bold rounded whitespace-nowrap", selectedHalf === 1 ? "bg-blue-50 text-blue-600" : "text-gray-500")}>النصف الأول</button>
-                            <button onClick={() => setSelectedHalf(2)} className={cn("px-2 py-1 text-[10px] md:text-xs font-bold rounded whitespace-nowrap", selectedHalf === 2 ? "bg-blue-50 text-blue-600" : "text-gray-500")}>النصف الثاني</button>
+                        <div className="hidden md:flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm flex-row-reverse">
+                            <button onClick={() => setSelectedHalf(1)} className={cn("px-2 py-1 text-xs font-bold rounded", selectedHalf === 1 ? "bg-blue-50 text-blue-600" : "text-gray-500")}>النصف الأول</button>
+                            <button onClick={() => setSelectedHalf(2)} className={cn("px-2 py-1 text-xs font-bold rounded", selectedHalf === 2 ? "bg-blue-50 text-blue-600" : "text-gray-500")}>النصف الثاني</button>
                         </div>
-                        <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-gray-200 shadow-sm justify-center">
-                            <button onClick={goToNextMonth} className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded text-gray-600 transition-colors">
-                                <ChevronLeft size={16} />
+                        <div className="flex items-center gap-0.5 md:gap-1 bg-white p-0.5 md:p-1 rounded-lg border border-gray-200 shadow-sm justify-center">
+                            <button onClick={goToNextMonth} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center hover:bg-gray-100 rounded text-gray-600 transition-colors">
+                                <ChevronLeft size={12} />
                             </button>
-                            <div className="flex items-center gap-1.5 px-2">
-                                <Calendar size={12} className="text-blue-500" />
-                                <span className="text-[10px] md:text-xs font-black text-gray-700 whitespace-nowrap">{monthLabelWithYear}</span>
+                            <div className="flex items-center gap-0.5 md:gap-1.5 px-0.5 md:px-2">
+                                <Calendar size={10} className="text-blue-500" />
+                                <span className="text-[8px] md:text-xs font-black text-gray-700">{monthLabelWithYear}</span>
                             </div>
-                            <button onClick={goToPreviousMonth} className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded text-gray-600 transition-colors">
-                                <ChevronRight size={16} />
+                            <button onClick={goToPreviousMonth} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center hover:bg-gray-100 rounded text-gray-600 transition-colors">
+                                <ChevronRight size={12} />
                             </button>
                         </div>
                     </div>
                 </div>
 
                 {/* --- شريط التنقل بين التبويبات --- */}
-                <div className="max-w-5xl mx-auto mt-4 flex bg-gray-100/80 p-1 rounded-xl gap-1 overflow-x-auto no-scrollbar px-4 md:px-0">
+                <div className="max-w-4xl mx-auto mt-2 md:mt-4 flex bg-gray-100/80 p-0.5 md:p-1 rounded-xl gap-0.5 md:gap-1 overflow-x-auto no-scrollbar px-1 md:px-0">
 
                     <button
                         onClick={() => setActiveTab('performance')}
                         className={cn(
-                            "flex-1 min-w-[90px] py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap",
+                            "flex-1 py-1.5 md:py-2.5 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-0.5 md:gap-1.5",
                             activeTab === 'performance' ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
                         )}
                     >
-                        <TrendingUp size={14} />
+                        <TrendingUp size={12} />
                         الأداء
                     </button>
                     <button
                         onClick={() => setActiveTab('mostTested')}
                         className={cn(
-                            "flex-1 min-w-[90px] py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap",
+                            "flex-1 py-1.5 md:py-2.5 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-0.5 md:gap-1.5",
                             activeTab === 'mostTested' ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
                         )}
                     >
-                        <Trophy size={14} />
+                        <Trophy size={12} />
                         الأكثر
-                        <span className={cn("text-[10px] font-black px-1.5 py-0.5 rounded-full font-sans", activeTab === 'mostTested' ? "bg-blue-100 text-blue-600" : "bg-gray-200 text-gray-500")}>{mostTestedStudents.length}</span>
+                        <span className={cn("text-[8px] md:text-[10px] font-black px-1 md:px-1.5 py-0.5 rounded-full font-sans", activeTab === 'mostTested' ? "bg-blue-100 text-blue-600" : "bg-gray-200 text-gray-500")}>{mostTestedStudents.length}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('notTested')}
                         className={cn(
-                            "flex-1 min-w-[90px] py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap",
+                            "flex-1 py-1.5 md:py-2.5 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-0.5 md:gap-1.5",
                             activeTab === 'notTested' ? "bg-white text-amber-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
                         )}
                     >
-                        <AlertCircle size={14} />
+                        <AlertCircle size={12} />
                         لم يختبروا
-                        <span className={cn("text-[10px] font-black px-1.5 py-0.5 rounded-full font-sans", activeTab === 'notTested' ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-500")}>{notTestedStudents.length}</span>
+                        <span className={cn("text-[8px] md:text-[10px] font-black px-1 md:px-1.5 py-0.5 rounded-full font-sans", activeTab === 'notTested' ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-500")}>{notTestedStudents.length}</span>
                     </button>
                 </div>
             </header>
 
-            <main className="max-w-5xl mx-auto px-4 py-4 md:p-6 space-y-6">
-                <AnimatePresence mode="wait">
-
-                    {/* --- التبويب 1: قائمة الطلاب الذين لم يختبروا (الباقي) --- */}
+            <main className="max-w-4xl mx-auto px-2 md:px-6 py-4 space-y-6">
+                {/* --- التبويب 1: قائمة الطلاب الذين لم يختبروا (الباقي) --- */}
                     {activeTab === 'notTested' && (
-                        <motion.div
-                            key="notTested"
-                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                            className="space-y-6"
-                        >
+                        <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
                             <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-4">
-                                <div className="flex flex-row-reverse items-center gap-2 md:gap-3 w-full md:w-auto">
+                                <div className="flex flex-row-reverse items-center gap-1 md:gap-3 w-full md:w-auto flex-wrap justify-center">
                                     {/* فلتر المجموعة ونوع الاختبار */}
-                                    <div className="relative flex-1 md:flex-none">
+                                    <div className="relative">
                                         <select
                                             value={selectedRemainingCount}
                                             onChange={(e) => setSelectedRemainingCount(e.target.value)}
-                                            className="appearance-none bg-white border border-gray-100 px-8 py-3 pr-4 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold text-gray-600 focus:outline-none w-full md:min-w-[120px] text-right"
+                                            className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
                                         >
-                                            <option value="all">الكل (بقي له)</option>
-                                            <option value="3">بقي له 3</option>
-                                            <option value="2">بقي له 2</option>
-                                            <option value="1">بقي له 1</option>
+                                            <option value="all">الكل</option>
+                                            <option value="3">بقي 3</option>
+                                            <option value="2">بقي 2</option>
+                                            <option value="1">بقي 1</option>
                                         </select>
-                                        <ChevronDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                     </div>
-                                    <div className="relative flex-1 md:flex-none">
+                                    <div className="relative">
                                         <select
                                             value={selectedGroupId}
                                             onChange={(e) => setSelectedGroupId(e.target.value)}
-                                            className="appearance-none bg-white border border-gray-100 px-8 py-3 pr-4 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold text-gray-600 focus:outline-none w-full md:min-w-[150px] text-right"
+                                            className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
                                         >
                                             <option value="all">كل المجموعات</option>
                                             {filteredGroupsList?.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
                                         </select>
-                                        <ChevronDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                     </div>
-                                    <div className="relative flex-1 md:flex-none">
+                                    <div className="relative">
                                         <select
                                             value={selectedExamType}
                                             onChange={(e) => setSelectedExamType(e.target.value)}
-                                            className="appearance-none bg-white border border-gray-100 px-8 py-3 pr-4 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold text-gray-600 focus:outline-none w-full md:min-w-[140px] text-right"
+                                            className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
                                         >
                                             <option value="new">جديد</option>
                                             <option value="near">ماضي قريب</option>
                                             <option value="far">بعيد</option>
                                         </select>
-                                        <ChevronDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                     </div>
                                 </div>
                             </div>
@@ -383,39 +377,35 @@ export default function ExamsReportPage() {
                                     </div>
                                 )}
                             </div>
-                        </motion.div>
+                        </div>
                     )}
 
                     {/* --- التبويب 2: الطلاب الأكثر اختباراً --- */}
                     {activeTab === 'mostTested' && (
-                        <motion.div
-                            key="mostTested"
-                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                            className="space-y-6"
-                        >
+                        <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
                             <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-4">
-                                <div className="flex flex-row-reverse items-center gap-3 flex-wrap justify-center">
+                                <div className="flex flex-row-reverse items-center gap-2 md:gap-3 flex-wrap justify-center">
                                     {/* فلاتر إضافية للعدد الأدنى والمجموعة */}
                                     <div className="relative">
                                         <select
                                             value={selectedGroupId}
                                             onChange={(e) => setSelectedGroupId(e.target.value)}
-                                            className="appearance-none bg-white border border-gray-100 px-10 py-2.5 pr-4 rounded-2xl text-sm font-bold text-gray-600 focus:outline-none min-w-[140px] text-right"
+                                            className="appearance-none bg-white border border-gray-100 px-6 py-1.5 md:px-10 md:py-2.5 pr-3 md:pr-4 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
                                         >
                                             <option value="all"> المجموعات</option>
                                             {filteredGroupsList?.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
                                         </select>
-                                        <ChevronDown size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <ChevronDown size={12} className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                     </div>
-                                    <div className="flex flex-row-reverse items-center bg-white border border-gray-100 px-3 py-1.5 rounded-2xl gap-2">
-                                        <span className="text-xs font-bold text-gray-400"> الأقل:</span>
+                                    <div className="flex flex-row-reverse items-center bg-white border border-gray-100 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-2xl gap-1 md:gap-2">
+                                        <span className="text-[10px] md:text-xs font-bold text-gray-400">الأقل:</span>
                                         <input
                                             type="number"
                                             value={examsLimit}
                                             onChange={(e) => setExamsLimit(e.target.value)}
-                                            className="w-10 h-8 bg-gray-50 rounded-lg text-center font-black text-blue-600 border-none focus:outline-none"
+                                            className="w-8 md:w-10 h-6 md:h-8 bg-gray-50 rounded-lg text-center font-black text-blue-600 border-none focus:outline-none text-xs"
                                         />
-                                        <span className="text-xs font-bold text-gray-400">اختبار</span>
+                                        <span className="text-[10px] md:text-xs font-bold text-gray-400">اختبار</span>
                                     </div>
                                 </div>
                             </div>
@@ -471,47 +461,43 @@ export default function ExamsReportPage() {
                                     </div>
                                 ))}
                             </div>
-                        </motion.div>
+                        </div>
                     )}
 
 
 
                     {/* --- التبويب 4: مقارنة أداء المجموعات --- */}
                     {activeTab === 'performance' && (
-                        <motion.div
-                            key="performance"
-                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                            className="space-y-8"
-                        >
+                        <div className="space-y-8 animate-[fadeIn_0.3s_ease-out]">
                             {/* شريط الفلاتر التفاعلي لتبويب الأداء */}
-                            <div className="flex items-center justify-start md:justify-center gap-2 md:gap-4 py-3 border-y border-gray-100 flex-row-reverse overflow-x-auto no-scrollbar w-full">
+                            <div className="flex items-center justify-start md:justify-center gap-1 md:gap-4 py-3 border-y border-gray-100 flex-row-reverse flex-wrap w-full">
                                 <button
                                     onClick={() => setPerformanceFilter('all')}
-                                    className={cn("flex flex-row-reverse items-center gap-1.5 md:gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all shrink-0", performanceFilter === 'all' ? "bg-blue-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
+                                    className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'all' ? "bg-blue-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
                                 >
-                                    <span className="text-[10px] md:text-sm font-black uppercase whitespace-nowrap">الكل</span>
-                                    <div className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full", performanceFilter === 'all' ? "bg-white/20" : "bg-blue-600")} />
+                                    <span className="text-[9px] md:text-sm font-black">الكل</span>
+                                    <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'all' ? "bg-white/20" : "bg-blue-600")} />
                                 </button>
                                 <button
                                     onClick={() => setPerformanceFilter('new')}
-                                    className={cn("flex flex-row-reverse items-center gap-1.5 md:gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all shrink-0", performanceFilter === 'new' ? "bg-green-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
+                                    className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'new' ? "bg-green-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
                                 >
-                                    <span className="text-[10px] md:text-sm font-black uppercase whitespace-nowrap">جديد</span>
-                                    <div className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full", performanceFilter === 'new' ? "bg-white" : "bg-green-500")} />
+                                    <span className="text-[9px] md:text-sm font-black">جديد</span>
+                                    <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'new' ? "bg-white" : "bg-green-500")} />
                                 </button>
                                 <button
                                     onClick={() => setPerformanceFilter('near')}
-                                    className={cn("flex flex-row-reverse items-center gap-1.5 md:gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all shrink-0", performanceFilter === 'near' ? "bg-blue-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
+                                    className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'near' ? "bg-blue-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
                                 >
-                                    <span className="text-[10px] md:text-sm font-black uppercase whitespace-nowrap">ماضي قريب</span>
-                                    <div className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full", performanceFilter === 'near' ? "bg-white" : "bg-blue-500")} />
+                                    <span className="text-[9px] md:text-sm font-black">ماضي قريب</span>
+                                    <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'near' ? "bg-white" : "bg-blue-500")} />
                                 </button>
                                 <button
                                     onClick={() => setPerformanceFilter('far')}
-                                    className={cn("flex flex-row-reverse items-center gap-1.5 md:gap-3 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all shrink-0", performanceFilter === 'far' ? "bg-purple-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
+                                    className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'far' ? "bg-purple-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
                                 >
-                                    <span className="text-[10px] md:text-sm font-black uppercase whitespace-nowrap">بعيد</span>
-                                    <div className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full", performanceFilter === 'far' ? "bg-white" : "bg-purple-500")} />
+                                    <span className="text-[9px] md:text-sm font-black">بعيد</span>
+                                    <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'far' ? "bg-white" : "bg-purple-500")} />
                                 </button>
                             </div>
 
@@ -536,38 +522,35 @@ export default function ExamsReportPage() {
                                                     <span className="text-xs font-black text-gray-400 font-sans">{currentVal}</span>
                                                 </div>
                                                 <div className="h-6 w-full flex flex-row-reverse">
-                                                    <motion.div layout initial={{ width: 0 }} animate={{ width: overallWidth }} className="h-full bg-gray-100 rounded-full overflow-hidden flex flex-row-reverse shadow-inner">
+                                                    <div style={{ width: overallWidth }} className="h-full bg-gray-100 rounded-full overflow-hidden flex flex-row-reverse shadow-inner">
                                                         {(performanceFilter === 'all' || performanceFilter === 'new') && (
-                                                            <motion.div layout initial={{ width: 0 }} animate={{ width: performanceFilter === 'all' ? `${(data.parts.new / (data.total || 1)) * 100}%` : '100%' }} className="bg-green-500 h-full relative group cursor-pointer border-l border-white/10" />
+                                                            <div style={{ width: performanceFilter === 'all' ? `${(data.parts.new / (data.total || 1)) * 100}%` : '100%' }} className="bg-green-500 h-full relative group cursor-pointer border-l border-white/10 animate-[chartFill_0.7s_ease-out]" />
                                                         )}
                                                         {(performanceFilter === 'all' || performanceFilter === 'near') && (
-                                                            <motion.div layout initial={{ width: 0 }} animate={{ width: performanceFilter === 'all' ? `${(data.parts.near / (data.total || 1)) * 100}%` : '100%' }} className="bg-blue-500 h-full border-l border-white/10 relative group cursor-pointer" />
+                                                            <div style={{ width: performanceFilter === 'all' ? `${(data.parts.near / (data.total || 1)) * 100}%` : '100%' }} className="bg-blue-500 h-full border-l border-white/10 relative group cursor-pointer animate-[chartFill_0.7s_ease-out]" />
                                                         )}
                                                         {(performanceFilter === 'all' || performanceFilter === 'far') && (
-                                                            <motion.div layout initial={{ width: 0 }} animate={{ width: performanceFilter === 'all' ? `${(data.parts.far / (data.total || 1)) * 100}%` : '100%' }} className="bg-purple-500 h-full border-l border-white/10 relative group cursor-pointer" />
+                                                            <div style={{ width: performanceFilter === 'all' ? `${(data.parts.far / (data.total || 1)) * 100}%` : '100%' }} className="bg-purple-500 h-full border-l border-white/10 relative group cursor-pointer animate-[chartFill_0.7s_ease-out]" />
                                                         )}
-                                                    </motion.div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
                                     });
                                 })()}
                             </div>
-                        </motion.div>
+                        </div>
                     )}
-                </AnimatePresence>
             </main>
 
             {/* --- مودال تفاصيل الطالب (يظهر عند النقر على أي طالب) --- */}
-            <AnimatePresence>
-                {selectedStudentForDetails && (
-                    <StudentDetailModal
-                        isOpen={!!selectedStudentForDetails}
-                        student={selectedStudentForDetails}
-                        onClose={() => setSelectedStudentForDetails(null)}
-                    />
-                )}
-            </AnimatePresence>
+            {selectedStudentForDetails && (
+                <StudentDetailModal
+                    isOpen={!!selectedStudentForDetails}
+                    student={selectedStudentForDetails}
+                    onClose={() => setSelectedStudentForDetails(null)}
+                />
+            )}
         </div>
     );
 }

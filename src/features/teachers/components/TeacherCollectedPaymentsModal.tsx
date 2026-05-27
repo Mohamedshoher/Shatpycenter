@@ -1,5 +1,5 @@
 // التحصيل من المدرس ومن المدير
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { X, CircleDollarSign, AlertCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -29,24 +29,13 @@ export const TeacherCollectedPaymentsModal = ({
         : { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'hover:border-indigo-200' };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div key={`collected-payments-container-${title}`}>
-                    <motion.div 
-                        key="collected-backdrop"
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[250] bg-black/20 backdrop-blur-[2px]" 
-                        onClick={onClose} 
-                    />
-                    <motion.div 
-                        key="collected-content"
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-                        animate={{ opacity: 1, scale: 1, y: 0 }} 
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-3xl bg-white rounded-[40px] shadow-2xl border border-gray-100 p-6 z-[251] h-[80vh] flex flex-col"
-                    >
+        <>
+            <FadeIn show={isOpen} className="fixed inset-0 z-[250]">
+                <div onClick={onClose} className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+            </FadeIn>
+            <SlideIn show={isOpen}
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-3xl bg-white rounded-[40px] shadow-2xl border border-gray-100 p-6 z-[251] h-[80vh] flex flex-col"
+            >
                         <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
                             <div className="flex items-center gap-3">
                                 <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", colorClasses.bg, colorClasses.text)}>
@@ -105,9 +94,7 @@ export const TeacherCollectedPaymentsModal = ({
                                 )}
                             </div>
                         </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+            </SlideIn>
+        </>
     );
 };

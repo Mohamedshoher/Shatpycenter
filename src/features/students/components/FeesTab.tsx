@@ -3,7 +3,7 @@ import { Button } from '../../../components/ui/button';
 import { CreditCard, Trash2, Calendar, FileText, User } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
-import { AnimatePresence, motion } from 'framer-motion';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 
 export default function FeesTab({ student, records }: any) {
     const { user } = useAuthStore();
@@ -130,19 +130,17 @@ export default function FeesTab({ student, records }: any) {
             </div>
 
             {/* مودال تسجيل الدفع السريع */}
-            <AnimatePresence>
-                {isPaymentModalOpen && (
-                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => setIsPaymentModalOpen(false)} className="absolute inset-0 bg-black/40" />
-                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="relative bg-white p-6 rounded-[32px] w-full max-w-sm">
-                            <h3 className="font-black mb-4">تسجيل دفع: {paymentMonth}</h3>
-                            <input type="number" value={feeAmount} onChange={(e) => setFeeAmount(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl mb-3" placeholder="المبلغ" />
-                            <input type="text" value={receiptNum} onChange={(e) => setReceiptNum(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl mb-4" placeholder="رقم الوصل" />
-                            <Button onClick={handleSaveFee} className="w-full bg-blue-600">تأكيد الدفع</Button>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            <FadeIn show={isPaymentModalOpen} className="fixed inset-0 z-[300]">
+                <div onClick={() => setIsPaymentModalOpen(false)} className="absolute inset-0 bg-black/40" />
+            </FadeIn>
+            <SlideIn show={isPaymentModalOpen} className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+                <div className="relative bg-white p-6 rounded-[32px] w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="font-black mb-4">تسجيل دفع: {paymentMonth}</h3>
+                    <input type="number" value={feeAmount} onChange={(e) => setFeeAmount(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl mb-3" placeholder="المبلغ" />
+                    <input type="text" value={receiptNum} onChange={(e) => setReceiptNum(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl mb-4" placeholder="رقم الوصل" />
+                    <Button onClick={handleSaveFee} className="w-full bg-blue-600">تأكيد الدفع</Button>
+                </div>
+            </SlideIn>
         </div>
     );
 }

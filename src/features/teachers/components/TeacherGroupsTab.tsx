@@ -1,6 +1,6 @@
 // مجموعات  المدرس
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { Plus, Trash2, X, Layers } from 'lucide-react';
 
 interface Props {
@@ -53,38 +53,34 @@ export const TeacherGroupsTab = ({ teacher, groups, students, teachers, isDirect
                 </div>
             )}
 
-            <AnimatePresence>
-                {showAssignModal && (
-                    <>
-                        <div className="fixed inset-0 z-[150] bg-black/10 backdrop-blur-[2px]" onClick={() => setShowAssignModal(false)} />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white rounded-[40px] shadow-2xl border border-gray-100 p-6 z-[151] flex flex-col max-h-[60vh]"
-                        >
-                            <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-50">
-                                <h3 className="font-bold text-gray-900">اختر مجموعة لإسنادها</h3>
-                                <button onClick={() => setShowAssignModal(false)} className="text-gray-400"><X size={18} /></button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
-                                {availableGroups.length === 0 ? (
-                                    <p className="text-center py-10 text-xs text-gray-400">لا توجد مجموعات متاحة</p>
-                                ) : (
-                                    availableGroups.map(g => (
-                                        <button key={g.id} onClick={() => { onAssignGroup(g.id); setShowAssignModal(false); }} className="w-full text-right p-4 rounded-2xl hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100 group">
-                                            <div className="flex flex-row-reverse items-center justify-between">
-                                                <div>
-                                                    <p className="font-bold text-sm text-gray-800">{g.name}</p>
-                                                    <p className="text-[10px] text-gray-400 font-bold mt-1">المعلم الحالي: {teachers?.find(t => t.id === g.teacherId)?.fullName || 'لا يوجد'}</p>
-                                                </div>
-                                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 opacity-0 group-hover:opacity-100 transition-all"><Plus size={16} /></div>
-                                            </div>
-                                        </button>
-                                    ))
-                                )}
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+            <FadeIn show={showAssignModal} className="fixed inset-0 z-[150]">
+                <div onClick={() => setShowAssignModal(false)} className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
+            </FadeIn>
+            <SlideIn show={showAssignModal}
+                className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white rounded-[40px] shadow-2xl border border-gray-100 p-6 z-[151] flex flex-col max-h-[60vh]"
+            >
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-50">
+                    <h3 className="font-bold text-gray-900">اختر مجموعة لإسنادها</h3>
+                    <button onClick={() => setShowAssignModal(false)} className="text-gray-400"><X size={18} /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+                    {availableGroups.length === 0 ? (
+                        <p className="text-center py-10 text-xs text-gray-400">لا توجد مجموعات متاحة</p>
+                    ) : (
+                        availableGroups.map(g => (
+                            <button key={g.id} onClick={() => { onAssignGroup(g.id); setShowAssignModal(false); }} className="w-full text-right p-4 rounded-2xl hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100 group">
+                                <div className="flex flex-row-reverse items-center justify-between">
+                                    <div>
+                                        <p className="font-bold text-sm text-gray-800">{g.name}</p>
+                                        <p className="text-[10px] text-gray-400 font-bold mt-1">المعلم الحالي: {teachers?.find(t => t.id === g.teacherId)?.fullName || 'لا يوجد'}</p>
+                                    </div>
+                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 opacity-0 group-hover:opacity-100 transition-all"><Plus size={16} /></div>
+                                </div>
+                            </button>
+                        ))
+                    )}
+                </div>
+            </SlideIn>
         </div>
     );
 };

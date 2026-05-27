@@ -26,6 +26,18 @@ body {
   direction: rtl; /* Enforce RTL globally */
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fadeInOnly {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 @keyframes blob {
   0% { transform: translate(0px, 0px) scale(1); }
   33% { transform: translate(30px, -50px) scale(1.1); }
@@ -43,4 +55,8 @@ body {
 
 .animation-delay-4000 {
   animation-delay: 4s;
+}
+
+@keyframes chartFill {
+  from { width: 0; }
 }
