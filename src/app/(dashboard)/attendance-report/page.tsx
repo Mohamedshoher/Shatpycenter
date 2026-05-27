@@ -7,15 +7,17 @@ import { Users } from 'lucide-react';
 import AttendanceStats from './AttendanceStats';
 import AttendanceFilters from './AttendanceFilters';
 import StudentReportCard from './StudentReportCard';
-import AttendanceChartModal from './AttendanceChartModal';
+import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
 
 // الخدمات والمخازن
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useAuthStore } from '@/store/useAuthStore';
-import StudentDetailModal from '@/features/students/components/StudentDetailModal';
-import EditStudentModal from '@/features/students/components/EditStudentModal';
+
+const AttendanceChartModal = dynamic(() => import('./AttendanceChartModal'), { ssr: false });
+const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
+const EditStudentModal = dynamic(() => import('@/features/students/components/EditStudentModal'), { ssr: false });
 
 export default function AttendanceReportPage() {
     const { data: students, archiveStudent } = useStudents();

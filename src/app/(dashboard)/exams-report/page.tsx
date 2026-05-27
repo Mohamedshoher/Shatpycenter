@@ -22,8 +22,11 @@ import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useAuthStore } from '@/store/useAuthStore';
-import StudentDetailModal from '@/features/students/components/StudentDetailModal';
+
+import dynamic from 'next/dynamic';
 import { useAllExams } from '@/features/students/hooks/useAllExams';
+
+const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
 
 // --- تعريف الأنواع والقواميس المساعدة ---
 type TabType = 'notTested' | 'mostTested' | 'performance';

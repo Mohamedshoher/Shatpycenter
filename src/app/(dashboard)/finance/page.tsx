@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import AddTransactionModal from '@/features/finance/components/AddTransactionModal';
+import dynamic from 'next/dynamic';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTransactionsByMonth } from '@/features/finance/services/financeService';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
@@ -31,9 +31,11 @@ import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useTeacherAttendance, useAllTeachersAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
-import TeacherCollectionsModal from '@/features/finance/components/TeacherCollectionsModal';
-import TeacherDetailModal from '@/features/teachers/components/TeacherDetailModal';
 import { teacherDeductionService } from '@/features/teachers/services/deductionService';
+
+const AddTransactionModal = dynamic(() => import('@/features/finance/components/AddTransactionModal'), { ssr: false });
+const TeacherCollectionsModal = dynamic(() => import('@/features/finance/components/TeacherCollectionsModal'), { ssr: false });
+const TeacherDetailModal = dynamic(() => import('@/features/teachers/components/TeacherDetailModal'), { ssr: false });
 
 
 interface Transaction extends TransactionData {
