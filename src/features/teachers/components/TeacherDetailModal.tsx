@@ -742,7 +742,7 @@ export default function TeacherDetailModal({
             <SlideIn show={isOpen}
                 className="fixed inset-0 z-[200] flex items-center justify-center p-2 md:p-4"
             >
-                <div className="bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20 w-full max-w-6xl max-h-[98vh] md:max-h-[95vh]">
+                <div className="bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20 w-full max-w-6xl h-[90vh] md:h-[85vh]">
                     {/* رأس النافذة (Header) */}
                     <div className="p-5 md:p-8 relative bg-white border-b border-gray-50 shrink-0">
                         <div className="flex items-center justify-between gap-4">
