@@ -740,9 +740,9 @@ export default function TeacherDetailModal({
                 <div onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
             <SlideIn show={isOpen}
-                className="relative w-[95vw] max-w-6xl h-[95vh] bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20 fixed inset-0 z-[200] flex items-center justify-center p-4"
+                className="fixed inset-0 z-[200] flex items-center justify-center p-2 md:p-4"
             >
-                <div className="bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20 w-full h-full">
+                <div className="bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20 w-full max-w-6xl max-h-[98vh] md:max-h-[95vh]">
                     {/* رأس النافذة (Header) */}
                     <div className="p-5 md:p-8 relative bg-white border-b border-gray-50 shrink-0">
                         <div className="flex items-center justify-between gap-4">
