@@ -206,23 +206,30 @@ export default function ExamsReportPage() {
             baseGroups = baseGroups.filter((g: any) => assignedGroupIds.includes(g.id));
         }
 
-        return baseGroups.map((g: any) => {
-            const groupStudents = (students || []).filter((s: any) => s.groupId === g.id);
-            const groupStudentIds = new Set(groupStudents.map((s: any) => s.id));
+                return baseGroups.map((g: any) => {
+                    const groupStudents = (students || []).filter((s: any) => s.groupId === g.id);
+                    const groupStudentIds = new Set(groupStudents.map((s: any) => s.id));
 
-            const groupExams = allExams.filter((e: any) => groupStudentIds.has(e.studentId));
+                    const groupExams = allExams.filter((e: any) => groupStudentIds.has(e.studentId));
 
-            return {
-                id: g.id,
-                name: g.name,
-                total: groupExams.length,
-                parts: {
-                    new: groupExams.filter((e: any) => e.type === 'جديد').length,
-                    near: groupExams.filter((e: any) => e.type === 'ماضي قريب').length,
-                    far: groupExams.filter((e: any) => e.type === 'ماضي بعيد').length
-                }
-            };
-        });
+                    // لكل نوع، نحسب عدد الطلاب الفريدين الذين اختبروه (مرة واحدة على الأقل)
+                    const doneStudents = {
+                        new: new Set(groupExams.filter((e: any) => e.type === 'جديد').map((e: any) => e.studentId)),
+                        near: new Set(groupExams.filter((e: any) => e.type === 'ماضي قريب').map((e: any) => e.studentId)),
+                        far: new Set(groupExams.filter((e: any) => e.type === 'ماضي بعيد').map((e: any) => e.studentId)),
+                    };
+
+                    return {
+                        id: g.id,
+                        name: g.name,
+                        totalStudents: groupStudents.length,
+                        notTested: {
+                            new: Math.max(0, groupStudents.length - doneStudents.new.size),
+                            near: Math.max(0, groupStudents.length - doneStudents.near.size),
+                            far: Math.max(0, groupStudents.length - doneStudents.far.size),
+                        }
+                    };
+                });
     }, [groups, students, allExams, user, assignedGroupIds]);
 
     return (
@@ -479,34 +486,60 @@ export default function ExamsReportPage() {
                             <div className="space-y-6">
                                 {(() => {
                                     const maxVal = Math.max(...performanceData.map((d: any) => {
-                                        if (performanceFilter === 'all') return d.total || 1;
-                                        if (performanceFilter === 'new') return d.parts.new;
-                                        if (performanceFilter === 'near') return d.parts.near;
-                                        return d.parts.far;
+                                        if (performanceFilter === 'all') {
+                                            return Math.max(d.notTested.new, d.notTested.near, d.notTested.far, 1);
+                                        }
+                                        if (performanceFilter === 'new') return d.notTested.new;
+                                        if (performanceFilter === 'near') return d.notTested.near;
+                                        return d.notTested.far;
                                     }), 1);
 
                                     return performanceData.map((data: any) => {
-                                        const currentVal = performanceFilter === 'all' ? data.total : (data.parts as any)[performanceFilter];
-                                        const overallWidth = `${(currentVal / maxVal) * 100}%`;
+                                        const totalSt = data.totalStudents;
+
+                                        if (performanceFilter === 'all') {
+                                            return (
+                                                <div key={data.id} className="space-y-3 bg-white rounded-2xl p-4 border border-gray-100">
+                                                    <div className="flex flex-row-reverse items-center justify-between">
+                                                        <span className="text-sm font-bold text-gray-700">{data.name}</span>
+                                                        <span className="text-xs font-black text-gray-400 font-sans">{totalSt} طالب</span>
+                                                    </div>
+                                                    <div className="space-y-2 pr-2">
+                                                        {(['new', 'near', 'far'] as const).map(type => {
+                                                            const label = { new: 'جديد', near: 'ماضي قريب', far: 'بعيد' }[type];
+                                                            const color = { new: 'from-green-400 to-emerald-500', near: 'from-blue-400 to-blue-500', far: 'from-purple-400 to-purple-500' }[type];
+                                                            const val = data.notTested[type];
+                                                            return (
+                                                                <div key={type} className="flex items-center gap-2">
+                                                                    <span className="text-[11px] font-bold text-gray-400 w-16 shrink-0 text-left">{label}</span>
+                                                                    <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden shadow-inner" style={{ direction: 'ltr' }}>
+                                                                        <div style={{ width: `${(val / Math.max(totalSt, 1)) * 100}%` }} className={`h-full bg-gradient-to-l ${color} rounded-full animate-[chartFill_0.7s_ease-out]`} />
+                                                                    </div>
+                                                                    <span className="text-[11px] font-black text-gray-500 font-sans w-6 text-center">{val}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        const notTestedVal = (data.notTested as any)[performanceFilter];
+                                        const barWidth = `${(notTestedVal / maxVal) * 100}%`;
 
                                         return (
                                             <div key={data.id} className="space-y-2">
                                                 <div className="flex flex-row-reverse items-center justify-between px-1">
                                                     <span className="text-sm font-bold text-gray-700">{data.name}</span>
-                                                    <span className="text-xs font-black text-gray-400 font-sans">{currentVal}</span>
+                                                    <span className="text-xs font-black text-gray-400 font-sans">
+                                                        <span className="text-red-500">{notTestedVal} لم يختبر</span>
+                                                        <span className="text-gray-300 mx-1.5">|</span>
+                                                        <span className="text-gray-500">{totalSt} طالب</span>
+                                                    </span>
                                                 </div>
-                                                <div className="h-6 w-full flex flex-row-reverse">
-                                                    <div style={{ width: overallWidth }} className="h-full bg-gray-100 rounded-full overflow-hidden flex flex-row-reverse shadow-inner">
-                                                        {(performanceFilter === 'all' || performanceFilter === 'new') && (
-                                                            <div style={{ width: performanceFilter === 'all' ? `${(data.parts.new / (data.total || 1)) * 100}%` : '100%' }} className="bg-green-500 h-full relative group cursor-pointer border-l border-white/10 animate-[chartFill_0.7s_ease-out]" />
-                                                        )}
-                                                        {(performanceFilter === 'all' || performanceFilter === 'near') && (
-                                                            <div style={{ width: performanceFilter === 'all' ? `${(data.parts.near / (data.total || 1)) * 100}%` : '100%' }} className="bg-blue-500 h-full border-l border-white/10 relative group cursor-pointer animate-[chartFill_0.7s_ease-out]" />
-                                                        )}
-                                                        {(performanceFilter === 'all' || performanceFilter === 'far') && (
-                                                            <div style={{ width: performanceFilter === 'all' ? `${(data.parts.far / (data.total || 1)) * 100}%` : '100%' }} className="bg-purple-500 h-full border-l border-white/10 relative group cursor-pointer animate-[chartFill_0.7s_ease-out]" />
-                                                        )}
-                                                    </div>
+                                                {/* شريط من اليسار لليمين (عكسي) لإظهار عدد من لم يختبر */}
+                                                <div className="h-6 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner" style={{ direction: 'ltr' }}>
+                                                    <div style={{ width: barWidth }} className="h-full bg-gradient-to-l from-red-400 to-orange-400 rounded-full animate-[chartFill_0.7s_ease-out]" />
                                                 </div>
                                             </div>
                                         );
