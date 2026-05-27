@@ -1,0 +1,57 @@
+"use client";
+
+import Sidebar from '@/components/layout/Sidebar';
+import { ChatFloatingButton } from '@/components/ChatFloatingButton';
+import { PresenceTracker } from '@/components/PresenceTracker';
+import { usePathname, useRouter } from 'next/navigation';
+import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useEffect } from 'react';
+
+export default function DashboardShell({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
+    const router = useRouter();
+    const { user } = useAuthStore();
+    const { setSidebarOpen } = useUIStore();
+
+    useEffect(() => {
+        if (user?.role === 'parent') {
+            router.push('/parent');
+        }
+    }, [user, router]);
+
+    if (user?.role === 'parent') return null;
+
+    return (
+        <div className="flex min-h-screen bg-gray-50 text-right">
+            <PresenceTracker />
+
+            <div
+                className="fixed top-0 right-0 bottom-0 w-4 z-[130] md:hidden"
+                onTouchStart={(e) => {
+                    const touch = e.touches[0];
+                    const startX = touch.clientX;
+                    const handleTouchMove = (moveEvent: TouchEvent) => {
+                        const moveX = moveEvent.touches[0].clientX;
+                        if (startX - moveX > 50) {
+                            setSidebarOpen(true);
+                            document.removeEventListener('touchmove', handleTouchMove);
+                        }
+                    };
+                    document.addEventListener('touchmove', handleTouchMove);
+                    document.addEventListener('touchend', () => {
+                        document.removeEventListener('touchmove', handleTouchMove);
+                    }, { once: true });
+                }}
+            />
+
+            <Sidebar />
+
+            <div className="flex-1 md:mr-64 transition-all duration-300">
+                <main className="p-0">{children}</main>
+            </div>
+
+            {pathname !== '/chat' && <ChatFloatingButton />}
+        </div>
+    );
+}

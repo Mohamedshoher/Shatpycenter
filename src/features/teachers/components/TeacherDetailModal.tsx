@@ -3,12 +3,12 @@
 // ==========================================
 // 1. استيراد المكتبات والأدوات الأساسية
 // ==========================================
-import { useState, useEffect, useRef } from 'react'; // هوكس الحالة والتأثيرات من React
+import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
-import { cn, getWhatsAppUrl } from '@/lib/utils'; // وظيفة لدمج أصناف CSS بشكل ديناميكي
-import { Button } from '@/components/ui/button'; // مكون الزر الجاهز
-import { supabase } from '@/lib/supabase'; // عميل قاعدة بيانات Supabase
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'; // مكتبة إدارة جلب البيانات
+import { cn, getWhatsAppUrl } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 
 // ==========================================
 // 2. استيراد الأيقونات
@@ -34,13 +34,17 @@ import { getFeesByMonth, deleteFeeRecord } from '@/features/students/services/re
 import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction, addTransaction } from '@/features/finance/services/financeService';
 import { updateGroup } from '@/features/groups/services/groupService';
 import { automationService } from '@/features/automation/services/automationService';
-import { TeacherCollectionTab } from './TeacherCollectionTab';
-import { TeacherAttendanceTab } from './TeacherAttendanceTab';
-import { TeacherPayrollTab } from './TeacherPayrollTab';
 import { useTeacherDashboard } from '@/features/teachers/hooks/useTeacherDashboard';
 import { TeacherDeficitModal } from './TeacherDeficitModal';
-import { TeacherCollectedPaymentsModal } from './TeacherCollectedPaymentsModal';
 import { TeacherGroupsTab } from './TeacherGroupsTab';
+
+// ==========================================
+// 4. التحميل البطيء للمكونات الثقيلة
+// ==========================================
+const TeacherCollectionTab = lazy(() => import('./TeacherCollectionTab').then(m => ({ default: m.TeacherCollectionTab })));
+const TeacherAttendanceTab = lazy(() => import('./TeacherAttendanceTab').then(m => ({ default: m.TeacherAttendanceTab })));
+const TeacherPayrollTab = lazy(() => import('./TeacherPayrollTab').then(m => ({ default: m.TeacherPayrollTab })));
+const TeacherCollectedPaymentsModal = lazy(() => import('./TeacherCollectedPaymentsModal').then(m => ({ default: m.TeacherCollectedPaymentsModal })));
 
 // ==========================================
 // 4. الدوال المساعدة (Helper Functions) - خارج المكون لتحسين الأداء
@@ -637,85 +641,91 @@ export default function TeacherDetailModal({
             // ----------------------------------------
             case 'collection':  
                 return (
-                    <TeacherCollectionTab
-                        teacher={teacher}
-                        isTeacher={isTeacher}
-                        updateMonth={updateMonth}
-                        selectedMonthRaw={selectedMonthRaw}
-                        amount={amount}
-                        setAmount={setAmount}
-                        notes={notes}
-                        setNotes={setNotes}
-                        handleCollectionSubmit={handleCollectionSubmit}
-                        expectedExpenses={expectedExpenses}
-                        totalCollected={totalCollected}
-                        totalCollectedByManager={totalCollectedByManager}
-                        totalHandedOver={totalHandedOver}
-                        collectionHistoryMapped={collectionHistoryMapped}
-                        setShowCollectedDetails={setShowCollectedDetails}
-                        setShowManagerCollectedDetails={setShowManagerCollectedDetails}
-                        setShowDeficitDetails={setShowDeficitDetails}
-                        realDeficit={realDeficit}
-                        unpaidStudents={unpaidStudents}
-                        handleDeleteFee={handleDeleteFee}
-                    />
+                    <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader size={24} className="animate-spin text-blue-600" /></div>}>
+                        <TeacherCollectionTab
+                            teacher={teacher}
+                            isTeacher={isTeacher}
+                            updateMonth={updateMonth}
+                            selectedMonthRaw={selectedMonthRaw}
+                            amount={amount}
+                            setAmount={setAmount}
+                            notes={notes}
+                            setNotes={setNotes}
+                            handleCollectionSubmit={handleCollectionSubmit}
+                            expectedExpenses={expectedExpenses}
+                            totalCollected={totalCollected}
+                            totalCollectedByManager={totalCollectedByManager}
+                            totalHandedOver={totalHandedOver}
+                            collectionHistoryMapped={collectionHistoryMapped}
+                            setShowCollectedDetails={setShowCollectedDetails}
+                            setShowManagerCollectedDetails={setShowManagerCollectedDetails}
+                            setShowDeficitDetails={setShowDeficitDetails}
+                            realDeficit={realDeficit}
+                            unpaidStudents={unpaidStudents}
+                            handleDeleteFee={handleDeleteFee}
+                        />
+                    </Suspense>
                 );
             // --------------------------------------------------------------------------------
             // تبويب الحضور والانصراف (Attendance)
             // ----------------------------------------
             case 'attendance':
                 return (
-                    <TeacherAttendanceTab
-                        updateMonth={updateMonth}
-                        selectedMonthRaw={selectedMonthRaw}
-                        selectedMonth={selectedMonth}
-                        attendanceData={attendanceData}
-                        isTeacher={isTeacher}
-                        activeDayMenu={activeDayMenu}
-                        setActiveDayMenu={setActiveDayMenu}
-                        setTempStatus={setTempStatus}
-                        tempStatus={tempStatus}
-                        handleAddDiscipline={handleAddDiscipline}
-                        tempAmount={tempAmount}
-                        setTempAmount={setTempAmount}
-                        tempReason={tempReason}
-                        setTempReason={setTempReason}
-                        dayDetails={dayDetails}
-                        setDayDetails={setDayDetails}
-                        updateAttendanceAsync={updateAttendanceAsync}
-                        dailyRate={dailyRate}
-                        deductions={deductions}
-                    />
+                    <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader size={24} className="animate-spin text-blue-600" /></div>}>
+                        <TeacherAttendanceTab
+                            updateMonth={updateMonth}
+                            selectedMonthRaw={selectedMonthRaw}
+                            selectedMonth={selectedMonth}
+                            attendanceData={attendanceData}
+                            isTeacher={isTeacher}
+                            activeDayMenu={activeDayMenu}
+                            setActiveDayMenu={setActiveDayMenu}
+                            setTempStatus={setTempStatus}
+                            tempStatus={tempStatus}
+                            handleAddDiscipline={handleAddDiscipline}
+                            tempAmount={tempAmount}
+                            setTempAmount={setTempAmount}
+                            tempReason={tempReason}
+                            setTempReason={setTempReason}
+                            dayDetails={dayDetails}
+                            setDayDetails={setDayDetails}
+                            updateAttendanceAsync={updateAttendanceAsync}
+                            dailyRate={dailyRate}
+                            deductions={deductions}
+                        />
+                    </Suspense>
                 );
             // --------------------------------------------------------------------------------
             // تبويب الراتب والمحاسبة المالية (Payroll)
             // ----------------------------------------
             case 'payroll':
                 return (
-                    <TeacherPayrollTab
-                        selectedMonth={selectedMonth}
-                        selectedMonthRaw={selectedMonthRaw}
-                        updateMonth={updateMonth}
-                        basicSalary={basicSalary}
-                        autoRewards={autoRewards}
-                        manualRewardsTotal={manualRewardsTotal}
-                        autoDeductions={autoDeductions}
-                        manualDeductionsTotal={manualDeductionsTotal}
-                        totalPaid={totalPaid}
-                        totalEntitlement={totalEntitlement}
-                        remainingToPay={remainingToPay}
-                        isTeacher={isTeacher}
-                        paymentsHistory={paymentsHistory}
-                        handlePaySalary={handlePaySalary}
-                        handleSendReport={handleSendReport}
-                        deleteSalaryMutation={deleteSalaryMutation}
-                        isSettlementMode={isSettlementMode}
-                        setIsSettlementMode={setIsSettlementMode}
-                        isPartnership={isPartnership}
-                        partnershipPercentage={partnershipPercentage}
-                        totalCollectedForGroup={totalCollectedForGroup}
-                        expectedPartnershipSalary={salaryStats.expectedPartnershipSalary}
-                    />
+                    <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader size={24} className="animate-spin text-blue-600" /></div>}>
+                        <TeacherPayrollTab
+                            selectedMonth={selectedMonth}
+                            selectedMonthRaw={selectedMonthRaw}
+                            updateMonth={updateMonth}
+                            basicSalary={basicSalary}
+                            autoRewards={autoRewards}
+                            manualRewardsTotal={manualRewardsTotal}
+                            autoDeductions={autoDeductions}
+                            manualDeductionsTotal={manualDeductionsTotal}
+                            totalPaid={totalPaid}
+                            totalEntitlement={totalEntitlement}
+                            remainingToPay={remainingToPay}
+                            isTeacher={isTeacher}
+                            paymentsHistory={paymentsHistory}
+                            handlePaySalary={handlePaySalary}
+                            handleSendReport={handleSendReport}
+                            deleteSalaryMutation={deleteSalaryMutation}
+                            isSettlementMode={isSettlementMode}
+                            setIsSettlementMode={setIsSettlementMode}
+                            isPartnership={isPartnership}
+                            partnershipPercentage={partnershipPercentage}
+                            totalCollectedForGroup={totalCollectedForGroup}
+                            expectedPartnershipSalary={salaryStats.expectedPartnershipSalary}
+                        />
+                    </Suspense>
                 );
         }
     };
@@ -797,28 +807,32 @@ export default function TeacherDetailModal({
                     {/* ========================================== */}
 
                     {/* نافذة تفاصيل تحصيل المدرس */}
-                    <TeacherCollectedPaymentsModal
-                        isOpen={showCollectedDetails}
-                        onClose={() => setShowCollectedDetails(false)}
-                        title="تفاصيل ما حصله المدرس"
-                        totalAmount={totalCollected}
-                        payments={collectedPayments}
-                        isDirector={isDirector}
-                        onDeleteFee={handleDeleteFee}
-                        accentColor="blue"
-                    />
+                    <Suspense fallback={null}>
+                        <TeacherCollectedPaymentsModal
+                            isOpen={showCollectedDetails}
+                            onClose={() => setShowCollectedDetails(false)}
+                            title="تفاصيل ما حصله المدرس"
+                            totalAmount={totalCollected}
+                            payments={collectedPayments}
+                            isDirector={isDirector}
+                            onDeleteFee={handleDeleteFee}
+                            accentColor="blue"
+                        />
+                    </Suspense>
 
                     {/* نافذة تفاصيل تحصيل المدير */}
-                    <TeacherCollectedPaymentsModal
-                        isOpen={showManagerCollectedDetails}
-                        onClose={() => setShowManagerCollectedDetails(false)}
-                        title="ما حصله المدير من المجموعة"
-                        totalAmount={totalCollectedByManager}
-                        payments={managerCollectedPayments}
-                        isDirector={isDirector}
-                        onDeleteFee={handleDeleteFee}
-                        accentColor="indigo"
-                    />
+                    <Suspense fallback={null}>
+                        <TeacherCollectedPaymentsModal
+                            isOpen={showManagerCollectedDetails}
+                            onClose={() => setShowManagerCollectedDetails(false)}
+                            title="ما حصله المدير من المجموعة"
+                            totalAmount={totalCollectedByManager}
+                            payments={managerCollectedPayments}
+                            isDirector={isDirector}
+                            onDeleteFee={handleDeleteFee}
+                            accentColor="indigo"
+                        />
+                    </Suspense>
 
                     {/* نافذة تفاصيل عجز المجموعة الحقيقي - الطلاب المدينين */}
                     <TeacherDeficitModal
