@@ -37,7 +37,7 @@ const pwaConfig = withPWA({
             {
                 // استعلامات Supabase - مخزنة للاستخدام فوراً حتى مع بطء النت
                 urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-                handler: "StaleWhileRevalidate",
+                handler: "NetworkFirst",
                 options: {
                     cacheName: "supabase-api-cache",
                     expiration: {
@@ -48,7 +48,6 @@ const pwaConfig = withPWA({
                     cacheableResponse: {
                         statuses: [0, 200],
                     },
-
                 },
             },
             {
@@ -69,7 +68,7 @@ const pwaConfig = withPWA({
 });
 
 const nextConfig: NextConfig = {
-    // تم تعطيل Turbopack لتفادي أخطاء PWA
+    turbopack: {},
 };
 
 export default pwaConfig(nextConfig);

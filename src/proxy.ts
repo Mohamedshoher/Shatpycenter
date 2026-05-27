@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// This middleware will run on all routes
-export function middleware(request: NextRequest) {
+// This proxy will run on all routes
+export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Public routes that don't require authentication
@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
 }
 
-// Configure which routes to run middleware on
+// Configure which routes to run proxy on
 export const config = {
     matcher: [
         /*
