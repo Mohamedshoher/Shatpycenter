@@ -23,18 +23,11 @@ export const teacherDeductionService = {
   // جلب الخصومات الخاصة بمعلم محدد
   getTeacherDeductions: async (teacherId: string): Promise<TeacherDeduction[]> => {
     try {
-      const { data, error } = await supabase
-        .from('deductions')
-        .select('*, teachers(full_name)')
-        .eq('teacher_id', teacherId)
-        .order('date', { ascending: false });
+      const res = await fetch(`/api/deductions?teacherId=${encodeURIComponent(teacherId)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
 
-      if (error) {
-        console.error("Error fetching teacher deductions:", error);
-        return [];
-      }
-
-      return (data || []).map(row => ({
+      return (data || []).map((row: any) => ({
         id: row.id,
         teacherId: row.teacher_id,
         teacherName: row.teachers?.full_name || 'Unknown',
@@ -54,17 +47,11 @@ export const teacherDeductionService = {
   // جلب جميع الخصومات لجميع المعلمين
   getAllDeductions: async (): Promise<TeacherDeduction[]> => {
     try {
-      const { data, error } = await supabase
-        .from('deductions')
-        .select('*, teachers(full_name)')
-        .order('date', { ascending: false });
+      const res = await fetch('/api/deductions');
+      if (!res.ok) return [];
+      const data = await res.json();
 
-      if (error) {
-        console.error("Error fetching all deductions:", error);
-        return [];
-      }
-
-      return (data || []).map(row => ({
+      return (data || []).map((row: any) => ({
         id: row.id,
         teacherId: row.teacher_id,
         teacherName: row.teachers?.full_name || 'Unknown',
@@ -174,21 +161,11 @@ export const teacherDeductionService = {
   // جلب الخصومات الشهرية لمعلم
   getMonthlyDeductions: async (teacherId: string, year: number, month: number): Promise<TeacherDeduction[]> => {
     try {
-      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-      const nextMonth = month === 12 ? 1 : month + 1;
-      const nextYear = month === 12 ? year + 1 : year;
-      const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+      const res = await fetch(`/api/deductions?teacherId=${encodeURIComponent(teacherId)}&year=${year}&month=${month}`);
+      if (!res.ok) return [];
+      const data = await res.json();
 
-      const { data, error } = await supabase
-        .from('deductions')
-        .select('*, teachers(full_name)')
-        .eq('teacher_id', teacherId)
-        .gte('date', startDate)
-        .lt('date', endDate);
-
-      if (error) throw error;
-
-      return (data || []).map(row => ({
+      return (data || []).map((row: any) => ({
         id: row.id,
         teacherId: row.teacher_id,
         teacherName: row.teachers?.full_name || 'Unknown',
@@ -232,16 +209,10 @@ export const teacherDeductionService = {
   hasDeductionForDate: async (teacherId: string, date: Date): Promise<boolean> => {
     try {
       const dateStr = date.toISOString().split('T')[0];
-
-      const { data, error } = await supabase
-        .from('deductions')
-        .select('id')
-        .eq('teacher_id', teacherId)
-        .eq('date', dateStr)
-        .limit(1);
-
-      if (error) return false;
-      return data && data.length > 0;
+      const res = await fetch(`/api/deductions?teacherId=${encodeURIComponent(teacherId)}`);
+      if (!res.ok) return false;
+      const data = await res.json();
+      return data && (data as any[]).some((d: any) => d.date === dateStr);
     } catch (error) {
       console.error("Error checking deduction for date:", error);
       return false;

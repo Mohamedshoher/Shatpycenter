@@ -73,30 +73,21 @@ export interface LeaveRequest {
 // ===== سجلات الحضور =====
 export const getStudentAttendance = async (studentId: string): Promise<AttendanceRecord[]> => {
     try {
-        const { data, error } = await supabase
-            .from('attendance')
-            .select('id, student_id, date, month_key, status, created_at')
-            .eq('student_id', studentId)
-            // .order('date', { ascending: false }); // Optional ordering
-            .order('created_at', { ascending: false });
-    
-            if (error) {
-                console.error("Supabase error fetching attendance:", error);
-                return [];
-            }
-    
-            return (data || []).map(row => {
-                const dateObj = new Date(row.date); // row.date is YYYY-MM-DD
-                return {
-                    id: row.id,
-                    studentId: row.student_id,
-                    day: dateObj.getDate(),
-                    month: row.month_key || `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`,
-                    status: row.status as 'present' | 'absent',
-                    recordedBy: '', // Not in schema example
-                    timestamp: new Date(row.created_at).getTime()
-                };
-            });
+        const res = await fetch(`/api/attendance?studentId=${encodeURIComponent(studentId)}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((row: any) => {
+            const dateObj = new Date(row.date);
+            return {
+                id: row.id,
+                studentId: row.student_id,
+                day: dateObj.getDate(),
+                month: row.month_key || `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`,
+                status: row.status as 'present' | 'absent',
+                recordedBy: '',
+                timestamp: new Date(row.created_at).getTime()
+            };
+        });
     } catch (error) {
         console.error("Error fetching student attendance:", error);
         return [];
@@ -106,44 +97,25 @@ export const getStudentAttendance = async (studentId: string): Promise<Attendanc
 export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record<string, AttendanceRecord[]>> => {
     try {
         const [year, month] = monthKey.split('-').map(Number);
-        const startDate = `${monthKey}-01`;
-        const lastDay = new Date(year, month, 0).getDate();
-        const endDate = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
-
-        // نستخدم الشرطين معاً: month_key المباشر أو نطاق التاريخ
-        // لضمان إرجاع جميع السجلات سواء كان month_key مضبوطاً أم لا
-        const { data, error } = await supabase
-            .from('attendance')
-            .select('id, student_id, date, status, created_at')
-            .or(`month_key.eq.${monthKey},and(date.gte.${startDate},date.lte.${endDate})`)
-            .order('created_at', { ascending: true })
-            .limit(30000);
-
-        if (error) {
-            console.error("Supabase error fetching month attendance:", error);
-            return {};
-        }
+        const res = await fetch(`/api/attendance?monthKey=${encodeURIComponent(monthKey)}`);
+        if (!res.ok) return {};
+        const data = await res.json();
 
         const map: Record<string, AttendanceRecord[]> = {};
-        (data || []).forEach(row => {
+        (data || []).forEach((row: any) => {
             if (!map[row.student_id]) map[row.student_id] = [];
-
-            // نستخدم string split بدلاً من new Date() لتجنب مشاكل المناطق الزمنية
-            const dateStr = (row.date as string).split('T')[0]; // نأخذ الجزء YYYY-MM-DD فقط
+            const dateStr = (row.date as string).split('T')[0];
             const dateParts = dateStr.split('-');
-
             const yearPart = dateParts[0];
             const monthPart = dateParts.length >= 2 ? dateParts[1].padStart(2, '0') : String(month).padStart(2, '0');
             const dayPart = dateParts.length >= 3 ? dateParts[2].padStart(2, '0') : '01';
-
             const derivedDay = parseInt(dayPart, 10);
             const derivedMonth = `${yearPart}-${monthPart}`;
-
             map[row.student_id].push({
                 id: row.id,
                 studentId: row.student_id,
                 day: derivedDay,
-                month: derivedMonth, // نستخدم الشهر المستمد من التاريخ لضمان التطابق مع التنسيق (YYYY-MM)
+                month: derivedMonth,
                 status: row.status as 'present' | 'absent',
                 recordedBy: '',
                 timestamp: new Date(row.created_at).getTime()
@@ -157,81 +129,31 @@ export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record
 };
 
 export const getAllAttendance = async (): Promise<AttendanceRecord[]> => {
-    // Basic implementation if needed
     return [];
 };
 
-export const addAttendanceRecord = async (record: Omit<AttendanceRecord, 'id'>): Promise<AttendanceRecord> => {
-    try {
-        // Construct date from day and month
-        // month is "YYYY-MM", day is number
-        const [year, month] = record.month.split('-').map(Number);
-        const fullDate = `${year}-${String(month).padStart(2, '0')}-${String(record.day).padStart(2, '0')}`;
+export const addAttendanceRecord = async (record: { studentId: string, status: 'present' | 'absent', day: number, month: string }): Promise<AttendanceRecord> => {
+    const { data, error } = await supabase
+        .from('attendance')
+        .insert([{
+            student_id: record.studentId,
+            status: record.status,
+            date: `${record.month}-${String(record.day).padStart(2, '0')}`,
+            month_key: record.month
+        }])
+        .select('id, created_at')
+        .single();
 
-        // Check for existing record logic implies upsert or delete-then-insert.
-        // Supabase upsert is easier if we have a unique constraint, but delete-then-insert works too.
-
-        // Remove existing
-        await supabase.from('attendance')
-            .delete()
-            .eq('student_id', record.studentId)
-            .eq('date', fullDate);
-
-        const { data, error } = await supabase
-            .from('attendance')
-            .insert([{
-                student_id: record.studentId,
-                date: fullDate,
-                month_key: record.month,
-                status: record.status
-            }])
-            .select('id')
-            .single();
-
-        if (error) throw error;
-
-        return {
-            ...record,
-            id: data.id,
-            timestamp: Date.now()
-        };
-    } catch (e) {
-        console.error("Error adding attendance:", e);
-        throw e;
-    }
-};
-
-export const updateAttendanceRecord = async (id: string, data: Partial<AttendanceRecord>): Promise<void> => {
-    // Only status usually updates
-    if (data.status) {
-        await supabase.from('attendance').update({ status: data.status }).eq('id', id);
-    }
-};
-
-export const deleteAttendanceRecord = async (id: string): Promise<void> => {
-    await supabase.from('attendance').delete().eq('id', id);
+    if (error) throw error;
+    return { ...record, id: data.id, recordedBy: '', timestamp: new Date(data.created_at).getTime() } as AttendanceRecord;
 };
 
 // ===== سجلات الاختبارات =====
 export const getStudentExams = async (studentId: string): Promise<ExamRecord[]> => {
     try {
-        const { data, error } = await supabase
-            .from('exams')
-            .select('id, student_id, surah, exam_type, grade, date, created_at')
-            .eq('student_id', studentId);
-
-        if (error) return [];
-
-        return (data || []).map(row => ({
-            id: row.id,
-            studentId: row.student_id,
-            surah: row.surah,
-            type: row.exam_type,
-            grade: row.grade,
-            date: row.date, // Assumed stored as string or convert
-            notes: '',
-            timestamp: new Date(row.created_at).getTime()
-        }));
+        const res = await fetch(`/api/exams?studentIds=${encodeURIComponent(studentId)}`);
+        if (!res.ok) return [];
+        return await res.json();
     } catch (error) {
         console.error("Error fetching student exams:", error);
         return [];
@@ -292,14 +214,10 @@ export const deleteExamRecord = async (id: string): Promise<void> => {
 // ===== سجلات الرسوم =====
 export const getStudentFees = async (studentId: string): Promise<FeeRecord[]> => {
     try {
-        const { data, error } = await supabase
-            .from('fees')
-            .select('id, student_id, month, amount, receipt_number, date, created_by, created_at')
-            .eq('student_id', studentId);
-
-        if (error) return [];
-
-        return (data || []).map(row => ({
+        const res = await fetch(`/api/records/fees?studentId=${encodeURIComponent(studentId)}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((row: any) => ({
             id: row.id,
             studentId: row.student_id,
             month: row.month,
@@ -317,14 +235,10 @@ export const getStudentFees = async (studentId: string): Promise<FeeRecord[]> =>
 
 export const getFeesByMonth = async (monthKey: string): Promise<FeeRecord[]> => {
     try {
-        const { data, error } = await supabase
-            .from('fees')
-            .select('id, student_id, month, amount, receipt_number, date, created_by, created_at')
-            .eq('month', monthKey);
-
-        if (error) return [];
-
-        return (data || []).map(row => ({
+        const res = await fetch(`/api/records/fees?month=${encodeURIComponent(monthKey)}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((row: any) => ({
             id: row.id,
             studentId: row.student_id,
             month: row.month,
@@ -343,23 +257,21 @@ export const getFeesByMonth = async (monthKey: string): Promise<FeeRecord[]> => 
 export const getAllFees = async (): Promise<FeeRecord[]> => { return []; };
 
 export const addFeeRecord = async (record: Omit<FeeRecord, 'id'>): Promise<FeeRecord> => {
-    try {
-        const { data, error } = await supabase
-            .from('fees')
-            .insert([{
-                student_id: record.studentId,
-                month: record.month,
-                amount: parseFloat(record.amount.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/[^0-9.]/g, '')),
-                receipt_number: record.receipt,
-                date: record.date,
-                created_by: record.createdBy
-            }])
-            .select('id, created_at')
-            .single();
+    const { data, error } = await supabase
+        .from('fees')
+        .insert([{
+            student_id: record.studentId,
+            month: record.month,
+            amount: parseFloat(record.amount.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/[^0-9.]/g, '')),
+            receipt_number: record.receipt,
+            date: record.date,
+            created_by: record.createdBy
+        }])
+        .select('id, created_at')
+        .single();
 
-        if (error) throw error;
-        return { ...record, id: data.id, timestamp: new Date(data.created_at).getTime() };
-    } catch (error) { throw error; }
+    if (error) throw error;
+    return { ...record, id: data.id, timestamp: new Date(data.created_at).getTime() };
 };
 
 export const updateFeeRecord = async (id: string, data: Partial<FeeRecord>): Promise<void> => {
@@ -376,17 +288,10 @@ export const deleteFeeRecord = async (id: string): Promise<void> => {
 // ===== سجلات الإعفاءات =====
 export const getStudentExemptions = async (studentId: string): Promise<ExemptionRecord[]> => {
     try {
-        const { data, error } = await supabase
-            .from('free_exemptions')
-            .select('id, student_id, student_name, teacher_id, month, amount, exempted_by, created_at')
-            .eq('student_id', studentId);
-
-        if (error) {
-            console.error("Error fetching student exemptions:", error);
-            return [];
-        }
-
-        return (data || []).map(row => ({
+        const res = await fetch(`/api/records/exemptions?studentId=${encodeURIComponent(studentId)}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((row: any) => ({
             id: row.id,
             studentId: row.student_id,
             studentName: row.student_name,
@@ -403,26 +308,17 @@ export const getStudentExemptions = async (studentId: string): Promise<Exemption
 };
 
 export const deleteExemptionRecord = async (id: string): Promise<void> => {
-    try {
-        const { error } = await supabase.from('free_exemptions').delete().eq('id', id);
-        if (error) throw error;
-    } catch (error) {
-        console.error("Error deleting exemption record:", error);
-        throw error;
-    }
+    const { error } = await supabase.from('free_exemptions').delete().eq('id', id);
+    if (error) throw error;
 };
 
 // ===== سجلات الخطة اليومية =====
 export const getStudentPlans = async (studentId: string): Promise<PlanRecord[]> => {
     try {
-        const { data, error } = await supabase
-            .from('plans')
-            .select('id, student_id, date, new_hifz, prev_review, distant_review, session_time, status, created_at')
-            .eq('student_id', studentId);
-
-        if (error) return [];
-
-        return (data || []).map(row => ({
+        const res = await fetch(`/api/records/plans?studentId=${encodeURIComponent(studentId)}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((row: any) => ({
             id: row.id,
             studentId: row.student_id,
             date: row.date,
@@ -442,28 +338,28 @@ export const getStudentPlans = async (studentId: string): Promise<PlanRecord[]> 
 export const getAllPlans = async (): Promise<PlanRecord[]> => { return []; };
 
 export const addPlanRecord = async (record: Omit<PlanRecord, 'id'>): Promise<PlanRecord> => {
-    try {
-        const { data, error } = await supabase
-            .from('plans')
-            .insert([{
-                student_id: record.studentId,
-                date: record.date,
-                new_hifz: record.newHifz,
-                prev_review: record.prevReview,
-                distant_review: record.distantReview,
-                session_time: record.sessionTime,
-                status: record.status
-            }])
-            .select('id, created_at')
-            .single();
+    const { data, error } = await supabase
+        .from('plans')
+        .insert([{
+            student_id: record.studentId,
+            date: record.date,
+            new_hifz: record.newHifz,
+            prev_review: record.prevReview,
+            distant_review: record.distantReview,
+            session_time: record.sessionTime,
+            status: record.status
+        }])
+        .select('id, created_at')
+        .single();
 
-        if (error) throw error;
-        return { ...record, id: data.id, timestamp: new Date(data.created_at).getTime() };
-    } catch (error) { throw error; }
+    if (error) throw error;
+    return { ...record, id: data.id, timestamp: new Date(data.created_at).getTime() };
 };
 
 export const updatePlanRecord = async (id: string, data: Partial<PlanRecord>): Promise<void> => {
-    // Not implemented fully as per previous code
+    const updates: any = {};
+    if (data.status) updates.status = data.status;
+    await supabase.from('plans').update(updates).eq('id', id);
 };
 
 export const deletePlanRecord = async (id: string): Promise<void> => {
@@ -475,21 +371,10 @@ export const deletePlanRecord = async (id: string): Promise<void> => {
 // ===== طلبات الإجازة =====
 export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
     try {
-        const { data, error } = await supabase
-            .from('leave_requests')
-            .select('id, student_id, student_name, start_date, end_date, reason, status, created_at')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            // التحقق مما إذا كان الخطأ بسبب عدم وجود الجدول (كود 42P01 في PostgreSQL)
-            if (error.code === '42P01') {
-                console.warn("جدول 'leave_requests' غير موجود بعد. يرجى إنشاء الجدول في Supabase.");
-                return [];
-            }
-            throw error;
-        }
-
-        return (data || []).map(row => ({
+        const res = await fetch('/api/records/leaves');
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((row: any) => ({
             id: row.id,
             studentId: row.student_id,
             studentName: row.student_name,
@@ -556,15 +441,11 @@ export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status
 };
 export const updateLeaveRequest = async (id: string, data: Partial<LeaveRequest>): Promise<void> => {
     try {
-        const updates: any = {};
-        if (data.status) updates.status = data.status;
-
-        const { error } = await supabase
-            .from('leave_requests')
-            .update(updates)
-            .eq('id', id);
-
-        if (error) throw error;
+        await fetch('/api/records/leaves', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, status: data.status })
+        });
     } catch (error) {
         console.error("Error updating leave request:", error);
         throw error;
@@ -600,14 +481,10 @@ export const hasUnpaidFees = async (studentId: string, monthlyAmount: number): P
 // ===== سجلات الملحوظات =====
 export const getStudentNotes = async (studentId: string) => {
     try {
-        const { data, error } = await supabase
-            .from('student_notes')
-            .select('id, content, type, created_at, created_by')
-            .eq('student_id', studentId)
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        return (data || []).map(n => ({
+        const res = await fetch(`/api/records/notes?studentId=${encodeURIComponent(studentId)}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((n: any) => ({
             id: n.id,
             text: n.content,
             type: n.type,
@@ -615,26 +492,20 @@ export const getStudentNotes = async (studentId: string) => {
             createdBy: n.created_by
         }));
     } catch (error: any) {
-        console.error("Error fetching student notes for student:", studentId, error?.message || error);
+        console.error("Error fetching student notes:", error);
         return [];
     }
 };
 
 export const addStudentNote = async (note: { studentId: string, content: string, type: string, createdBy: string }) => {
     try {
-        const { data, error } = await supabase
-            .from('student_notes')
-            .insert([{
-                student_id: note.studentId,
-                content: note.content,
-                type: note.type,
-                created_by: note.createdBy
-            }])
-            .select('id, student_id, content, type, created_by, created_at')
-            .single();
-
-        if (error) throw error;
-        return data;
+        const res = await fetch('/api/records/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: note.studentId, content: note.content, type: note.type, created_by: note.createdBy })
+        });
+        if (!res.ok) throw new Error('Failed to add note');
+        return await res.json();
     } catch (error) {
         console.error("Error adding student note:", error);
         throw error;
@@ -643,8 +514,7 @@ export const addStudentNote = async (note: { studentId: string, content: string,
 
 export const deleteStudentNote = async (id: string) => {
     try {
-        const { error } = await supabase.from('student_notes').delete().eq('id', id);
-        if (error) throw error;
+        await fetch(`/api/records/notes?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     } catch (error) {
         console.error("Error deleting student note:", error);
         throw error;
@@ -653,17 +523,12 @@ export const deleteStudentNote = async (id: string) => {
 
 export const getLatestNotes = async () => {
     try {
-        const { data, error } = await supabase
-            .from('student_notes')
-            .select('student_id, content, created_at, created_by')
-            .order('created_at', { ascending: false });
+        const res = await fetch('/api/records/notes');
+        if (!res.ok) return {};
+        const data = await res.json();
 
-        if (error) throw error;
-
-        // خريطة لتخزين أحدث ملحوظة لكل طالب
         const latestNotesMap: Record<string, { text: string, date: string, createdBy: string }> = {};
-
-        (data || []).forEach(n => {
+        (data || []).forEach((n: any) => {
             if (!latestNotesMap[n.student_id]) {
                 latestNotesMap[n.student_id] = {
                     text: n.content,
@@ -672,75 +537,45 @@ export const getLatestNotes = async () => {
                 };
             }
         });
-
         return latestNotesMap;
     } catch (error: any) {
-        console.error("Error fetching latest notes map:", error?.message || error);
+        console.error("Error fetching latest notes:", error);
         return {};
     }
 };
 
 export const getAllStudentNotesWithDetails = async (limit: number = 20) => {
     try {
-        const { data, error } = await supabase
-            .from('student_notes')
-            .select(`
-                id,
-                content,
-                created_at,
-                created_by,
-                student_id,
-                is_read,
-                students!inner (
-                    id,
-                    full_name,
-                    group_id,
-                    status,
-                    parent_phone,
-                    groups (
-                        id,
-                        name,
-                        teacher_id,
-                        teachers (
-                            id,
-                            full_name
-                        )
-                    )
-                )
-            `)
-            .eq('students.status', 'active')
-            .order('created_at', { ascending: false })
-            .limit(limit);
-
-        if (error) throw error;
-
+        const res = await fetch(`/api/records/notes?limit=${limit}`);
+        if (!res.ok) return [];
+        const data = await res.json();
         return (data || []).map((n: any) => ({
             id: n.id,
             content: n.content,
             createdAt: n.created_at,
             createdBy: n.created_by,
             studentId: n.student_id,
-            studentName: n.students?.full_name || 'غير معروف',
+            studentName: n.students?.full_name || n.student_name || 'غير معروف',
             parentPhone: n.students?.parent_phone || '',
-            groupName: n.students?.groups?.name || 'بدون مجموعة',
-            groupId: n.students?.groups?.id || null,
+            groupName: n.students?.groups?.name || n.group_name || 'بدون مجموعة',
+            groupId: n.students?.groups?.id || n.group_id || null,
             teacherName: n.students?.groups?.teachers?.full_name || 'غير معروف',
             isRead: n.is_read || false
         }));
     } catch (error: any) {
-        console.error("Error fetching all student notes with details:", error?.message || error);
+        console.error("Error fetching all student notes:", error);
         return [];
     }
 };
 
 export const markNoteAsRead = async (id: string, isRead: boolean = true) => {
     try {
-        const { error } = await supabase
-            .from('student_notes')
-            .update({ is_read: isRead })
-            .eq('id', id);
-
-        if (error) throw error;
+        const res = await fetch('/api/records/notes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, isRead })
+        });
+        if (!res.ok) throw new Error('Failed to mark note as read');
     } catch (error: any) {
         console.error("Error marking note as read:", error?.message || error);
         throw error;

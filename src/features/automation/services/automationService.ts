@@ -81,23 +81,20 @@ export const addLog = async (log: Omit<AutomationLog, 'id'>): Promise<Automation
 
 export const getLogs = async (logLimit: number = 1500, selectedDateStr?: string): Promise<AutomationLog[]> => {
     try {
-        const { data, error } = await supabase.from('automation_logs')
-            .select('id, rule_id, rule_name, affected_entity_id, affected_entity_name, details, triggered_at, status')
-            .order('triggered_at', { ascending: false })
-            .limit(logLimit);
+        const res = await fetch(`/api/automation/logs?limit=${logLimit}`);
+        if (!res.ok) return [];
+        const data = await res.json();
 
-        if (error || !data) return [];
-
-        let mappedLogs = data.map(row => ({
-            id: row.id, ruleId: row.rule_id, ruleName: row.rule_name, triggeredBy: 'system',
-            recipientId: row.affected_entity_id, recipientName: row.affected_entity_name,
-            messageSent: row.details, timestamp: new Date(row.triggered_at), status: row.status as any
+        let mappedLogs = (data || []).map((row: any) => ({
+            id: row.id, ruleId: row.rule_id || row.ruleId, ruleName: row.rule_name || row.ruleName, triggeredBy: 'system',
+            recipientId: row.affected_entity_id || row.recipientId, recipientName: row.affected_entity_name || row.recipientName,
+            messageSent: row.details || row.messageSent, timestamp: new Date(row.triggered_at || row.timestamp), status: (row.status || 'success') as any
         }));
 
         if (selectedDateStr) {
             const formattedDate = normalizeDate(selectedDateStr); // e.g. "2026-04-07"
             
-            mappedLogs = mappedLogs.filter(log => {
+            mappedLogs = mappedLogs.filter((log: AutomationLog) => {
                 const logDateStr = log.timestamp.toISOString().split('T')[0];
                 const containsInDetails = log.messageSent && log.messageSent.includes(formattedDate);
                 const executedThatDay = logDateStr === formattedDate;
@@ -110,21 +107,21 @@ export const getLogs = async (logLimit: number = 1500, selectedDateStr?: string)
         // إذا لم يختر، نعيد آخر جلسة فحص لكل نوع على حدة (آخر 10 دقائق من أحدث سجل لكل تصنيف)
         if (mappedLogs.length === 0) return mappedLogs;
 
-        const reportLogs = mappedLogs.filter(log => log.ruleName.includes('تقرير') || log.ruleName.includes('تقارير'));
-        const examLogs = mappedLogs.filter(log => log.ruleName.includes('اختبار'));
-        const otherLogs = mappedLogs.filter(log => !log.ruleName.includes('تقرير') && !log.ruleName.includes('تقارير') && !log.ruleName.includes('اختبار'));
+        const reportLogs = mappedLogs.filter((log: AutomationLog) => log.ruleName.includes('تقرير') || log.ruleName.includes('تقارير'));
+        const examLogs = mappedLogs.filter((log: AutomationLog) => log.ruleName.includes('اختبار'));
+        const otherLogs = mappedLogs.filter((log: AutomationLog) => !log.ruleName.includes('تقرير') && !log.ruleName.includes('تقارير') && !log.ruleName.includes('اختبار'));
 
-        const getLatestSession = (list: any[]) => {
+        const getLatestSession = (list: AutomationLog[]) => {
             if (list.length === 0) return [];
             const latest = list[0].timestamp.getTime();
-            return list.filter(log => (latest - log.timestamp.getTime()) <= 10 * 60 * 1000);
+            return list.filter((log: AutomationLog) => (latest - log.timestamp.getTime()) <= 10 * 60 * 1000);
         };
 
         return [
             ...getLatestSession(reportLogs),
             ...getLatestSession(examLogs),
             ...getLatestSession(otherLogs)
-        ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        ].sort((a: AutomationLog, b: AutomationLog) => b.timestamp.getTime() - a.timestamp.getTime());
     } catch (e) {
         console.error("getLogs Error:", e);
         return [];
@@ -132,13 +129,18 @@ export const getLogs = async (logLimit: number = 1500, selectedDateStr?: string)
 };
 
 export const getRules = async (): Promise<AutomationRule[]> => {
-    const { data, error } = await supabase.from('automation_rules').select('id, name, type, recipients, schedule, conditions, actions, is_active, created_at');
-    if (error) return [];
-    return data.map(row => ({
-        id: row.id, name: row.name, trigger: row.type as any, recipients: row.recipients || [],
-        schedule: row.schedule, condition: row.conditions, action: row.actions,
-        enabled: row.is_active, createdAt: new Date(row.created_at)
-    }));
+    try {
+        const res = await fetch('/api/automation/rules');
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((row: any) => ({
+            id: row.id, name: row.name, trigger: row.type as any, recipients: row.recipients || [],
+            schedule: row.schedule, condition: row.conditions, action: row.actions,
+            enabled: row.is_active, createdAt: new Date(row.created_at)
+        }));
+    } catch {
+        return [];
+    }
 };
 
 export const createRule = async (rule: any) => {

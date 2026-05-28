@@ -127,7 +127,7 @@ export default function DashboardOverview() {
 
     const pendingLeaves = leaveRequests.filter(r => r.status === 'pending');
 
-    const { data: studentNotes = [] } = useQuery({
+    const { data: studentNotes = [] } = useQuery<any[]>({
         queryKey: ['student-notes-details'],
         queryFn: () => getAllStudentNotesWithDetails(),
         enabled: user?.role === 'director' || user?.role === 'supervisor'
