@@ -45,10 +45,22 @@ export default function FinancePage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSalaryStatusOpen, setIsSalaryStatusOpen] = useState(false);
     const [isDeficitOpen, setIsDeficitOpen] = useState(false);
+    const [isManagerDirectOpen, setIsManagerDirectOpen] = useState(false);
+    const [isFromTeachersOpen, setIsFromTeachersOpen] = useState(false);
+    const [isOtherIncomeOpen, setIsOtherIncomeOpen] = useState(false);
+    const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+    const [isExemptionsOpen, setIsExemptionsOpen] = useState(false);
+    const [isDeductionsOpen, setIsDeductionsOpen] = useState(false);
+    const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
     const queryClient = useQueryClient();
     const { data: teachers = [] } = useTeachers();
     const { data: students = [] } = useStudents();
     const { data: groups = [] } = useGroups();
+
+    const normalize = (s: string) => {
+        if (!s) return '';
+        return s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/[ًٌٍَُِّ]/g, '').replace(/\s+/g, '').trim();
+    };
 
     useEffect(() => {
         const now = new Date();
@@ -99,7 +111,7 @@ export default function FinancePage() {
     const { data: exemptions = [] } = useQuery({
         queryKey: ['exemptions', selectedMonth],
         queryFn: async () => {
-            const { data } = await supabase.from('free_exemptions').select('id, amount').eq('month', selectedMonth);
+            const { data } = await supabase.from('free_exemptions').select('id, student_id, student_name, exempted_by, amount').eq('month', selectedMonth);
             return data || [];
         },
         enabled: isClient && !!selectedMonth
@@ -231,6 +243,18 @@ export default function FinancePage() {
         };
     }, [filteredTransactions, teachers, students, groups, allFees, user?.displayName, exemptions, selectedMonth, monthDeductions, allAttendanceMap]);
 
+    const incomeDetails = useMemo(() => {
+        const incomeTransactions = filteredTransactions.filter(tr => tr.type === 'income');
+        const managerFees = allFees.filter((fee: any) => {
+            const isByTeacher = teachers.some(t => fee.createdBy === t.fullName || fee.createdBy === t.phone || (fee.createdBy && normalize(fee.createdBy) === normalize(t.fullName)));
+            const isExplicitManager = fee.createdBy === user?.displayName || fee.createdBy === 'المدير' || fee.createdBy === 'admin';
+            return isExplicitManager || (!isByTeacher && fee.createdBy && fee.createdBy !== 'غير معروف');
+        });
+        const fromTeacherTxns = incomeTransactions.filter(tr => tr.category === 'تحصيل من مدرس');
+        const otherTxns = incomeTransactions.filter(tr => tr.category === 'donation' || tr.category === 'other');
+        return { managerFees, fromTeacherTxns, otherTxns };
+    }, [filteredTransactions, allFees, teachers, user?.displayName]);
+
     const teacherPaymentStatus = useMemo(() => {
         const salaryPaymentsThisMonth = filteredTransactions.filter(tr => tr.type === 'expense' && tr.category === 'salary');
         const paidMap = new Map<string, number>();
@@ -301,6 +325,27 @@ export default function FinancePage() {
             return { teacherId: id, teacherName: teacher?.fullName || id, collected: data.amount, count: data.count, deficit, expected, unpaidStudents: tStudents.filter(s => { const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0); return paid < (Number(s.monthlyAmount) || 0); }).length };
         }).sort((a, b) => b.deficit - a.deficit);
     }, [teachers, allFees, students, groups, exemptions, selectedMonth]);
+
+    const teacherAnalysis = useMemo(() => {
+        const collections = deficitPerTeacher.map(d => ({ teacherId: d.teacherId, teacherName: d.teacherName, collected: d.collected, deficit: d.deficit, expected: d.expected, unpaidStudents: d.unpaidStudents }));
+        const exemptionList = exemptions.map((ex: any) => {
+            const student = students.find(s => s.id === ex.student_id);
+            return { id: ex.id, studentName: ex.student_name || student?.fullName || 'طالب', amount: ex.amount, exemptedBy: ex.exempted_by || 'المدير' };
+        });
+        const filteredDeductions = monthDeductions.filter((d: any) => {
+            const dm = `${new Date(d.appliedDate).getFullYear()}-${String(new Date(d.appliedDate).getMonth() + 1).padStart(2, '0')}`;
+            return dm === selectedMonth && d.status === 'applied' && !d.reason.startsWith('مكافأة:');
+        });
+        const deductionList = teachers.map(t => {
+            const manual = filteredDeductions.filter((d: any) => d.teacherId === t.id).reduce((a, d) => a + d.amount, 0);
+            const att = allAttendanceMap[t.id] || {};
+            const absence = Object.values(att).reduce((acc: number, stat: any) => { if (stat === 'absent') return acc + 1; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
+            const daily = t.accountingType === 'partnership' ? ((Number(t.partnershipPercentage) || 0) / 22) : ((Number(t.salary) || 1000) / 22);
+            const total = Math.round((manual + absence) * daily);
+            return total > 0 ? { teacherId: t.id, teacherName: t.fullName, amount: total, manualDays: manual, absenceDays: absence } : null;
+        }).filter(Boolean).sort((a: any, b: any) => b.amount - a.amount);
+        return { collections, exemptionList, deductionList };
+    }, [deficitPerTeacher, exemptions, students, teachers, selectedMonth, monthDeductions, allAttendanceMap]);
 
     const handleAddTransaction = () => {
         setIsModalOpen(false);
@@ -440,6 +485,279 @@ export default function FinancePage() {
                 </div>
             </SlideIn>
 
+            {/* Manager Direct Modal */}
+            <FadeIn show={isManagerDirectOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsManagerDirectOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isManagerDirectOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                            <Wallet size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">تحصيل الإدارة</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">المبالغ المحصلة مباشرة من المدير</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsManagerDirectOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
+                    {incomeDetails.managerFees.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد مبالغ محصلة هذا الشهر.
+                        </div>
+                    ) : (
+                        incomeDetails.managerFees.map((fee: any) => {
+                            const std = students.find(s => s.id === fee.studentId);
+                            return (
+                                <div key={fee.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
+                                    <div className="text-right">
+                                        <p className="font-black text-gray-900 text-sm">{std?.fullName || fee.studentName || 'طالب'}</p>
+                                        <p className="text-[10px] text-gray-400 font-bold">{typeof fee.date === 'string' ? fee.date.split('T')[0] : fee.date}</p>
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-lg font-black text-blue-600 font-sans">{Number(fee.amount?.toString().replace(/[^0-9.]/g, '') || 0).toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                                        {fee.createdBy && <p className="text-[9px] text-gray-400">بواسطة: {fee.createdBy}</p>}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-blue-600 font-sans">{feesByManager.toLocaleString()} <span className="text-sm">ج.م</span></div>
+                        <p className="text-xs font-black text-gray-400">إجمالي تحصيل الإدارة</p>
+                    </div>
+                </div>
+            </SlideIn>
+
+            {/* From Teachers Modal */}
+            <FadeIn show={isFromTeachersOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsFromTeachersOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isFromTeachersOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-600">
+                            <ArrowUpCircle size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">مستلم من المدرسين</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">المبالغ التي سلمها المدرسون للمدير</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsFromTeachersOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
+                    {incomeDetails.fromTeacherTxns.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد مبالغ مستلمة من المدرسين هذا الشهر.
+                        </div>
+                    ) : (
+                        incomeDetails.fromTeacherTxns.map((tr: any) => (
+                            <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
+                                <div className="text-right">
+                                    <p className="font-black text-gray-900 text-sm">{tr.title}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold">{tr.date}</p>
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-lg font-black text-sky-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                                    {tr.performedBy && <p className="text-[9px] text-gray-400">بواسطة: {tr.performedBy}</p>}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-sky-600 font-sans">{fromTeachers.toLocaleString()} <span className="text-sm">ج.م</span></div>
+                        <p className="text-xs font-black text-gray-400">إجمالي المستلم من المدرسين</p>
+                    </div>
+                </div>
+            </SlideIn>
+
+            {/* Other Income Modal */}
+            <FadeIn show={isOtherIncomeOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsOtherIncomeOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isOtherIncomeOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-cyan-50 rounded-2xl flex items-center justify-center text-cyan-600">
+                            <ArrowUpCircle size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">إيرادات أخرى</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">التبرعات والإيرادات الأخرى</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsOtherIncomeOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
+                    {incomeDetails.otherTxns.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد إيرادات أخرى هذا الشهر.
+                        </div>
+                    ) : (
+                        incomeDetails.otherTxns.map((tr: any) => (
+                            <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
+                                <div className="text-right">
+                                    <p className="font-black text-gray-900 text-sm">{tr.title || tr.category}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold">{tr.date}</p>
+                                </div>
+                                <p className="text-lg font-black text-cyan-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                            </div>
+                        ))
+                    )}
+                </div>
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-cyan-600 font-sans">{otherIncome.toLocaleString()} <span className="text-sm">ج.م</span></div>
+                        <p className="text-xs font-black text-gray-400">إجمالي الإيرادات الأخرى</p>
+                    </div>
+                </div>
+            </SlideIn>
+
+            {/* Collections Modal */}
+            <FadeIn show={isCollectionsOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsCollectionsOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isCollectionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600">
+                            <Wallet size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">تحصيل المدرسين</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">المبالغ المحصلة من الطلاب لكل مدرس</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsCollectionsOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
+                    {teacherAnalysis.collections.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد تحصيلات هذا الشهر.
+                        </div>
+                    ) : (
+                        teacherAnalysis.collections.map(c => (
+                            <div key={c.teacherId} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
+                                <div className="text-right">
+                                    <p className="font-black text-gray-900 text-sm">{c.teacherName}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold">عجز: {c.deficit.toLocaleString()} | متوقع: {c.expected.toLocaleString()} | طلاب غير مسددين: {c.unpaidStudents}</p>
+                                </div>
+                                <p className="text-lg font-black text-purple-600 font-sans">{c.collected.toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                            </div>
+                        ))
+                    )}
+                </div>
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-purple-600 font-sans">{teacherFees.toLocaleString()} <span className="text-sm">ج.م</span></div>
+                        <p className="text-xs font-black text-gray-400">إجمالي تحصيل المدرسين</p>
+                    </div>
+                </div>
+            </SlideIn>
+
+            {/* Exemptions Modal */}
+            <FadeIn show={isExemptionsOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsExemptionsOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isExemptionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600">
+                            <Wallet size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">الإعفاءات المالية</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">الطلاب المعفيين من الدفع لهذا الشهر</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsExemptionsOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
+                    {teacherAnalysis.exemptionList.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد إعفاءات هذا الشهر.
+                        </div>
+                    ) : (
+                        teacherAnalysis.exemptionList.map(ex => (
+                            <div key={ex.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
+                                <div className="text-right">
+                                    <p className="font-black text-gray-900 text-sm">{ex.studentName}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold">بواسطة: {ex.exemptedBy}</p>
+                                </div>
+                                <p className="text-lg font-black text-teal-600 font-sans">{Number(ex.amount).toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                            </div>
+                        ))
+                    )}
+                </div>
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-teal-600 font-sans">{totalGlobalExempted.toLocaleString()} <span className="text-sm">ج.م</span></div>
+                        <p className="text-xs font-black text-gray-400">إجمالي الإعفاءات</p>
+                    </div>
+                </div>
+            </SlideIn>
+
+            {/* Deductions Modal */}
+            <FadeIn show={isDeductionsOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsDeductionsOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isDeductionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600">
+                            <AlertCircle size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">خصومات المدرسين</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">الخصومات والغياب لكل مدرس</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsDeductionsOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
+                    {(teacherAnalysis.deductionList as any[]).length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد خصومات هذا الشهر.
+                        </div>
+                    ) : (
+                        (teacherAnalysis.deductionList as any[]).map((d: any) => (
+                            <div key={d.teacherId} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
+                                <div className="text-right">
+                                    <p className="font-black text-gray-900 text-sm">{d.teacherName}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold">غياب: {d.absenceDays}ي | يدوي: {d.manualDays}ي</p>
+                                </div>
+                                <p className="text-lg font-black text-red-600 font-sans">{d.amount.toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                            </div>
+                        ))
+                    )}
+                </div>
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-red-600 font-sans">{totalGlobalDeductions.toLocaleString()} <span className="text-sm">ج.م</span></div>
+                        <p className="text-xs font-black text-gray-400">إجمالي الخصومات</p>
+                    </div>
+                </div>
+            </SlideIn>
+
             {/* Sticky Header */}
             <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 relative">
@@ -493,8 +811,6 @@ export default function FinancePage() {
                             </button>
                         </div>
                     )}
-
-
                 </div>
             </div>
 
@@ -524,22 +840,22 @@ export default function FinancePage() {
                                 <Link href="/finance/income" className="text-[10px] font-bold text-green-600 hover:underline">التفاصيل ←</Link>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <Link href="/finance/teachers" className="p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50 hover:border-purple-300 hover:shadow-sm transition-all">
+                                <button onClick={() => setIsCollectionsOpen(true)} className="p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50 hover:border-purple-300 hover:shadow-sm transition-all text-right w-full">
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">محصل المدرسين</p>
                                     <p className="text-lg font-black text-purple-600 font-sans">{teacherFees.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
-                                </Link>
-                                <Link href="/finance/income" className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 hover:border-blue-300 hover:shadow-sm transition-all">
+                                </button>
+                                <button onClick={() => setIsManagerDirectOpen(true)} className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 hover:border-blue-300 hover:shadow-sm transition-all text-right w-full">
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">تحصيل الإدارة</p>
                                     <p className="text-lg font-black text-blue-600 font-sans">{feesByManager.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
-                                </Link>
-                                <Link href="/finance/income" className="p-4 bg-sky-50/50 rounded-2xl border border-sky-100/50 hover:border-sky-300 hover:shadow-sm transition-all">
+                                </button>
+                                <button onClick={() => setIsFromTeachersOpen(true)} className="p-4 bg-sky-50/50 rounded-2xl border border-sky-100/50 hover:border-sky-300 hover:shadow-sm transition-all text-right w-full">
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">مستلم من المدرسين</p>
                                     <p className="text-lg font-black text-sky-600 font-sans">{fromTeachers.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
-                                </Link>
-                                <Link href="/finance/income" className="p-4 bg-cyan-50/50 rounded-2xl border border-cyan-100/50 hover:border-cyan-300 hover:shadow-sm transition-all">
+                                </button>
+                                <button onClick={() => setIsOtherIncomeOpen(true)} className="p-4 bg-cyan-50/50 rounded-2xl border border-cyan-100/50 hover:border-cyan-300 hover:shadow-sm transition-all text-right w-full">
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">إيرادات أخرى</p>
                                     <p className="text-lg font-black text-cyan-600 font-sans">{otherIncome.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
-                                </Link>
+                                </button>
                             </div>
                         </div>
 
@@ -559,14 +875,14 @@ export default function FinancePage() {
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">العجز</p>
                                     <p className="text-lg font-black text-amber-600 font-sans">{totalGlobalDeficit.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
                                 </button>
-                                <Link href="/finance/teachers" className="p-4 bg-teal-50/50 rounded-2xl border border-teal-100/50 hover:border-teal-300 hover:shadow-sm transition-all">
+                                <button onClick={() => setIsExemptionsOpen(true)} className="p-4 bg-teal-50/50 rounded-2xl border border-teal-100/50 hover:border-teal-300 hover:shadow-sm transition-all text-right w-full">
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">المعفي عنه</p>
                                     <p className="text-lg font-black text-teal-600 font-sans">{totalGlobalExempted.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
-                                </Link>
-                                <Link href="/finance/teachers" className="p-4 bg-red-50/50 rounded-2xl border border-red-100/50 hover:border-red-300 hover:shadow-sm transition-all">
+                                </button>
+                                <button onClick={() => setIsDeductionsOpen(true)} className="p-4 bg-red-50/50 rounded-2xl border border-red-100/50 hover:border-red-300 hover:shadow-sm transition-all text-right w-full">
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">الخصومات</p>
                                     <p className="text-lg font-black text-red-600 font-sans">{totalGlobalDeductions.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
-                                </Link>
+                                </button>
                                 <button onClick={() => setIsSalaryStatusOpen(true)} className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 hover:border-emerald-300 hover:shadow-sm transition-all text-right w-full">
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">الرواتب</p>
                                     <div className="flex items-center gap-1.5 mt-1">
