@@ -138,7 +138,10 @@ export default function DashboardOverview() {
             title: user?.role === 'teacher' ? 'طلابي' : 'إجمالي الطلاب',
             value: myStudents.length.toString(),
             icon: Users,
-            color: 'bg-blue-500',
+            color: 'from-blue-500 to-blue-600',
+            lightBg: 'bg-blue-50',
+            border: 'border-blue-200',
+            shadow: 'shadow-blue-500/10',
             roles: ['director', 'supervisor', 'teacher'],
             link: '/students'
         },
@@ -146,7 +149,10 @@ export default function DashboardOverview() {
             title: 'الحضور اليوم',
             value: myAttendanceCount.toString(),
             icon: CalendarCheck,
-            color: 'bg-green-500',
+            color: 'from-green-500 to-emerald-600',
+            lightBg: 'bg-green-50',
+            border: 'border-green-200',
+            shadow: 'shadow-green-500/10',
             roles: ['director', 'supervisor', 'teacher'],
             link: '/attendance-report'
         },
@@ -154,7 +160,10 @@ export default function DashboardOverview() {
             title: user?.role === 'teacher' ? 'مجموعاتي' : 'المجموعات',
             value: myGroups.length.toString(),
             icon: LayoutGrid,
-            color: 'bg-orange-500',
+            color: 'from-orange-500 to-orange-600',
+            lightBg: 'bg-orange-50',
+            border: 'border-orange-200',
+            shadow: 'shadow-orange-500/10',
             roles: ['director', 'supervisor', 'teacher'],
             link: '/groups'
         },
@@ -162,7 +171,10 @@ export default function DashboardOverview() {
             title: 'طلاب جدد',
             value: pendingStudents.length.toString(),
             icon: UserCheck,
-            color: 'bg-amber-500',
+            color: 'from-amber-500 to-amber-600',
+            lightBg: 'bg-amber-50',
+            border: 'border-amber-200',
+            shadow: 'shadow-amber-500/10',
             roles: ['director', 'supervisor'],
             link: '/students/pending'
         },
@@ -171,8 +183,11 @@ export default function DashboardOverview() {
             title: 'تحديث الحسابات',
             value: students.filter(s => s.status === 'active' && (s.parentPhone || '').replace(/[^0-9]/g, '').length >= 11).length.toString(),
             icon: RefreshCw,
-            color: 'bg-indigo-600',
-            roles: ['director'], // متاح فقط للمدير
+            color: 'from-indigo-500 to-indigo-600',
+            lightBg: 'bg-indigo-50',
+            border: 'border-indigo-200',
+            shadow: 'shadow-indigo-500/10',
+            roles: ['director'],
             onClick: () => handleSyncParents()
         },
         {
@@ -181,7 +196,10 @@ export default function DashboardOverview() {
                 ? pendingLeaves.filter(req => myStudents.some(s => s.fullName === req.studentName))
                 : pendingLeaves).length.toString(),
             icon: CalendarDays,
-            color: 'bg-orange-500',
+            color: 'from-orange-500 to-rose-600',
+            lightBg: 'bg-orange-50',
+            border: 'border-orange-200',
+            shadow: 'shadow-orange-500/10',
             roles: ['director', 'supervisor'],
             onClick: () => setIsLeaveModalOpen(true)
         },
@@ -191,18 +209,23 @@ export default function DashboardOverview() {
                 ? studentNotes.filter(n => !n.isRead && myStudents.some(s => s.id === n.studentId))
                 : studentNotes.filter(n => !n.isRead)).length.toString(),
             icon: MessageSquare,
-            color: 'bg-blue-600',
+            color: 'from-blue-500 to-blue-600',
+            lightBg: 'bg-blue-50',
+            border: 'border-blue-200',
+            shadow: 'shadow-blue-500/10',
             roles: ['director', 'supervisor'],
             onClick: () => setIsNotesModalOpen(true)
         },
 
     ].filter(s => s.roles.includes(user?.role || ''));
 
+    const hour = today.getHours();
+    const greeting = hour >= 5 && hour < 12 ? 'صباح الخير' : hour >= 12 && hour < 18 ? 'مساء الخير' : 'مرحباً';
+
     const isLoading = loadingStudents || loadingGroups || (loadingFinance && (user?.role === 'director' || user?.role === 'supervisor'));
 
     const handleSyncParents = async () => {
         setIsSyncing(true);
-        // محاكاة عملية فحص وتحديث الحسابات
         await new Promise(resolve => setTimeout(resolve, 1500));
         const activeStudentsOnly = students.filter((s: Student) => s.status === 'active');
         const invalidCount = activeStudentsOnly.filter((s: Student) => (s.parentPhone || '').replace(/[^0-9]/g, '').length < 11).length;
@@ -216,16 +239,35 @@ export default function DashboardOverview() {
 
     return (
         <div className="min-h-screen bg-[#f8faff] pb-32">
-            <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-8 md:space-y-12 text-right">
-                {/* Header Section */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-6 px-2">
-                    <div className="text-center sm:text-right">
-                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 leading-tight">
-                            مرحباً، {user?.displayName || 'مستخدم'} 👋
-                        </h1>
-                        <p className="text-base text-gray-400 font-bold mt-2">
-                            {mounted && today.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                        </p>
+            <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-6 md:space-y-10 text-right">
+                {/* Welcome Banner */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-[32px] p-6 md:p-8 shadow-2xl shadow-blue-600/20">
+                    <div className="absolute inset-0 opacity-10">
+                        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full blur-3xl" />
+                        <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-white rounded-full blur-3xl" />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full">
+                            <div className="grid grid-cols-6 gap-4 opacity-5 rotate-12">
+                                {Array.from({ length: 24 }).map((_, i) => (
+                                    <div key={i} className="w-2 h-2 bg-white rounded-full" />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+                        <div className="text-center sm:text-right">
+                            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-white leading-tight">
+                                {greeting}، {user?.displayName || 'مستخدم'}
+                            </h1>
+                            <p className="text-sm md:text-base text-blue-200 font-bold mt-1.5">
+                                {mounted && today.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/10">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center text-white font-black text-sm shadow-lg">
+                                {user?.displayName?.charAt(0) || 'م'}
+                            </div>
+                            <span className="text-white/80 text-xs font-bold">{user?.role === 'director' ? 'مدير عام' : user?.role === 'supervisor' ? 'مشرف' : user?.role === 'teacher' ? 'مدرس' : ''}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -236,8 +278,8 @@ export default function DashboardOverview() {
                     </div>
                 ) : (
                     <>
-                        {/* Main Stats Grid - Compact Horizontal Layout */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 px-2">
+                        {/* Main Stats Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                             {stats.map((stat, idx) => (
                                 <div
                                     key={idx}
@@ -246,46 +288,48 @@ export default function DashboardOverview() {
                                         if (stat.onClick) stat.onClick();
                                         else if (stat.link) router.push(stat.link);
                                     }}
-                                    className="bg-white rounded-[24px] p-4 shadow-sm border border-gray-50 flex items-center gap-4 cursor-pointer hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-1 transition-all group animate-[fadeIn_0.4s_ease-out_both]"
+                                    className="bg-white rounded-[24px] p-4 border border-gray-100 flex items-center gap-4 cursor-pointer hover:shadow-xl hover:shadow-gray-200/60 hover:-translate-y-1 transition-all group animate-[fadeIn_0.4s_ease-out_both] relative overflow-hidden"
                                 >
                                     <div className={cn(
-                                        "w-10 h-10 rounded-xl flex items-center justify-center shadow-md transition-transform group-hover:rotate-6 shrink-0",
+                                        "w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 shrink-0",
                                         stat.color,
                                         stat.onClick && isSyncing ? "animate-spin" : ""
                                     )}>
-                                        <stat.icon size={20} />
+                                        <stat.icon size={22} className="text-white" />
                                     </div>
-                                    <div className="flex-1 text-right">
-                                        <p className="text-xs md:text-base font-black text-gray-800 leading-none">{stat.title}</p>
+                                    <div className="flex-1 text-right min-w-0">
+                                        <p className="text-xs font-black text-gray-500 truncate">{stat.title}</p>
+                                        <div className="w-8 h-1 rounded-full mt-1.5 bg-gradient-to-r from-transparent to-gray-200" />
                                     </div>
                                     <div className="text-left">
-                                        <p className="text-xl font-black text-gray-900 font-sans leading-none">{stat.value}</p>
+                                        <p className="text-2xl md:text-3xl font-black text-gray-900 font-sans leading-none tabular-nums">{stat.value}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        {/* Quick Actions Hub - New Admin Control Center */}
-                        <div className="px-2 space-y-6 pb-20">
-                            <div className="flex items-center justify-between px-2">
-                                <h3 className="font-black text-gray-900 text-2xl tracking-tight">الوصول السريع</h3>
-                                <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase">مركز التحكم</span>
+                        {/* Quick Actions */}
+                        <div className="space-y-5">
+                            <div className="flex items-center gap-3 px-1">
+                                <div className="h-7 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
+                                <h3 className="font-black text-gray-900 text-xl">الوصول السريع</h3>
+                                <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-full">مركز التحكم</span>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                                 {[
-                                    { title: 'غرفة الأتمتة', desc: 'خصومات وتقارير آلي', icon: RefreshCw, color: 'text-purple-600', bg: 'bg-purple-50', link: '/automation' },
-                                    { title: 'تقارير الحضور', desc: 'متابعة الغياب اليومي', icon: CalendarCheck, color: 'text-green-600', bg: 'bg-green-50', link: '/attendance-report' },
-                                    { title: 'مركز الاختبارات', desc: 'نتائج تقييم الطلاب', icon: Trophy, color: 'text-amber-600', bg: 'bg-amber-50', link: '/exams-report' },
-                                    { title: 'إدارة المجموعات', desc: 'توزيع الطلاب والمدرسين', icon: LayoutGrid, color: 'text-blue-600', bg: 'bg-blue-50', link: '/groups' },
+                                    { title: 'غرفة الأتمتة', desc: 'خصومات وتقارير آلي', icon: RefreshCw, color: 'from-purple-500 to-purple-600', bg: 'bg-purple-50', textColor: 'text-purple-600', link: '/automation' },
+                                    { title: 'تقارير الحضور', desc: 'متابعة الغياب اليومي', icon: CalendarCheck, color: 'from-green-500 to-emerald-600', bg: 'bg-green-50', textColor: 'text-green-600', link: '/attendance-report' },
+                                    { title: 'مركز الاختبارات', desc: 'نتائج تقييم الطلاب', icon: Trophy, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-50', textColor: 'text-amber-600', link: '/exams-report' },
+                                    { title: 'إدارة المجموعات', desc: 'توزيع الطلاب والمدرسين', icon: LayoutGrid, color: 'from-blue-500 to-blue-600', bg: 'bg-blue-50', textColor: 'text-blue-600', link: '/groups' },
                                 ].map((action, idx) => (
                                     <div
                                         key={idx}
                                         onClick={() => router.push(action.link)}
-                                        className="bg-white rounded-[32px] p-5 border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 transition-all cursor-pointer group flex flex-col items-center text-center hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]"
+                                        className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 transition-all cursor-pointer group flex flex-col items-center text-center hover:-translate-y-1 active:scale-[0.97]"
                                     >
-                                        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:rotate-12", action.bg, action.color)}>
-                                            <action.icon size={28} />
+                                        <div className={cn("w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-4 shadow-md transition-all duration-300 group-hover:scale-110 group-hover:rotate-12", action.color)}>
+                                            <action.icon size={26} className="text-white" />
                                         </div>
                                         <h4 className="font-black text-gray-900 text-sm mb-1">{action.title}</h4>
                                         <p className="text-[10px] text-gray-400 font-bold leading-tight">{action.desc}</p>

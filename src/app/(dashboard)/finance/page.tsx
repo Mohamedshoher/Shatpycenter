@@ -219,7 +219,12 @@ export default function FinancePage() {
 
         const salaryPaymentsThisMonth = filteredTransactions.filter(tr => tr.type === 'expense' && tr.category === 'salary');
         const paidSet = new Set(salaryPaymentsThisMonth.map(p => p.relatedUserId).filter(Boolean));
-        const activeTeachers = teachers.filter(t => t.status !== 'inactive');
+        const activeTeachers = teachers.filter(t => {
+            if (t.status === 'inactive') return false;
+            const joinDate = (t as any).joinDate;
+            if (joinDate) return joinDate.substring(0, 7) <= selectedMonth;
+            return true;
+        });
         const paidCount = activeTeachers.filter(t => paidSet.has(t.id)).length;
         const unpaidCount = activeTeachers.length - paidCount;
         const totalPaid = salaryPaymentsThisMonth.reduce((sum, p) => sum + p.amount, 0);
@@ -367,7 +372,7 @@ export default function FinancePage() {
             <FadeIn show={isSalaryStatusOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsSalaryStatusOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
-            <SlideIn show={isSalaryStatusOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+            <SlideIn show={isSalaryStatusOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
@@ -446,7 +451,7 @@ export default function FinancePage() {
             <FadeIn show={isDeficitOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsDeficitOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
-            <SlideIn show={isDeficitOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+            <SlideIn show={isDeficitOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
@@ -494,7 +499,7 @@ export default function FinancePage() {
             <FadeIn show={isManagerDirectOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsManagerDirectOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
-            <SlideIn show={isManagerDirectOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+            <SlideIn show={isManagerDirectOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
@@ -544,7 +549,7 @@ export default function FinancePage() {
             <FadeIn show={isFromTeachersOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsFromTeachersOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
-            <SlideIn show={isFromTeachersOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+            <SlideIn show={isFromTeachersOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-600">
@@ -591,7 +596,7 @@ export default function FinancePage() {
             <FadeIn show={isOtherIncomeOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsOtherIncomeOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
-            <SlideIn show={isOtherIncomeOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+            <SlideIn show={isOtherIncomeOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-cyan-50 rounded-2xl flex items-center justify-center text-cyan-600">
@@ -635,7 +640,7 @@ export default function FinancePage() {
             <FadeIn show={isCollectionsOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsCollectionsOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
-            <SlideIn show={isCollectionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+            <SlideIn show={isCollectionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600">
@@ -679,7 +684,7 @@ export default function FinancePage() {
             <FadeIn show={isExemptionsOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsExemptionsOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
-            <SlideIn show={isExemptionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+            <SlideIn show={isExemptionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600">
@@ -723,7 +728,7 @@ export default function FinancePage() {
             <FadeIn show={isDeductionsOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsDeductionsOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
-            <SlideIn show={isDeductionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+            <SlideIn show={isDeductionsOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600">
@@ -764,42 +769,40 @@ export default function FinancePage() {
             </SlideIn>
 
             {/* Sticky Header */}
-            <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
-                <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 relative">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="w-11 h-11 bg-blue-600 text-white rounded-[16px] flex items-center justify-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
-                        >
-                            <Plus size={22} />
-                        </button>
-                    </div>
+            <div className="sticky top-0 z-[70] bg-white/95 backdrop-blur-xl px-4 py-3 border-b border-gray-100 shadow-sm">
+                <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="w-10 h-10 bg-blue-600 text-white rounded-[14px] flex items-center justify-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 shrink-0"
+                    >
+                        <Plus size={20} />
+                    </button>
 
                     {isClient && (
-                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                             <button
                                 onClick={() => { const i = months.findIndex(m => m.value === selectedMonth); if (i < months.length - 1) setSelectedMonth(months[i + 1].value); }}
                                 disabled={months.findIndex(m => m.value === selectedMonth) === months.length - 1}
-                                className="w-10 h-10 bg-white border border-blue-100 rounded-[16px] flex items-center justify-center text-blue-600 hover:bg-blue-50 active:scale-95 transition-all shadow-md shadow-blue-500/5 disabled:opacity-50 disabled:hover:bg-white"
+                                className="w-9 h-9 bg-white border border-gray-100 rounded-[12px] flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 active:scale-95 transition-all disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-500 disabled:hover:border-gray-100"
                             >
-                                <ChevronRight size={20} />
+                                <ChevronRight size={17} />
                             </button>
                             <div className="relative">
                                 <button
                                     onClick={() => setShowMonthPicker(!showMonthPicker)}
-                                    className="h-12 px-6 bg-white border border-blue-100 rounded-[18px] flex items-center gap-3 text-blue-700 font-black shadow-md shadow-blue-500/5 hover:border-blue-300"
+                                    className="h-9 px-4 bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-[14px] flex items-center gap-2 text-blue-700 font-black shadow-sm hover:shadow-md hover:border-blue-200 active:scale-95 transition-all"
                                 >
-                                    <Calendar size={20} className="text-blue-600" />
-                                    <span className="text-sm whitespace-nowrap">{months.find(m => m.value === selectedMonth)?.label}</span>
-                                    <ChevronDown size={16} className={cn("transition-transform duration-300", showMonthPicker && "rotate-180")} />
+                                    <Calendar size={16} className="text-blue-500" />
+                                    <span className="text-[11px] sm:text-xs whitespace-nowrap font-black">{months.find(m => m.value === selectedMonth)?.label}</span>
+                                    <ChevronDown size={12} className={cn("transition-transform duration-300 text-blue-400", showMonthPicker && "rotate-180")} />
                                 </button>
                                 {showMonthPicker && (
-                                    <div className="absolute top-[120%] left-1/2 -translate-x-1/2 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1">
+                                    <div className="absolute top-[110%] left-1/2 -translate-x-1/2 w-44 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1.5">
                                         {months.map(month => (
                                             <button key={month.value}
                                                 onClick={() => { setSelectedMonth(month.value); setShowMonthPicker(false); }}
-                                                className={cn("w-full px-4 py-2.5 text-right text-xs font-bold transition-all flex items-center justify-between",
-                                                    selectedMonth === month.value ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}>
+                                                className={cn("w-full px-4 py-2 text-right text-[11px] font-bold transition-all flex items-center justify-between",
+                                                    selectedMonth === month.value ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-50")}>
                                                 {month.label}
                                                 {selectedMonth === month.value && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                                             </button>
@@ -810,12 +813,14 @@ export default function FinancePage() {
                             <button
                                 onClick={() => { const i = months.findIndex(m => m.value === selectedMonth); if (i > 0) setSelectedMonth(months[i - 1].value); }}
                                 disabled={months.findIndex(m => m.value === selectedMonth) === 0}
-                                className="w-10 h-10 bg-white border border-blue-100 rounded-[16px] flex items-center justify-center text-blue-600 hover:bg-blue-50 active:scale-95 transition-all shadow-md shadow-blue-500/5 disabled:opacity-50 disabled:hover:bg-white"
+                                className="w-9 h-9 bg-white border border-gray-100 rounded-[12px] flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 active:scale-95 transition-all disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-500 disabled:hover:border-gray-100"
                             >
-                                <ChevronLeft size={20} />
+                                <ChevronLeft size={17} />
                             </button>
                         </div>
                     )}
+
+                    <div className="w-10" />
                 </div>
             </div>
 
