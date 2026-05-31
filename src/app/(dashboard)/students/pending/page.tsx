@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStudents, updateStudent, deleteStudent } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
-import { UserCheck, UserX, Edit2, Trash2, Users, Calendar, Phone, MapPin, CreditCard, MessageSquare, BookOpen, MessageCircle } from 'lucide-react';
+import { UserCheck, UserX, Edit2, Trash2, Users, Calendar, Phone, MapPin, CreditCard, MessageSquare, BookOpen, MessageCircle, ChevronLeft } from 'lucide-react';
+import EditStudentModal from '@/features/students/components/EditStudentModal';
 
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { Student, Group } from '@/types';
@@ -27,25 +28,29 @@ export default function PendingStudentsPage() {
 
     const pendingStudents = allStudents.filter(s => s.status === 'pending');
     
-    const recentStudents = allStudents.filter(s => {
-        if (s.status === 'active' && s.enrollmentDate) {
-            const enrollDate = new Date(s.enrollmentDate);
-            const today = new Date();
-            // Reset times for accurate day difference
-            enrollDate.setHours(0,0,0,0);
-            today.setHours(0,0,0,0);
-            
-            const diffTime = today.getTime() - enrollDate.getTime();
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            
-            return diffDays <= 2 && diffDays >= 0; // Today, yesterday, and the day before
-        }
-        return false;
-    }).sort((a, b) => {
-        const dateA = new Date((a as any).createdAt || a.enrollmentDate || 0).getTime();
-        const dateB = new Date((b as any).createdAt || b.enrollmentDate || 0).getTime();
-        return dateB - dateA;
-    });
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const recentStudents = allStudents
+        .filter(s => {
+            if (s.status === 'pending') return false;
+            if (!s.enrollmentDate) return false;
+            const d = new Date(s.enrollmentDate);
+            d.setHours(0, 0, 0, 0);
+            return d >= sevenDaysAgo && d <= new Date();
+        })
+        .sort((a, b) => {
+            const dateA = new Date(a.enrollmentDate || 0).getTime();
+            const dateB = new Date(b.enrollmentDate || 0).getTime();
+            return dateB - dateA;
+        });
+
+    const getGroupName = (groupId: string | null) => {
+        if (!groupId) return 'بدون مجموعة';
+        const group = groups.find((g: Group) => g.id === groupId);
+        return group?.name || 'مجموعة غير معروفة';
+    };
 
     const handleWelcomeWhatsApp = (student: Student) => {
         const phone = student.parentPhone || student.studentPhone || '';
@@ -107,6 +112,10 @@ export default function PendingStudentsPage() {
 
     const handleEdit = (student: Student) => {
         setEditingStudent(student);
+    };
+
+    const handleCloseEdit = () => {
+        setEditingStudent(null);
     };
 
     const handleApprove = (studentId: string) => {
@@ -233,6 +242,89 @@ export default function PendingStudentsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Recent Students (Last 7 Days) */}
+            <div className="space-y-4">
+                <h2 className="text-xl font-black text-gray-900 px-2 border-r-4 border-green-400">المضافون حديثاً (آخر 7 أيام)</h2>
+                {recentStudents.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
+                        <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <Users size={32} className="text-gray-400" />
+                        </div>
+                        <p className="text-gray-500 font-bold text-lg">لا يوجد طلاب مضافون حديثاً</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {recentStudents.map((student) => (
+                            <div
+                                key={student.id}
+                                className="bg-white rounded-3xl p-6 shadow-sm border border-green-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
+                            >
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 font-black text-lg">
+                                            {student.fullName[0]}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-gray-900">{student.fullName}</h3>
+                                            <span className="inline-block mt-1 px-3 py-1 text-xs font-bold bg-green-100 text-green-600 rounded-full">
+                                                {student.status === 'active' ? 'نشط' : student.status}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleEdit(student)}
+                                            className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
+                                            title="تعديل"
+                                        >
+                                            <Edit2 size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleWelcomeWhatsApp(student)}
+                                            className="w-10 h-10 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 flex items-center justify-center transition-colors"
+                                            title="إرسال ترحيب واتساب"
+                                        >
+                                            <MessageCircle size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                        <ChevronLeft size={14} className="text-gray-300 shrink-0" />
+                                        <span className="font-bold text-gray-500 min-w-[70px]">المجموعة:</span>
+                                        <span className="font-black text-gray-800">{getGroupName(student.groupId)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                        <ChevronLeft size={14} className="text-gray-300 shrink-0" />
+                                        <span className="font-bold text-gray-500 min-w-[70px]">ولي الأمر:</span>
+                                        <span className="font-sans text-gray-700">{student.parentPhone}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                        <ChevronLeft size={14} className="text-gray-300 shrink-0" />
+                                        <span className="font-bold text-gray-500 min-w-[70px]">تاريخ الالتحاق:</span>
+                                        <span className="text-gray-700">{student.enrollmentDate}</span>
+                                    </div>
+                                    {student.monthlyAmount && (
+                                        <div className="flex items-center gap-2 text-gray-600">
+                                            <ChevronLeft size={14} className="text-gray-300 shrink-0" />
+                                            <span className="font-bold text-gray-500 min-w-[70px]">المبلغ:</span>
+                                            <span className="text-gray-700">{student.monthlyAmount} ج.م</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Edit Student Modal */}
+            <EditStudentModal
+                student={editingStudent}
+                isOpen={!!editingStudent}
+                onClose={handleCloseEdit}
+            />
 
             {/* Reject Modal */}
             {showRejectModal && (

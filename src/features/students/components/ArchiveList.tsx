@@ -621,7 +621,8 @@ export default function ArchiveList() {
             <FadeIn show={!!restoreTarget} className="fixed inset-0 z-[200]">
                 <div onClick={() => setRestoreTarget(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
             </FadeIn>
-            <SlideIn show={!!restoreTarget} className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-[40px] p-8 shadow-2xl z-[201]">
+            <SlideIn show={!!restoreTarget} className="fixed inset-0 z-[201] flex items-center justify-center p-4">
+                <div className="relative w-full max-w-md bg-white rounded-[40px] p-8 shadow-2xl">
                 <div className="text-center space-y-4">
                     <div className="w-20 h-20 bg-green-50 rounded-[30px] flex items-center justify-center text-green-600 mx-auto">
                         <RotateCcw size={40} />
@@ -683,6 +684,7 @@ export default function ArchiveList() {
                             إلغاء
                         </button>
                     </div>
+                </div>
                 </div>
             </SlideIn>
 
