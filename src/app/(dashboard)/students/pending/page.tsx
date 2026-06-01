@@ -1,20 +1,23 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getStudents, updateStudent, deleteStudent } from '@/features/students/services/studentService';
+import { getStudents, updateStudent } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
-import { UserCheck, UserX, Edit2, Trash2, Users, Calendar, Phone, MapPin, CreditCard, MessageSquare, BookOpen, MessageCircle, ChevronLeft } from 'lucide-react';
+import { getFeesByMonth } from '@/features/students/services/recordsService';
+import { UserCheck, UserX, Edit2, Users, Calendar, Phone, CreditCard, MessageSquare, BookOpen, MessageCircle } from 'lucide-react';
 import EditStudentModal from '@/features/students/components/EditStudentModal';
 
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { Student, Group } from '@/types';
+import { FeeRecord } from '@/features/students/services/recordsService';
 
 export default function PendingStudentsPage() {
     const queryClient = useQueryClient();
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [rejectReason, setRejectReason] = useState('');
     const [showRejectModal, setShowRejectModal] = useState<Student | null>(null);
+    const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
 
     const { data: allStudents = [], isLoading } = useQuery({
         queryKey: ['students'],
@@ -26,13 +29,27 @@ export default function PendingStudentsPage() {
         queryFn: () => getGroups()
     });
 
-    const pendingStudents = allStudents.filter(s => s.status === 'pending');
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const { data: currentMonthFees = [] } = useQuery({
+        queryKey: ['fees', currentMonthKey],
+        queryFn: () => getFeesByMonth(currentMonthKey)
+    });
+
+    const paidStudentIds = useMemo(() => new Set(currentMonthFees.map((f: FeeRecord) => f.studentId)), [currentMonthFees]);
+
+    const allPendingStudents = allStudents.filter(s => s.status === 'pending');
+    const pendingStudents = allPendingStudents.filter(s => {
+        if (filterStatus === 'all') return true;
+        const hasPaid = paidStudentIds.has(s.id);
+        return filterStatus === 'paid' ? hasPaid : !hasPaid;
+    });
     
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
-    const recentStudents = allStudents
+    const allRecentStudents = allStudents
         .filter(s => {
             if (s.status === 'pending') return false;
             if (!s.enrollmentDate) return false;
@@ -45,6 +62,11 @@ export default function PendingStudentsPage() {
             const dateB = new Date(b.enrollmentDate || 0).getTime();
             return dateB - dateA;
         });
+    const recentStudents = allRecentStudents.filter(s => {
+        if (filterStatus === 'all') return true;
+        const hasPaid = paidStudentIds.has(s.id);
+        return filterStatus === 'paid' ? hasPaid : !hasPaid;
+    });
 
     const getGroupName = (groupId: string | null) => {
         if (!groupId) return 'بدون مجموعة';
@@ -161,6 +183,32 @@ export default function PendingStudentsPage() {
                 </div>
             </div>
 
+            {/* Filter */}
+            <div className="bg-white rounded-3xl p-3 shadow-sm border border-gray-100 flex items-center gap-2 overflow-x-auto">
+                <span className="text-sm font-bold text-gray-500 shrink-0 px-1">فلتر الدفع:</span>
+                {[
+                    { key: 'all', label: 'الكل' },
+                    { key: 'paid', label: 'مدفوع ✓' },
+                    { key: 'unpaid', label: 'غير مدفوع ✗' },
+                ].map(f => (
+                    <button
+                        key={f.key}
+                        onClick={() => setFilterStatus(f.key as 'all' | 'paid' | 'unpaid')}
+                        className={cn(
+                            'px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0',
+                            filterStatus === f.key
+                                ? 'bg-blue-600 text-white shadow'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        )}
+                    >
+                        {f.label}
+                    </button>
+                ))}
+                <div className="text-xs text-gray-400 mr-auto shrink-0">
+                    المدفوع: {allPendingStudents.filter(s => paidStudentIds.has(s.id)).length} / {allPendingStudents.length}
+                </div>
+            </div>
+
             {/* Pending Students List */}
             <div className="space-y-4 mb-8">
                 <h2 className="text-xl font-black text-gray-900 px-2 border-r-4 border-amber-400">في انتظار الموافقة</h2>
@@ -173,72 +221,53 @@ export default function PendingStudentsPage() {
                     </div>
                 ) : (
                     <div className="grid gap-4">
-                        {pendingStudents.map((student) => (
+                        {pendingStudents.map((student) => {
+                            const hasPaid = paidStudentIds.has(student.id);
+                            return (
                             <div
                                 key={student.id}
-                                className="bg-white rounded-3xl p-6 shadow-sm border border-amber-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
+                                className="bg-white rounded-3xl p-4 shadow-sm border border-amber-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
                             >
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 font-black text-lg">
-                                            {student.fullName[0]}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-black text-gray-900">{student.fullName}</h3>
-                                            <span className="inline-block mt-1 px-3 py-1 text-xs font-bold bg-amber-100 text-amber-600 rounded-full">
-                                                معلق
+                                {/* Line 1: avatar + name + badges + actions */}
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 shrink-0 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 font-black text-sm">
+                                        {student.fullName[0]}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-black text-gray-900 truncate">{student.fullName}</h3>
+                                            <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-600 rounded-full">معلق</span>
+                                            <span className={cn(
+                                                'shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full',
+                                                hasPaid ? 'bg-green-100 text-green-600' : 'bg-red-50 text-red-500'
+                                            )}>
+                                                {hasPaid ? 'مدفوع' : 'غير مدفوع'}
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => handleEdit(student)}
-                                            className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
-                                        >
-                                            <Edit2 size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleApprove(student.id)}
-                                            className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 hover:bg-teal-100 flex items-center justify-center transition-colors"
-                                        >
-                                            <UserCheck size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleReject(student)}
-                                            className="w-10 h-10 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors"
-                                        >
-                                            <UserX size={18} />
-                                        </button>
+                                    <div className="flex gap-1 shrink-0">
+                                        <button onClick={() => handleEdit(student)} className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"><Edit2 size={15} /></button>
+                                        <button onClick={() => handleApprove(student.id)} className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 hover:bg-teal-100 flex items-center justify-center transition-colors"><UserCheck size={15} /></button>
+                                        <button onClick={() => handleReject(student)} className="w-8 h-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors"><UserX size={15} /></button>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Phone size={16} className="text-blue-500" />
-                                        <span className="font-bold">ولي الأمر:</span>
-                                        <span className="font-sans">{student.parentPhone}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Calendar size={16} className="text-orange-500" />
-                                        <span className="font-bold">تاريخ الالتحاق:</span>
-                                        <span>{student.enrollmentDate}</span>
-                                    </div>
+                                {/* Line 2: compact info row */}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                                    <span className="flex items-center gap-1"><Phone size={12} className="text-blue-400" /><span className="font-sans">{student.parentPhone}</span></span>
+                                    <span className="flex items-center gap-1"><Calendar size={12} className="text-orange-400" /><span>{student.enrollmentDate}</span></span>
                                     {student.appointment && (
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <BookOpen size={16} className="text-indigo-500" />
-                                            <span className="font-bold">الموعد:</span>
-                                            <span>{student.appointment}</span>
-                                        </div>
+                                        <span className="flex items-center gap-1"><BookOpen size={12} className="text-indigo-400" /><span>{student.appointment}</span></span>
+                                    )}
+                                    {student.monthlyAmount && (
+                                        <span className="flex items-center gap-1"><CreditCard size={12} className="text-gray-400" /><span>{student.monthlyAmount} ج.م</span></span>
                                     )}
                                     {student.notes && (
-                                        <div className="flex items-start gap-2 text-gray-600 md:col-span-2">
-                                            <MessageSquare size={16} className="text-gray-400 mt-0.5" />
-                                            <span className="font-bold">ملاحظات:</span>
-                                            <span className="flex-1">{student.notes}</span>
-                                        </div>
+                                        <span className="flex items-center gap-1 truncate max-w-[200px]"><MessageSquare size={12} className="text-gray-400 shrink-0" /><span className="truncate">{student.notes}</span></span>
                                     )}
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -255,66 +284,49 @@ export default function PendingStudentsPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {recentStudents.map((student) => (
+                        {recentStudents.map((student) => {
+                            const hasPaid = paidStudentIds.has(student.id);
+                            return (
                             <div
                                 key={student.id}
-                                className="bg-white rounded-3xl p-6 shadow-sm border border-green-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
+                                className="bg-white rounded-3xl p-4 shadow-sm border border-green-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
                             >
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 font-black text-lg">
-                                            {student.fullName[0]}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-black text-gray-900">{student.fullName}</h3>
-                                            <span className="inline-block mt-1 px-3 py-1 text-xs font-bold bg-green-100 text-green-600 rounded-full">
+                                {/* Line 1: avatar + name + badges + actions */}
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 shrink-0 bg-green-100 rounded-xl flex items-center justify-center text-green-600 font-black text-sm">
+                                        {student.fullName[0]}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-black text-gray-900 truncate">{student.fullName}</h3>
+                                            <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-600 rounded-full">
                                                 {student.status === 'active' ? 'نشط' : student.status}
+                                            </span>
+                                            <span className={cn(
+                                                'shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full',
+                                                hasPaid ? 'bg-green-100 text-green-600' : 'bg-red-50 text-red-500'
+                                            )}>
+                                                {hasPaid ? 'مدفوع' : 'غير مدفوع'}
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => handleEdit(student)}
-                                            className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
-                                            title="تعديل"
-                                        >
-                                            <Edit2 size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleWelcomeWhatsApp(student)}
-                                            className="w-10 h-10 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 flex items-center justify-center transition-colors"
-                                            title="إرسال ترحيب واتساب"
-                                        >
-                                            <MessageCircle size={18} />
-                                        </button>
+                                    <div className="flex gap-1 shrink-0">
+                                        <button onClick={() => handleEdit(student)} className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors" title="تعديل"><Edit2 size={15} /></button>
+                                        <button onClick={() => handleWelcomeWhatsApp(student)} className="w-8 h-8 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 flex items-center justify-center transition-colors" title="إرسال ترحيب واتساب"><MessageCircle size={15} /></button>
                                     </div>
                                 </div>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <ChevronLeft size={14} className="text-gray-300 shrink-0" />
-                                        <span className="font-bold text-gray-500 min-w-[70px]">المجموعة:</span>
-                                        <span className="font-black text-gray-800">{getGroupName(student.groupId)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <ChevronLeft size={14} className="text-gray-300 shrink-0" />
-                                        <span className="font-bold text-gray-500 min-w-[70px]">ولي الأمر:</span>
-                                        <span className="font-sans text-gray-700">{student.parentPhone}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <ChevronLeft size={14} className="text-gray-300 shrink-0" />
-                                        <span className="font-bold text-gray-500 min-w-[70px]">تاريخ الالتحاق:</span>
-                                        <span className="text-gray-700">{student.enrollmentDate}</span>
-                                    </div>
+                                {/* Line 2: compact info row */}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                                    <span className="flex items-center gap-1"><Users size={12} className="text-gray-400" /><span className="font-black text-gray-700">{getGroupName(student.groupId)}</span></span>
+                                    <span className="flex items-center gap-1"><Phone size={12} className="text-blue-400" /><span className="font-sans">{student.parentPhone}</span></span>
+                                    <span className="flex items-center gap-1"><Calendar size={12} className="text-orange-400" /><span>{student.enrollmentDate}</span></span>
                                     {student.monthlyAmount && (
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <ChevronLeft size={14} className="text-gray-300 shrink-0" />
-                                            <span className="font-bold text-gray-500 min-w-[70px]">المبلغ:</span>
-                                            <span className="text-gray-700">{student.monthlyAmount} ج.م</span>
-                                        </div>
+                                        <span className="flex items-center gap-1"><CreditCard size={12} className="text-gray-400" /><span>{student.monthlyAmount} ج.م</span></span>
                                     )}
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
