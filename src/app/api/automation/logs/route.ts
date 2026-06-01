@@ -11,7 +11,9 @@ export async function GET(request: NextRequest) {
         let query = supabase.from('automation_logs').select('*').order('created_at', { ascending: false }).limit(limit);
 
         if (date) {
-            query = query.eq('date', date);
+            const dayStart = `${date}T00:00:00`;
+            const dayEnd = `${date}T23:59:59.999`;
+            query = query.gte('triggered_at', dayStart).lte('triggered_at', dayEnd);
         }
 
         const { data, error } = await query;

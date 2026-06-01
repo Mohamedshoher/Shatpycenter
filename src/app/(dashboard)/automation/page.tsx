@@ -28,8 +28,7 @@ export default function AutomationPage() {
     const handleRunReportCheck = async () => {
         if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص التقارير اليومية وتطبيق الخصومات على المخالفين؟")) {
             const result = await executeMissingReportDeduction();
-            setSelectedDate(''); // نعود لأحدث سجل عند التشغيل
-            loadLogs('');
+            setSelectedDate('');
 
             const violators = (result || []).filter((r: any) => r.recipientId !== 'system');
 
@@ -44,8 +43,7 @@ export default function AutomationPage() {
     const handleRunExamCheck = async () => {
         if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص الاختبارات اليومية وتطبيق الخصومات على من لم يسجّل اختباراً؟")) {
             const result = await executeMissingExamDeduction();
-            setSelectedDate(''); // نعود لأحدث سجل عند التشغيل الجديد
-            loadLogs('');
+            setSelectedDate('');
 
             const violators = (result || []).filter((r: any) => r.recipientId !== 'system');
 

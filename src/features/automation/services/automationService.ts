@@ -79,49 +79,40 @@ export const addLog = async (log: Omit<AutomationLog, 'id'>): Promise<Automation
     };
 };
 
-export const getLogs = async (logLimit: number = 1500, selectedDateStr?: string): Promise<AutomationLog[]> => {
+export const getLogs = async (logLimit: number = 500, selectedDateStr?: string): Promise<AutomationLog[]> => {
     try {
-        const res = await fetch(`/api/automation/logs?limit=${logLimit}`);
+        const params = new URLSearchParams({ limit: String(logLimit) });
+        if (selectedDateStr) params.set('date', normalizeDate(selectedDateStr));
+
+        const res = await fetch(`/api/automation/logs?${params}`);
         if (!res.ok) return [];
         const data = await res.json();
 
-        let mappedLogs = (data || []).map((row: any) => ({
+        const mappedLogs: AutomationLog[] = (data || []).map((row: any) => ({
             id: row.id, ruleId: row.rule_id || row.ruleId, ruleName: row.rule_name || row.ruleName, triggeredBy: 'system',
             recipientId: row.affected_entity_id || row.recipientId, recipientName: row.affected_entity_name || row.recipientName,
             messageSent: row.details || row.messageSent, timestamp: new Date(row.triggered_at || row.timestamp), status: (row.status || 'success') as any
         }));
 
-        if (selectedDateStr) {
-            const formattedDate = normalizeDate(selectedDateStr); // e.g. "2026-04-07"
-            
-            mappedLogs = mappedLogs.filter((log: AutomationLog) => {
-                const logDateStr = log.timestamp.toISOString().split('T')[0];
-                const containsInDetails = log.messageSent && log.messageSent.includes(formattedDate);
-                const executedThatDay = logDateStr === formattedDate;
-                
-                return executedThatDay || containsInDetails;
-            });
-            return mappedLogs;
+        if (selectedDateStr) return mappedLogs;
+
+        // آخر جلسة فحص (آخر 10 دقائق من أحدث سجل لكل تصنيف)
+        const latestPerType = new Map<string, number>();
+        for (const log of mappedLogs) {
+            const type = log.ruleName.includes('تقرير') || log.ruleName.includes('تقارير') ? 'report'
+                : log.ruleName.includes('اختبار') ? 'exam' : 'other';
+            const ts = log.timestamp.getTime();
+            if (!latestPerType.has(type) || ts > latestPerType.get(type)!) {
+                latestPerType.set(type, ts);
+            }
         }
 
-        // إذا لم يختر، نعيد آخر جلسة فحص لكل نوع على حدة (آخر 10 دقائق من أحدث سجل لكل تصنيف)
-        if (mappedLogs.length === 0) return mappedLogs;
-
-        const reportLogs = mappedLogs.filter((log: AutomationLog) => log.ruleName.includes('تقرير') || log.ruleName.includes('تقارير'));
-        const examLogs = mappedLogs.filter((log: AutomationLog) => log.ruleName.includes('اختبار'));
-        const otherLogs = mappedLogs.filter((log: AutomationLog) => !log.ruleName.includes('تقرير') && !log.ruleName.includes('تقارير') && !log.ruleName.includes('اختبار'));
-
-        const getLatestSession = (list: AutomationLog[]) => {
-            if (list.length === 0) return [];
-            const latest = list[0].timestamp.getTime();
-            return list.filter((log: AutomationLog) => (latest - log.timestamp.getTime()) <= 10 * 60 * 1000);
-        };
-
-        return [
-            ...getLatestSession(reportLogs),
-            ...getLatestSession(examLogs),
-            ...getLatestSession(otherLogs)
-        ].sort((a: AutomationLog, b: AutomationLog) => b.timestamp.getTime() - a.timestamp.getTime());
+        return mappedLogs.filter((log: AutomationLog) => {
+            const type = log.ruleName.includes('تقرير') || log.ruleName.includes('تقارير') ? 'report'
+                : log.ruleName.includes('اختبار') ? 'exam' : 'other';
+            const latest = latestPerType.get(type);
+            return latest && (latest - log.timestamp.getTime()) <= 10 * 60 * 1000;
+        }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     } catch (e) {
         console.error("getLogs Error:", e);
         return [];
