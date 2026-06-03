@@ -152,7 +152,7 @@ export default function ArchiveList() {
         const target = new Date(end.getFullYear(), end.getMonth(), 1);
 
         let totalMonthDebt = 0;
-        const unpaidMonths: string[] = [];
+        const unpaidMonths: { label: string; key: string }[] = [];
 
         while (current <= target) {
             const monthLabel = current.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
@@ -179,7 +179,7 @@ export default function ArchiveList() {
                 
                 if (!isPaid && !isExempted) {
                     totalMonthDebt += monthDebtAmount;
-                    unpaidMonths.push(monthLabel);
+                    unpaidMonths.push({ label: monthLabel, key: monthKey });
                 }
             }
 
@@ -212,11 +212,11 @@ export default function ArchiveList() {
             const studentGroup = groups?.find(g => g.id === student.groupId);
             const teacherId = studentGroup?.teacherId || '';
 
-            const exemptionsToInsert = (debtInfo.unpaidMonths || []).map((month: string) => ({
+            const exemptionsToInsert = (debtInfo.unpaidMonths || []).map((m: { label: string; key: string }) => ({
                 student_id: student.id,
                 student_name: student.fullName,
                 teacher_id: teacherId,
-                month: month,
+                month: m.key,
                 amount: student.monthlyAmount || 100,
                 exempted_by: user?.displayName || 'المدير',
                 created_at: new Date().toISOString()
@@ -564,7 +564,7 @@ export default function ArchiveList() {
                                                         const phone = student.parentPhone || student.studentPhone || '';
                                                         const monthlyAmount = student.monthlyAmount || 100;
                                                         const totalAmount = debtInfo.amount * monthlyAmount;
-                                                        const monthsText = (debtInfo.unpaidMonths || []).join('، ');
+                                                        const monthsText = (debtInfo.unpaidMonths || []).map((m: { label: string }) => m.label).join('، ');
                                                         
                                                         const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\n\nنود إعلامكم أن الطالب مدين بـ *${debtInfo.label}* كرسوم متأخرة.\n🗓️ الأشهر المستحقة: (${monthsText})\n💰 المبلغ المطلوب: *${totalAmount} جنيه*\n\n💳 رقم الهاتف للدفع (كاش أو إنستا): *01064116467*\n\nونأسف لو في أي خطأ ويسعدنا خدمتكم في أي وقت.`;
                                                         window.open(getWhatsAppUrl(phone, message), '_blank');
