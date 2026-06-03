@@ -307,6 +307,27 @@ export const getStudentExemptions = async (studentId: string): Promise<Exemption
     }
 };
 
+export const addExemptionRecord = async (record: { studentId: string; studentName: string; month: string; amount: number; exemptedBy: string }): Promise<any> => {
+    try {
+        const res = await fetch('/api/records/exemptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                student_id: record.studentId,
+                student_name: record.studentName,
+                month: record.month,
+                amount: record.amount,
+                exempted_by: record.exemptedBy
+            })
+        });
+        if (!res.ok) throw new Error('Failed to add exemption');
+        return await res.json();
+    } catch (error) {
+        console.error("Error adding exemption:", error);
+        throw error;
+    }
+};
+
 export const deleteExemptionRecord = async (id: string): Promise<void> => {
     const { error } = await supabase.from('free_exemptions').delete().eq('id', id);
     if (error) throw error;

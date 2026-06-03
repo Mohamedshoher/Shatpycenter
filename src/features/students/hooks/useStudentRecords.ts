@@ -12,6 +12,7 @@ import {
     deleteFeeRecord,
     addLeaveRequest,
     getStudentExemptions,
+    addExemptionRecord,
     deleteExemptionRecord
 } from "../services/recordsService";
 
@@ -117,6 +118,14 @@ export const useStudentRecords = (studentId: string) => {
         }
     });
 
+    const addExemption = useMutation({
+        mutationFn: addExemptionRecord,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['exemptions', studentId] });
+            queryClient.invalidateQueries({ queryKey: ['fees', studentId] });
+        }
+    });
+
     const deleteExemption = useMutation({
         mutationFn: deleteExemptionRecord,
         onSuccess: () => {
@@ -200,6 +209,7 @@ export const useStudentRecords = (studentId: string) => {
         updateExam,
         deleteExam,
         deleteFee,
+        addExemption,
         deleteExemption,
         deleteNote
     };

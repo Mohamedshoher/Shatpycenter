@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStudents, updateStudent } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
-import { UserCheck, UserX, Edit2, Users, Calendar, Phone, CreditCard, MessageSquare, BookOpen, MessageCircle } from 'lucide-react';
+import { UserCheck, UserX, Edit2, Users, Calendar, Phone, CreditCard, MessageSquare, BookOpen, MessageCircle, ChevronDown } from 'lucide-react';
 import EditStudentModal from '@/features/students/components/EditStudentModal';
 
 import { cn, getWhatsAppUrl } from '@/lib/utils';
@@ -18,6 +18,9 @@ export default function PendingStudentsPage() {
     const [rejectReason, setRejectReason] = useState('');
     const [showRejectModal, setShowRejectModal] = useState<Student | null>(null);
     const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
+    const [daysAgoFilter, setDaysAgoFilter] = useState<number | null>(null);
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+    const [showDateDropdown, setShowDateDropdown] = useState(false);
 
     const { data: allStudents = [], isLoading } = useQuery({
         queryKey: ['students'],
@@ -38,11 +41,34 @@ export default function PendingStudentsPage() {
 
     const paidStudentIds = useMemo(() => new Set(currentMonthFees.map((f: FeeRecord) => f.studentId)), [currentMonthFees]);
 
+    const getDateByDaysAgo = (daysAgo: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() - daysAgo);
+        return d.toISOString().split('T')[0];
+    };
+
+    const daysAgoLabel = (days: number) => {
+        if (days === 0) return 'اليوم';
+        if (days === 1) return 'أمس';
+        if (days === 2) return 'أول أمس';
+        return `قبل ${days} أيام`;
+    };
+
+    const daysAgoOptions = [0, 1, 2, 3, 4, 5, 6, 7];
+
     const allPendingStudents = allStudents.filter(s => s.status === 'pending');
     const pendingStudents = allPendingStudents.filter(s => {
-        if (filterStatus === 'all') return true;
+        if (filterStatus === 'all' && daysAgoFilter === null) return true;
         const hasPaid = paidStudentIds.has(s.id);
-        return filterStatus === 'paid' ? hasPaid : !hasPaid;
+        if (filterStatus !== 'all') {
+            if (filterStatus === 'paid' && !hasPaid) return false;
+            if (filterStatus === 'unpaid' && hasPaid) return false;
+        }
+        if (daysAgoFilter !== null) {
+            const targetDate = getDateByDaysAgo(daysAgoFilter);
+            if (s.enrollmentDate !== targetDate) return false;
+        }
+        return true;
     });
     
     const sevenDaysAgo = new Date();
@@ -63,9 +89,17 @@ export default function PendingStudentsPage() {
             return dateB - dateA;
         });
     const recentStudents = allRecentStudents.filter(s => {
-        if (filterStatus === 'all') return true;
+        if (filterStatus === 'all' && daysAgoFilter === null) return true;
         const hasPaid = paidStudentIds.has(s.id);
-        return filterStatus === 'paid' ? hasPaid : !hasPaid;
+        if (filterStatus !== 'all') {
+            if (filterStatus === 'paid' && !hasPaid) return false;
+            if (filterStatus === 'unpaid' && hasPaid) return false;
+        }
+        if (daysAgoFilter !== null) {
+            const targetDate = getDateByDaysAgo(daysAgoFilter);
+            if (s.enrollmentDate !== targetDate) return false;
+        }
+        return true;
     });
 
     const getGroupName = (groupId: string | null) => {
@@ -175,37 +209,90 @@ export default function PendingStudentsPage() {
                         <Users size={28} />
                     </div>
                     <div className="flex-1">
-                        <h1 className="text-2xl font-black text-gray-900">الطلاب الجدد والمنتظرون</h1>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-2xl font-black text-gray-900">الطلاب الجدد والمنتظرون</h1>
+                            {/* القائمة المنسدلة لحالة الدفع */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                    className={cn(
+                                        'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5',
+                                        filterStatus !== 'all' ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    )}
+                                >
+                                    {filterStatus === 'all' ? 'الكل' : filterStatus === 'paid' ? 'مدفوع ✓' : 'غير مدفوع ✗'}
+                                    <ChevronDown size={14} />
+                                </button>
+                                {showStatusDropdown && (
+                                    <>
+                                        <div className="fixed inset-0 z-[300]" onClick={() => setShowStatusDropdown(false)} />
+                                        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-[301] min-w-[160px] p-2">
+                                            {[
+                                                { key: 'all', label: 'الكل' },
+                                                { key: 'paid', label: 'مدفوع ✓' },
+                                                { key: 'unpaid', label: 'غير مدفوع ✗' },
+                                            ].map(f => (
+                                                <button
+                                                    key={f.key}
+                                                    onClick={() => { setFilterStatus(f.key as 'all' | 'paid' | 'unpaid'); setShowStatusDropdown(false); }}
+                                                    className={cn(
+                                                        'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                                        filterStatus === f.key ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
+                                                    )}
+                                                >
+                                                    {f.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            {/* القائمة المنسدلة لأيام التسجيل */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowDateDropdown(!showDateDropdown)}
+                                    className={cn(
+                                        'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5',
+                                        daysAgoFilter !== null ? 'bg-amber-500 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    )}
+                                >
+                                    {daysAgoFilter !== null ? daysAgoLabel(daysAgoFilter) : 'الأيام'}
+                                    <ChevronDown size={14} />
+                                </button>
+                                {showDateDropdown && (
+                                    <>
+                                        <div className="fixed inset-0 z-[300]" onClick={() => setShowDateDropdown(false)} />
+                                        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-[301] min-w-[180px] p-2">
+                                            <button
+                                                onClick={() => { setDaysAgoFilter(null); setShowDateDropdown(false); }}
+                                                className={cn(
+                                                    'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                                    daysAgoFilter === null ? 'bg-amber-50 text-amber-600' : 'text-gray-600 hover:bg-gray-50'
+                                                )}
+                                            >
+                                                الكل
+                                            </button>
+                                            {daysAgoOptions.map(d => (
+                                                <button
+                                                    key={d}
+                                                    onClick={() => { setDaysAgoFilter(d); setShowDateDropdown(false); }}
+                                                    className={cn(
+                                                        'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                                        daysAgoFilter === d ? 'bg-amber-50 text-amber-600' : 'text-gray-600 hover:bg-gray-50'
+                                                    )}
+                                                >
+                                                    {daysAgoLabel(d)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
                         <p className="text-sm text-gray-500 font-bold mt-1">
                             {pendingStudents.length + recentStudents.length} طالب جديد أو في انتظار الموافقة
                         </p>
                     </div>
-                </div>
-            </div>
-
-            {/* Filter */}
-            <div className="bg-white rounded-3xl p-3 shadow-sm border border-gray-100 flex items-center gap-2 overflow-x-auto">
-                <span className="text-sm font-bold text-gray-500 shrink-0 px-1">فلتر الدفع:</span>
-                {[
-                    { key: 'all', label: 'الكل' },
-                    { key: 'paid', label: 'مدفوع ✓' },
-                    { key: 'unpaid', label: 'غير مدفوع ✗' },
-                ].map(f => (
-                    <button
-                        key={f.key}
-                        onClick={() => setFilterStatus(f.key as 'all' | 'paid' | 'unpaid')}
-                        className={cn(
-                            'px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0',
-                            filterStatus === f.key
-                                ? 'bg-blue-600 text-white shadow'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        )}
-                    >
-                        {f.label}
-                    </button>
-                ))}
-                <div className="text-xs text-gray-400 mr-auto shrink-0">
-                    المدفوع: {allPendingStudents.filter(s => paidStudentIds.has(s.id)).length} / {allPendingStudents.length}
                 </div>
             </div>
 
@@ -234,9 +321,17 @@ export default function PendingStudentsPage() {
                                         {student.fullName[0]}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-black text-gray-900 truncate">{student.fullName}</h3>
-                                            <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-600 rounded-full">معلق</span>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-black text-gray-900 truncate">{student.fullName}</h3>
+                                    <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-600 rounded-full">معلق</span>
+                                    <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-orange-50 text-orange-600 rounded-full">
+                                        {(() => {
+                                            if (!student.enrollmentDate) return '';
+                                            const today = new Date().toISOString().split('T')[0];
+                                            const diff = Math.floor((new Date(today).getTime() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                                            return daysAgoLabel(diff);
+                                        })()}
+                                    </span>
                                             <span className={cn(
                                                 'shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full',
                                                 hasPaid ? 'bg-green-100 text-green-600' : 'bg-red-50 text-red-500'

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '../../../components/ui/button';
-import { CreditCard, Trash2, Calendar, FileText, User } from 'lucide-react';
+import { Trash2, ShieldCheck, Undo2 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
@@ -8,7 +8,9 @@ import { FadeIn, SlideIn } from '@/components/ui/transition';
 export default function FeesTab({ student, records }: any) {
     const { user } = useAuthStore();
     const isDirector = user?.role === 'director';
-    const { fees, exemptions, addFee, deleteFee, deleteExemption } = records;
+    const isSupervisor = user?.role === 'supervisor';
+    const canExempt = isDirector || isSupervisor;
+    const { fees, exemptions, addFee, addExemption, deleteFee, deleteExemption } = records;
 
     // حالات مودال الدفع
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -89,6 +91,12 @@ export default function FeesTab({ student, records }: any) {
                                             المبلغ: {studentFee.amount} | وصل: {studentFee.receipt} | {studentFee.date}
                                         </span>
                                     )}
+
+                                    {exemption && (
+                                        <span className="text-[9px] bg-gray-50 px-1.5 py-0.5 rounded text-gray-600 border border-gray-100">
+                                            بمبلغ: {exemption.amount} | بواسطة: {exemption.exemptedBy}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -112,7 +120,41 @@ export default function FeesTab({ student, records }: any) {
                                     );
                                 })()}
 
-                                {!studentFee && !exemption && (
+                                {/* إعفاء - للمدير أو المشرف فقط */}
+                                {!studentFee && !exemption && canExempt && (
+                                    <button
+                                        onClick={() => {
+                                            if (confirm(`هل أنت متأكد من العفو عن ${m.label} للطالب ${student.fullName}؟`)) {
+                                                addExemption.mutate({
+                                                    studentId: student.id,
+                                                    studentName: student.fullName,
+                                                    month: m.key,
+                                                    amount: student.monthlyAmount || 0,
+                                                    exemptedBy: user?.displayName || 'المدير',
+                                                });
+                                            }
+                                        }}
+                                        className="px-3 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold">
+                                        <ShieldCheck size={14} className="inline ml-1" />
+                                        العفو
+                                    </button>
+                                )}
+
+                                {/* إلغاء العفو - للمدير أو المشرف فقط */}
+                                {exemption && canExempt && (
+                                    <button
+                                        onClick={() => {
+                                            if (confirm(`هل أنت متأكد من إلغاء العفو عن ${m.label}؟`)) {
+                                                deleteExemption.mutate(exemption.id);
+                                            }
+                                        }}
+                                        className="p-2 text-purple-500 hover:bg-purple-50 rounded-xl transition-colors"
+                                        title="إلغاء العفو">
+                                        <Undo2 size={16} />
+                                    </button>
+                                )}
+
+                                {!studentFee && (
                                     <button
                                         onClick={() => {
                                             setPaymentMonth(m.label);
