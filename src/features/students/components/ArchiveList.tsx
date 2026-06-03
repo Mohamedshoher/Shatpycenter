@@ -207,9 +207,15 @@ export default function ArchiveList() {
         setIsExempting(student.id);
         try {
             const { supabase } = await import('@/lib/supabase');
+
+            // الحصول على teacher_id من مجموعة الطالب (العمود مطلوب في جدول free_exemptions)
+            const studentGroup = groups?.find(g => g.id === student.groupId);
+            const teacherId = studentGroup?.teacherId || '';
+
             const exemptionsToInsert = (debtInfo.unpaidMonths || []).map((month: string) => ({
                 student_id: student.id,
                 student_name: student.fullName,
+                teacher_id: teacherId,
                 month: month,
                 amount: student.monthlyAmount || 100,
                 exempted_by: user?.displayName || 'المدير',
