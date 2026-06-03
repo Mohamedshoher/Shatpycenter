@@ -20,6 +20,10 @@
 # production
 /build
 
+# next.js service worker (auto-generated)
+public/workbox-*.js
+public/swe-worker-*.js
+
 # misc
 .DS_Store
 *.pem
