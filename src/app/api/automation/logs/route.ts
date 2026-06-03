@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
         const date = searchParams.get('date');
 
         const supabase = createServerSupabase();
-        let query = supabase.from('automation_logs').select('*').order('created_at', { ascending: false }).limit(limit);
+        let query = supabase.from('automation_logs').select('*').order('triggered_at', { ascending: false }).limit(limit);
 
         if (date) {
             const dayStart = `${date}T00:00:00`;

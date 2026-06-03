@@ -55,8 +55,8 @@ export default function AutomationPage() {
         }
     };
 
-    const reportLogs = logs.filter(log => log.ruleName.includes('تقرير') || log.ruleName.includes('تقارير'));
-    const examLogs = logs.filter(log => log.ruleName.includes('اختبار'));
+    const reportLogs = logs.filter(log => log.ruleName?.includes('تقارير') || log.ruleName?.includes('تقرير'));
+    const examLogs = logs.filter(log => log.ruleName?.includes('اختبار'));
 
     const renderLogList = (items: typeof logs, title: string, Icon: any, colorClass: string, bgClass: string, borderClass: string) => (
         <div className={`rounded-3xl p-6 shadow-sm border ${borderClass} h-full flex flex-col ${bgClass}`}>

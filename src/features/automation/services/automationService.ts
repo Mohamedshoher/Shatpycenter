@@ -40,21 +40,26 @@ const DAYS_MAP = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأر�
 
 /** تحويل أي صيغة تاريخ إلى YYYY-MM-DD */
 const normalizeDate = (dateInput: any): string => {
-    if (!dateInput) return new Date().toISOString().split('T')[0];
+    if (!dateInput) return formatLocalDate(new Date());
     
-    // إذا كان كائن تاريخ
-    if (dateInput instanceof Date) return dateInput.toISOString().split('T')[0];
+    if (dateInput instanceof Date) return formatLocalDate(dateInput);
 
-    // إذا كان نصاً
     const dateStr = String(dateInput);
     if (dateStr.includes('/')) {
         const parts = dateStr.split('/');
-        // معالجة DD/MM/YYYY
         if (parts[0].length === 2) return `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
     if (dateStr.includes('T')) return dateStr.split('T')[0];
     
-    return dateStr; // نأمل أن يكون YYYY-MM-DD
+    return dateStr;
+};
+
+/** تنسيق التاريخ حسب المنطقة الزمنية المحلية (YYYY-MM-DD) */
+const formatLocalDate = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 };
 
 // ==========================================
@@ -85,7 +90,10 @@ export const getLogs = async (logLimit: number = 500, selectedDateStr?: string):
         if (selectedDateStr) params.set('date', normalizeDate(selectedDateStr));
 
         const res = await fetch(`/api/automation/logs?${params}`);
-        if (!res.ok) return [];
+        if (!res.ok) {
+            console.error('getLogs: API returned', res.status);
+            return [];
+        }
         const data = await res.json();
 
         const mappedLogs: AutomationLog[] = (data || []).map((row: any) => ({
@@ -96,23 +104,19 @@ export const getLogs = async (logLimit: number = 500, selectedDateStr?: string):
 
         if (selectedDateStr) return mappedLogs;
 
-        // آخر جلسة فحص (آخر 10 دقائق من أحدث سجل لكل تصنيف)
-        const latestPerType = new Map<string, number>();
+        // آخر جلسة فحص (أحدث 150 سجل لكل تصنيف)
+        const typeGroups: { [key: string]: AutomationLog[] } = { report: [], exam: [], other: [] };
         for (const log of mappedLogs) {
-            const type = log.ruleName.includes('تقرير') || log.ruleName.includes('تقارير') ? 'report'
-                : log.ruleName.includes('اختبار') ? 'exam' : 'other';
-            const ts = log.timestamp.getTime();
-            if (!latestPerType.has(type) || ts > latestPerType.get(type)!) {
-                latestPerType.set(type, ts);
-            }
+            const type = log.ruleName?.includes('تقارير') || log.ruleName?.includes('تقرير') ? 'report'
+                : log.ruleName?.includes('اختبار') ? 'exam' : 'other';
+            if (typeGroups[type]) typeGroups[type].push(log);
         }
 
-        return mappedLogs.filter((log: AutomationLog) => {
-            const type = log.ruleName.includes('تقرير') || log.ruleName.includes('تقارير') ? 'report'
-                : log.ruleName.includes('اختبار') ? 'exam' : 'other';
-            const latest = latestPerType.get(type);
-            return latest && (latest - log.timestamp.getTime()) <= 10 * 60 * 1000;
-        }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        return [
+            ...typeGroups.report.slice(0, 50),
+            ...typeGroups.exam.slice(0, 50),
+            ...typeGroups.other.slice(0, 50)
+        ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     } catch (e) {
         console.error("getLogs Error:", e);
         return [];
@@ -122,16 +126,32 @@ export const getLogs = async (logLimit: number = 500, selectedDateStr?: string):
 export const getRules = async (): Promise<AutomationRule[]> => {
     try {
         const res = await fetch('/api/automation/rules');
-        if (!res.ok) return [];
-        const data = await res.json();
-        return (data || []).map((row: any) => ({
-            id: row.id, name: row.name, trigger: row.type as any, recipients: row.recipients || [],
-            schedule: row.schedule, condition: row.conditions, action: row.actions,
-            enabled: row.is_active, createdAt: new Date(row.created_at)
-        }));
-    } catch {
-        return [];
-    }
+        if (res.ok) {
+            const data = await res.json();
+            const rules = (data || []).map((row: any) => ({
+                id: row.id, name: row.name, trigger: row.type as any, recipients: row.recipients || [],
+                schedule: row.schedule, condition: row.conditions, action: row.actions,
+                enabled: row.is_active, createdAt: new Date(row.created_at)
+            }));
+            if (rules.length > 0) return rules;
+        }
+    } catch {}
+
+    // قواعد افتراضية احتياطية إذا لم توجد في قاعدة البيانات أو فشل الاتصال
+    return [
+        {
+            id: 'default-report-rule', name: 'خصم ربع يوم لعدم تسليم التقرير اليومي', trigger: 'missing_daily_report',
+            recipients: ['teacher'], condition: { deductionAmount: 0.25 },
+            action: { type: 'apply_deduction', messageTemplate: '' }, enabled: true, createdAt: new Date(),
+            schedule: {}
+        },
+        {
+            id: 'default-exam-rule', name: 'خصم ربع يوم لعدم تسجيل اختبار', trigger: 'repeated_exams',
+            recipients: ['teacher'], condition: { deductionAmount: 0.25 },
+            action: { type: 'apply_deduction', messageTemplate: '' }, enabled: true, createdAt: new Date(),
+            schedule: {}
+        }
+    ];
 };
 
 export const createRule = async (rule: any) => {
@@ -203,54 +223,80 @@ export const executeDeduction = async (
 };
 
 export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
-    const target = new Date(); target.setDate(target.getDate() - 1);
-    const dateStr = normalizeDate(target);
-    const dayOfWeek = target.getDay();
-    const startTime = new Date();
+    try {
+        const target = new Date(); target.setDate(target.getDate() - 1);
+        const dateStr = normalizeDate(target);
+        const dayOfWeek = target.getDay();
+        const startTime = new Date();
 
-    if (WEEKEND_DAYS.includes(dayOfWeek)) return [];
+        if (WEEKEND_DAYS.includes(dayOfWeek)) return [];
 
-    const rules = await getRules();
-    const rule = rules.find(r => r.trigger === 'missing_daily_report' && r.enabled);
-    if (!rule) return [];
+        const rules = await getRules();
+        const rule = rules.find(r => r.trigger === 'missing_daily_report' && r.enabled);
+        if (!rule) return [];
 
-    const { data: teachers } = await supabase.from('teachers').select('id, full_name').eq('status', 'active');
-    if (!teachers?.length) return [];
+        const { data: teachers } = await supabase.from('teachers').select('id, full_name').eq('status', 'active');
+        if (!teachers?.length) return [];
 
-    const teacherIds = teachers.map(t => t.id);
-    const [ { data: allDeductions }, { data: allGroups }, { data: allAttendance }, { data: teacherAttendance } ] = await Promise.all([
-        supabase.from('deductions').select('teacher_id').in('teacher_id', teacherIds).eq('date', dateStr).eq('applied_by', 'system-automation'),
-        supabase.from('groups').select('teacher_id, students(id)').in('teacher_id', teacherIds),
-        supabase.from('attendance').select('student_id').gte('date', `${dateStr}T00:00:00`).lte('date', `${dateStr}T23:59:59`),
-        supabase.from('teacher_attendance').select('teacher_id, status').in('teacher_id', teacherIds).eq('date', dateStr)
-    ]);
+        const teacherIds = teachers.map(t => t.id);
 
-    const alreadyDeducted = new Set(allDeductions?.map(d => d.teacher_id));
-    const submittedStudents = new Set(allAttendance?.map(a => a.student_id));
-    const absentTeachers = new Set(teacherAttendance?.filter(a => a.status === 'absent').map(a => a.teacher_id));
-    const logs = [];
+        const [ dedResult, groupsResult, attResult, teaResult ] = await Promise.all([
+            supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).eq('date', dateStr).eq('applied_by', 'system-automation'),
+            supabase.from('groups').select('id, teacher_id').in('teacher_id', teacherIds),
+            supabase.from('attendance').select('student_id').eq('date', dateStr),
+            supabase.from('teacher_attendance').select('teacher_id, status').in('teacher_id', teacherIds).eq('date', dateStr)
+        ]);
 
-    for (const t of teachers) {
-        const studentIds = (allGroups?.filter(g => g.teacher_id === t.id) || []).flatMap(g => (g.students as any[] || []).map(s => s.id));
-        if (studentIds.length === 0) continue;
+        if (dedResult.error) console.error('dedResult error:', dedResult.error);
+        if (groupsResult.error) console.error('groupsResult error:', groupsResult.error);
+        if (attResult.error) console.error('attResult error:', attResult.error);
+        if (teaResult.error) console.error('teaResult error:', teaResult.error);
 
-        // تخطي المعلم إذا كان غائباً (لأن الخصم يطبق يدوياً عند الغياب)
-        if (absentTeachers.has(t.id)) continue;
+        const alreadyDeducted = new Set(dedResult.data?.filter(d => d.reason?.includes('تقرير')).map(d => d.teacher_id));
+        const submittedStudents = new Set(attResult.data?.map(a => a.student_id));
+        const absentTeachers = new Set(teaResult.data?.filter(a => a.status === 'absent').map(a => a.teacher_id));
 
-        if (!studentIds.some(id => submittedStudents.has(id)) && !alreadyDeducted.has(t.id)) {
-            const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسليم التقرير اليومي (أتمتة)', rule.id, 'فحص التقارير اليومية', dateStr, startTime);
-            logs.push(...res.logs);
-            try {
-                const conv = await chatService.getOrCreateConversation(['director', t.id], ['المدير العام', t.full_name], 'director-teacher');
-                await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم ربع يوم لعدم تسليم التقرير ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
-            } catch (e) {}
+        const groupIds = groupsResult.data?.map(g => g.id) || [];
+        const { data: allStudents } = groupIds.length > 0
+            ? await supabase.from('students').select('id, group_id').in('group_id', groupIds)
+            : { data: [] };
+        const groupTeacherMap = new Map(groupsResult.data?.map(g => [g.id, g.teacher_id]) || []);
+        const teacherStudentsMap = new Map<string, string[]>();
+        for (const s of allStudents || []) {
+            const tId = groupTeacherMap.get(s.group_id);
+            if (tId) {
+                const list = teacherStudentsMap.get(tId) || [];
+                list.push(s.id);
+                teacherStudentsMap.set(tId, list);
+            }
         }
-    }
 
-    if (logs.length === 0) {
-        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص التقارير اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سلموا التقارير ليوم ${dateStr}`, timestamp: startTime, status: 'success' }));
+        const logs = [];
+
+        for (const t of teachers) {
+            const studentIds = teacherStudentsMap.get(t.id) || [];
+            if (studentIds.length === 0) continue;
+
+            if (absentTeachers.has(t.id)) continue;
+
+            if (!studentIds.some(id => submittedStudents.has(id)) && !alreadyDeducted.has(t.id)) {
+                const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسليم التقرير اليومي (أتمتة)', rule.id, 'فحص التقارير اليومية', dateStr, startTime);
+                logs.push(...res.logs);
+                try {
+                    const conv = await chatService.getOrCreateConversation(['director', t.id], ['المدير العام', t.full_name], 'director-teacher');
+                    await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم ربع يوم لعدم تسليم التقرير ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
+                } catch (e) {}
+            }
+        }
+
+        if (logs.length === 0) {
+            logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص التقارير اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سلموا التقارير ليوم ${dateStr}`, timestamp: startTime, status: 'success' }));
+        }
+        return logs;
+    } catch (error: any) {
+        console.error('checkMissingDailyReports error:', error);
+        return [];
     }
-    return logs;
 };
 
 export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
@@ -269,37 +315,50 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
     if (!teachers?.length) return [];
 
     const teacherIds = teachers.map(t => t.id);
-    const [ { data: allGroups }, { data: allExams }, { data: allDeductions }, { data: teacherAttendance } ] = await Promise.all([
-        supabase.from('groups').select('teacher_id, students(id)').in('teacher_id', teacherIds),
-        supabase.from('exams').select('student_id').gte('date', `${dateStr}T00:00:00`).lte('date', `${dateStr}T23:59:59`),
-        supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).eq('date', dateStr).eq('applied_by', 'system-automation'),
-        supabase.from('teacher_attendance').select('teacher_id, status').in('teacher_id', teacherIds).eq('date', dateStr)
+
+    const [ groupsResult, examsResult, dedResult ] = await Promise.all([
+        supabase.from('groups').select('id, teacher_id').in('teacher_id', teacherIds),
+        supabase.from('exams').select('student_id').eq('date', dateStr),
+        supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).eq('date', dateStr)
     ]);
 
-    const examStudents = new Set(allExams?.map(e => e.student_id));
-    const alreadyDeducted = new Set(allDeductions?.map(d => d.teacher_id));
-    const absentTeachers = new Set(teacherAttendance?.filter(a => a.status === 'absent').map(a => a.teacher_id));
+    const examStudents = new Set(examsResult.data?.map(e => e.student_id));
+    const alreadyDeducted = new Set(dedResult.data?.filter(d => d.reason?.includes('اختبار')).map(d => d.teacher_id));
+
+    // جلب الطلاب لكل مجموعة
+    const groupIds = groupsResult.data?.map(g => g.id) || [];
+    const { data: allStudents } = groupIds.length > 0
+        ? await supabase.from('students').select('id, group_id').in('group_id', groupIds)
+        : { data: [] };
+    const groupTeacherMap = new Map(groupsResult.data?.map(g => [g.id, g.teacher_id]) || []);
+    const teacherStudentsMap = new Map<string, string[]>();
+    for (const s of allStudents || []) {
+        const tId = groupTeacherMap.get(s.group_id);
+        if (tId) {
+            const list = teacherStudentsMap.get(tId) || [];
+            list.push(s.id);
+            teacherStudentsMap.set(tId, list);
+        }
+    }
+
     const logs = [];
 
     for (const t of teachers) {
-        const studentIds = (allGroups?.filter(g => g.teacher_id === t.id) || []).flatMap(g => (g.students as any[] || []).map(s => s.id));
+        const studentIds = teacherStudentsMap.get(t.id) || [];
         if (studentIds.length === 0) continue;
 
-        // تخطي المعلم إذا كان غائباً (لأن الخصم يطبق يدوياً عند الغياب)
-        if (absentTeachers.has(t.id)) continue;
-
         if (!studentIds.some(id => examStudents.has(id)) && !alreadyDeducted.has(t.id)) {
-            const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسجيل الاختبارات الأسبوعية', rule.id, 'فحص الاختبارات الأسبوعية', dateStr, startTime);
+            const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسجيل الاختبارات الأسبوعية', rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
             logs.push(...res.logs);
             try {
                 const conv = await chatService.getOrCreateConversation(['director', t.id], ['المدير العام', t.full_name], 'director-teacher');
-                await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم ربع يوم لعدم تسليم الاختبارات ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
+                await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم ربع يوم لعدم تسجيل اختبار ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
             } catch (e) {}
         }
     }
 
     if (logs.length === 0) {
-        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات الأسبوعية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سجلوا اختبارات ليوم ${dateStr}`, timestamp: startTime, status: 'success' }));
+        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سجلوا اختبارات ليوم ${dateStr}`, timestamp: startTime, status: 'success' }));
     }
     return logs;
 };
