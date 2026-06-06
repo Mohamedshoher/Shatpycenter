@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStudents, updateStudent } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
-import { UserCheck, UserX, Edit2, Users, Calendar, Phone, CreditCard, MessageSquare, BookOpen, MessageCircle, ChevronDown } from 'lucide-react';
+import { UserCheck, UserX, Edit2, Users, Calendar, Phone, CreditCard, MessageSquare, BookOpen, MessageCircle, ChevronDown, LayoutGrid } from 'lucide-react';
 import EditStudentModal from '@/features/students/components/EditStudentModal';
 
 import { cn, getWhatsAppUrl } from '@/lib/utils';
@@ -19,8 +19,10 @@ export default function PendingStudentsPage() {
     const [showRejectModal, setShowRejectModal] = useState<Student | null>(null);
     const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
     const [daysAgoFilter, setDaysAgoFilter] = useState<number | null>(null);
+    const [filterGroup, setFilterGroup] = useState<string | null>(null);
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const [showDateDropdown, setShowDateDropdown] = useState(false);
+    const [showGroupDropdown, setShowGroupDropdown] = useState(false);
 
     const { data: allStudents = [], isLoading } = useQuery({
         queryKey: ['students'],
@@ -58,16 +60,7 @@ export default function PendingStudentsPage() {
 
     const allPendingStudents = allStudents.filter(s => s.status === 'pending');
     const pendingStudents = allPendingStudents.filter(s => {
-        if (filterStatus === 'all' && daysAgoFilter === null) return true;
-        const hasPaid = paidStudentIds.has(s.id);
-        if (filterStatus !== 'all') {
-            if (filterStatus === 'paid' && !hasPaid) return false;
-            if (filterStatus === 'unpaid' && hasPaid) return false;
-        }
-        if (daysAgoFilter !== null) {
-            const targetDate = getDateByDaysAgo(daysAgoFilter);
-            if (s.enrollmentDate !== targetDate) return false;
-        }
+        if (filterGroup !== null && s.groupId !== filterGroup) return false;
         return true;
     });
     
@@ -89,6 +82,7 @@ export default function PendingStudentsPage() {
             return dateB - dateA;
         });
     const recentStudents = allRecentStudents.filter(s => {
+        if (filterGroup !== null && s.groupId !== filterGroup) return false;
         if (filterStatus === 'all' && daysAgoFilter === null) return true;
         const hasPaid = paidStudentIds.has(s.id);
         if (filterStatus !== 'all') {
@@ -288,6 +282,48 @@ export default function PendingStudentsPage() {
                                     </>
                                 )}
                             </div>
+                            {/* القائمة المنسدلة للمجموعات */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowGroupDropdown(!showGroupDropdown)}
+                                    className={cn(
+                                        'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5',
+                                        filterGroup !== null ? 'bg-indigo-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    )}
+                                >
+                                    <LayoutGrid size={14} />
+                                    {filterGroup !== null ? getGroupName(filterGroup) : 'المجموعات'}
+                                    <ChevronDown size={14} />
+                                </button>
+                                {showGroupDropdown && (
+                                    <>
+                                        <div className="fixed inset-0 z-[300]" onClick={() => setShowGroupDropdown(false)} />
+                                        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-[301] min-w-[180px] p-2 max-h-[300px] overflow-y-auto">
+                                            <button
+                                                onClick={() => { setFilterGroup(null); setShowGroupDropdown(false); }}
+                                                className={cn(
+                                                    'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                                    filterGroup === null ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50'
+                                                )}
+                                            >
+                                                الكل
+                                            </button>
+                                            {groups.map((g: Group) => (
+                                                <button
+                                                    key={g.id}
+                                                    onClick={() => { setFilterGroup(g.id); setShowGroupDropdown(false); }}
+                                                    className={cn(
+                                                        'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                                        filterGroup === g.id ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50'
+                                                    )}
+                                                >
+                                                    {g.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                         <p className="text-sm text-gray-500 font-bold mt-1">
                             {pendingStudents.length + recentStudents.length} طالب جديد أو في انتظار الموافقة
@@ -296,79 +332,8 @@ export default function PendingStudentsPage() {
                 </div>
             </div>
 
-            {/* Pending Students List */}
-            <div className="space-y-4 mb-8">
-                <h2 className="text-xl font-black text-gray-900 px-2 border-r-4 border-amber-400">في انتظار الموافقة</h2>
-                {pendingStudents.length === 0 ? (
-                    <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
-                        <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                            <UserCheck size={32} className="text-gray-400" />
-                        </div>
-                        <p className="text-gray-500 font-bold text-lg">لا يوجد طلاب في انتظار الموافقة حالياً</p>
-                    </div>
-                ) : (
-                    <div className="grid gap-4">
-                        {pendingStudents.map((student) => {
-                            const hasPaid = paidStudentIds.has(student.id);
-                            return (
-                            <div
-                                key={student.id}
-                                className="bg-white rounded-3xl p-4 shadow-sm border border-amber-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
-                            >
-                                {/* Line 1: avatar + name + badges + actions */}
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 shrink-0 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 font-black text-sm">
-                                        {student.fullName[0]}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-black text-gray-900 truncate">{student.fullName}</h3>
-                                    <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-600 rounded-full">معلق</span>
-                                    <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-orange-50 text-orange-600 rounded-full">
-                                        {(() => {
-                                            if (!student.enrollmentDate) return '';
-                                            const today = new Date().toISOString().split('T')[0];
-                                            const diff = Math.floor((new Date(today).getTime() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
-                                            return daysAgoLabel(diff);
-                                        })()}
-                                    </span>
-                                            <span className={cn(
-                                                'shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full',
-                                                hasPaid ? 'bg-green-100 text-green-600' : 'bg-red-50 text-red-500'
-                                            )}>
-                                                {hasPaid ? 'مدفوع' : 'غير مدفوع'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-1 shrink-0">
-                                        <button onClick={() => handleEdit(student)} className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"><Edit2 size={15} /></button>
-                                        <button onClick={() => handleApprove(student.id)} className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 hover:bg-teal-100 flex items-center justify-center transition-colors"><UserCheck size={15} /></button>
-                                        <button onClick={() => handleReject(student)} className="w-8 h-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors"><UserX size={15} /></button>
-                                    </div>
-                                </div>
-                                {/* Line 2: compact info row */}
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
-                                    <span className="flex items-center gap-1"><Phone size={12} className="text-blue-400" /><span className="font-sans">{student.parentPhone}</span></span>
-                                    <span className="flex items-center gap-1"><Calendar size={12} className="text-orange-400" /><span>{student.enrollmentDate}</span></span>
-                                    {student.appointment && (
-                                        <span className="flex items-center gap-1"><BookOpen size={12} className="text-indigo-400" /><span>{student.appointment}</span></span>
-                                    )}
-                                    {student.monthlyAmount && (
-                                        <span className="flex items-center gap-1"><CreditCard size={12} className="text-gray-400" /><span>{student.monthlyAmount} ج.م</span></span>
-                                    )}
-                                    {student.notes && (
-                                        <span className="flex items-center gap-1 truncate max-w-[200px]"><MessageSquare size={12} className="text-gray-400 shrink-0" /><span className="truncate">{student.notes}</span></span>
-                                    )}
-                                </div>
-                            </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-
             {/* Recent Students (Last 7 Days) */}
-            <div className="space-y-4">
+            <div className="space-y-4 mb-8">
                 <h2 className="text-xl font-black text-gray-900 px-2 border-r-4 border-green-400">المضافون حديثاً (آخر 7 أيام)</h2>
                 {recentStudents.length === 0 ? (
                     <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
@@ -392,8 +357,8 @@ export default function PendingStudentsPage() {
                                         {student.fullName[0]}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-black text-gray-900 truncate">{student.fullName}</h3>
+                                        <h3 className="font-black text-gray-900 leading-tight">{student.fullName}</h3>
+                                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                             <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-600 rounded-full">
                                                 {student.status === 'active' ? 'نشط' : student.status}
                                             </span>
@@ -417,6 +382,78 @@ export default function PendingStudentsPage() {
                                     <span className="flex items-center gap-1"><Calendar size={12} className="text-orange-400" /><span>{student.enrollmentDate}</span></span>
                                     {student.monthlyAmount && (
                                         <span className="flex items-center gap-1"><CreditCard size={12} className="text-gray-400" /><span>{student.monthlyAmount} ج.م</span></span>
+                                    )}
+                                </div>
+                            </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Pending Students List */}
+            <div className="space-y-4">
+                <h2 className="text-xl font-black text-gray-900 px-2 border-r-4 border-amber-400">في انتظار الموافقة</h2>
+                {pendingStudents.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
+                        <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <UserCheck size={32} className="text-gray-400" />
+                        </div>
+                        <p className="text-gray-500 font-bold text-lg">لا يوجد طلاب في انتظار الموافقة حالياً</p>
+                    </div>
+                ) : (
+                    <div className="grid gap-4">
+                        {pendingStudents.map((student) => {
+                            const hasPaid = paidStudentIds.has(student.id);
+                            return (
+                            <div
+                                key={student.id}
+                                className="bg-white rounded-3xl p-4 shadow-sm border border-amber-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
+                            >
+                                {/* Line 1: avatar + name + badges + actions */}
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 shrink-0 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 font-black text-sm">
+                                        {student.fullName[0]}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-black text-gray-900 leading-tight">{student.fullName}</h3>
+                                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                            <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-600 rounded-full">معلق</span>
+                                            <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-orange-50 text-orange-600 rounded-full">
+                                                {(() => {
+                                                    if (!student.enrollmentDate) return '';
+                                                    const today = new Date().toISOString().split('T')[0];
+                                                    const diff = Math.floor((new Date(today).getTime() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                                                    return daysAgoLabel(diff);
+                                                })()}
+                                            </span>
+                                            <span className={cn(
+                                                'shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full',
+                                                hasPaid ? 'bg-green-100 text-green-600' : 'bg-red-50 text-red-500'
+                                            )}>
+                                                {hasPaid ? 'مدفوع' : 'غير مدفوع'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-1 shrink-0">
+                                        <button onClick={() => handleEdit(student)} className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"><Edit2 size={15} /></button>
+                                        <button onClick={() => handleApprove(student.id)} className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 hover:bg-teal-100 flex items-center justify-center transition-colors"><UserCheck size={15} /></button>
+                                        <button onClick={() => handleReject(student)} className="w-8 h-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors"><UserX size={15} /></button>
+                                    </div>
+                                </div>
+                                {/* Line 2: compact info row */}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                                    <span className="flex items-center gap-1"><LayoutGrid size={12} className="text-indigo-400" /><span className="font-black text-gray-700">{getGroupName(student.groupId)}</span></span>
+                                    <span className="flex items-center gap-1"><Phone size={12} className="text-blue-400" /><span className="font-sans">{student.parentPhone}</span></span>
+                                    <span className="flex items-center gap-1"><Calendar size={12} className="text-orange-400" /><span>{student.enrollmentDate}</span></span>
+                                    {student.appointment && (
+                                        <span className="flex items-center gap-1"><BookOpen size={12} className="text-indigo-400" /><span>{student.appointment}</span></span>
+                                    )}
+                                    {student.monthlyAmount && (
+                                        <span className="flex items-center gap-1"><CreditCard size={12} className="text-gray-400" /><span>{student.monthlyAmount} ج.م</span></span>
+                                    )}
+                                    {student.notes && (
+                                        <span className="flex items-center gap-1 truncate max-w-[200px]"><MessageSquare size={12} className="text-gray-400 shrink-0" /><span className="truncate">{student.notes}</span></span>
                                     )}
                                 </div>
                             </div>

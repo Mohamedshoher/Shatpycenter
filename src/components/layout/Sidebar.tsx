@@ -52,7 +52,13 @@ export default function Sidebar() {
             roles: ['director', 'supervisor', 'teacher']
         },
         {
-            label: 'طلاب جدد',
+            label: 'الطلاب الجدد',
+            href: '/teacher/new-students',
+            icon: UserCheck,
+            roles: ['teacher']
+        },
+        {
+            label: 'طلاب جدد (إدارة)',
             href: '/students/pending',
             icon: UserCheck,
             roles: ['director']
