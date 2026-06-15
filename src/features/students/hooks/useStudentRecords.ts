@@ -164,6 +164,15 @@ export const useStudentRecords = (studentId: string) => {
         }
     });
 
+    const replyNote = useMutation({
+        mutationFn: ({ id, reply, repliedBy }: { id: string, reply: string, repliedBy: string }) =>
+            import("../services/recordsService").then(m => m.replyToNote(id, reply, repliedBy)),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notes', studentId] });
+            queryClient.invalidateQueries({ queryKey: ['student-notes-details'] });
+        }
+    });
+
     const plansQuery = useQuery({
         queryKey: ['plans', studentId],
         queryFn: () => import("../services/recordsService").then(m => m.getStudentPlans(studentId)),
@@ -206,6 +215,7 @@ export const useStudentRecords = (studentId: string) => {
         addPlan,
         addLeave,
         addNote,
+        replyNote,
         updateExam,
         deleteExam,
         deleteFee,

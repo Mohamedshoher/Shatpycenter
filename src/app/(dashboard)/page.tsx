@@ -26,7 +26,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getStudents } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { getTransactionsByMonth } from '@/features/finance/services/financeService';
-import { getLeaveRequests, updateLeaveRequest, LeaveRequest, getAllStudentNotesWithDetails, deleteStudentNote, markNoteAsRead } from '@/features/students/services/recordsService';
+import { getLeaveRequests, updateLeaveRequest, LeaveRequest, getAllStudentNotesWithDetails, deleteStudentNote, markNoteAsRead, replyToNote } from '@/features/students/services/recordsService';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import dynamic from 'next/dynamic';
 const StudentNotesModal = dynamic(() => import('@/features/finance/components/StudentNotesModal'), { ssr: false });
@@ -432,6 +432,10 @@ export default function DashboardOverview() {
                 onTransferStudent={(studentId) => {
                     const student = students.find((s: Student) => s.id === studentId);
                     if (student) setSelectedStudentForEdit(student);
+                }}
+                onReplyToNote={async (noteId, reply) => {
+                    await replyToNote(noteId, reply, user?.displayName || 'المدير');
+                    queryClient.invalidateQueries({ queryKey: ['student-notes-details'] });
                 }}
             />
 

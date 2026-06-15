@@ -376,7 +376,7 @@ export default function PendingStudentsPage() {
                                     </div>
                                 </div>
                                 {/* Line 2: compact info row */}
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-600">
                                     <span className="flex items-center gap-1"><Users size={12} className="text-gray-400" /><span className="font-black text-gray-700">{getGroupName(student.groupId)}</span></span>
                                     <span className="flex items-center gap-1"><Phone size={12} className="text-blue-400" /><span className="font-sans">{student.parentPhone}</span></span>
                                     <span className="flex items-center gap-1"><Calendar size={12} className="text-orange-400" /><span>{student.enrollmentDate}</span></span>
@@ -384,6 +384,12 @@ export default function PendingStudentsPage() {
                                         <span className="flex items-center gap-1"><CreditCard size={12} className="text-gray-400" /><span>{student.monthlyAmount} ج.م</span></span>
                                     )}
                                 </div>
+                                {student.notes && (
+                                    <div className="mt-2 pt-2 border-t border-dashed border-gray-100 flex items-start gap-2 text-xs text-gray-500">
+                                        <MessageSquare size={13} className="shrink-0 mt-0.5 text-gray-400" />
+                                        <span className="leading-relaxed">{student.notes}</span>
+                                    </div>
+                                )}
                             </div>
                             );
                         })}
@@ -442,7 +448,7 @@ export default function PendingStudentsPage() {
                                     </div>
                                 </div>
                                 {/* Line 2: compact info row */}
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-600">
                                     <span className="flex items-center gap-1"><LayoutGrid size={12} className="text-indigo-400" /><span className="font-black text-gray-700">{getGroupName(student.groupId)}</span></span>
                                     <span className="flex items-center gap-1"><Phone size={12} className="text-blue-400" /><span className="font-sans">{student.parentPhone}</span></span>
                                     <span className="flex items-center gap-1"><Calendar size={12} className="text-orange-400" /><span>{student.enrollmentDate}</span></span>
@@ -452,10 +458,13 @@ export default function PendingStudentsPage() {
                                     {student.monthlyAmount && (
                                         <span className="flex items-center gap-1"><CreditCard size={12} className="text-gray-400" /><span>{student.monthlyAmount} ج.م</span></span>
                                     )}
-                                    {student.notes && (
-                                        <span className="flex items-center gap-1 truncate max-w-[200px]"><MessageSquare size={12} className="text-gray-400 shrink-0" /><span className="truncate">{student.notes}</span></span>
-                                    )}
                                 </div>
+                                {student.notes && (
+                                    <div className="mt-2 pt-2 border-t border-dashed border-gray-100 flex items-start gap-2 text-xs text-gray-500">
+                                        <MessageSquare size={13} className="shrink-0 mt-0.5 text-gray-400" />
+                                        <span className="leading-relaxed">{student.notes}</span>
+                                    </div>
+                                )}
                             </div>
                             );
                         })}

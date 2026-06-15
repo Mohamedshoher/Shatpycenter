@@ -271,7 +271,10 @@ create table if not exists student_notes (
   content text not null,                          
   type text not null,                             
   created_by text,                                
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  reply text,
+  replied_by text,
+  replied_at timestamp with time zone
 );
 
 alter table student_notes enable row level security;

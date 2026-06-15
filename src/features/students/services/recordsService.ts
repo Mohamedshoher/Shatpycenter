@@ -510,7 +510,10 @@ export const getStudentNotes = async (studentId: string) => {
             text: n.content,
             type: n.type,
             date: new Date(n.created_at).toLocaleDateString('ar-EG'),
-            createdBy: n.created_by
+            createdBy: n.created_by,
+            reply: n.reply,
+            repliedBy: n.replied_by,
+            repliedAt: n.replied_at
         }));
     } catch (error: any) {
         console.error("Error fetching student notes:", error);
@@ -581,11 +584,28 @@ export const getAllStudentNotesWithDetails = async (limit: number = 20) => {
             groupName: n.students?.groups?.name || n.group_name || 'بدون مجموعة',
             groupId: n.students?.groups?.id || n.group_id || null,
             teacherName: n.students?.groups?.teachers?.full_name || 'غير معروف',
-            isRead: n.is_read || false
+            isRead: n.is_read || false,
+            reply: n.reply,
+            repliedBy: n.replied_by,
+            repliedAt: n.replied_at
         }));
     } catch (error: any) {
         console.error("Error fetching all student notes:", error);
         return [];
+    }
+};
+
+export const replyToNote = async (id: string, reply: string, repliedBy: string) => {
+    try {
+        const res = await fetch('/api/records/notes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, reply, repliedBy })
+        });
+        if (!res.ok) throw new Error('Failed to reply to note');
+    } catch (error: any) {
+        console.error("Error replying to note:", error?.message || error);
+        throw error;
     }
 };
 

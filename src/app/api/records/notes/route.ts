@@ -37,11 +37,19 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
-        const { id, isRead } = await request.json();
+        const body = await request.json();
+        const { id, isRead, reply, repliedBy } = body;
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
         const supabase = createServerSupabase();
-        const { error } = await supabase.from('student_notes').update({ is_read: isRead }).eq('id', id);
+        const updateData: any = {};
+        if (typeof isRead === 'boolean') updateData.is_read = isRead;
+        if (typeof reply === 'string') {
+            updateData.reply = reply;
+            updateData.replied_by = repliedBy || null;
+            updateData.replied_at = new Date().toISOString();
+        }
+        const { error } = await supabase.from('student_notes').update(updateData).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
     } catch (error: any) {

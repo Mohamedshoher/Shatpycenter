@@ -25,4 +25,5 @@ export interface StudentRecordsHook {
     deleteFee: any;
     deleteExemption: any;
     deleteNote: any;
+    replyNote: any;
 }
