@@ -115,6 +115,7 @@ export const useTeacherDashboard = (
         // 4. الراتب
         let basicSalary = 0;
         const isPartnership = teacher.accountingType === 'partnership';
+        const standardWorkingDays = 22;
         
         // حساب إجمالي محصل المجموعة (كل الطلاب التابعين لمجموعات المدرس)
         const totalCollectedForGroup = allFees.filter(f => {
@@ -127,21 +128,43 @@ export const useTeacherDashboard = (
             basicSalary = (totalCollectedForGroup * percentage) / 100;
         } else {
             basicSalary = Number(teacher.salary) || 0;
-            // إذا كان المدرس سيصفي حسابه في وسط الشهر، نحسب له الراتب الأساسي نسبة لليوم
-            if (isSettlementMode) {
-                basicSalary = Math.round((basicSalary / daysInMonth) * currentDay);
-            }
         }
 
-        const dailyRate = isPartnership ? (basicSalary / 22) : (Number(teacher.salary) || 1000) / 22;
+        const dailyRate = isPartnership ? (basicSalary / standardWorkingDays) : (Number(teacher.salary) || 1000) / standardWorkingDays;
 
-        // خصومات تلقائية (حسب الحضور)
-        const autoDeductions = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
-            if (status === 'absent') return acc + dailyRate;
-            if (status === 'half') return acc + (dailyRate * 0.5);
-            if (status === 'quarter') return acc + (dailyRate * 0.25);
-            return acc;
-        }, 0);
+        // حساب أيام الغياب من سجل الحضور (بما في ذلك partial)
+        let absentDays = 0;
+        Object.values(attendanceData || {}).forEach((status: any) => {
+            if (status === 'absent') absentDays += 1;
+            else if (status === 'half') absentDays += 0.5;
+            else if (status === 'quarter') absentDays += 0.25;
+        });
+
+        // إجمالي أيام العمل في الشهر = 22 يوم افتراضي (ثابت)
+        // في التصفية: اليوم الحالي = آخر يوم عمل، وباقي الشهر يُحتسب غياب
+        const totalWorkingDays = standardWorkingDays;
+
+        // في وضع التصفية: الأيام المتبقية من الشهر تُحتسب غياب (لأن المدرس أنهى عمله)
+        const remainingDaysInMonth = isSettlementMode
+            ? Math.max(0, standardWorkingDays - currentDay)
+            : 0;
+
+        // إجمالي أيام الغياب (بما فيها الأيام المتبقية في التصفية)
+        const totalAbsentDays = absentDays + remainingDaysInMonth;
+
+        // أيام الحضور الفعلية
+        const attendedDays = Math.max(0, totalWorkingDays - totalAbsentDays);
+
+        // الراتب الأساسي على أساس أيام الحضور فقط (للمرتب الثابت)
+        const attendanceBasedSalary = isPartnership
+            ? basicSalary
+            : Math.round((dailyRate * attendedDays) * 100) / 100;
+
+        // خصومات تلقائية (حسب الحضور) - للعرض فقط
+        const autoDeductions = isPartnership ? 0 : Math.round((absentDays * dailyRate) * 100) / 100;
+
+        // خصم الأيام المتبقية في التصفية
+        const remainingDaysDeduction = isPartnership ? 0 : Math.round((remainingDaysInMonth * dailyRate) * 100) / 100;
 
         // مكافآت تلقائية (حسب الحضور)
         const autoRewards = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
@@ -170,7 +193,8 @@ export const useTeacherDashboard = (
             .reduce((acc: number, curr) => acc + curr.amount, 0);
 
         const totalPaid = paymentsHistory.reduce((acc, curr) => acc + Number(curr.amount), 0);
-        const totalEntitlement = Math.round((basicSalary + autoRewards + manualRewardsTotal - autoDeductions - manualDeductionsTotal) * 100) / 100;
+        // الخصومات اليدوية تطبق دائماً
+        const totalEntitlement = Math.round((attendanceBasedSalary + autoRewards + manualRewardsTotal - manualDeductionsTotal) * 100) / 100;
         const remainingToPay = Math.max(0, Math.round((totalEntitlement - totalPaid) * 100) / 100);
 
         // 5. الطلاب الذين لم يدفعوا
@@ -231,6 +255,7 @@ export const useTeacherDashboard = (
             totalHandedOver,
             salaryStats: {
                 basicSalary,
+                attendanceBasedSalary,
                 autoRewards,
                 manualRewardsTotal,
                 autoDeductions,
@@ -242,7 +267,13 @@ export const useTeacherDashboard = (
                 isPartnership,
                 partnershipPercentage: teacher.partnershipPercentage,
                 totalCollectedForGroup,
-                expectedPartnershipSalary: isPartnership ? (expectedExpenses * (Number(teacher.partnershipPercentage) || 0)) / 100 : 0
+                expectedPartnershipSalary: isPartnership ? (expectedExpenses * (Number(teacher.partnershipPercentage) || 0)) / 100 : 0,
+                totalWorkingDays,
+                attendedDays,
+                absentDays,
+                totalAbsentDays,
+                remainingDaysInMonth,
+                remainingDaysDeduction
             }
         };
     }, [teacher, students, groups, allFees, selectedMonthRaw, attendanceData, handovers, exemptions, deductions, paymentsHistory, allTeachers]);

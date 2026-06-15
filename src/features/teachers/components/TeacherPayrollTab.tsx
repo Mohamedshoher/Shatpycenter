@@ -25,6 +25,13 @@ interface TeacherPayrollTabProps {
     partnershipPercentage?: number;
     totalCollectedForGroup?: number;
     expectedPartnershipSalary?: number;
+    totalWorkingDays?: number;
+    attendedDays?: number;
+    absentDays?: number;
+    totalAbsentDays?: number;
+    remainingDaysInMonth?: number;
+    remainingDaysDeduction?: number;
+    dailyRate?: number;
 }
 
 export const TeacherPayrollTab = ({
@@ -49,7 +56,14 @@ export const TeacherPayrollTab = ({
     isPartnership,
     partnershipPercentage,
     totalCollectedForGroup,
-    expectedPartnershipSalary = 0
+    expectedPartnershipSalary = 0,
+    totalWorkingDays = 22,
+    attendedDays = 0,
+    absentDays = 0,
+    totalAbsentDays = 0,
+    remainingDaysInMonth = 0,
+    remainingDaysDeduction = 0,
+    dailyRate = 0
 }: TeacherPayrollTabProps) => {
 
     return (
@@ -159,11 +173,28 @@ export const TeacherPayrollTab = ({
                                 <span className="text-xs md:text-sm font-bold text-gray-500">{isPartnership ? 'استحقاق الشراكة:' : 'الراتب الأساسي:'}</span>
                                 <span className="text-sm md:text-lg font-black font-sans text-gray-900">{basicSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                             </div>
-                            {isPartnership && (
+                            {!isPartnership && (
+                                <div className="text-right mt-1 text-[9px] font-bold text-gray-400">
+                                    {dailyRate.toLocaleString()} ج.م × {attendedDays} يوم حضور
+                                    {isSettlementMode && remainingDaysInMonth > 0 && (
+                                        <> (من أصل {totalWorkingDays} يوم - خصم {remainingDaysInMonth} يوم متبقية)</>
+                                    )}
+                                </div>
+                            )}
+                            {isPartnership ? (
                                 <div className="text-right mt-1 flex flex-col gap-1">
                                     <p className="text-[10px] font-bold text-blue-500">
                                         محسوب بنسبة {partnershipPercentage}% من إجمالي تحصيل المجموعة ({totalCollectedForGroup?.toLocaleString()} ج.م)
                                     </p>
+                                </div>
+                            ) : (
+                                <div className="text-right mt-1 flex flex-row-reverse flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold">
+                                    <span className="text-green-600">{attendedDays} يوم حضور</span>
+                                    {absentDays > 0 && <span className="text-red-500">{absentDays} يوم غياب فعلي</span>}
+                                    {isSettlementMode && remainingDaysInMonth > 0 && (
+                                        <span className="text-amber-600">{remainingDaysInMonth} يوم متبقية (تخصم)</span>
+                                    )}
+                                    <span className="text-gray-400">القيمة اليومية: {dailyRate.toLocaleString()} ج.م</span>
                                 </div>
                             )}
                         </div>
@@ -190,13 +221,27 @@ export const TeacherPayrollTab = ({
 
                 {/* تنبيه وضع التصفية */}
                 {isSettlementMode && (
-                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-3xl flex flex-row-reverse items-center gap-3 animate-pulse">
-                        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 shrink-0">
-                            <Calendar size={20} />
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-3xl flex flex-col gap-3 animate-pulse">
+                        <div className="flex flex-row-reverse items-center gap-3">
+                            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 shrink-0">
+                                <Calendar size={20} />
+                            </div>
+                            <div className="text-right">
+                                <h5 className="text-xs font-black text-amber-800">وضع التصفية النشط</h5>
+                                <p className="text-[10px] font-bold text-amber-600">اليوم هو آخر يوم عمل. يتم الخصم عن الأيام المتبقية في الشهر.</p>
+                            </div>
                         </div>
-                        <div className="text-right">
-                            <h5 className="text-xs font-black text-amber-800">وضع التصفية النشط</h5>
-                            <p className="text-[10px] font-bold text-amber-600">يتم الآن حساب الراتب الأساسي بناءً على أيام العمل المنقضية فقط من الشهر الحالي.</p>
+                        <div className="flex flex-row-reverse items-center justify-between bg-white/70 rounded-2xl px-4 py-2.5 border border-amber-100 text-xs font-bold">
+                            <span className="text-amber-800">الراتب الأساسي = القيمة اليومية × أيام الحضور</span>
+                            <span className="text-gray-600">{dailyRate.toLocaleString()} ج.م × {attendedDays} يوم = <span className="text-amber-900">{basicSalary.toLocaleString()} ج.م</span></span>
+                        </div>
+                        <div className="flex flex-row-reverse items-center justify-between bg-white/70 rounded-2xl px-4 py-2 border border-red-100 text-xs font-bold">
+                            <span className="text-red-700">خصم الأيام المتبقية ({remainingDaysInMonth} يوم)</span>
+                            <span className="text-gray-600">-{remainingDaysDeduction.toLocaleString()} ج.م</span>
+                        </div>
+                        <div className="flex flex-row-reverse items-center justify-between bg-amber-100 rounded-2xl px-4 py-3 border border-amber-300 text-sm font-black">
+                            <span className="text-amber-900">إجمالي الراتب بعد التصفية</span>
+                            <span className="text-amber-900">{basicSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                         </div>
                     </div>
                 )}

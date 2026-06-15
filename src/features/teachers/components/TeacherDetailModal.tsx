@@ -258,6 +258,7 @@ export default function TeacherDetailModal({
         totalHandedOver = 0,
         salaryStats = {
             basicSalary: 0,
+            attendanceBasedSalary: 0,
             autoRewards: 0,
             manualRewardsTotal: 0,
             autoDeductions: 0,
@@ -269,12 +270,19 @@ export default function TeacherDetailModal({
             isPartnership: false,
             partnershipPercentage: 0,
             totalCollectedForGroup: 0,
-            expectedPartnershipSalary: 0
+            expectedPartnershipSalary: 0,
+            totalWorkingDays: 22,
+            attendedDays: 0,
+            absentDays: 0,
+            totalAbsentDays: 0,
+            remainingDaysInMonth: 0,
+            remainingDaysDeduction: 0
         }
     } = dashboard || {};
 
     const {
         basicSalary,
+        attendanceBasedSalary,
         autoRewards,
         manualRewardsTotal,
         autoDeductions,
@@ -286,7 +294,13 @@ export default function TeacherDetailModal({
         isPartnership,
         partnershipPercentage,
         totalCollectedForGroup,
-        expectedPartnershipSalary
+        expectedPartnershipSalary,
+        totalWorkingDays,
+        attendedDays,
+        absentDays,
+        totalAbsentDays,
+        remainingDaysInMonth,
+        remainingDaysDeduction
     } = salaryStats;
 
     // ==========================================
@@ -705,7 +719,7 @@ export default function TeacherDetailModal({
                             selectedMonth={selectedMonth}
                             selectedMonthRaw={selectedMonthRaw}
                             updateMonth={updateMonth}
-                            basicSalary={basicSalary}
+                            basicSalary={attendanceBasedSalary}
                             autoRewards={autoRewards}
                             manualRewardsTotal={manualRewardsTotal}
                             autoDeductions={autoDeductions}
@@ -713,6 +727,13 @@ export default function TeacherDetailModal({
                             totalPaid={totalPaid}
                             totalEntitlement={totalEntitlement}
                             remainingToPay={remainingToPay}
+                            totalWorkingDays={totalWorkingDays}
+                            attendedDays={attendedDays}
+                            absentDays={absentDays}
+                            totalAbsentDays={totalAbsentDays}
+                            remainingDaysInMonth={remainingDaysInMonth}
+                            remainingDaysDeduction={remainingDaysDeduction}
+                            dailyRate={dailyRate}
                             isTeacher={isTeacher}
                             paymentsHistory={paymentsHistory}
                             handlePaySalary={handlePaySalary}
