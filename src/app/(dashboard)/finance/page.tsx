@@ -52,6 +52,7 @@ export default function FinancePage() {
     const [isExemptionsOpen, setIsExemptionsOpen] = useState(false);
     const [isDeductionsOpen, setIsDeductionsOpen] = useState(false);
     const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
+    const [isDeliveryDeficitOpen, setIsDeliveryDeficitOpen] = useState(false);
     const queryClient = useQueryClient();
     const { data: teachers = [] } = useTeachers();
     const { data: students = [] } = useStudents();
@@ -335,6 +336,39 @@ export default function FinancePage() {
             return { teacherId: id, teacherName: teacher?.fullName || id, collected: data.amount, count: data.count, deficit, expected, unpaidStudents: tStudents.filter(s => { const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0); return paid < (Number(s.monthlyAmount) || 0); }).length };
         }).sort((a, b) => b.deficit - a.deficit);
     }, [teachers, allFees, students, groups, exemptions, selectedMonth]);
+
+    const deliveryDeficitByTeacher = useMemo(() => {
+        const normalize = (s: string) => { if (!s) return ''; return s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/[ًٌٍَُِّ]/g, '').replace(/\s+/g, '').trim(); };
+
+        const collectedByTeacher: Record<string, number> = {};
+        teachers.filter(t => t.status === 'active' || !t.status).forEach(t => { collectedByTeacher[t.id] = 0; });
+
+        allFees.forEach(fee => {
+            const matched = teachers.find(t => fee.createdBy === t.fullName || fee.createdBy === t.phone || (fee.createdBy && normalize(fee.createdBy) === normalize(t.fullName)));
+            if (matched) {
+                if (!collectedByTeacher[matched.id]) collectedByTeacher[matched.id] = 0;
+                collectedByTeacher[matched.id] += Number(fee.amount?.toString().replace(/[^0-9.]/g, '')) || 0;
+            }
+        });
+
+        const handedOverByTeacher: Record<string, number> = {};
+        filteredTransactions.filter(tr => tr.category === 'تحصيل من مدرس').forEach(tr => {
+            if (tr.relatedUserId) {
+                handedOverByTeacher[tr.relatedUserId] = (handedOverByTeacher[tr.relatedUserId] || 0) + tr.amount;
+            }
+        });
+
+        return Object.entries(collectedByTeacher).map(([id, collected]) => {
+            const teacher = teachers.find(t => t.id === id);
+            const handedOver = handedOverByTeacher[id] || 0;
+            const deficit = collected - handedOver;
+            return { teacherId: id, teacherName: teacher?.fullName || id, collected, handedOver, deficit };
+        }).filter(d => d.deficit > 0).sort((a, b) => b.deficit - a.deficit);
+    }, [teachers, allFees, filteredTransactions, selectedMonth]);
+
+    const totalDeliveryDeficit = useMemo(() => {
+        return deliveryDeficitByTeacher.reduce((sum, d) => sum + d.deficit, 0);
+    }, [deliveryDeficitByTeacher]);
 
     const teacherAnalysis = useMemo(() => {
         const collections = deficitPerTeacher.map(d => ({ teacherId: d.teacherId, teacherName: d.teacherName, collected: d.collected, deficit: d.deficit, expected: d.expected, unpaidStudents: d.unpaidStudents }));
@@ -768,6 +802,54 @@ export default function FinancePage() {
                 </div>
             </SlideIn>
 
+            {/* Delivery Deficit Modal */}
+            <FadeIn show={isDeliveryDeficitOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsDeliveryDeficitOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isDeliveryDeficitOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600">
+                            <AlertCircle size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">عجز التسليم</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">المبالغ التي جمعها المدرسون من الطلاب ولم يسلموها للإدارة</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsDeliveryDeficitOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
+                    {deliveryDeficitByTeacher.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا يوجد عجز تسليم هذا الشهر - جميع المدرسين سلموا كامل المبالغ.
+                        </div>
+                    ) : (
+                        deliveryDeficitByTeacher.map(d => (
+                            <div key={d.teacherId} className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm flex items-center justify-between hover:border-rose-300 transition-all">
+                                <div className="text-right">
+                                    <p className="font-black text-gray-900 text-sm">{d.teacherName}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold">محصل: {d.collected.toLocaleString()} ج.م | سلم: {d.handedOver.toLocaleString()} ج.م</p>
+                                </div>
+                                <p className="text-lg font-black text-rose-600 font-sans">{d.deficit.toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-rose-600 font-sans">
+                            {totalDeliveryDeficit.toLocaleString()} <span className="text-sm">ج.م</span>
+                        </div>
+                        <p className="text-xs font-black text-gray-400">إجمالي عجز التسليم</p>
+                    </div>
+                </div>
+            </SlideIn>
+
             {/* Sticky Header */}
             <div className="sticky top-0 z-[70] bg-white/95 backdrop-blur-xl px-4 py-3 border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
@@ -901,6 +983,20 @@ export default function FinancePage() {
                                     </div>
                                 </button>
                             </div>
+                            <button onClick={() => setIsDeliveryDeficitOpen(true)} className="mt-4 w-full p-5 bg-rose-50/50 rounded-2xl border border-rose-200/50 hover:border-rose-400 hover:shadow-sm hover:bg-rose-50/80 transition-all text-right">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600">
+                                            <AlertCircle size={20} />
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[11px] font-black text-gray-500">عجز التسليم</p>
+                                            <p className="text-[9px] font-bold text-gray-400">المبالغ المحصلة ولم تسلم</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-2xl font-black text-rose-600 font-sans">{totalDeliveryDeficit.toLocaleString()} <span className="text-[10px]">ج.م</span></p>
+                                </div>
+                            </button>
                         </div>
 
                         {/* Section 3: Summary */}
