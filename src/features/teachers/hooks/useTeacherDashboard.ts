@@ -130,7 +130,10 @@ export const useTeacherDashboard = (
             basicSalary = Number(teacher.salary) || 0;
         }
 
-        const dailyRate = isPartnership ? (basicSalary / standardWorkingDays) : (Number(teacher.salary) || 1000) / standardWorkingDays;
+        // القيمة اليومية: للمرتب الثابت من راتبه، وللنسبة من المتوقع جمعه للمجموعة
+        const dailyRate = isPartnership
+            ? ((expectedExpenses * (Number(teacher.partnershipPercentage) || 0)) / 100) / standardWorkingDays
+            : (Number(teacher.salary) || 1000) / standardWorkingDays;
 
         // حساب أيام الغياب من سجل الحضور (بما في ذلك partial)
         let absentDays = 0;
@@ -160,11 +163,11 @@ export const useTeacherDashboard = (
             ? basicSalary
             : Math.round((dailyRate * attendedDays) * 100) / 100;
 
-        // خصومات تلقائية (حسب الحضور) - للعرض فقط
-        const autoDeductions = isPartnership ? 0 : Math.round((absentDays * dailyRate) * 100) / 100;
+        // خصومات تلقائية (حسب الحضور)
+        const autoDeductions = Math.round((absentDays * dailyRate) * 100) / 100;
 
         // خصم الأيام المتبقية في التصفية
-        const remainingDaysDeduction = isPartnership ? 0 : Math.round((remainingDaysInMonth * dailyRate) * 100) / 100;
+        const remainingDaysDeduction = Math.round((remainingDaysInMonth * dailyRate) * 100) / 100;
 
         // مكافآت تلقائية (حسب الحضور)
         const autoRewards = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
@@ -194,7 +197,9 @@ export const useTeacherDashboard = (
 
         const totalPaid = paymentsHistory.reduce((acc, curr) => acc + Number(curr.amount), 0);
         // الخصومات اليدوية تطبق دائماً
-        const totalEntitlement = Math.round((attendanceBasedSalary + autoRewards + manualRewardsTotal - manualDeductionsTotal) * 100) / 100;
+        // خصومات الغياب تطبق فقط لنظام النسبة (لأن المرتب الثابت محسوب على أيام الحضور)
+        const totalDeductionsToApply = isPartnership ? autoDeductions + remainingDaysDeduction : 0;
+        const totalEntitlement = Math.round((attendanceBasedSalary + autoRewards + manualRewardsTotal - manualDeductionsTotal - totalDeductionsToApply) * 100) / 100;
         const remainingToPay = Math.max(0, Math.round((totalEntitlement - totalPaid) * 100) / 100);
 
         // 5. الطلاب الذين لم يدفعوا

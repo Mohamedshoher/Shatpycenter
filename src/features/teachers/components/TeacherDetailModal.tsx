@@ -8,7 +8,7 @@ import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation, keepPreviousData } from '@tanstack/react-query';
 
 // ==========================================
 // 2. استيراد الأيقونات
@@ -29,6 +29,7 @@ import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeductions';
 import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
+import { getTeacherAttendance } from '@/features/teachers/services/attendanceService';
 import { DeductionsList } from '@/features/teachers/components/DeductionsList';
 import { getFeesByMonth, deleteFeeRecord } from '@/features/students/services/recordsService';
 import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction, addTransaction } from '@/features/finance/services/financeService';
@@ -167,14 +168,16 @@ export default function TeacherDetailModal({
                 return true;
             });
         },
-        enabled: !!selectedMonthRaw && isOpen
+        enabled: !!selectedMonthRaw && isOpen,
+        placeholderData: keepPreviousData
     });
 
     // 4. جلب عمليات تسليم النقدية (ما سلمه المعلم للمدير)
     const { data: handovers = [] } = useQuery({
         queryKey: ['handovers', teacher?.id, selectedMonthRaw],
         queryFn: () => getTeacherHandovers(teacher!.id, selectedMonthRaw),
-        enabled: !!teacher?.id && !!selectedMonthRaw && isOpen
+        enabled: !!teacher?.id && !!selectedMonthRaw && isOpen,
+        placeholderData: keepPreviousData
     });
 
     // 5. جلب الإعفاءات
@@ -191,7 +194,8 @@ export default function TeacherDetailModal({
             }
             return data || [];
         },
-        enabled: isOpen
+        enabled: isOpen,
+        placeholderData: keepPreviousData
     });
 
     // 6. جلب سجل الرواتب
@@ -209,7 +213,8 @@ export default function TeacherDetailModal({
             }
         },
         enabled: !!teacher?.id,
-        staleTime: 5 * 60 * 1000 // 5 دقائق
+        staleTime: 5 * 60 * 1000, // 5 دقائق
+        placeholderData: keepPreviousData
     });
 
     // 7. ميوتيشن حذف سجل صرف الراتب
@@ -616,6 +621,57 @@ export default function TeacherDetailModal({
             };
         }
     }, [isOpen]);
+
+    // ==========================================
+    // التحميل المُسبق (Prefetch) للشهور المجاورة لسرعة التصفح
+    // ==========================================
+    useEffect(() => {
+        if (!teacher?.id || !isOpen || !selectedMonthRaw) return;
+
+        const [year, month] = selectedMonthRaw.split('-').map(Number);
+
+        // جلب الشهر السابق والتالي في الخلفية
+        [-1, 1].forEach(offset => {
+            const adj = new Date(year, month - 1 + offset, 1);
+            const adjRaw = `${adj.getFullYear()}-${String(adj.getMonth() + 1).padStart(2, '0')}`;
+
+            queryClient.prefetchQuery({
+                queryKey: ['salaryPayments', teacher.id, adjRaw],
+                queryFn: async () => {
+                    const [y, m] = adjRaw.split('-').map(Number);
+                    return await getTeacherSalaryPayments(teacher.id, y, m);
+                },
+                staleTime: 5 * 60 * 1000,
+            });
+
+            queryClient.prefetchQuery({
+                queryKey: ['fees', 'month', adjRaw],
+                queryFn: async () => {
+                    const feesByKey = await getFeesByMonth(adjRaw);
+                    const feesByLabel = await getFeesByMonth(adjRaw);
+                    const seen = new Set();
+                    return [...feesByKey, ...feesByLabel].filter(f => {
+                        if (seen.has(f.id)) return false;
+                        seen.add(f.id);
+                        return true;
+                    });
+                },
+                staleTime: 5 * 60 * 1000,
+            });
+
+            queryClient.prefetchQuery({
+                queryKey: ['handovers', teacher.id, adjRaw],
+                queryFn: () => getTeacherHandovers(teacher.id, adjRaw),
+                staleTime: 5 * 60 * 1000,
+            });
+
+            queryClient.prefetchQuery({
+                queryKey: ['teacher-attendance', teacher.id, adjRaw],
+                queryFn: () => getTeacherAttendance(teacher.id, adjRaw),
+                staleTime: 5 * 60 * 1000,
+            });
+        });
+    }, [teacher?.id, selectedMonthRaw, isOpen, queryClient]);
 
     // ==========================================
     // واجهة المستخدم: تعريف التبويبات

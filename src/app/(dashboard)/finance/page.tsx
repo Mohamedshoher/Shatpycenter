@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getTransactionsByMonth } from '@/features/finance/services/financeService';
+import { getTransactionsByMonth, addTransaction } from '@/features/finance/services/financeService';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
@@ -53,6 +53,7 @@ export default function FinancePage() {
     const [isDeductionsOpen, setIsDeductionsOpen] = useState(false);
     const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
     const [isDeliveryDeficitOpen, setIsDeliveryDeficitOpen] = useState(false);
+    const [isDevelopmentOpen, setIsDevelopmentOpen] = useState(false);
     const queryClient = useQueryClient();
     const { data: teachers = [] } = useTeachers();
     const { data: students = [] } = useStudents();
@@ -249,6 +250,8 @@ export default function FinancePage() {
         };
     }, [filteredTransactions, teachers, students, groups, allFees, user?.displayName, exemptions, selectedMonth, monthDeductions, allAttendanceMap]);
 
+    const developmentAmount = Math.floor(fromTeachers * 0.04 * 100) / 100;
+
     const incomeDetails = useMemo(() => {
         const incomeTransactions = filteredTransactions.filter(tr => tr.type === 'income');
         const managerFees = allFees.filter((fee: any) => {
@@ -394,6 +397,23 @@ export default function FinancePage() {
     const handleAddTransaction = () => {
         setIsModalOpen(false);
         queryClient.invalidateQueries({ queryKey: ['transactions', selectedMonth] });
+    };
+
+    const handleRecordDevelopment = async () => {
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const result = await addTransaction({
+            amount: developmentAmount,
+            type: 'expense',
+            category: 'other',
+            date: today,
+            description: `تطوير الدرس (4% من مستلم المدرسين ${fromTeachers.toLocaleString()} ج.م)`,
+            performedBy: user?.uid || 'المدير'
+        });
+        if (result) {
+            queryClient.invalidateQueries({ queryKey: ['transactions', selectedMonth] });
+            setIsDevelopmentOpen(false);
+        }
     };
 
     if (!isClient) return null;
@@ -623,6 +643,50 @@ export default function FinancePage() {
                         <div className="text-2xl font-black text-sky-600 font-sans">{fromTeachers.toLocaleString()} <span className="text-sm">ج.م</span></div>
                         <p className="text-xs font-black text-gray-400">إجمالي المستلم من المدرسين</p>
                     </div>
+                </div>
+            </SlideIn>
+
+            {/* Development Fund Modal (4%) */}
+            <FadeIn show={isDevelopmentOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsDevelopmentOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isDevelopmentOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
+                            <Wallet size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">تطوير الدرس</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">4% من المبالغ المستلمة من المدرسين</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsDevelopmentOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-8 space-y-6">
+                    <div className="bg-amber-50/50 rounded-[24px] p-6 border border-amber-100/50 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-gray-500">إجمالي المستلم من المدرسين</span>
+                            <span className="text-lg font-black text-gray-900 font-sans">{fromTeachers.toLocaleString()} ج.م</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-gray-500">نسبة التطوير</span>
+                            <span className="text-lg font-black text-amber-600 font-sans">4%</span>
+                        </div>
+                        <div className="border-t border-amber-200/50 pt-4 flex items-center justify-between">
+                            <span className="text-sm font-black text-gray-700">مبلغ تطوير الدرس</span>
+                            <span className="text-2xl font-black text-amber-600 font-sans">{developmentAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleRecordDevelopment}
+                        disabled={developmentAmount <= 0}
+                        className="w-full h-14 bg-amber-600 text-white rounded-[24px] font-black shadow-xl shadow-amber-600/20 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                    >
+                        تسجيل مصروف تطوير الدرس ({developmentAmount.toLocaleString()} ج.م)
+                    </button>
                 </div>
             </SlideIn>
 
@@ -949,6 +1013,20 @@ export default function FinancePage() {
                                     <p className="text-lg font-black text-cyan-600 font-sans">{otherIncome.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
                                 </button>
                             </div>
+                            <button onClick={() => setIsDevelopmentOpen(true)} className="mt-4 w-full p-5 bg-amber-50/50 rounded-2xl border border-amber-200/50 hover:border-amber-400 hover:shadow-sm hover:bg-amber-50/80 transition-all text-right">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600">
+                                            <Wallet size={20} />
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[11px] font-black text-gray-500">تطوير الدرس</p>
+                                            <p className="text-[9px] font-bold text-gray-400">4% من مستلم المدرسين</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-2xl font-black text-amber-600 font-sans">{developmentAmount.toLocaleString()} <span className="text-[10px]">ج.م</span></p>
+                                </div>
+                            </button>
                         </div>
 
                         {/* Section 2: Analysis */}

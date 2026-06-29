@@ -3,7 +3,7 @@
 // ============================================================================
 
 // استيراد أدوات مكتبة React Query المسؤولة عن جلب البيانات وإدارة ذاكرة التخزين المؤقت (Cache)
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 
 // استيراد دوال الخدمات (Services) والأنواع (Types) الخاصة بسجل الحضور
 import { 
@@ -27,6 +27,7 @@ export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
         // دالة الجلب: تتأكد من وجود المعرف والشهر قبل إرسال الطلب للخادم
         queryFn: () => teacherId && monthKey ? getTeacherAttendance(teacherId, monthKey) : Promise.resolve({}),
         enabled: !!teacherId && !!monthKey, // تفعيل الاستعلام فقط إذا توفرت المعطيات
+        placeholderData: keepPreviousData, // الاحتفاظ ببيانات الشهر السابق أثناء تحميل الجديد
     });
 
     // 2. عملية تحديث (Mutation) لتسجيل أو تعديل حالة الحضور
