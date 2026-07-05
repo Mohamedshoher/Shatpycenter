@@ -647,7 +647,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 {user?.role !== 'director' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 transition-colors" title="المالية"><CreditCard size={18} /></button>
                                 )}
-                                {isManagement ? (
+                                {(isManagement || user?.role === 'teacher') ? (
                                     <button 
                                         onClick={(e) => { 
                                             e.stopPropagation(); 
