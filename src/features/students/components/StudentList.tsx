@@ -671,6 +671,15 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     </button>
                                 )}
                                 {user?.role === 'teacher' && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'exams'); }} 
+                                        className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-white rounded-lg transition-all" 
+                                        title="الاختبارات"
+                                    >
+                                        <BookOpen size={18} />
+                                    </button>
+                                )}
+                                {user?.role === 'teacher' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'notes'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="الملاحظات"><FileText size={18} /></button>
                                 )}
 
