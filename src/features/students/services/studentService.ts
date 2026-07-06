@@ -30,7 +30,6 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<string> 
                 parent_phone: student.parentPhone,
                 status: student.status || 'pending',
                 monthly_amount: student.monthlyAmount,
-                birth_date: student.birthDate,
                 address: student.address,
                 notes: student.notes,
                 enrollment_date: student.enrollmentDate,
@@ -55,7 +54,6 @@ export const updateStudent = async (id: string, data: Partial<Student>): Promise
         if (data.parentPhone) updates.parent_phone = data.parentPhone;
         if (data.status) updates.status = data.status;
         if (data.monthlyAmount !== undefined) updates.monthly_amount = data.monthlyAmount;
-        if (data.birthDate) updates.birth_date = data.birthDate;
         if (data.address) updates.address = data.address;
         if (data.notes) updates.notes = data.notes;
         if (data.appointment !== undefined) updates.appointment = data.appointment;

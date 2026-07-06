@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
         const supabase = createServerSupabase();
         let query = supabase
             .from('students')
-            .select('id, full_name, group_id, parent_phone, status, monthly_amount, birth_date, address, appointment, notes, enrollment_date, archived_date, created_at');
+            .select('*');
 
         if (groupIds) {
             const ids = groupIds.split(',');
@@ -32,17 +32,17 @@ export async function GET(request: NextRequest) {
             id: row.id,
             fullName: row.full_name,
             groupId: row.group_id,
-            parentPhone: row.parent_phone,
+            parentPhone: row.parent_phone || row.phone || '',
             status: row.status,
             isArchived: row.status === 'archived',
             monthlyAmount: Number(row.monthly_amount) || 0,
-            birthDate: row.birth_date,
-            address: row.address,
-            appointment: row.appointment,
-            notes: row.notes,
+            birthDate: row.birth_date || undefined,
+            address: row.address || '',
+            appointment: row.appointment || '',
+            notes: row.notes || '',
             enrollmentDate: row.enrollment_date || (row.created_at ? row.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
-            archivedDate: row.archived_date,
-            whatsapp: row.parent_phone,
+            archivedDate: row.archived_date || undefined,
+            whatsapp: row.parent_phone || row.phone || '',
             email: '',
             password: '',
             role: 'student',
