@@ -26,14 +26,13 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<string> 
             .from('students')
             .insert([{
                 full_name: student.fullName,
-                group_id: student.groupId,
+                group_id: student.groupId || null,
                 parent_phone: student.parentPhone,
                 status: student.status || 'pending',
                 monthly_amount: student.monthlyAmount,
-                address: student.address,
-                notes: student.notes,
+                notes: student.notes || null,
                 enrollment_date: student.enrollmentDate,
-                appointment: student.appointment
+                appointment: student.appointment || null
             }])
             .select('id')
             .single();
