@@ -194,6 +194,30 @@ export default function ParentDashboard() {
                         </div>
                     )}
                 </div>
+
+                {/* قسم جروب واتساب المركز - يظهر دائماً */}
+                <div className="mt-12 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-[40px] p-6 md:p-8 border border-green-100/50">
+                    <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
+                        <div className="w-16 h-16 md:w-20 md:h-20 bg-green-500 rounded-2xl md:rounded-3xl flex items-center justify-center text-white shadow-lg shadow-green-500/20 shrink-0">
+                            <MessageCircle size={32} className="md:w-10 md:h-10" />
+                        </div>
+                        <div className="flex-1 text-center md:text-right">
+                            <h3 className="text-lg md:text-xl font-black text-gray-900 mb-1">جروب واتساب المركز</h3>
+                            <p className="text-xs md:text-sm text-gray-500 font-bold">
+                                تواصل مع أولياء الأمور الآخرين واستقبل الإعلانات والتوجيهات الهامة من إدارة المركز.
+                            </p>
+                        </div>
+                        <a
+                            href={process.env.NEXT_PUBLIC_WHATSAPP_GROUP_LINK || 'https://chat.whatsapp.com/XXXXXXXXXXX'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full md:w-auto h-14 md:h-12 bg-green-600 hover:bg-green-700 text-white rounded-2xl md:rounded-full px-8 flex items-center justify-center gap-2 text-sm font-black shadow-lg shadow-green-500/20 active:scale-95 transition-all"
+                        >
+                            <MessageCircle size={18} />
+                            انضم للجروب
+                        </a>
+                    </div>
+                </div>
             </main>
 
             {/* نافذة تفاصيل الطالب المنبثقة */}
@@ -223,6 +247,15 @@ export default function ParentDashboard() {
                     contacts={contacts}
                 />
             )}
+
+            {/* زر واتساب الدعم المباشر العائم */}
+            <button
+                onClick={() => window.open(`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_CENTER_WHATSAPP || '201234567890'}`, '_blank')}
+                className="fixed bottom-28 left-6 w-14 h-14 bg-green-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-all hover:bg-green-700"
+                title="التواصل المباشر عبر واتساب"
+            >
+                <MessageCircle size={28} />
+            </button>
 
             {/* زر المراسلة الداخلية العائم */}
             <button
