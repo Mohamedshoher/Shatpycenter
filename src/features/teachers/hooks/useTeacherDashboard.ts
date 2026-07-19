@@ -13,6 +13,17 @@ const normalize = (s: string) => {
         .trim();
 };
 
+// دالة لحساب أيام العمل المتبقية من اليوم حتى نهاية الشهر (بدون الخميس والجمعة)
+const countRemainingWorkDays = (currentDay: number, year: number, month: number) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let count = 0;
+    for (let day = currentDay + 1; day <= daysInMonth; day++) {
+        const dow = new Date(year, month, day).getDay();
+        if (dow !== 4 && dow !== 5) count++; // الخميس=4, الجمعة=5
+    }
+    return count;
+};
+
 export const useTeacherDashboard = (
     teacher: any,
     students: any[] = [],
@@ -148,8 +159,9 @@ export const useTeacherDashboard = (
         const totalWorkingDays = standardWorkingDays;
 
         // في وضع التصفية: الأيام المتبقية من الشهر تُحتسب غياب (لأن المدرس أنهى عمله)
+        // يتم حساب أيام العمل الفعلية فقط (بدون الخميس والجمعة)
         const remainingDaysInMonth = isSettlementMode
-            ? Math.max(0, standardWorkingDays - currentDay)
+            ? countRemainingWorkDays(currentDay, now.getFullYear(), now.getMonth())
             : 0;
 
         // إجمالي أيام الغياب (بما فيها الأيام المتبقية في التصفية)
