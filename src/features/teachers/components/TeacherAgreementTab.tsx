@@ -37,10 +37,21 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
                         </p>
                     </div>
 
-                    {/* البند الثاني: الغياب والإجازات */}
+                    {/* البند الثاني: ساعات العمل */}
                     <div className="bg-white rounded-2xl p-5 border border-emerald-50 shadow-sm">
                         <h4 className="font-black text-emerald-800 text-base mb-3 flex items-center gap-2">
-                            <span>📌</span> ثانيًا: الغياب والإجازات
+                            <span>⏰</span> ثانيًا: ساعات العمل
+                        </h4>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                            ساعات العمل هي 4 ساعات يوميًا، لمدة 5 أيام في الأسبوع،
+                            وذلك وفق الجدول الزمني المعتمد من إدارة المركز.
+                        </p>
+                    </div>
+
+                    {/* البند الثالث: الغياب والإجازات */}
+                    <div className="bg-white rounded-2xl p-5 border border-emerald-50 shadow-sm">
+                        <h4 className="font-black text-emerald-800 text-base mb-3 flex items-center gap-2">
+                            <span>📌</span> ثالثًا: الغياب والإجازات
                         </h4>
                         <p className="text-sm text-gray-700 leading-relaxed mb-3">
                             يلتزم المعلم بإبلاغ إدارة المركز قبل الغياب بوقتٍ كافٍ، ويفضل أن يكون قبلها بيوم كامل
@@ -69,7 +80,7 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
                     {/* البند الثالث: التقرير اليومي */}
                     <div className="bg-white rounded-2xl p-5 border border-emerald-50 shadow-sm">
                         <h4 className="font-black text-emerald-800 text-base mb-3 flex items-center gap-2">
-                            <span>📝</span> ثالثًا: التقرير اليومي (الحضور والغياب)
+                            <span>📝</span> رابعًا: التقرير اليومي (الحضور والغياب)
                         </h4>
                         <p className="text-sm text-gray-700 leading-relaxed mb-3">
                             يلتزم كل معلم بإرسال التقرير اليومي عبر النظام، ويشمل:
@@ -86,7 +97,7 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
                     {/* البند الرابع: تسجيل الاختبارات */}
                     <div className="bg-white rounded-2xl p-5 border border-emerald-50 shadow-sm">
                         <h4 className="font-black text-emerald-800 text-base mb-3 flex items-center gap-2">
-                            <span>📚</span> رابعًا: تسجيل الاختبارات
+                            <span>📚</span> خامسًا: تسجيل الاختبارات
                         </h4>
                         <p className="text-sm text-gray-700 leading-relaxed mb-3">
                             يلتزم كل معلم بتسجيل جميع الاختبارات الخاصة بطلابه على النظام.
@@ -102,7 +113,7 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
                     {/* البند الخامس: متابعة أولياء الأمور */}
                     <div className="bg-white rounded-2xl p-5 border border-emerald-50 shadow-sm">
                         <h4 className="font-black text-emerald-800 text-base mb-3 flex items-center gap-2">
-                            <span>📞</span> خامسًا: متابعة أولياء الأمور
+                            <span>📞</span> سادسًا: متابعة أولياء الأمور
                         </h4>
                         <p className="text-sm text-gray-700 leading-relaxed mb-3">
                             يلتزم كل معلم بمتابعة أولياء أمور الطلاب التابعين له بصورة مستمرة.
@@ -118,7 +129,7 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
                     {/* البند السادس: الالتزام بالعمل */}
                     <div className="bg-white rounded-2xl p-5 border border-emerald-50 shadow-sm">
                         <h4 className="font-black text-emerald-800 text-base mb-3 flex items-center gap-2">
-                            <span>🤝</span> سادسًا: الالتزام بالعمل
+                            <span>🤝</span> سابعًا: الالتزام بالعمل
                         </h4>
                         <p className="text-sm text-gray-700 leading-relaxed">
                             يلتزم جميع المعلمين بما سبق من بنود، ويُعد العمل داخل المركز قائمًا على الانضباط،
@@ -129,7 +140,7 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
                     {/* البند السابع: المسؤولية المالية والتصفية */}
                     <div className="bg-white rounded-2xl p-5 border border-amber-50 shadow-sm bg-gradient-to-br from-amber-50/50 to-white">
                         <h4 className="font-black text-amber-800 text-base mb-3 flex items-center gap-2">
-                            <span>⚖️</span> سابعًا: المسؤولية المالية والتصفية
+                            <span>⚖️</span> ثامنًا: المسؤولية المالية والتصفية
                         </h4>
                         <ul className="space-y-2 pr-4">
                             <li className="text-sm text-gray-700 flex items-start gap-2">

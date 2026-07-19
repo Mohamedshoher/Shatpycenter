@@ -1,7 +1,9 @@
-"use client";// تبويب الراتب
+"use client";
 
-import { Calendar, CircleDollarSign, MessageCircle, Trash2, Loader, ChevronRight, ChevronLeft } from 'lucide-react';
+import { useState } from 'react';
+import { Calendar, CircleDollarSign, MessageCircle, Trash2, Loader, ChevronRight, ChevronLeft, X, Wallet, Plus, Banknote, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
 interface TeacherPayrollTabProps {
     selectedMonth: string;
     selectedMonthRaw: string;
@@ -19,8 +21,8 @@ interface TeacherPayrollTabProps {
     handlePaySalary: (amount: number, description: string) => void;
     handleSendReport: () => void;
     deleteSalaryMutation: any;
-    isSettlementMode: boolean; // إضافة هنا
-    setIsSettlementMode: (val: boolean) => void; // إضافة هنا
+    isSettlementMode: boolean;
+    setIsSettlementMode: (val: boolean) => void;
     isPartnership?: boolean;
     partnershipPercentage?: number;
     totalCollectedForGroup?: number;
@@ -66,244 +68,283 @@ export const TeacherPayrollTab = ({
     dailyRate = 0
 }: TeacherPayrollTabProps) => {
 
+    const [showPayModal, setShowPayModal] = useState(false);
+    const [payAmount, setPayAmount] = useState('');
+    const [payNote, setPayNote] = useState('');
+
+    const handleManualPay = () => {
+        const amount = parseFloat(payAmount);
+        if (isNaN(amount) || amount <= 0) return;
+        handlePaySalary(amount, payNote || 'مصروف راتب (يدوي)');
+        setShowPayModal(false);
+        setPayAmount('');
+        setPayNote('');
+    };
+
+    const totalRewards = autoRewards + manualRewardsTotal;
+    const totalDeductions = autoDeductions + manualDeductionsTotal;
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-            {/* اختيار الشهر في تبويب الراتب - متجاوب */}
+        <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+
+            {/* شريط الشهر والتصفية */}
             <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
-                {/* زر السابق */}
-                <button
-                    onClick={() => updateMonth(-1)}
-                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
-                >
+                <button onClick={() => updateMonth(-1)} className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto">
                     <ChevronRight size={16} />
                     <span className="hidden md:inline">الشهر السابق</span>
                 </button>
-
-                {/* الشهر */}
                 <div className="flex-1 flex justify-center w-full min-w-0 mx-1">
                     <div className="bg-gray-50 px-3 md:px-6 py-2 rounded-xl border border-gray-100 text-xs md:text-sm font-bold flex items-center justify-center gap-2 text-gray-700 relative w-full md:w-auto max-w-[200px]">
                         <span className="truncate" dir="ltr">{selectedMonthRaw}</span>
-                        <Calendar size={14} className="md:w-4 md:h-4 text-gray-400 shrink-0" />
-                        <input
-                            type="month"
-                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                            value={selectedMonthRaw}
-                            onChange={(e) => updateMonth(e.target.value)}
-                        />
+                        <Calendar size={14} className="text-gray-400 shrink-0" />
+                        <input type="month" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" value={selectedMonthRaw} onChange={(e) => updateMonth(e.target.value)} />
                     </div>
                 </div>
-
-                {/* زر الحالي */}
-                <button
-                    onClick={() => {
-                        const today = new Date();
-                        const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-                        updateMonth(monthStr);
-                    }}
-                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
-                >
+                <button onClick={() => { const today = new Date(); updateMonth(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`); }} className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto">
                     <span className="hidden md:inline">الشهر الحالي</span>
                     <ChevronLeft size={16} />
                 </button>
-
-                {/* زر التصفية الحالية */}
                 {!isTeacher && (
-                    <button
-                        onClick={() => setIsSettlementMode(!isSettlementMode)}
-                        className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all h-10 md:h-auto border",
-                            isSettlementMode
-                                ? "bg-red-600 text-white border-red-700 shadow-lg shadow-red-200"
-                                : "bg-teal-50 text-teal-700 border-teal-100 hover:bg-teal-100"
-                        )}
-                    >
+                    <button onClick={() => setIsSettlementMode(!isSettlementMode)} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all h-10 md:h-auto border", isSettlementMode ? "bg-red-600 text-white border-red-700 shadow-lg shadow-red-200" : "bg-teal-50 text-teal-700 border-teal-100 hover:bg-teal-100")}>
                         <CircleDollarSign size={14} />
                         {isSettlementMode ? "إلغاء التصفية" : "تصفية حساب حالية"}
                     </button>
                 )}
             </div>
 
-            {/* بطاقة الراتب والمستحقات (كرت المحاسبة الرئيسي) */}
+            {/* بطاقة الراتب الرئيسية */}
             <div className="bg-white rounded-[32px] md:rounded-[48px] border border-gray-100 p-4 md:p-8 shadow-sm space-y-6 md:space-y-8 overflow-hidden relative">
-                {/* أيقونة خلفية جمالية */}
-                <CircleDollarSign size={200} className="absolute -left-10 -bottom-10 text-gray-50/50 -rotate-12 pointer-events-none opacity-20 md:opacity-100" />
 
+                {/* خلفية جمالية */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute -top-20 -left-20 w-64 h-64 bg-blue-50 rounded-full opacity-30" />
+                    <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-teal-50 rounded-full opacity-20" />
+                </div>
+
+                {/* رأس البطاقة */}
                 <div className="flex flex-row-reverse items-start justify-between relative z-10">
                     <div className="text-right">
-                        <h3 className="text-xl md:text-2xl font-black text-gray-900 leading-tight"> الراتب </h3>
+                        <h3 className="text-xl md:text-2xl font-black text-gray-900">الراتب</h3>
                         <p className="text-gray-400 font-bold text-xs md:text-sm">شهر {selectedMonth}</p>
                     </div>
-                    <div className="bg-orange-50 px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-orange-100 flex items-center gap-2 text-[8px] md:text-[10px] font-black text-orange-600">
-                        <span>حالة الصرف:</span>
-                        <span>قيد الانتظار ⌛</span>
+                    <div className="bg-gradient-to-l from-orange-50 to-amber-50 px-4 py-2 rounded-full border border-orange-100 flex items-center gap-2 text-[10px] font-black text-orange-600 shadow-sm">
+                        <span>المتبقي:</span>
+                        <span className="text-orange-800">{remainingToPay.toLocaleString()} ج.م</span>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 relative z-10">
-                    {/* عرض صافي المستحق والمتبقي */}
-                    <div className="md:col-span-4 flex flex-col gap-3 md:gap-4 font-sans">
+                {/* بطاقات الإجماليات */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+                    {isPartnership && (
+                        <div className="bg-gradient-to-br from-amber-400 to-amber-600 p-5 rounded-[28px] text-center shadow-xl shadow-amber-500/20 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent)]" />
+                            <p className="text-[10px] font-black text-amber-50/80 relative z-10">الراتب المتوقع</p>
+                            <p className="text-2xl md:text-3xl font-black text-white tracking-tight relative z-10 mt-1 font-sans">{expectedPartnershipSalary.toLocaleString()}</p>
+                            <p className="text-[8px] font-black text-amber-100/50 relative z-10 mt-1">بنسبة {partnershipPercentage}%</p>
+                        </div>
+                    )}
+                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-5 rounded-[28px] text-center shadow-xl shadow-gray-900/20 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)]" />
+                        <p className="text-[10px] font-black text-gray-400 relative z-10">إجمالي الاستحقاق</p>
+                        <p className="text-2xl md:text-3xl font-black text-white tracking-tight relative z-10 mt-1 font-sans">{totalEntitlement.toLocaleString()}</p>
+                        <p className="text-[8px] font-black text-gray-500 relative z-10 mt-1">ج.م</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-teal-500 to-emerald-600 p-5 rounded-[28px] text-center shadow-xl shadow-teal-500/20 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent)]" />
+                        <p className="text-[10px] font-black text-teal-100/80 relative z-10">المتبقي للصرف</p>
+                        <p className="text-2xl md:text-3xl font-black text-white tracking-tight relative z-10 mt-1 font-sans">{remainingToPay.toLocaleString()}</p>
+                        <p className="text-[8px] font-black text-teal-200/60 relative z-10 mt-1">EGP</p>
+                    </div>
+                </div>
+
+                {/* تفاصيل الحساب */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+                    <div className="space-y-3">
+                        <div className="flex flex-row-reverse items-center justify-between bg-gradient-to-l from-gray-50 to-white p-4 rounded-2xl border border-gray-100 hover:shadow-sm transition-shadow">
+                            <span className="text-xs md:text-sm font-bold text-gray-500">{isPartnership ? 'استحقاق الشراكة' : 'الراتب الأساسي'}</span>
+                            <div className="text-left">
+                                <span className="text-sm md:text-lg font-black font-sans text-gray-900">{basicSalary.toLocaleString()} ج.م</span>
+                                {!isPartnership && (
+                                    <div className="text-[9px] font-bold text-gray-400 mt-0.5">
+                                        {dailyRate.toLocaleString()} ج.م × {attendedDays} يوم حضور
+                                        {isSettlementMode && remainingDaysInMonth > 0 && <> (من {totalWorkingDays} يوم - خصم {remainingDaysInMonth} يوم)</>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                         {isPartnership && (
-                            <div className="bg-amber-500 p-4 md:p-6 rounded-[24px] md:rounded-[32px] text-center space-y-1 md:space-y-2 shadow-xl shadow-amber-500/20 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                    <CircleDollarSign size={60} className="md:w-20 md:h-20" />
-                                </div>
-                                <p className="text-[10px] md:text-xs font-black text-amber-50 relative z-10">الراتب المتوقع (100% تحصيل)</p>
-                                <p className="text-2xl md:text-4xl font-black text-white tracking-tight relative z-10">{expectedPartnershipSalary.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                                <p className="text-[8px] md:text-[10px] font-black text-amber-100/60 uppercase tracking-widest relative z-10">EXPECTED EARNINGS</p>
+                            <div className="text-right text-[10px] font-bold text-blue-500 bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
+                                محسوب بنسبة {partnershipPercentage}% من إجمالي تحصيل المجموعة ({totalCollectedForGroup?.toLocaleString()} ج.م)
                             </div>
                         )}
-                        <div className="bg-gray-50/80 p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-gray-100 text-center space-y-1 md:space-y-2 backdrop-blur-sm">
-                            <p className="text-[10px] md:text-xs font-bold text-gray-400">إجمالي الاستحقاق</p>
-                            <p className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">{totalEntitlement.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                        </div>
-                        <div className="bg-teal-600 p-4 md:p-6 rounded-[24px] md:rounded-[32px] text-center space-y-1 md:space-y-2 shadow-xl shadow-teal-600/30 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <CircleDollarSign size={60} className="md:w-20 md:h-20" />
+                        {!isPartnership && (
+                            <div className="flex flex-row-reverse flex-wrap gap-2 text-[10px] font-bold">
+                                <span className="bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100">{attendedDays} يوم حضور</span>
+                                {absentDays > 0 && <span className="bg-red-50 text-red-600 px-3 py-1.5 rounded-full border border-red-100">{absentDays} يوم غياب</span>}
+                                {isSettlementMode && remainingDaysInMonth > 0 && <span className="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-100">{remainingDaysInMonth} يوم متبقية (تخصم)</span>}
+                                <span className="bg-gray-50 text-gray-500 px-3 py-1.5 rounded-full border border-gray-100">{dailyRate.toLocaleString()} ج.م/يوم</span>
                             </div>
-                            <p className="text-[10px] md:text-xs font-bold text-teal-100/80 relative z-10">المتبقي للصرف</p>
-                            <p className="text-2xl md:text-4xl font-black text-white tracking-tight relative z-10">{remainingToPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                            <p className="text-[8px] md:text-[10px] font-black text-teal-200/60 uppercase tracking-widest relative z-10">EGYPTIAN POUND</p>
-                        </div>
+                        )}
                     </div>
-
-                    {/* تفاصيل بنود الحساب (أساسي، حوافز، استقطاعات) */}
-                    <div className="md:col-span-8 flex flex-col gap-3">
-                        <div className="flex flex-col p-4 md:p-5 bg-gray-50/30 rounded-[20px] md:rounded-[24px] border border-gray-50 hover:bg-gray-50 transition-colors">
-                            <div className="flex flex-row-reverse items-center justify-between">
-                                <span className="text-xs md:text-sm font-bold text-gray-500">{isPartnership ? 'استحقاق الشراكة:' : 'الراتب الأساسي:'}</span>
-                                <span className="text-sm md:text-lg font-black font-sans text-gray-900">{basicSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
-                            </div>
-                            {!isPartnership && (
-                                <div className="text-right mt-1 text-[9px] font-bold text-gray-400">
-                                    {dailyRate.toLocaleString()} ج.م × {attendedDays} يوم حضور
-                                    {isSettlementMode && remainingDaysInMonth > 0 && (
-                                        <> (من أصل {totalWorkingDays} يوم - خصم {remainingDaysInMonth} يوم متبقية)</>
-                                    )}
-                                </div>
-                            )}
-                            {isPartnership ? (
-                                <div className="text-right mt-1 flex flex-col gap-1">
-                                    <p className="text-[10px] font-bold text-blue-500">
-                                        محسوب بنسبة {partnershipPercentage}% من إجمالي تحصيل المجموعة ({totalCollectedForGroup?.toLocaleString()} ج.م)
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="text-right mt-1 flex flex-row-reverse flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold">
-                                    <span className="text-green-600">{attendedDays} يوم حضور</span>
-                                    {absentDays > 0 && <span className="text-red-500">{absentDays} يوم غياب فعلي</span>}
-                                    {isSettlementMode && remainingDaysInMonth > 0 && (
-                                        <span className="text-amber-600">{remainingDaysInMonth} يوم متبقية (تخصم)</span>
-                                    )}
-                                    <span className="text-gray-400">القيمة اليومية: {dailyRate.toLocaleString()} ج.م</span>
-                                </div>
-                            )}
+                    <div className="space-y-3">
+                        <div className="flex flex-row-reverse items-center justify-between bg-gradient-to-l from-green-50 to-white p-4 rounded-2xl border border-green-100 hover:shadow-sm transition-shadow">
+                            <span className="text-xs md:text-sm font-bold text-green-700">المكافآت والحوافز</span>
+                            <span className="text-sm md:text-lg font-black font-sans text-green-600">+{totalRewards.toLocaleString()} ج.م</span>
                         </div>
-                        <div className="flex flex-row-reverse items-center justify-between p-4 md:p-5 bg-green-50/30 rounded-[20px] md:rounded-[24px] border border-green-50 hover:bg-green-50 transition-colors">
-                            <div className="text-right">
-                                <p className="text-xs md:text-sm font-bold text-green-700">مكافآت وحوافز:</p>
-                                <p className="text-[8px] md:text-[9px] font-bold text-green-600/60 leading-none mt-1">(حضور + يدوي)</p>
-                            </div>
-                            <span className="text-sm md:text-lg font-black font-sans text-green-600">+{(autoRewards + manualRewardsTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
+                        <div className="flex flex-row-reverse items-center justify-between bg-gradient-to-l from-red-50 to-white p-4 rounded-2xl border border-red-100 hover:shadow-sm transition-shadow">
+                            <span className="text-xs md:text-sm font-bold text-red-700">الخصومات والاستقطاعات</span>
+                            <span className="text-sm md:text-lg font-black font-sans text-red-600">-{totalDeductions.toLocaleString()} ج.م</span>
                         </div>
-                        <div className="flex flex-row-reverse items-center justify-between p-4 md:p-5 bg-red-50/30 rounded-[20px] md:rounded-[24px] border border-red-50 hover:bg-red-50 transition-colors">
-                            <div className="text-right">
-                                <p className="text-xs md:text-sm font-bold text-red-700">خصومات واستقطاعات:</p>
-                                <p className="text-[8px] md:text-[9px] font-bold text-red-600/60 leading-none mt-1">(غياب + يدوي)</p>
-                            </div>
-                            <span className="text-sm md:text-lg font-black font-sans text-red-600">-{(autoDeductions + manualDeductionsTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
-                        </div>
-                        <div className="flex flex-row-reverse items-center justify-between p-4 md:p-5 bg-purple-50/30 rounded-[20px] md:rounded-[24px] border border-purple-50 hover:bg-purple-50 transition-colors">
-                            <span className="text-xs md:text-sm font-bold text-purple-700">تم صرفه للمدرس:</span>
-                            <span className="text-sm md:text-lg font-black font-sans text-purple-600">-{totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
+                        <div className="flex flex-row-reverse items-center justify-between bg-gradient-to-l from-purple-50 to-white p-4 rounded-2xl border border-purple-100 hover:shadow-sm transition-shadow">
+                            <span className="text-xs md:text-sm font-bold text-purple-700">تم صرفه</span>
+                            <span className="text-sm md:text-lg font-black font-sans text-purple-600">{totalPaid.toLocaleString()} ج.م</span>
                         </div>
                     </div>
                 </div>
 
-                {/* تنبيه وضع التصفية */}
+                {/* تنبيه التصفية */}
                 {isSettlementMode && (
-                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-3xl flex flex-col gap-3 animate-pulse">
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-5 rounded-3xl relative z-10">
                         <div className="flex flex-row-reverse items-center gap-3">
-                            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 shrink-0">
-                                <Calendar size={20} />
+                            <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 shrink-0">
+                                <AlertCircle size={20} />
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex-1">
                                 <h5 className="text-xs font-black text-amber-800">وضع التصفية النشط</h5>
-                                <p className="text-[10px] font-bold text-amber-600">اليوم هو آخر يوم عمل. يتم الخصم عن الأيام المتبقية في الشهر.</p>
+                                <p className="text-[10px] font-bold text-amber-600">اليوم هو آخر يوم عمل. يتم الخصم عن الأيام المتبقية.</p>
                             </div>
                         </div>
-                        <div className="flex flex-row-reverse items-center justify-between bg-white/70 rounded-2xl px-4 py-2.5 border border-amber-100 text-xs font-bold">
-                            <span className="text-amber-800">الراتب الأساسي = القيمة اليومية × أيام الحضور</span>
-                            <span className="text-gray-600">{dailyRate.toLocaleString()} ج.م × {attendedDays} يوم = <span className="text-amber-900">{basicSalary.toLocaleString()} ج.م</span></span>
-                        </div>
-                        <div className="flex flex-row-reverse items-center justify-between bg-white/70 rounded-2xl px-4 py-2 border border-red-100 text-xs font-bold">
-                            <span className="text-red-700">خصم الأيام المتبقية ({remainingDaysInMonth} يوم)</span>
-                            <span className="text-gray-600">-{remainingDaysDeduction.toLocaleString()} ج.م</span>
-                        </div>
-                        <div className="flex flex-row-reverse items-center justify-between bg-amber-100 rounded-2xl px-4 py-3 border border-amber-300 text-sm font-black">
-                            <span className="text-amber-900">إجمالي الراتب بعد التصفية</span>
-                            <span className="text-amber-900">{basicSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
+                        <div className="mt-3 space-y-2 text-xs font-bold">
+                            <div className="flex flex-row-reverse items-center justify-between bg-white/70 rounded-2xl px-4 py-2.5 border border-amber-100">
+                                <span className="text-amber-800">الراتب = القيمة اليومية × أيام الحضور</span>
+                                <span className="text-gray-600">{dailyRate.toLocaleString()} ج.م × {attendedDays} يوم = <span className="text-amber-900">{basicSalary.toLocaleString()} ج.م</span></span>
+                            </div>
+                            <div className="flex flex-row-reverse items-center justify-between bg-white/70 rounded-2xl px-4 py-2 border border-red-100">
+                                <span className="text-red-700">خصم الأيام المتبقية ({remainingDaysInMonth} يوم)</span>
+                                <span className="text-gray-600">-{remainingDaysDeduction.toLocaleString()} ج.م</span>
+                            </div>
+                            <div className="flex flex-row-reverse items-center justify-between bg-amber-100 rounded-2xl px-4 py-3 border border-amber-300 text-sm font-black">
+                                <span className="text-amber-900">الإجمالي بعد التصفية</span>
+                                <span className="text-amber-900">{basicSalary.toLocaleString()} ج.م</span>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* سجل الدفعات النقدية المصروفة لهذا الشهر */}
-                <div className="space-y-4 pt-4 border-t border-gray-50 relative z-10">
+                {/* سجل الدفعات */}
+                <div className="space-y-4 pt-2 relative z-10">
                     <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-3">
-                        <h4 className="text-lg font-black text-gray-800">سجل صرف الراتب</h4>
+                        <h4 className="text-base md:text-lg font-black text-gray-800 flex items-center gap-2">
+                            <Wallet size={18} className="text-blue-500" />
+                            سجل صرف الراتب
+                        </h4>
                         {!isTeacher && (
                             <div className="flex flex-wrap items-center justify-center gap-2">
-                                <button
-                                    onClick={() => {
-                                        const amountStr = prompt('أدخل المبلغ المسلم للمدرس:');
-                                        if (amountStr) {
-                                            const amount = parseFloat(amountStr);
-                                            if (!isNaN(amount)) handlePaySalary(amount, 'مصروف راتب (يدوي)');
-                                        }
-                                    }}
-                                    className="px-3 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-bold border border-blue-100 hover:bg-blue-100 transition-all"
-                                >
-                                    + مصروف راتب (يدوي)
+                                <button onClick={() => setShowPayModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-blue-500 to-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-95 transition-all">
+                                    <Plus size={14} />
+                                    صرف يدوي
+                                </button>
+                                <button onClick={handleSendReport} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-emerald-500 to-emerald-600 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all">
+                                    <MessageCircle size={14} />
+                                    إرسال تقرير
                                 </button>
                             </div>
                         )}
                     </div>
-                    <div className="bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 p-4 md:p-8 text-center">
-                        {paymentsHistory.length === 0 ? (
-                            <p className="text-gray-400 text-sm font-bold">لا توجد دفعات مسجلة لهذا الشهر.</p>
-                        ) : (
-                            <div className="space-y-2">
-                                {paymentsHistory.map((p: any) => (
-                                    <div key={p.id} className="flex flex-row-reverse items-center justify-between text-xs font-bold bg-white p-3 rounded-xl border border-gray-100">
-                                        <span className="text-gray-500">{new Date(p.date).toLocaleDateString('ar-EG')}</span>
-                                        <span className="text-blue-600">{p.description}</span>
-                                        <span className="text-gray-900">{p.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
-                                        {!isTeacher && <button
-                                            onClick={() => deleteSalaryMutation.mutate(p.id)}
-                                            disabled={deleteSalaryMutation.isPending}
-                                            className="text-red-400 hover:text-red-600 disabled:opacity-50"
-                                        >
-                                            {deleteSalaryMutation.isPending ? <Loader size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                                        </button>}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
 
-                {/* أزرار الإجراءات النهائية (صرف كامل المتبقي أو إرسال تقرير) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-                    {!isTeacher && (
-                        <button
-                            onClick={() => handlePaySalary(remainingToPay, 'صرف نهائي')}
-                            disabled={remainingToPay <= 0}
-                            className="h-14 bg-blue-600 text-white rounded-[24px] font-black shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 md:col-span-2"
-                        >
-                            صرف المتبقي ({remainingToPay.toLocaleString()} ج.م) نهائياً 💸
-                        </button>
+                    {paymentsHistory.length === 0 ? (
+                        <div className="bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-200 py-12 text-center">
+                            <Banknote size={40} className="mx-auto text-gray-300 mb-3" />
+                            <p className="text-gray-400 text-sm font-bold">لا توجد دفعات مسجلة لهذا الشهر.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {paymentsHistory.map((p: any) => (
+                                <div key={p.id} className="flex flex-row-reverse items-center justify-between bg-white p-4 rounded-2xl border border-gray-50 hover:border-gray-200 hover:shadow-sm transition-all group">
+                                    <div className="flex flex-row-reverse items-center gap-3">
+                                        <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
+                                            <Banknote size={16} />
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs font-black text-gray-900 font-sans">{p.amount.toLocaleString()} ج.م</p>
+                                            <p className="text-[9px] font-bold text-gray-400">{new Date(p.date).toLocaleDateString('ar-EG')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-full">{p.description}</span>
+                                        {!isTeacher && (
+                                            <button onClick={() => deleteSalaryMutation.mutate(p.id)} disabled={deleteSalaryMutation.isPending} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+                                                {deleteSalaryMutation.isPending ? <Loader size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
+
+                {/* صرف المتبقي */}
+                {!isTeacher && remainingToPay > 0 && (
+                    <div className="relative z-10">
+                        <button onClick={() => handlePaySalary(remainingToPay, 'صرف نهائي')} className="w-full h-14 bg-gradient-to-l from-blue-600 to-blue-700 text-white rounded-[24px] font-black shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                            صرف المتبقي ({remainingToPay.toLocaleString()} ج.م) نهائياً
+                            <CircleDollarSign size={18} />
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {/* نافذة الصرف اليدوي */}
+            {showPayModal && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+                    <div onClick={() => setShowPayModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+                    <div className="bg-white rounded-[32px] shadow-2xl border border-white/20 w-full max-w-md overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
+                        <div className="bg-gradient-to-l from-blue-500 to-blue-600 p-6 text-center relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent)]" />
+                            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 relative z-10 backdrop-blur-sm">
+                                <CircleDollarSign size={28} className="text-white" />
+                            </div>
+                            <h3 className="text-lg font-black text-white relative z-10">صرف راتب يدوي</h3>
+                            <p className="text-sm text-blue-100 relative z-10 mt-1">أدخل المبلغ المراد صرفه للمدرس</p>
+                            <button onClick={() => setShowPayModal(false)} className="absolute top-4 left-4 w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-white hover:bg-white/30 transition-all z-10">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="space-y-2 text-right">
+                                <label className="text-xs font-bold text-gray-500 mr-1">المبلغ (ج.م)</label>
+                                <input
+                                    type="number"
+                                    placeholder="أدخل المبلغ..."
+                                    value={payAmount}
+                                    onChange={(e) => setPayAmount(e.target.value)}
+                                    autoFocus
+                                    className="w-full h-14 bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold text-lg"
+                                />
+                            </div>
+                            <div className="space-y-2 text-right">
+                                <label className="text-xs font-bold text-gray-500 mr-1">البيان (اختياري)</label>
+                                <input
+                                    type="text"
+                                    placeholder="مثال: صرف جزء من الراتب..."
+                                    value={payNote}
+                                    onChange={(e) => setPayNote(e.target.value)}
+                                    className="w-full h-12 bg-gray-50 border border-gray-100 rounded-2xl px-4 text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button onClick={() => setShowPayModal(false)} className="flex-1 h-12 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all text-sm">
+                                    إلغاء
+                                </button>
+                                <button onClick={handleManualPay} disabled={!payAmount || parseFloat(payAmount) <= 0} className="flex-1 h-12 bg-gradient-to-l from-blue-500 to-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm">
+                                    صرف
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
