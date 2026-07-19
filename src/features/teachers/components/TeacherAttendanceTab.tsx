@@ -95,23 +95,23 @@ export const TeacherAttendanceTab = ({
             </div>
 
             {/* كروت ملخص الحضور (الغياب والمكافآت) */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                <div className="bg-white p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
                     <div className="text-right">
-                        <p className="text-xs font-bold text-gray-400 mb-1">  الغياب</p>
-                        <p className="text-2xl font-black text-red-600 font-sans">{Number(totalAbsenceDays)} يوم</p>
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 mb-0.5 md:mb-1">الغياب</p>
+                        <p className="text-lg md:text-2xl font-black text-red-600 font-sans">{Number(totalAbsenceDays)} يوم</p>
                     </div>
-                    <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-500">
-                        <Calendar size={24} />
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-red-50 rounded-xl md:rounded-2xl flex items-center justify-center text-red-500">
+                        <Calendar size={18} className="md:w-6 md:h-6" />
                     </div>
                 </div>
-                <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
+                <div className="bg-white p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
                     <div className="text-right">
-                        <p className="text-xs font-bold text-gray-400 mb-1"> المكافآت</p>
-                        <p className="text-2xl font-black text-green-600 font-sans">{Number(totalRewardDays)} يوم</p>
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 mb-0.5 md:mb-1">المكافآت</p>
+                        <p className="text-lg md:text-2xl font-black text-green-600 font-sans">{Number(totalRewardDays)} يوم</p>
                     </div>
-                    <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-500">
-                        <Calendar size={24} />
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-green-50 rounded-xl md:rounded-2xl flex items-center justify-center text-green-500">
+                        <Calendar size={18} className="md:w-6 md:h-6" />
                     </div>
                 </div>
                 {!isTeacher && (
@@ -136,25 +136,25 @@ export const TeacherAttendanceTab = ({
                             }
                             alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
                         }}
-                        className="bg-gradient-to-br from-red-50 to-white p-6 rounded-[32px] border border-red-100 shadow-sm hover:shadow-md hover:border-red-200 transition-all flex flex-col items-center justify-center text-center gap-2"
+                        className="bg-gradient-to-br from-red-50 to-white p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-red-100 shadow-sm hover:shadow-md hover:border-red-200 transition-all flex flex-col items-center justify-center text-center gap-1 md:gap-2"
                     >
-                        <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-red-500">
-                            <Calendar size={24} />
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 rounded-xl md:rounded-2xl flex items-center justify-center text-red-500">
+                            <Calendar size={18} className="md:w-6 md:h-6" />
                         </div>
-                        <p className="text-xs font-bold text-red-600">تعميد غياب</p>
-                        <p className="text-[9px] font-bold text-red-400">للمتبقي من الشهر</p>
+                        <p className="text-[10px] md:text-xs font-bold text-red-600">تعميد غياب</p>
+                        <p className="text-[7px] md:text-[9px] font-bold text-red-400">للمتبقي من الشهر</p>
                     </button>
                 )}
             </div>
 
             {/* التقويم الشهري التفاعلي للحضور */}
-            <div className="bg-white p-6 md:p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                <h4 className="font-black text-gray-900 text-lg md:text-xl text-center">سجل حضور شهر: {selectedMonth}</h4>
+                <div className="bg-white p-3 md:p-8 rounded-[28px] md:rounded-[40px] border border-gray-100 shadow-sm space-y-4 md:space-y-6">
+                <h4 className="font-black text-gray-900 text-sm md:text-xl text-center">سجل حضور شهر: {selectedMonth}</h4>
 
-                <div className="grid grid-cols-7 gap-1 md:gap-2">
+                <div className="grid grid-cols-7 gap-0.5 md:gap-2">
                     {/* رؤوس أيام الأسبوع */}
                     {weekDays.map(day => (
-                        <div key={day} className="text-center text-[8px] md:text-[10px] font-bold text-gray-400 pb-2">{day}</div>
+                        <div key={day} className="text-center text-[7px] md:text-[10px] font-bold text-gray-400 pb-1 md:pb-2">{day}</div>
                     ))}
 
                     {/* موازنة بداية التقويم (Offset) بناءً على أول يوم في الشهر */}
@@ -205,20 +205,20 @@ export const TeacherAttendanceTab = ({
                                             setTempStatus(s?.includes('reward') ? 'reward' : (s === 'present' ? 'present' : (s === 'absent' ? 'absent' : 'discipline')));
                                         }}
                                         className={cn(
-                                            "aspect-square w-full rounded-xl md:rounded-2xl border flex flex-col items-center justify-center text-xs md:text-sm font-bold transition-all relative shadow-sm",
-                                            isToday ? "border-blue-500 ring-2 ring-blue-500/10 shadow-lg shadow-blue-500/10" : "border-gray-50",
+                                            "aspect-square w-full rounded-lg md:rounded-2xl border flex flex-col items-center justify-center text-[10px] md:text-sm font-bold transition-all relative shadow-sm",
+                                            isToday ? "border-blue-500 ring-2 ring-blue-500/10 shadow-lg shadow-blue-500/10" : "border-gray-100 md:border-gray-50",
                                             isWeekend || isTeacher ? "bg-red-50/10 border-red-50 text-red-400 cursor-default" :
                                                 status === 'present' ? "bg-green-50 border-green-100 text-green-600" :
                                                     (status === 'quarter' || status === 'half') ? "bg-orange-50 border-orange-100 text-orange-600" :
                                                         (status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') ? "bg-green-50 border-green-200 text-green-600" :
                                                             status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
-                                                                "bg-gray-50/50 text-gray-300 border-gray-100 hover:border-blue-200"
+                                                                "bg-gray-50/50 text-gray-400 border-gray-100 hover:border-blue-200"
                                         )}
                                     >
-                                        <span className="mb-0.5">{day}</span>
-                                        {isWeekend && <span className="text-[6px] md:text-[7px] mt-0.5 font-black uppercase text-red-500/40">إجازة</span>}
-                                        {status && (status === 'present' || status?.includes('reward')) && !isWeekend && (
-                                            <CheckCircle2 size={14} className="text-green-600/80" />
+                                        <span className="mb-0.5 leading-none">{day}</span>
+                                        {isWeekend && <span className="text-[5px] md:text-[7px] mt-0.5 font-black uppercase text-red-500/40">إجازة</span>}
+                                        {(status === 'present' || status?.includes('reward')) && !isWeekend && (
+                                            <CheckCircle2 size={10} className="md:w-[14px] md:h-[14px] text-green-600/80" />
                                         )}
                                         {status && (status === 'quarter' || status === 'half' || status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') && !isWeekend && (
                                             <div className={cn(
@@ -233,11 +233,11 @@ export const TeacherAttendanceTab = ({
                                         <div onClick={() => setActiveDayMenu(null)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
                                     </FadeIn>
                                     <SlideIn show={activeDayMenu === day && !isTeacher}
-                                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[340px] bg-white rounded-[32px] shadow-2xl border border-gray-100 p-6 z-[201] space-y-4"
+                                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-[400px] bg-white rounded-[32px] shadow-2xl border border-gray-100 p-5 md:p-6 z-[201] space-y-4"
                                     >
                                         <div className="flex flex-row-reverse items-center justify-between border-b border-gray-50 pb-3">
-                                            <h5 className="font-black text-gray-800 text-base">تعديل سجل يوم {day}</h5>
-                                            <button onClick={() => setActiveDayMenu(null)} className="text-gray-400 hover:bg-gray-50 p-1 rounded-full transition-all"><X size={20} /></button>
+                                            <h5 className="font-black text-gray-800 text-sm md:text-base">تعديل سجل يوم {day}</h5>
+                                            <button onClick={() => setActiveDayMenu(null)} className="text-gray-400 hover:bg-gray-50 p-1 rounded-full transition-all"><X size={18} className="md:w-5 md:h-5" /></button>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-2">

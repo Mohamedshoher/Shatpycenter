@@ -819,30 +819,26 @@ export default function TeacherDetailModal({
             <SlideIn show={isOpen}
                 className="fixed inset-0 z-[200] flex items-center justify-center p-2 md:p-4"
             >
-                <div className="bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20 w-full max-w-6xl h-[90vh] md:h-[85vh]">
+                <div className="bg-white rounded-[40px] md:rounded-[56px] shadow-2xl overflow-hidden flex flex-col border border-white/20 w-full max-w-full md:max-w-7xl h-[90vh] md:h-[90vh]">
                     {/* رأس النافذة (Header) */}
-                    <div className="p-5 md:p-8 relative bg-white border-b border-gray-50 shrink-0">
-                        <div className="flex items-center justify-between gap-4">
-                            <div className="flex flex-row-reverse items-center gap-3">
-                                <div className="text-right min-w-0">
-                                        <h2 className="text-lg md:text-2xl font-black text-slate-900 truncate leading-tight">{teacher!.fullName}</h2>
-                                    {isDirector ? (
-                                        <div className="flex flex-row-reverse items-center justify-end gap-1 mt-1">
-                                            <button onClick={() => onDelete?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="حذف"><Trash2 size={16} /></button>
-                                            <button onClick={() => onEdit?.(teacher!)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="تعديل"><Edit3 size={16} /></button>
-                                            <a href={`tel:${teacher!.phone}`} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="اتصال"><Phone size={16} /></a>
-                                        </div>
-                                    ) : (
-                                        <p className="text-blue-500 font-bold text-[10px] md:text-sm mt-0.5 whitespace-nowrap">الملف الشخصي للمدرس</p>
-                                    )}
-                                </div>
+                    <div className="p-4 md:p-6 relative bg-white border-b border-gray-50 shrink-0">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-row-reverse items-center gap-2 min-w-0 flex-1">
+                                <h2 className="text-base md:text-2xl font-black text-slate-900 truncate leading-tight">{teacher!.fullName}</h2>
+                                {isDirector ? (
+                                    <div className="flex flex-row-reverse items-center gap-1 shrink-0">
+                                        <a href={`tel:${teacher!.phone}`} className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="اتصال"><Phone size={14} className="md:w-[18px] md:h-[18px]" /></a>
+                                        <button onClick={() => onEdit?.(teacher!)} className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="تعديل"><Edit3 size={14} className="md:w-[18px] md:h-[18px]" /></button>
+                                        <button onClick={() => onDelete?.(teacher!)} className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="حذف"><Trash2 size={14} className="md:w-[18px] md:h-[18px]" /></button>
+                                    </div>
+                                ) : (
+                                    <p className="text-blue-500 font-bold text-[10px] md:text-sm whitespace-nowrap">الملف الشخصي</p>
+                                )}
                             </div>
 
-                            <div className="flex items-center gap-1.5 md:gap-3">
-                                <button onClick={onClose} className="w-10 h-10 md:w-12 md:h-12 bg-slate-100/80 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-all">
-                                    <X size={20} />
-                                </button>
-                            </div>
+                            <button onClick={onClose} className="w-8 h-8 md:w-10 md:h-10 bg-slate-100/80 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-all shrink-0">
+                                <X size={18} className="md:w-5 md:h-5" />
+                            </button>
                         </div>
                     </div>
 
