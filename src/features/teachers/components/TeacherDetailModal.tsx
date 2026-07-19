@@ -38,6 +38,7 @@ import { automationService } from '@/features/automation/services/automationServ
 import { useTeacherDashboard } from '@/features/teachers/hooks/useTeacherDashboard';
 import { TeacherDeficitModal } from './TeacherDeficitModal';
 import { TeacherGroupsTab } from './TeacherGroupsTab';
+import { TeacherAgreementTab } from './TeacherAgreementTab';
 
 // ==========================================
 // 4. التحميل البطيء للمكونات الثقيلة
@@ -682,6 +683,7 @@ export default function TeacherDetailModal({
         { id: 'attendance', label: 'الحضور', icon: Calendar },
         { id: 'payroll', label: 'الراتب', icon: CreditCard },
         { id: 'groups', label: 'المجموعات', icon: Layers },
+        { id: 'agreement', label: 'الاتفاق', icon: FileText },
     ].filter(tab => {
         if (user?.role === 'supervisor') return tab.id !== 'payroll' && tab.id !== 'collection';
         return true;
@@ -805,6 +807,13 @@ export default function TeacherDetailModal({
                             expectedPartnershipSalary={salaryStats.expectedPartnershipSalary}
                         />
                     </Suspense>
+                );
+            // ----------------------------------------
+            // تبويب بنود الاتفاق (Agreement)
+            // ----------------------------------------
+            case 'agreement':
+                return (
+                    <TeacherAgreementTab teacher={teacher} />
                 );
         }
     };

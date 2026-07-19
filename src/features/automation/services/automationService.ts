@@ -146,8 +146,8 @@ export const getRules = async (): Promise<AutomationRule[]> => {
             schedule: {}
         },
         {
-            id: 'default-exam-rule', name: 'خصم ربع يوم لعدم تسجيل اختبار', trigger: 'repeated_exams',
-            recipients: ['teacher'], condition: { deductionAmount: 0.25 },
+            id: 'default-exam-rule', name: 'خصم نصف يوم لعدم تسجيل اختبار', trigger: 'repeated_exams',
+            recipients: ['teacher'], condition: { deductionAmount: 0.5 },
             action: { type: 'apply_deduction', messageTemplate: '' }, enabled: true, createdAt: new Date(),
             schedule: {}
         }
@@ -348,11 +348,11 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
         if (studentIds.length === 0) continue;
 
         if (!studentIds.some(id => examStudents.has(id)) && !alreadyDeducted.has(t.id)) {
-            const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسجيل الاختبارات الأسبوعية', rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
+            const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.5, 'عدم تسجيل الاختبارات الأسبوعية', rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
             logs.push(...res.logs);
             try {
                 const conv = await chatService.getOrCreateConversation(['director', t.id], ['المدير العام', t.full_name], 'director-teacher');
-                await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم ربع يوم لعدم تسجيل اختبار ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
+                await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم نصف يوم لعدم تسجيل اختبار ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
             } catch (e) {}
         }
     }
