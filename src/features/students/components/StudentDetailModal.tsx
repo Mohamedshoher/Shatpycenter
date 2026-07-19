@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, CreditCard, BookOpen, FileText, Clock } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
+import BookOpen from 'lucide-react/dist/esm/icons/book-open'
+import FileText from 'lucide-react/dist/esm/icons/file-text'
+import Clock from 'lucide-react/dist/esm/icons/clock';
 import { cn } from '../../../lib/utils';
 import { useStudents } from '../hooks/useStudents';
 import { useStudentRecords } from '../hooks/useStudentRecords';
@@ -10,12 +15,12 @@ import dynamic from 'next/dynamic';
 
 // استيراد المكونات الفرعية
 import ModalHeader from './ModalHeader';
-import AttendanceTab from './AttendanceTab';
-import FeesTab from './FeesTab';
-import ExamsTab from './ExamsTab';
 
+const AttendanceTab = dynamic(() => import('./AttendanceTab'), { ssr: false });
+const FeesTab = dynamic(() => import('./FeesTab'), { ssr: false });
+const ExamsTab = dynamic(() => import('./ExamsTab'), { ssr: false });
 const ScheduleTab = dynamic(() => import('./ScheduleTab'), { ssr: false });
-import NotesTab from './NotesTab';
+const NotesTab = dynamic(() => import('./NotesTab'), { ssr: false });
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 

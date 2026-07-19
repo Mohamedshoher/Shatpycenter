@@ -4,7 +4,14 @@ import { useState, useEffect } from 'react';
 import { useLogin } from '../hooks/useLogin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Users, GraduationCap, Phone, Lock, Briefcase, UserCheck, UserCircle } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
+import Users from 'lucide-react/dist/esm/icons/users'
+import GraduationCap from 'lucide-react/dist/esm/icons/graduation-cap'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import Lock from 'lucide-react/dist/esm/icons/lock'
+import Briefcase from 'lucide-react/dist/esm/icons/briefcase'
+import UserCheck from 'lucide-react/dist/esm/icons/user-check'
+import UserCircle from 'lucide-react/dist/esm/icons/user-circle';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { cn } from '@/lib/utils';
 

@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { ArrowUpCircle, Wallet, ChevronDown, ChevronLeft, ChevronRight, Calendar, Plus, X, ArrowLeft } from 'lucide-react';
+import ArrowUpCircle from 'lucide-react/dist/esm/icons/arrow-up-circle'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import X from 'lucide-react/dist/esm/icons/x'
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

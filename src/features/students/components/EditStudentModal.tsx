@@ -6,7 +6,7 @@ import Modal from '@/components/ui/modal'; // مكون النافذة المنب
 import { Input } from '@/components/ui/input'; // مكون حقل الإدخال
 import { Button } from '@/components/ui/button'; // مكون الزر
 import { updateStudent } from '../services/studentService'; // خدمة تحديث بيانات الطالب في قاعدة البيانات
-import { Loader2 } from 'lucide-react'; // أيقونة التحميل
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2'; // أيقونة التحميل
 import { Student, Group } from '@/types'; // استيراد نوع بيانات الطالب
 import { getGroups } from '@/features/groups/services/groupService';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'; // مكتبة إدارة حالات البيانات (TanStack Query)

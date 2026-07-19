@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateGroup } from '@/features/groups/services/groupService';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import Modal from '@/components/ui/modal';
-import { Save, X } from 'lucide-react';
+import Save from 'lucide-react/dist/esm/icons/save'
+import X from 'lucide-react/dist/esm/icons/x';
 
 interface EditGroupModalProps {
     isOpen: boolean;

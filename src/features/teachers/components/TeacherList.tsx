@@ -7,18 +7,16 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { deleteTeacher } from '../services/teacherService';
-import {
-    UserPlus,
-    Search,
-    Menu,
-    SlidersHorizontal,
-    X,
-    Phone,
-    Briefcase,
-    CheckCircle2,
-    XCircle,
-    TrendingDown
-} from 'lucide-react';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
+import Search from 'lucide-react/dist/esm/icons/search'
+import Menu from 'lucide-react/dist/esm/icons/menu'
+import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal'
+import X from 'lucide-react/dist/esm/icons/x'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import Briefcase from 'lucide-react/dist/esm/icons/briefcase'
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import XCircle from 'lucide-react/dist/esm/icons/x-circle'
+import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
 
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Teacher } from '@/types';

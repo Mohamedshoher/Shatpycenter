@@ -1,6 +1,8 @@
 //  تفاصيل عجز المجموعة
 import { FadeIn, SlideIn } from '@/components/ui/transition';
-import { X, Gift, UserX } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import Gift from 'lucide-react/dist/esm/icons/gift'
+import UserX from 'lucide-react/dist/esm/icons/user-x';
 import { cn } from '@/lib/utils';
 
 interface Props {

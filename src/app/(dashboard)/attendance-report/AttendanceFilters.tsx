@@ -1,5 +1,5 @@
 "use client";
-import { ChevronDown } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 
 interface AttendanceFiltersProps {
     groups: any[];

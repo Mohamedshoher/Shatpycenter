@@ -1,18 +1,16 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import {
-    ArrowUpCircle,
-    ArrowDownCircle,
-    Wallet,
-    Plus,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    Calendar,
-    AlertCircle,
-    X,
-} from 'lucide-react';
+import ArrowUpCircle from 'lucide-react/dist/esm/icons/arrow-up-circle'
+import ArrowDownCircle from 'lucide-react/dist/esm/icons/arrow-down-circle'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import X from 'lucide-react/dist/esm/icons/x';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';

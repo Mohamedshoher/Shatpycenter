@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeductions';
 import { DeductionsList } from '@/features/teachers/components/DeductionsList';
-import { Loader, AlertCircle } from 'lucide-react';
+import Loader from 'lucide-react/dist/esm/icons/loader'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 
 export const TeacherDeductionsPanel: React.FC = () => {
   const [isClient, setIsClient] = useState(false);

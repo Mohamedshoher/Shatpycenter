@@ -1,5 +1,6 @@
 "use client";
-import { CheckCircle2, BarChart2 } from 'lucide-react';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import BarChart2 from 'lucide-react/dist/esm/icons/bar-chart-2';
 import { cn } from '@/lib/utils';
 
 interface AttendanceStatsProps {

@@ -1,6 +1,9 @@
 // التحصيل من المدرس ومن المدير
 import { FadeIn, SlideIn } from '@/components/ui/transition';
-import { X, CircleDollarSign, AlertCircle, Trash2 } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import CircleDollarSign from 'lucide-react/dist/esm/icons/circle-dollar-sign'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { cn } from '@/lib/utils';
 
 interface Props {

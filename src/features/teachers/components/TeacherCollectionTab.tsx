@@ -1,15 +1,13 @@
 "use client";// تبويب التحصيل
 
 import { Button } from '@/components/ui/button';
-import { 
-    CircleDollarSign, 
-    Calendar, 
-    ChevronRight, 
-    ChevronLeft, 
-    Coins, 
-    Trash2, 
-    AlertCircle 
-} from 'lucide-react';
+import CircleDollarSign from 'lucide-react/dist/esm/icons/circle-dollar-sign'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import Coins from 'lucide-react/dist/esm/icons/coins'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 

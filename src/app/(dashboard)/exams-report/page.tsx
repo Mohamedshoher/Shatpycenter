@@ -1,19 +1,17 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import {
-    Trophy,
-    TrendingUp,
-    ChevronDown,
-    Bell,
-    Share2,
-    ChevronRight,
-    ChevronLeft,
-    User,
-    AlertCircle,
-    Calendar,
-    MessageCircle
-} from 'lucide-react';
+import Trophy from 'lucide-react/dist/esm/icons/trophy'
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
+import Bell from 'lucide-react/dist/esm/icons/bell'
+import Share2 from 'lucide-react/dist/esm/icons/share-2'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import User from 'lucide-react/dist/esm/icons/user'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { FadeIn } from '@/components/ui/transition';
 

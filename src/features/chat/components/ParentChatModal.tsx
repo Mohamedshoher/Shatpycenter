@@ -5,7 +5,11 @@ import { useChat } from '../hooks/useChat';
 import { ConversationList } from './ConversationList';
 import { MessageArea } from './MessageArea';
 import { MessageInput } from './MessageInput';
-import { X, Search, UserPlus, MessageCircle, ArrowRight } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import Search from 'lucide-react/dist/esm/icons/search'
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import { useAuthStore } from '@/store/useAuthStore';
 import { chatService } from '../services/chatService';
 import { FadeIn, SlideIn } from '@/components/ui/transition';

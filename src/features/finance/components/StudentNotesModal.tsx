@@ -1,6 +1,17 @@
 "use client";
 
-import { X, MessageSquare, Users, User, Archive, Trash2, CheckCircle2, Circle, MessageCircle, ArrowRightLeft, Reply, Send } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square'
+import Users from 'lucide-react/dist/esm/icons/users'
+import User from 'lucide-react/dist/esm/icons/user'
+import Archive from 'lucide-react/dist/esm/icons/archive'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import Circle from 'lucide-react/dist/esm/icons/circle'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import ArrowRightLeft from 'lucide-react/dist/esm/icons/arrow-right-left'
+import Reply from 'lucide-react/dist/esm/icons/reply'
+import Send from 'lucide-react/dist/esm/icons/send';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { useState } from 'react';
 import { FadeIn, SlideIn } from '@/components/ui/transition';

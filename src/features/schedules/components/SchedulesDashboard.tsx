@@ -5,7 +5,14 @@ import { useQuery } from '@tanstack/react-query';
 import { getStudents } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Clock, Users, ArrowRight, Loader2, CalendarClock, TrendingUp, Filter, UserMinus } from 'lucide-react';
+import Clock from 'lucide-react/dist/esm/icons/clock'
+import Users from 'lucide-react/dist/esm/icons/users'
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right'
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
+import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock'
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
+import Filter from 'lucide-react/dist/esm/icons/filter'
+import UserMinus from 'lucide-react/dist/esm/icons/user-minus';
 import { cn } from '@/lib/utils';
 import { FadeIn } from '@/components/ui/transition';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';

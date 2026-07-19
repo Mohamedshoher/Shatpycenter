@@ -5,23 +5,21 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/lib/utils';
-import {
-    LayoutDashboard,
-    LayoutGrid,
-    Users,
-    GraduationCap,
-    Wallet,
-    Settings,
-    LogOut,
-    X,
-    CalendarCheck,
-    FileText,
-    Archive,
-    MessageCircle,
-    Zap,
-    UserCheck,
-    CalendarClock
-} from 'lucide-react';
+import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard'
+import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid'
+import Users from 'lucide-react/dist/esm/icons/users'
+import GraduationCap from 'lucide-react/dist/esm/icons/graduation-cap'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import Settings from 'lucide-react/dist/esm/icons/settings'
+import LogOut from 'lucide-react/dist/esm/icons/log-out'
+import X from 'lucide-react/dist/esm/icons/x'
+import CalendarCheck from 'lucide-react/dist/esm/icons/calendar-check'
+import FileText from 'lucide-react/dist/esm/icons/file-text'
+import Archive from 'lucide-react/dist/esm/icons/archive'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Zap from 'lucide-react/dist/esm/icons/zap'
+import UserCheck from 'lucide-react/dist/esm/icons/user-check'
+import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
 import { FadeIn } from '@/components/ui/transition';
 import { logout } from '@/features/auth/services/authService';
 import { useRouter } from 'next/navigation';

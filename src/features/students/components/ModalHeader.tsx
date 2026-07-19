@@ -1,4 +1,9 @@
-import { X, Archive, RotateCcw, Edit3, MessageCircle, Phone } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import Archive from 'lucide-react/dist/esm/icons/archive'
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw'
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Phone from 'lucide-react/dist/esm/icons/phone';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useStudents } from '../hooks/useStudents';
 import { useGroups } from '../../../features/groups/hooks/useGroups';

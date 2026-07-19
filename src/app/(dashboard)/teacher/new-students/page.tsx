@@ -5,7 +5,12 @@ import { useQuery } from '@tanstack/react-query';
 import { getStudents } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Users, Calendar, Phone, BookOpen, Info, UserCheck } from 'lucide-react';
+import Users from 'lucide-react/dist/esm/icons/users'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import BookOpen from 'lucide-react/dist/esm/icons/book-open'
+import Info from 'lucide-react/dist/esm/icons/info'
+import UserCheck from 'lucide-react/dist/esm/icons/user-check';
 import { cn } from '@/lib/utils';
 import { Student, Group } from '@/types';
 

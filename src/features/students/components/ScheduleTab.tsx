@@ -1,5 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Clock, Trash2, Edit2, Loader2, ArrowRightLeft, X } from 'lucide-react';
+import Clock from 'lucide-react/dist/esm/icons/clock'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import Edit2 from 'lucide-react/dist/esm/icons/edit-2'
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
+import ArrowRightLeft from 'lucide-react/dist/esm/icons/arrow-right-left'
+import X from 'lucide-react/dist/esm/icons/x';
 import { Button } from '../../../components/ui/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { updateStudent, getStudents } from '../services/studentService';

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x';
 import { SlideIn, FadeIn } from './transition';
 import { cn } from '@/lib/utils';
 

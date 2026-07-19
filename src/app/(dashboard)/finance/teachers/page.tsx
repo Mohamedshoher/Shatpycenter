@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { Wallet, Gift, AlertCircle, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Calendar, ShieldCheck, Loader, X } from 'lucide-react';
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import Gift from 'lucide-react/dist/esm/icons/gift'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left'
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check'
+import Loader from 'lucide-react/dist/esm/icons/loader'
+import X from 'lucide-react/dist/esm/icons/x';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

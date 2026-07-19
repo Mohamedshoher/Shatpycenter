@@ -4,6 +4,19 @@ export function cn(...inputs: ClassValue[]) {
     return clsx(inputs);
 }
 
+export function normalize(s: string): string {
+    if (!s) return '';
+    return s
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/ى/g, 'ي')
+        .replace(/[ءئؤ]/g, '')
+        .replace(/[ًٌٍَُِّ]/g, '')
+        .replace(/\s+/g, '')
+        .toLowerCase()
+        .trim();
+}
+
 /**
  * دالة بحث متدرجة: تبحث أولاً في الاسم الأول، إذا لم تجد تبحث في الثاني، ثم الثالث.
  */

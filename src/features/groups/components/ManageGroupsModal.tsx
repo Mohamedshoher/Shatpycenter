@@ -7,7 +7,10 @@ import { getGroups, updateGroup, deleteGroup } from '@/features/groups/services/
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import { getStudents } from '@/features/students/services/studentService';
 import Modal from '@/components/ui/modal';
-import { Trash2, User, X, Edit2 } from 'lucide-react';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import User from 'lucide-react/dist/esm/icons/user'
+import X from 'lucide-react/dist/esm/icons/x'
+import Edit2 from 'lucide-react/dist/esm/icons/edit-2';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 import EditGroupModal from './EditGroupModal';

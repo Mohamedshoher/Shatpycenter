@@ -1,17 +1,5 @@
 import { useMemo } from 'react';
-
-// دالة مساعدة لتوحيد النصوص (نفس التي في كودك)
-const normalize = (s: string) => {
-    if (!s) return '';
-    return s
-        .replace(/[أإآ]/g, 'ا')
-        .replace(/ة/g, 'ه')
-        .replace(/ى/g, 'ي')
-        .replace(/[ءئؤ]/g, '')
-        .replace(/[ًٌٍَُِّ]/g, '')
-        .replace(/\s+/g, '')
-        .trim();
-};
+import { normalize } from '@/lib/utils';
 
 export const useTeacherDashboard = (
     teacher: any,

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Wifi, WifiOff } from 'lucide-react';
+import Wifi from 'lucide-react/dist/esm/icons/wifi'
+import WifiOff from 'lucide-react/dist/esm/icons/wifi-off';
 
 function StatusBar({ show, children, className }: { show: boolean; children: React.ReactNode; className: string }) {
     return (

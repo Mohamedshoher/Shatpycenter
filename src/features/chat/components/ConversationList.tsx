@@ -3,7 +3,8 @@
 import { Conversation } from '@/store/useChatStore';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { MessageCircle, Badge } from 'lucide-react';
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Badge from 'lucide-react/dist/esm/icons/badge';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useStudents } from '@/features/students/hooks/useStudents';
 

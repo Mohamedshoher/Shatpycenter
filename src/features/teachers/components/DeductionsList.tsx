@@ -4,7 +4,9 @@
 // 1. الاستيرادات الأساسية (الأنواع، الأيقونات، وأدوات التاريخ)
 // ==========================================
 import { TeacherDeduction } from '@/features/teachers/services/deductionService'; // استيراد نوع بيانات الخصم
-import { Trash2, AlertCircle, Calendar } from 'lucide-react'; // أيقونات واجهة المستخدم
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'; // أيقونات واجهة المستخدم
 import { format } from 'date-fns'; // أداة لتنسيق وعرض التواريخ
 import { ar } from 'date-fns/locale'; // دعم اللغة العربية لتنسيق التاريخ
 

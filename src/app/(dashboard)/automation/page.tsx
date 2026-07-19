@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAutomationExecution } from '@/features/automation/hooks/useAutomationExecution';
 import { useAutomation } from '@/features/automation/hooks/useAutomation';
-import { Calendar, Trash2, BookOpen, Home } from 'lucide-react';
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import BookOpen from 'lucide-react/dist/esm/icons/book-open'
+import Home from 'lucide-react/dist/esm/icons/home';
 import { cn } from '@/lib/utils';
 
 export default function AutomationPage() {

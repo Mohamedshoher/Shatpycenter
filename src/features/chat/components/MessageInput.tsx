@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import Send from 'lucide-react/dist/esm/icons/send';
 import { updateUserPresence } from '../services/presenceService';
 import { useAuthStore } from '@/store/useAuthStore';
 

@@ -5,7 +5,7 @@ import Modal from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { addStudent } from '../services/studentService';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { Student, Group } from '@/types';
 import { getGroups } from '@/features/groups/services/groupService';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';

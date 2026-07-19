@@ -1,7 +1,18 @@
 "use client";
 
 import { useState } from 'react';
-import { Calendar, CircleDollarSign, MessageCircle, Trash2, Loader, ChevronRight, ChevronLeft, X, Wallet, Plus, Banknote, AlertCircle } from 'lucide-react';
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import CircleDollarSign from 'lucide-react/dist/esm/icons/circle-dollar-sign'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import Loader from 'lucide-react/dist/esm/icons/loader'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import X from 'lucide-react/dist/esm/icons/x'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import Banknote from 'lucide-react/dist/esm/icons/banknote'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { cn } from '@/lib/utils';
 
 interface TeacherPayrollTabProps {

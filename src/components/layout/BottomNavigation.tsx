@@ -3,17 +3,15 @@
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import Link from 'next/link';
-import {
-    Users,
-    LayoutGrid,
-    CreditCard,
-    CalendarCheck,
-    FileSpreadsheet,
-    User,
-    Zap,
-    MessageCircle,
-    FileText
-} from 'lucide-react';
+import Users from 'lucide-react/dist/esm/icons/users'
+import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid'
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
+import CalendarCheck from 'lucide-react/dist/esm/icons/calendar-check'
+import FileSpreadsheet from 'lucide-react/dist/esm/icons/file-spreadsheet'
+import User from 'lucide-react/dist/esm/icons/user'
+import Zap from 'lucide-react/dist/esm/icons/zap'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import FileText from 'lucide-react/dist/esm/icons/file-text';
 import { cn } from '@/lib/utils';
 
 export default function BottomNavigation() {

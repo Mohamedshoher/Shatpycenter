@@ -2,7 +2,8 @@ import { cn } from '@/lib/utils';
 import { ChatMessage } from '@/store/useChatStore';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { AlertTriangle, Pin } from 'lucide-react';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle'
+import Pin from 'lucide-react/dist/esm/icons/pin';
 import React from 'react';
 
 interface MessageBubbleProps {

@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Trash2, Pencil, Check, X } from 'lucide-react';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import Pencil from 'lucide-react/dist/esm/icons/pencil'
+import Check from 'lucide-react/dist/esm/icons/check'
+import X from 'lucide-react/dist/esm/icons/x';
 import { Button } from '../../../components/ui/button';
 import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';

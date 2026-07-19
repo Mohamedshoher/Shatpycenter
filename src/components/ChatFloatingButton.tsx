@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { MessageCircle } from 'lucide-react';
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import Link from 'next/link';
 import { useChatStore } from '@/store/useChatStore';
 import { playNotificationSound } from '@/lib/notificationSound';

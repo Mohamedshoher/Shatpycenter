@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users } from 'lucide-react';
+import Users from 'lucide-react/dist/esm/icons/users';
 
 // المكونات الفرعية
 import AttendanceStats from './AttendanceStats';

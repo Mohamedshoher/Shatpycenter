@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { X, Plus, Loader } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import Loader from 'lucide-react/dist/esm/icons/loader';
 import { cn } from '@/lib/utils';
 import { addTransaction } from '../services/financeService';
 import { useAuthStore } from '@/store/useAuthStore';

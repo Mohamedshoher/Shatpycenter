@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
 import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useQueryClient } from '@tanstack/react-query';

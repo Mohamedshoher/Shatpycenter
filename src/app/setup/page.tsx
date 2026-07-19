@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { registerRoleAccount } from '@/features/auth/services/authService';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Loader2, CheckCircle } from 'lucide-react';
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check'
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 
 export default function SetupPage() {
     const [loading, setLoading] = useState(false);

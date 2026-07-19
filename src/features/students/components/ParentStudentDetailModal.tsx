@@ -1,25 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import {
-    X,
-    Calendar,
-    CreditCard,
-    BookOpen,
-    TrendingUp,
-    CheckCircle2,
-    XCircle,
-    Info,
-    User,
-    ChevronLeft,
-    ChevronRight,
-    MapPin,
-    Phone,
-    Clock,
-    Book,
-    Award,
-    CheckCircle
-} from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
+import BookOpen from 'lucide-react/dist/esm/icons/book-open'
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import XCircle from 'lucide-react/dist/esm/icons/x-circle'
+import Info from 'lucide-react/dist/esm/icons/info'
+import User from 'lucide-react/dist/esm/icons/user'
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import MapPin from 'lucide-react/dist/esm/icons/map-pin'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import Clock from 'lucide-react/dist/esm/icons/clock'
+import Book from 'lucide-react/dist/esm/icons/book'
+import Award from 'lucide-react/dist/esm/icons/award'
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import { cn } from '@/lib/utils';
 import { useStudentRecords } from '../hooks/useStudentRecords';
 import { Group, Teacher } from '@/types';

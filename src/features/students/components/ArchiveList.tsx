@@ -6,22 +6,20 @@ import { useStudents } from '../hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import {
-    Search,
-    RotateCcw,
-    Trash2,
-    Menu,
-    SlidersHorizontal,
-    X,
-    User,
-    ArrowRight,
-    Clock,
-    AlertCircle,
-    Check,
-    MessageCircle,
-    Gift,
-    Loader2
-} from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search'
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import Menu from 'lucide-react/dist/esm/icons/menu'
+import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal'
+import X from 'lucide-react/dist/esm/icons/x'
+import User from 'lucide-react/dist/esm/icons/user'
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right'
+import Clock from 'lucide-react/dist/esm/icons/clock'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import Check from 'lucide-react/dist/esm/icons/check'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Gift from 'lucide-react/dist/esm/icons/gift'
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { useRouter } from 'next/navigation';
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
 import { Student } from '@/types';

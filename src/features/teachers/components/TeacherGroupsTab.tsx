@@ -1,7 +1,10 @@
 // مجموعات  المدرس
 import { useState } from 'react';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
-import { Plus, Trash2, X, Layers } from 'lucide-react';
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import X from 'lucide-react/dist/esm/icons/x'
+import Layers from 'lucide-react/dist/esm/icons/layers';
 
 interface Props {
     teacher: any;

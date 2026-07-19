@@ -1,5 +1,9 @@
 "use client";
-import { Archive, FileText, MessageCircle, Phone, Edit3 } from 'lucide-react';
+import Archive from 'lucide-react/dist/esm/icons/archive'
+import FileText from 'lucide-react/dist/esm/icons/file-text'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
 import { getWhatsAppUrl } from '@/lib/utils';
 
 interface StudentReportCardProps {

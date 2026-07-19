@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Button } from '../../../components/ui/button';
-import { Trash2, ShieldCheck, Undo2 } from 'lucide-react';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check'
+import Undo2 from 'lucide-react/dist/esm/icons/undo-2';
 import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { FadeIn, SlideIn } from '@/components/ui/transition';

@@ -5,7 +5,13 @@ import { useChat } from '@/features/chat/hooks/useChat';
 import { ConversationList } from '@/features/chat/components/ConversationList';
 import { MessageArea } from '@/features/chat/components/MessageArea';
 import { MessageInput } from '@/features/chat/components/MessageInput';
-import { Search, Loader, AlertCircle, X, UserPlus, Users, MessageCircle } from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search'
+import Loader from 'lucide-react/dist/esm/icons/loader'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import X from 'lucide-react/dist/esm/icons/x'
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
+import Users from 'lucide-react/dist/esm/icons/users'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { chatService } from '@/features/chat/services/chatService';

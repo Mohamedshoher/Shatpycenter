@@ -1,6 +1,9 @@
 "use client";
 
-import { X, User, ArrowUpCircle, ExternalLink } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import User from 'lucide-react/dist/esm/icons/user'
+import ArrowUpCircle from 'lucide-react/dist/esm/icons/arrow-up-circle'
+import ExternalLink from 'lucide-react/dist/esm/icons/external-link';
 import { cn } from '@/lib/utils';
 import { Teacher } from '@/types';
 import { FadeIn, SlideIn } from '@/components/ui/transition';

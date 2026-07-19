@@ -1,5 +1,9 @@
 import { FadeIn, SlideIn } from '@/components/ui/transition';
-import { UserX, FileText, X, Users, BarChart2 } from 'lucide-react';
+import UserX from 'lucide-react/dist/esm/icons/user-x'
+import FileText from 'lucide-react/dist/esm/icons/file-text'
+import X from 'lucide-react/dist/esm/icons/x'
+import Users from 'lucide-react/dist/esm/icons/users'
+import BarChart2 from 'lucide-react/dist/esm/icons/bar-chart-2';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 

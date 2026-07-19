@@ -7,7 +7,7 @@ import { getStudents } from '@/features/students/services/studentService';
 import StudentList from '@/features/students/components/StudentList';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { ArrowRight } from 'lucide-react';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 

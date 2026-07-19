@@ -1,24 +1,22 @@
 "use client";
 import { useEffect, useState, useMemo } from 'react';
 
-import {
-    Users,
-    LayoutGrid,
-    CreditCard,
-    CalendarCheck,
-    TrendingUp,
-    Search,
-    Loader,
-    UserCheck,
-    ShieldCheck,
-    RefreshCw,
-    CalendarDays,
-    Check,
-    X as CloseIcon,
-    Calendar,
-    MessageSquare,
-    Trophy
-} from 'lucide-react';
+import Users from 'lucide-react/dist/esm/icons/users'
+import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid'
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
+import CalendarCheck from 'lucide-react/dist/esm/icons/calendar-check'
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
+import Search from 'lucide-react/dist/esm/icons/search'
+import Loader from 'lucide-react/dist/esm/icons/loader'
+import UserCheck from 'lucide-react/dist/esm/icons/user-check'
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check'
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw'
+import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days'
+import Check from 'lucide-react/dist/esm/icons/check'
+import CloseIcon from 'lucide-react/dist/esm/icons/x'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square'
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import { useAuthStore } from '@/store/useAuthStore';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { cn } from '@/lib/utils';

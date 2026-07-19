@@ -7,23 +7,21 @@ import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
-import {
-    UserPlus,
-    Search,
-    MessageCircle,
-    Phone,
-    FileText,
-    Edit3,
-    Archive,
-    CreditCard,
-    Menu,
-    SlidersHorizontal,
-    X,
-    User,
-    BookOpen,
-    Calendar,
-    Clock
-} from 'lucide-react';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
+import Search from 'lucide-react/dist/esm/icons/search'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import FileText from 'lucide-react/dist/esm/icons/file-text'
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3'
+import Archive from 'lucide-react/dist/esm/icons/archive'
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
+import Menu from 'lucide-react/dist/esm/icons/menu'
+import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal'
+import X from 'lucide-react/dist/esm/icons/x'
+import User from 'lucide-react/dist/esm/icons/user'
+import BookOpen from 'lucide-react/dist/esm/icons/book-open'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import Clock from 'lucide-react/dist/esm/icons/clock';
 import {
     calculateTotalAbsence,
     calculateContinuousAbsence

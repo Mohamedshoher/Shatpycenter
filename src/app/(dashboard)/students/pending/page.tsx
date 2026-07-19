@@ -5,7 +5,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStudents, updateStudent } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
-import { UserCheck, UserX, Edit2, Users, Calendar, Phone, CreditCard, MessageSquare, BookOpen, MessageCircle, ChevronDown, LayoutGrid } from 'lucide-react';
+import UserCheck from 'lucide-react/dist/esm/icons/user-check'
+import UserX from 'lucide-react/dist/esm/icons/user-x'
+import Edit2 from 'lucide-react/dist/esm/icons/edit-2'
+import Users from 'lucide-react/dist/esm/icons/users'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square'
+import BookOpen from 'lucide-react/dist/esm/icons/book-open'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
+import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid';
 import EditStudentModal from '@/features/students/components/EditStudentModal';
 
 import { cn, getWhatsAppUrl } from '@/lib/utils';

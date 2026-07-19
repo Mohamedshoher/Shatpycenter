@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { FileText, Trash2, User, MessageCircle, Reply, Send } from 'lucide-react';
+import FileText from 'lucide-react/dist/esm/icons/file-text'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import User from 'lucide-react/dist/esm/icons/user'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Reply from 'lucide-react/dist/esm/icons/reply'
+import Send from 'lucide-react/dist/esm/icons/send';
 import { Button } from '../../../components/ui/button';
 import { cn, getWhatsAppUrl } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';

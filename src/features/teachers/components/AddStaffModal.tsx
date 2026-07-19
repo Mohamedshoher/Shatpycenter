@@ -11,18 +11,16 @@ import { cn } from '@/lib/utils'; // وظيفة لدمج أصناف CSS بشكل
 // ==========================================
 // 2. استيراد الأيقونات
 // ==========================================
-import {
-    User,
-    Phone,
-    Lock,
-    UserCircle,
-    GraduationCap,
-    Coins,
-    Handshake,
-    Loader2,
-    CheckCircle2,
-    AlertCircle
-} from 'lucide-react';
+import User from 'lucide-react/dist/esm/icons/user'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import Lock from 'lucide-react/dist/esm/icons/lock'
+import UserCircle from 'lucide-react/dist/esm/icons/user-circle'
+import GraduationCap from 'lucide-react/dist/esm/icons/graduation-cap'
+import Coins from 'lucide-react/dist/esm/icons/coins'
+import Handshake from 'lucide-react/dist/esm/icons/handshake'
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 
 // ==========================================
 // 3. استيراد أدوات إدارة البيانات (React Query & Services)

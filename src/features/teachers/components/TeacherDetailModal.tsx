@@ -13,11 +13,27 @@ import { useQuery, useQueryClient, useMutation, keepPreviousData } from '@tansta
 // ==========================================
 // 2. استيراد الأيقونات
 // ==========================================
-import {
-    X, Calendar, CreditCard, Briefcase, Phone, MessageCircle, FileText,
-    Users, Trash2, Edit3, Plus, CircleDollarSign, Coins, CheckCircle2,
-    AlertCircle, Loader, UserX, Gift, ChevronRight, ChevronLeft, Layers
-} from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
+import Briefcase from 'lucide-react/dist/esm/icons/briefcase'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import FileText from 'lucide-react/dist/esm/icons/file-text'
+import Users from 'lucide-react/dist/esm/icons/users'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import CircleDollarSign from 'lucide-react/dist/esm/icons/circle-dollar-sign'
+import Coins from 'lucide-react/dist/esm/icons/coins'
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import Loader from 'lucide-react/dist/esm/icons/loader'
+import UserX from 'lucide-react/dist/esm/icons/user-x'
+import Gift from 'lucide-react/dist/esm/icons/gift'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import Layers from 'lucide-react/dist/esm/icons/layers';
 
 // ==========================================
 // 3. استيراد الأنواع (Types) والخطافات (Hooks) والخدمات (Services)
@@ -63,19 +79,6 @@ const getMonthLabel = (offset: number) => {
     const d = new Date();
     d.setMonth(d.getMonth() + offset);
     return new Intl.DateTimeFormat('ar-EG', { month: 'long', year: 'numeric' }).format(d);
-};
-
-// دالة لتوحيد النصوص (إزالة التشكيل والمسافات) للمطابقة الدقيقة
-const normalize = (s: string) => {
-    if (!s) return '';
-    return s
-        .replace(/[أإآ]/g, 'ا')
-        .replace(/ة/g, 'ه')
-        .replace(/ى/g, 'ي')
-        .replace(/[ءئؤ]/g, '')
-        .replace(/[ًٌٍَُِّ]/g, '')
-        .replace(/\s+/g, '')
-        .trim();
 };
 
 // ==========================================

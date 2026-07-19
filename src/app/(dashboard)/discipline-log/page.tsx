@@ -5,7 +5,11 @@ import { teacherDeductionService } from '@/features/teachers/services/deductionS
 import { DeductionsList } from '@/features/teachers/components/DeductionsList';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { AlertCircle, Calendar, TrendingDown, Users, Loader } from 'lucide-react';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import TrendingDown from 'lucide-react/dist/esm/icons/trending-down'
+import Users from 'lucide-react/dist/esm/icons/users'
+import Loader from 'lucide-react/dist/esm/icons/loader';
 
 export default function DisciplineLogPage() {
   const [allDeductions, setAllDeductions] = useState<any[]>([]);

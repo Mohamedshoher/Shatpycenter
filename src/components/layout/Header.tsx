@@ -2,7 +2,8 @@
 
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Menu, Bell } from 'lucide-react';
+import Menu from 'lucide-react/dist/esm/icons/menu'
+import Bell from 'lucide-react/dist/esm/icons/bell';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 

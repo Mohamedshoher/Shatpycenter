@@ -1,6 +1,7 @@
 "use client";
 
-import { FileText, AlertCircle } from 'lucide-react';
+import FileText from 'lucide-react/dist/esm/icons/file-text'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 
 interface Props {
     teacher: any;
