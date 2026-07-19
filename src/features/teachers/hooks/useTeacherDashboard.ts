@@ -248,6 +248,9 @@ export const useTeacherDashboard = (
         }));
         const totalHandedOver = handovers.reduce((sum, h) => sum + Number(h.amount), 0);
 
+        // 7. فارق الأخذ - المبلغ الزائد الذي استلمه المدير فوق ما حصله المدرس
+        const collectionOverage = Math.max(0, totalHandedOver - totalCollected);
+
         return {
             expectedExpenses,
             collectedPayments,
@@ -258,6 +261,7 @@ export const useTeacherDashboard = (
             realDeficit,
             collectionHistoryMapped,
             totalHandedOver,
+            collectionOverage,
             salaryStats: {
                 basicSalary,
                 attendanceBasedSalary,

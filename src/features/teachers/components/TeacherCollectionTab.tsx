@@ -48,6 +48,7 @@ interface TeacherCollectionTabProps {
     realDeficit: number;
     unpaidStudents: UnpaidStudent[];
     handleDeleteFee: (feeId: string, studentName: string) => void;
+    collectionOverage: number;
 }
 
 export const TeacherCollectionTab = ({
@@ -70,7 +71,8 @@ export const TeacherCollectionTab = ({
     setShowDeficitDetails,
     realDeficit,
     unpaidStudents,
-    handleDeleteFee
+    handleDeleteFee,
+    collectionOverage
 }: TeacherCollectionTabProps) => {
     
     // أداة لإعادة تحديث البيانات عند الحاجة
@@ -157,7 +159,7 @@ export const TeacherCollectionTab = ({
             )}
 
             {/* 3. بطاقات الإحصائيات المالية */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                 {/* المصروفات المتوقعة */}
                 <div className="bg-gradient-to-br from-indigo-50 to-white p-4 md:p-6 rounded-[32px] border border-indigo-100 shadow-sm flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-transform">
                     <p className="text-[10px] md:text-xs font-black text-indigo-400 mb-2 uppercase tracking-wide">إجمالي المصروفات المتوقعة</p>
@@ -209,6 +211,17 @@ export const TeacherCollectionTab = ({
                         </button>
                     </div>
                 </div>
+
+                {/* فارق الأخذ - المبلغ الزائد المستلم */}
+                {!isTeacher && collectionOverage > 0 && (
+                    <div className="bg-gradient-to-br from-violet-50 to-white p-4 md:p-6 rounded-[32px] border border-violet-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
+                        <p className="text-[10px] md:text-xs font-black text-violet-500 mb-2 uppercase tracking-wide">فارق الأخذ (زيادة)</p>
+                        <p className="text-xl md:text-3xl font-black text-violet-700 font-sans">{collectionOverage.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
+                        <div className="mt-3 flex items-center gap-1">
+                            <span className="text-[9px] font-bold text-violet-400">مستلم زيادة عن المحصل</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* 4. تاريخ عمليات التسليم */}

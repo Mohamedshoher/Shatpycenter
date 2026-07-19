@@ -261,6 +261,7 @@ export default function TeacherDetailModal({
         realDeficit = 0,
         collectionHistoryMapped = [],
         totalHandedOver = 0,
+        collectionOverage = 0,
         salaryStats = {
             basicSalary: 0,
             attendanceBasedSalary: 0,
@@ -733,6 +734,7 @@ export default function TeacherDetailModal({
                             realDeficit={realDeficit}
                             unpaidStudents={unpaidStudents}
                             handleDeleteFee={handleDeleteFee}
+                            collectionOverage={collectionOverage}
                         />
                     </Suspense>
                 );
