@@ -21,8 +21,6 @@ interface TeacherPayrollTabProps {
     handlePaySalary: (amount: number, description: string) => void;
     handleSendReport: () => void;
     deleteSalaryMutation: any;
-    isSettlementMode: boolean;
-    setIsSettlementMode: (val: boolean) => void;
     isPartnership?: boolean;
     partnershipPercentage?: number;
     totalCollectedForGroup?: number;
@@ -31,8 +29,6 @@ interface TeacherPayrollTabProps {
     attendedDays?: number;
     absentDays?: number;
     totalAbsentDays?: number;
-    remainingDaysInMonth?: number;
-    remainingDaysDeduction?: number;
     dailyRate?: number;
 }
 
@@ -53,8 +49,6 @@ export const TeacherPayrollTab = ({
     handlePaySalary,
     handleSendReport,
     deleteSalaryMutation,
-    isSettlementMode,
-    setIsSettlementMode,
     isPartnership,
     partnershipPercentage,
     totalCollectedForGroup,
@@ -63,8 +57,6 @@ export const TeacherPayrollTab = ({
     attendedDays = 0,
     absentDays = 0,
     totalAbsentDays = 0,
-    remainingDaysInMonth = 0,
-    remainingDaysDeduction = 0,
     dailyRate = 0
 }: TeacherPayrollTabProps) => {
 
@@ -87,7 +79,7 @@ export const TeacherPayrollTab = ({
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
-            {/* شريط الشهر والتصفية */}
+            {/* شريط الشهر */}
             <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
                 <button onClick={() => updateMonth(-1)} className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto">
                     <ChevronRight size={16} />
@@ -104,12 +96,6 @@ export const TeacherPayrollTab = ({
                     <span className="hidden md:inline">الشهر الحالي</span>
                     <ChevronLeft size={16} />
                 </button>
-                {!isTeacher && (
-                    <button onClick={() => setIsSettlementMode(!isSettlementMode)} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all h-10 md:h-auto border", isSettlementMode ? "bg-red-600 text-white border-red-700 shadow-lg shadow-red-200" : "bg-teal-50 text-teal-700 border-teal-100 hover:bg-teal-100")}>
-                        <CircleDollarSign size={14} />
-                        {isSettlementMode ? "إلغاء التصفية" : "تصفية حساب حالية"}
-                    </button>
-                )}
             </div>
 
             {/* بطاقة الراتب الرئيسية */}
@@ -166,8 +152,7 @@ export const TeacherPayrollTab = ({
                                 <span className="text-sm md:text-lg font-black font-sans text-gray-900">{basicSalary.toLocaleString()} ج.م</span>
                                 {!isPartnership && (
                                     <div className="text-[9px] font-bold text-gray-400 mt-0.5">
-                                        {dailyRate.toLocaleString()} ج.م × {attendedDays} يوم حضور
-                                        {isSettlementMode && remainingDaysInMonth > 0 && <> (من {totalWorkingDays} يوم - خصم {remainingDaysInMonth} يوم)</>}
+                                        {dailyRate.toLocaleString()} ج.م × {attendedDays} يوم حضور من {totalWorkingDays} يوم
                                     </div>
                                 )}
                             </div>
@@ -181,7 +166,6 @@ export const TeacherPayrollTab = ({
                             <div className="flex flex-row-reverse flex-wrap gap-2 text-[10px] font-bold">
                                 <span className="bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100">{attendedDays} يوم حضور</span>
                                 {absentDays > 0 && <span className="bg-red-50 text-red-600 px-3 py-1.5 rounded-full border border-red-100">{absentDays} يوم غياب</span>}
-                                {isSettlementMode && remainingDaysInMonth > 0 && <span className="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-100">{remainingDaysInMonth} يوم متبقية (تخصم)</span>}
                                 <span className="bg-gray-50 text-gray-500 px-3 py-1.5 rounded-full border border-gray-100">{dailyRate.toLocaleString()} ج.م/يوم</span>
                             </div>
                         )}
@@ -202,36 +186,7 @@ export const TeacherPayrollTab = ({
                     </div>
                 </div>
 
-                {/* تنبيه التصفية */}
-                {isSettlementMode && (
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-5 rounded-3xl relative z-10">
-                        <div className="flex flex-row-reverse items-center gap-3">
-                            <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 shrink-0">
-                                <AlertCircle size={20} />
-                            </div>
-                            <div className="text-right flex-1">
-                                <h5 className="text-xs font-black text-amber-800">وضع التصفية النشط</h5>
-                                <p className="text-[10px] font-bold text-amber-600">اليوم هو آخر يوم عمل. يتم الخصم عن الأيام المتبقية.</p>
-                            </div>
-                        </div>
-                        <div className="mt-3 space-y-2 text-xs font-bold">
-                            <div className="flex flex-row-reverse items-center justify-between bg-white/70 rounded-2xl px-4 py-2.5 border border-amber-100">
-                                <span className="text-amber-800">الراتب = القيمة اليومية × أيام الحضور</span>
-                                <span className="text-gray-600">{dailyRate.toLocaleString()} ج.م × {attendedDays} يوم = <span className="text-amber-900">{basicSalary.toLocaleString()} ج.م</span></span>
-                            </div>
-                            <div className="flex flex-row-reverse items-center justify-between bg-white/70 rounded-2xl px-4 py-2 border border-red-100">
-                                <span className="text-red-700">خصم الأيام المتبقية ({remainingDaysInMonth} يوم)</span>
-                                <span className="text-gray-600">-{remainingDaysDeduction.toLocaleString()} ج.م</span>
-                            </div>
-                            <div className="flex flex-row-reverse items-center justify-between bg-amber-100 rounded-2xl px-4 py-3 border border-amber-300 text-sm font-black">
-                                <span className="text-amber-900">الإجمالي بعد التصفية</span>
-                                <span className="text-amber-900">{basicSalary.toLocaleString()} ج.م</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* سجل الدفعات */}
+                {/* سجل الدفعات وأزرار الإجراءات */}
                 <div className="space-y-4 pt-2 relative z-10">
                     <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-3">
                         <h4 className="text-base md:text-lg font-black text-gray-800 flex items-center gap-2">
@@ -240,13 +195,19 @@ export const TeacherPayrollTab = ({
                         </h4>
                         {!isTeacher && (
                             <div className="flex flex-wrap items-center justify-center gap-2">
-                                <button onClick={() => setShowPayModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-blue-500 to-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-95 transition-all">
+                                {remainingToPay > 0 && (
+                                    <button onClick={() => handlePaySalary(remainingToPay, 'صرف نهائي')} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-blue-600 to-blue-700 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 hover:shadow-xl hover:shadow-blue-600/30 hover:scale-[1.02] active:scale-95 transition-all">
+                                        <CircleDollarSign size={14} />
+                                        صرف المتبقي ({remainingToPay.toLocaleString()} ج.م)
+                                    </button>
+                                )}
+                                <button onClick={() => setShowPayModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-teal-500 to-teal-600 text-white rounded-xl text-xs font-black shadow-lg shadow-teal-500/20 hover:shadow-xl hover:shadow-teal-500/30 hover:scale-[1.02] active:scale-95 transition-all">
                                     <Plus size={14} />
                                     صرف يدوي
                                 </button>
                                 <button onClick={handleSendReport} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-emerald-500 to-emerald-600 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all">
                                     <MessageCircle size={14} />
-                                    إرسال تقرير
+                                    تقرير
                                 </button>
                             </div>
                         )}
@@ -283,16 +244,6 @@ export const TeacherPayrollTab = ({
                         </div>
                     )}
                 </div>
-
-                {/* صرف المتبقي */}
-                {!isTeacher && remainingToPay > 0 && (
-                    <div className="relative z-10">
-                        <button onClick={() => handlePaySalary(remainingToPay, 'صرف نهائي')} className="w-full h-14 bg-gradient-to-l from-blue-600 to-blue-700 text-white rounded-[24px] font-black shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
-                            صرف المتبقي ({remainingToPay.toLocaleString()} ج.م) نهائياً
-                            <CircleDollarSign size={18} />
-                        </button>
-                    </div>
-                )}
             </div>
 
             {/* نافذة الصرف اليدوي */}
@@ -300,13 +251,13 @@ export const TeacherPayrollTab = ({
                 <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
                     <div onClick={() => setShowPayModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
                     <div className="bg-white rounded-[32px] shadow-2xl border border-white/20 w-full max-w-md overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
-                        <div className="bg-gradient-to-l from-blue-500 to-blue-600 p-6 text-center relative overflow-hidden">
+                        <div className="bg-gradient-to-l from-teal-500 to-teal-600 p-6 text-center relative overflow-hidden">
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent)]" />
                             <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 relative z-10 backdrop-blur-sm">
                                 <CircleDollarSign size={28} className="text-white" />
                             </div>
                             <h3 className="text-lg font-black text-white relative z-10">صرف راتب يدوي</h3>
-                            <p className="text-sm text-blue-100 relative z-10 mt-1">أدخل المبلغ المراد صرفه للمدرس</p>
+                            <p className="text-sm text-teal-100 relative z-10 mt-1">أدخل المبلغ المراد صرفه للمدرس</p>
                             <button onClick={() => setShowPayModal(false)} className="absolute top-4 left-4 w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-white hover:bg-white/30 transition-all z-10">
                                 <X size={16} />
                             </button>
@@ -320,7 +271,7 @@ export const TeacherPayrollTab = ({
                                     value={payAmount}
                                     onChange={(e) => setPayAmount(e.target.value)}
                                     autoFocus
-                                    className="w-full h-14 bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold text-lg"
+                                    className="w-full h-14 bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 text-right focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all font-bold text-lg"
                                 />
                             </div>
                             <div className="space-y-2 text-right">
@@ -330,14 +281,14 @@ export const TeacherPayrollTab = ({
                                     placeholder="مثال: صرف جزء من الراتب..."
                                     value={payNote}
                                     onChange={(e) => setPayNote(e.target.value)}
-                                    className="w-full h-12 bg-gray-50 border border-gray-100 rounded-2xl px-4 text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                    className="w-full h-12 bg-gray-50 border border-gray-100 rounded-2xl px-4 text-right focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all"
                                 />
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button onClick={() => setShowPayModal(false)} className="flex-1 h-12 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all text-sm">
                                     إلغاء
                                 </button>
-                                <button onClick={handleManualPay} disabled={!payAmount || parseFloat(payAmount) <= 0} className="flex-1 h-12 bg-gradient-to-l from-blue-500 to-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm">
+                                <button onClick={handleManualPay} disabled={!payAmount || parseFloat(payAmount) <= 0} className="flex-1 h-12 bg-gradient-to-l from-teal-500 to-teal-600 text-white rounded-2xl font-bold shadow-lg shadow-teal-500/20 hover:shadow-xl hover:shadow-teal-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm">
                                     صرف
                                 </button>
                             </div>

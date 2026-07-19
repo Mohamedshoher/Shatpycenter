@@ -233,8 +233,6 @@ export default function TeacherDetailModal({
     // ====================================================================================
     // الحسابات المالية والإحصائيات (Business Logic)
     // ====================================================================================
-    const [isSettlementMode, setIsSettlementMode] = useState(false); // وضع تصفية الحساب
-
     const dashboard = useTeacherDashboard(
         teacher,
         students,
@@ -246,7 +244,6 @@ export default function TeacherDetailModal({
         deductions,
         paymentsHistory,
         selectedMonthRaw,
-        isSettlementMode,
         teachers
     );
 
@@ -281,9 +278,7 @@ export default function TeacherDetailModal({
             totalWorkingDays: 22,
             attendedDays: 0,
             absentDays: 0,
-            totalAbsentDays: 0,
-            remainingDaysInMonth: 0,
-            remainingDaysDeduction: 0
+            totalAbsentDays: 0
         }
     } = dashboard || {};
 
@@ -305,9 +300,7 @@ export default function TeacherDetailModal({
         totalWorkingDays,
         attendedDays,
         absentDays,
-        totalAbsentDays,
-        remainingDaysInMonth,
-        remainingDaysDeduction
+        totalAbsentDays
     } = salaryStats;
 
     // ==========================================
@@ -597,7 +590,6 @@ export default function TeacherDetailModal({
     useEffect(() => {
         if (teacher && isOpen) {
             loadDeductions();
-            setIsSettlementMode(false);
         }
     }, [teacher, isOpen, loadDeductions]);
 
@@ -792,16 +784,12 @@ export default function TeacherDetailModal({
                             attendedDays={attendedDays}
                             absentDays={absentDays}
                             totalAbsentDays={totalAbsentDays}
-                            remainingDaysInMonth={remainingDaysInMonth}
-                            remainingDaysDeduction={remainingDaysDeduction}
                             dailyRate={dailyRate}
                             isTeacher={isTeacher}
                             paymentsHistory={paymentsHistory}
                             handlePaySalary={handlePaySalary}
                             handleSendReport={handleSendReport}
                             deleteSalaryMutation={deleteSalaryMutation}
-                            isSettlementMode={isSettlementMode}
-                            setIsSettlementMode={setIsSettlementMode}
                             isPartnership={isPartnership}
                             partnershipPercentage={partnershipPercentage}
                             totalCollectedForGroup={totalCollectedForGroup}

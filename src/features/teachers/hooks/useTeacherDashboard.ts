@@ -13,17 +13,6 @@ const normalize = (s: string) => {
         .trim();
 };
 
-// دالة لحساب أيام العمل المتبقية من اليوم حتى نهاية الشهر (بدون الخميس والجمعة)
-const countRemainingWorkDays = (currentDay: number, year: number, month: number) => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    let count = 0;
-    for (let day = currentDay + 1; day <= daysInMonth; day++) {
-        const dow = new Date(year, month, day).getDay();
-        if (dow !== 4 && dow !== 5) count++; // الخميس=4, الجمعة=5
-    }
-    return count;
-};
-
 export const useTeacherDashboard = (
     teacher: any,
     students: any[] = [],
@@ -35,7 +24,6 @@ export const useTeacherDashboard = (
     deductions: any[] = [],
     paymentsHistory: any[] = [],
     selectedMonthRaw: string,
-    isSettlementMode: boolean = false, // إضافة وضع التصفية هنا
     allTeachers: any[] = [] // إضافة قائمة المعلمين هنا
 ) => {
     return useMemo(() => {
@@ -155,17 +143,10 @@ export const useTeacherDashboard = (
         });
 
         // إجمالي أيام العمل في الشهر = 22 يوم افتراضي (ثابت)
-        // في التصفية: اليوم الحالي = آخر يوم عمل، وباقي الشهر يُحتسب غياب
         const totalWorkingDays = standardWorkingDays;
 
-        // في وضع التصفية: الأيام المتبقية من الشهر تُحتسب غياب (لأن المدرس أنهى عمله)
-        // يتم حساب أيام العمل الفعلية فقط (بدون الخميس والجمعة)
-        const remainingDaysInMonth = isSettlementMode
-            ? countRemainingWorkDays(currentDay, now.getFullYear(), now.getMonth())
-            : 0;
-
-        // إجمالي أيام الغياب (بما فيها الأيام المتبقية في التصفية)
-        const totalAbsentDays = absentDays + remainingDaysInMonth;
+        // إجمالي أيام الغياب (سجل الحضور فقط)
+        const totalAbsentDays = absentDays;
 
         // أيام الحضور الفعلية
         const attendedDays = Math.max(0, totalWorkingDays - totalAbsentDays);
@@ -177,9 +158,6 @@ export const useTeacherDashboard = (
 
         // خصومات تلقائية (حسب الحضور)
         const autoDeductions = Math.round((absentDays * dailyRate) * 100) / 100;
-
-        // خصم الأيام المتبقية في التصفية
-        const remainingDaysDeduction = Math.round((remainingDaysInMonth * dailyRate) * 100) / 100;
 
         // مكافآت تلقائية (حسب الحضور)
         const autoRewards = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
@@ -210,7 +188,7 @@ export const useTeacherDashboard = (
         const totalPaid = paymentsHistory.reduce((acc, curr) => acc + Number(curr.amount), 0);
         // الخصومات اليدوية تطبق دائماً
         // خصومات الغياب تطبق فقط لنظام النسبة (لأن المرتب الثابت محسوب على أيام الحضور)
-        const totalDeductionsToApply = isPartnership ? autoDeductions + remainingDaysDeduction : 0;
+        const totalDeductionsToApply = isPartnership ? autoDeductions : 0;
         const totalEntitlement = Math.round((attendanceBasedSalary + autoRewards + manualRewardsTotal - manualDeductionsTotal - totalDeductionsToApply) * 100) / 100;
         const remainingToPay = Math.max(0, Math.round((totalEntitlement - totalPaid) * 100) / 100);
 
@@ -292,10 +270,8 @@ export const useTeacherDashboard = (
                 totalWorkingDays,
                 attendedDays,
                 absentDays,
-                totalAbsentDays,
-                remainingDaysInMonth,
-                remainingDaysDeduction
+                totalAbsentDays
             }
         };
-    }, [teacher, students, groups, allFees, selectedMonthRaw, attendanceData, handovers, exemptions, deductions, paymentsHistory, allTeachers, isSettlementMode]);
+    }, [teacher, students, groups, allFees, selectedMonthRaw, attendanceData, handovers, exemptions, deductions, paymentsHistory, allTeachers]);
 };
