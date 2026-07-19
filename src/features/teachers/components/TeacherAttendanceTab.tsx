@@ -95,7 +95,7 @@ export const TeacherAttendanceTab = ({
             </div>
 
             {/* كروت ملخص الحضور (الغياب والمكافآت) */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
                     <div className="text-right">
                         <p className="text-xs font-bold text-gray-400 mb-1">  الغياب</p>
@@ -114,6 +114,37 @@ export const TeacherAttendanceTab = ({
                         <Calendar size={24} />
                     </div>
                 </div>
+                {!isTeacher && (
+                    <button
+                        onClick={async () => {
+                            if (!confirm('هل أنت متأكد من تعميد الغياب لبقية أيام الشهر؟')) return;
+                            const [yearStr, monthStr] = selectedMonthRaw.split('-');
+                            const year = parseInt(yearStr);
+                            const month = parseInt(monthStr);
+                            const daysInMonth = new Date(year, month, 0).getDate();
+                            const today = new Date().getDate();
+                            const firstDay = new Date(year, month - 1, 1);
+                            const startOffset = (firstDay.getDay() + 1) % 7;
+
+                            for (let day = today + 1; day <= daysInMonth; day++) {
+                                const weekDayIdx = (day - 1 + startOffset) % 7;
+                                if (weekDayIdx === 5 || weekDayIdx === 6) continue;
+                                const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
+                                try {
+                                    await updateAttendanceAsync({ date: dateStr, status: 'absent' });
+                                } catch (e) {}
+                            }
+                            alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
+                        }}
+                        className="bg-gradient-to-br from-red-50 to-white p-6 rounded-[32px] border border-red-100 shadow-sm hover:shadow-md hover:border-red-200 transition-all flex flex-col items-center justify-center text-center gap-2"
+                    >
+                        <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-red-500">
+                            <Calendar size={24} />
+                        </div>
+                        <p className="text-xs font-bold text-red-600">تعميد غياب</p>
+                        <p className="text-[9px] font-bold text-red-400">للمتبقي من الشهر</p>
+                    </button>
+                )}
             </div>
 
             {/* التقويم الشهري التفاعلي للحضور */}
