@@ -285,5 +285,5 @@ export const useTeacherDashboard = (
                 remainingDaysDeduction
             }
         };
-    }, [teacher, students, groups, allFees, selectedMonthRaw, attendanceData, handovers, exemptions, deductions, paymentsHistory, allTeachers]);
+    }, [teacher, students, groups, allFees, selectedMonthRaw, attendanceData, handovers, exemptions, deductions, paymentsHistory, allTeachers, isSettlementMode]);
 };

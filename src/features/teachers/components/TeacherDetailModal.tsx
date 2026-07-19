@@ -597,6 +597,7 @@ export default function TeacherDetailModal({
     useEffect(() => {
         if (teacher && isOpen) {
             loadDeductions();
+            setIsSettlementMode(false);
         }
     }, [teacher, isOpen, loadDeductions]);
 
