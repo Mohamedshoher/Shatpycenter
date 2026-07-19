@@ -155,10 +155,11 @@ export const TeacherAttendanceTab = ({
                             const day = i + 1;
                             const rawStatus = (attendanceData as any)[String(day)];
 
-                            const isFuture = isCurrentMonth ? day > todayDay : (year > now.getFullYear() || (year === now.getFullYear() && month > (now.getMonth() + 1)));
+                            const isFutureMonth = year > now.getFullYear() || (year === now.getFullYear() && month > (now.getMonth() + 1));
+                            const isFutureDay = isCurrentMonth && day > todayDay;
                             const isToday = isCurrentMonth && day === todayDay;
 
-                            const status = isFuture ? rawStatus : (rawStatus || 'present');
+                            const status = isFutureMonth ? rawStatus : (isFutureDay ? rawStatus : (rawStatus || 'present'));
 
                             const weekDayIndex = (i + startOffset) % 7;
                             const isWeekend = weekDayIndex === 5 || weekDayIndex === 6; // الخميس والجمعة إجازة رسمية
@@ -167,9 +168,10 @@ export const TeacherAttendanceTab = ({
                                 <div key={i} className="relative">
                                     <button
                                         onClick={() => {
-                                            if (isFuture || isWeekend || isTeacher) return;
+                                            if (isFutureMonth || isWeekend || isTeacher) return;
                                             setActiveDayMenu(day);
-                                            setTempStatus(status?.includes('reward') ? 'reward' : (status === 'present' ? 'present' : (status === 'absent' ? 'absent' : 'discipline')));
+                                            const s = rawStatus || status;
+                                            setTempStatus(s?.includes('reward') ? 'reward' : (s === 'present' ? 'present' : (s === 'absent' ? 'absent' : 'discipline')));
                                         }}
                                         className={cn(
                                             "aspect-square w-full rounded-xl md:rounded-2xl border flex flex-col items-center justify-center text-xs md:text-sm font-bold transition-all relative shadow-sm",
@@ -184,10 +186,10 @@ export const TeacherAttendanceTab = ({
                                     >
                                         <span className="mb-0.5">{day}</span>
                                         {isWeekend && <span className="text-[6px] md:text-[7px] mt-0.5 font-black uppercase text-red-500/40">إجازة</span>}
-                                        {(status === 'present' || status?.includes('reward')) && !isWeekend && (
+                                        {status && (status === 'present' || status?.includes('reward')) && !isWeekend && (
                                             <CheckCircle2 size={14} className="text-green-600/80" />
                                         )}
-                                        {(status === 'quarter' || status === 'half' || status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') && !isWeekend && (
+                                        {status && (status === 'quarter' || status === 'half' || status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') && !isWeekend && (
                                             <div className={cn(
                                                 "w-1 h-1 rounded-full mt-1",
                                                 status?.includes('reward') ? "bg-green-400" : "bg-orange-400"
