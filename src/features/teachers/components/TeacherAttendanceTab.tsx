@@ -55,8 +55,36 @@ export const TeacherAttendanceTab = ({
 
     return (
         <div className="space-y-6">
-            {/* شريط اختيار الشهر والملخص - تصميم متجاوب */}
+            {/* شريط اختيار الشهر وتعيمد الغياب */}
             <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
+                {!isTeacher && (
+                    <button
+                        onClick={async () => {
+                            if (!confirm('هل أنت متأكد من تعميد الغياب لبقية أيام الشهر؟')) return;
+                            const [yearStr, monthStr] = selectedMonthRaw.split('-');
+                            const year = parseInt(yearStr);
+                            const month = parseInt(monthStr);
+                            const daysInMonth = new Date(year, month, 0).getDate();
+                            const today = new Date().getDate();
+                            const firstDay = new Date(year, month - 1, 1);
+                            const startOffset = (firstDay.getDay() + 1) % 7;
+
+                            for (let day = today + 1; day <= daysInMonth; day++) {
+                                const weekDayIdx = (day - 1 + startOffset) % 7;
+                                if (weekDayIdx === 5 || weekDayIdx === 6) continue;
+                                const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
+                                try {
+                                    await updateAttendanceAsync({ date: dateStr, status: 'absent' });
+                                } catch (e) {}
+                            }
+                            alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-200 transition-all shrink-0 h-10 md:h-auto"
+                    >
+                        <Calendar size={14} />
+                        <span className="hidden md:inline">تعميد غياب</span>
+                    </button>
+                )}
                 {/* زر السابق */}
                 <button
                     onClick={() => updateMonth(-1)}
@@ -95,7 +123,7 @@ export const TeacherAttendanceTab = ({
             </div>
 
             {/* كروت ملخص الحضور (الغياب والمكافآت) */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
                 <div className="bg-white p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
                     <div className="text-right">
                         <p className="text-[10px] md:text-xs font-bold text-gray-400 mb-0.5 md:mb-1">الغياب</p>
@@ -114,37 +142,6 @@ export const TeacherAttendanceTab = ({
                         <Calendar size={18} className="md:w-6 md:h-6" />
                     </div>
                 </div>
-                {!isTeacher && (
-                    <button
-                        onClick={async () => {
-                            if (!confirm('هل أنت متأكد من تعميد الغياب لبقية أيام الشهر؟')) return;
-                            const [yearStr, monthStr] = selectedMonthRaw.split('-');
-                            const year = parseInt(yearStr);
-                            const month = parseInt(monthStr);
-                            const daysInMonth = new Date(year, month, 0).getDate();
-                            const today = new Date().getDate();
-                            const firstDay = new Date(year, month - 1, 1);
-                            const startOffset = (firstDay.getDay() + 1) % 7;
-
-                            for (let day = today + 1; day <= daysInMonth; day++) {
-                                const weekDayIdx = (day - 1 + startOffset) % 7;
-                                if (weekDayIdx === 5 || weekDayIdx === 6) continue;
-                                const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
-                                try {
-                                    await updateAttendanceAsync({ date: dateStr, status: 'absent' });
-                                } catch (e) {}
-                            }
-                            alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
-                        }}
-                        className="bg-gradient-to-br from-red-50 to-white p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-red-100 shadow-sm hover:shadow-md hover:border-red-200 transition-all flex flex-col items-center justify-center text-center gap-1 md:gap-2"
-                    >
-                        <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 rounded-xl md:rounded-2xl flex items-center justify-center text-red-500">
-                            <Calendar size={18} className="md:w-6 md:h-6" />
-                        </div>
-                        <p className="text-[10px] md:text-xs font-bold text-red-600">تعميد غياب</p>
-                        <p className="text-[7px] md:text-[9px] font-bold text-red-400">للمتبقي من الشهر</p>
-                    </button>
-                )}
             </div>
 
             {/* التقويم الشهري التفاعلي للحضور */}
