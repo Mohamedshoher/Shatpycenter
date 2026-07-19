@@ -3,9 +3,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 
-// مدة الكاش: 30 دقيقة للبيانات الثابتة، ساعة في الذاكرة
-const STALE_TIME = 1000 * 60 * 10;   // 10 دقائق - لا يعيد التحميل تلقائياً
-const GC_TIME   = 1000 * 60 * 60;    // ساعة في الذاكرة
+// مدة الكاش: 30 دقيقة للبيانات الثابتة، ساعتان في الذاكرة
+const STALE_TIME = 1000 * 60 * 30;   // 30 دقيقة - لا يعيد التحميل تلقائياً
+const GC_TIME   = 1000 * 60 * 120;   // ساعتان في الذاكرة
 
 let browserClient: QueryClient | undefined;
 
