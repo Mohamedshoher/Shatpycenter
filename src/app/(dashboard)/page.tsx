@@ -66,10 +66,12 @@ export default function DashboardOverview() {
         }
     }, [user, router]);
 
-    // جلب البيانات الحقيقية
+    // جلب البيانات الحقيقية (فقط للمستخدمين المسموح لهم)
+    const canLoadData = user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'teacher';
     const { data: groups = [] as Group[], isLoading: loadingGroups } = useQuery({
         queryKey: ['groups'],
-        queryFn: () => getGroups()
+        queryFn: () => getGroups(),
+        enabled: canLoadData
     });
 
     // تصفية البيانات حسب دور المستخدم
@@ -86,7 +88,8 @@ export default function DashboardOverview() {
 
     const { data: students = [] as Student[], isLoading: loadingStudents } = useQuery({
         queryKey: ['students', myGroupsIds?.length],
-        queryFn: () => getStudents(myGroupsIds)
+        queryFn: () => getStudents(myGroupsIds),
+        enabled: canLoadData && myGroupsIds.length > 0
     });
 
     const { data: transactions = [] as FinancialTransaction[], isLoading: loadingFinance } = useQuery({
@@ -100,7 +103,8 @@ export default function DashboardOverview() {
         queryFn: async () => {
             const { data } = await supabase.from('attendance').select('id, student_id, date, status').eq('date', todayStr).eq('status', 'present');
             return data || [];
-        }
+        },
+        enabled: canLoadData
     });
     // استبعاد الطلاب المؤرشفين من العد الإجمالي
     const activeStudents = students.filter((s: Student) => s.status !== 'archived');
