@@ -1,15 +1,12 @@
 "use client";
 
 import Sidebar from '@/components/layout/Sidebar';
-import { ChatFloatingButton } from '@/components/ChatFloatingButton';
-import { PresenceTracker } from '@/components/PresenceTracker';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useEffect } from 'react';
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
     const router = useRouter();
     const { user } = useAuthStore();
     const { setSidebarOpen } = useUIStore();
@@ -24,8 +21,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
     return (
         <div className="flex min-h-screen bg-gray-50 text-right">
-            <PresenceTracker />
-
             <div
                 className="fixed top-0 right-0 bottom-0 w-4 z-[130] md:hidden"
                 onTouchStart={(e) => {
@@ -51,7 +46,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 <main className="p-0">{children}</main>
             </div>
 
-            {pathname !== '/chat' && <ChatFloatingButton />}
         </div>
     );
 }

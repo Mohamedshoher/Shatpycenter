@@ -16,7 +16,6 @@ import X from 'lucide-react/dist/esm/icons/x'
 import CalendarCheck from 'lucide-react/dist/esm/icons/calendar-check'
 import FileText from 'lucide-react/dist/esm/icons/file-text'
 import Archive from 'lucide-react/dist/esm/icons/archive'
-import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
 import Zap from 'lucide-react/dist/esm/icons/zap'
 import UserCheck from 'lucide-react/dist/esm/icons/user-check'
 import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
@@ -102,12 +101,6 @@ export default function Sidebar() {
             href: '/exams-report',
             icon: FileText,
             roles: ['director', 'supervisor', 'teacher']
-        },
-        {
-            label: 'الرسائل',
-            href: '/chat',
-            icon: MessageCircle,
-            roles: ['director', 'supervisor', 'teacher', 'parent']
         },
         {
             label: 'الأتمتة',

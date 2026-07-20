@@ -6,7 +6,6 @@ import { useStudents } from "@/features/students/hooks/useStudents";
 import { useGroups } from "@/features/groups/hooks/useGroups";
 import { useStudentRecords } from "@/features/students/hooks/useStudentRecords";
 import { useTeachers } from "@/features/teachers/hooks/useTeachers";
-import { ParentChatModal } from "@/features/chat/components/ParentChatModal";
 import { ParentStudentDetailModal } from "@/features/students/components/ParentStudentDetailModal";
 import {
     LogOut,
@@ -21,66 +20,20 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/features/auth/services/authService";
-import { cn } from "@/lib/utils";
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { Button } from "@/components/ui/button";
-import { PresenceTracker } from "@/components/PresenceTracker";
-import { useChatStore } from "@/store/useChatStore";
-import { playNotificationSound } from "@/lib/notificationSound";
-import { chatService } from "@/features/chat/services/chatService";
-import { useEffect, useRef } from "react";
 
 export default function ParentDashboard() {
     const { user, setUser } = useAuthStore();
     const router = useRouter();
     const { data: students, isLoading } = useStudents();
     const { data: groups } = useGroups();
-    const { unreadCount, setConversations } = useChatStore();
     const [selectedKidForLeave, setSelectedKidForLeave] = useState<any>(null);
     const [selectedKidForDetail, setSelectedKidForDetail] = useState<any>(null);
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [showPulse, setShowPulse] = useState(false);
-    const prevUnreadCount = useRef(0);
     const { data: teachers } = useTeachers();
 
     const parentPhone = user?.displayName || "";
     const myKids = students?.filter(s => s.parentPhone === parentPhone) || [];
-
-    // ✨ الاستماع للمحادثات وتحديث العداد
-    useEffect(() => {
-        if (!user?.uid) return;
-        const userId = user.uid.replace('mock-', '');
-        const unsubscribe = chatService.subscribeToConversations(userId, (conversations) => {
-            setConversations(conversations);
-        });
-        return () => unsubscribe();
-    }, [user?.uid, setConversations]);
-
-    // ✨ تشغيل الصوت والتأثير عند وصول رسالة جديدة
-    useEffect(() => {
-        if (unreadCount > prevUnreadCount.current && prevUnreadCount.current >= 0) {
-            playNotificationSound();
-            setShowPulse(true);
-            setTimeout(() => setShowPulse(false), 2000);
-        }
-        prevUnreadCount.current = unreadCount;
-    }, [unreadCount]);
-
-    // تصفية جهات الاتصال المسموح بالتواصل معها (المدير والمشرف ومدرسي الأبناء فقط)
-    const allowedContacts = teachers?.filter(t => {
-        // 1. المدير والمشرف متاحون دائماً
-        if (t.role === 'supervisor') return true;
-        // 2. مدرسو المجموعات التي ينتمي إليها الأبناء
-        const kidTeacherIds = myKids.map(k => k.groupId).map(gid => groups?.find(g => g.id === gid)?.teacherId);
-        if (kidTeacherIds.includes(t.id)) return true;
-        return false;
-    }) || [];
-
-    // إضافة المدير كجهة اتصال يدوية (بافتراض وجود مدير عام للنظام)
-    const contacts = [
-        { id: 'director', fullName: 'المدير العام', role: 'director' },
-        ...allowedContacts
-    ];
 
     // دالة تسجيل الخروج ومسح بيانات الجلسة
     const handleLogout = async () => {
@@ -100,7 +53,6 @@ export default function ParentDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50/50 font-sans pb-32" dir="rtl">
-            <PresenceTracker />
             {/* رأس الصفحة الثابت - مرن مع الحاوية */}
             <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between relative">
@@ -122,21 +74,6 @@ export default function ParentDashboard() {
 
                     {/* الجانب الأيسر: أزرار التنقل السريع */}
                     <div className="flex items-center gap-2 shrink-0">
-                        <button
-                            onClick={() => setIsChatOpen(true)}
-                            className={cn(
-                                "relative flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-indigo-600 hover:text-white transition-all active:scale-95",
-                                showPulse && "animate-bounce"
-                            )}
-                        >
-                            <MessageCircle size={16} />
-                            <span className="hidden sm:inline">المراسلة</span>
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white animate-pulse">
-                                    {unreadCount > 9 ? '+9' : unreadCount}
-                                </span>
-                            )}
-                        </button>
                         <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-blue-600 hover:text-white transition-all active:scale-95">
                             <Home size={16} />
                             <span className="hidden sm:inline">الرئيسية</span>
@@ -239,15 +176,6 @@ export default function ParentDashboard() {
                 />
             )}
 
-            {/* نافذة المراسلة المنبثقة */}
-            {isChatOpen && (
-                <ParentChatModal
-                    isOpen={isChatOpen}
-                    onClose={() => setIsChatOpen(false)}
-                    contacts={contacts}
-                />
-            )}
-
             {/* زر واتساب الدعم المباشر العائم */}
             <button
                 onClick={() => window.open(`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_CENTER_WHATSAPP || '201234567890'}`, '_blank')}
@@ -257,24 +185,6 @@ export default function ParentDashboard() {
                 <MessageCircle size={28} />
             </button>
 
-            {/* زر المراسلة الداخلية العائم */}
-            <button
-                onClick={() => setIsChatOpen(true)}
-                className={cn(
-                    "fixed bottom-10 left-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-all hover:bg-indigo-700 hover:rotate-12",
-                    showPulse && "animate-bounce shadow-indigo-500/50"
-                )}
-                title="المراسلة الداخلية"
-            >
-                <div className="relative">
-                    <MessageCircle size={32} />
-                    {unreadCount > 0 && (
-                        <span className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white text-xs flex items-center justify-center rounded-full border-2 border-white font-black shadow-lg">
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                        </span>
-                    )}
-                </div>
-            </button>
         </div>
     );
 }

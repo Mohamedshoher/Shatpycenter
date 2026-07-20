@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import { teacherDeductionService } from '@/features/teachers/services/deductionService';
-import { chatService } from '@/features/chat/services/chatService';
 import { updateTeacherAttendance } from '@/features/teachers/services/attendanceService';
 
 // ==========================================
@@ -198,20 +197,6 @@ export const executeDeduction = async (
         console.error("Failed to post attendance to teacher profile automatically", e);
     }
 
-    // إرسال إشعار فوري وتلقائي عبر الشات للمعلم
-    try {
-        const convo = await chatService.getOrCreateConversation(['system', tId], ['نظام الأتمتة', tName], 'system-teacher');
-        await chatService.sendMessage(
-            convo.id, 
-            'system', 
-            'نظام الأتمتة', 
-            'director', 
-            `🔔 تنبيه آلي: تم تطبيق خصم (${amt} يوم) من رصيدك الخاص. \nتاريخ الخصم: ${targetDate}\nالسبب: ${reason}`
-        );
-    } catch (e) {
-        console.error("Failed to send chat notification", e);
-    }
-
     const logs = [];
     const log = await addLog({
         ruleId: rId || 'manual', ruleName: rName || 'خصم آلي', triggeredBy: 'system', recipientId: tId, recipientName: tName,
@@ -282,10 +267,6 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
             if (!studentIds.some(id => submittedStudents.has(id)) && !alreadyDeducted.has(t.id)) {
                 const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسليم التقرير اليومي (أتمتة)', rule.id, 'فحص التقارير اليومية', dateStr, startTime);
                 logs.push(...res.logs);
-                try {
-                    const conv = await chatService.getOrCreateConversation(['director', t.id], ['المدير العام', t.full_name], 'director-teacher');
-                    await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم ربع يوم لعدم تسليم التقرير ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
-                } catch (e) {}
             }
         }
 
@@ -348,13 +329,9 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
         if (studentIds.length === 0) continue;
 
         if (!studentIds.some(id => examStudents.has(id)) && !alreadyDeducted.has(t.id)) {
-            const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.5, 'عدم تسجيل الاختبارات الأسبوعية', rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
-            logs.push(...res.logs);
-            try {
-                const conv = await chatService.getOrCreateConversation(['director', t.id], ['المدير العام', t.full_name], 'director-teacher');
-                await chatService.sendMessage(conv.id, 'director', 'المدير العام', 'director', `⚠️ تنبيه آلي: تم خصم نصف يوم لعدم تسجيل اختبار ليوم ${DAYS_MAP[dayOfWeek]} ${dateStr}.`);
-            } catch (e) {}
-        }
+                const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.5, 'عدم تسجيل الاختبارات الأسبوعية', rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
+                logs.push(...res.logs);
+            }
     }
 
     if (logs.length === 0) {
@@ -385,10 +362,8 @@ export const triggerAutomation = async (ruleId: string, recipientId: string, rec
     return await addLog({ ruleId, ruleName: rule.name, triggeredBy: 'system', recipientId, recipientName, messageSent: msg, timestamp: new Date(), status: 'success' });
 };
 
-export const sendManualNotification = async (tId: string, tName: string, amt: number, type: string, note: string, sender?: any) => {
-    const sId = sender?.uid || 'director', sName = sender?.displayName || 'المدير العام';
-    const conv = await chatService.getOrCreateConversation([sId, tId], [sName, tName], 'director-teacher');
-    await chatService.sendMessage(conv.id, sId, sName, 'director', `تنبيه إداري: تم تسجيل ${type === 'reward' ? 'مكافأة' : 'خصم'} بقيمة ${amt}.\nالبيان: ${note}`);
+export const sendManualNotification = async (_tId: string, _tName: string, _amt: number, _type: string, _note: string, _sender?: any) => {
+    console.log('Chat system removed - notification skipped');
 };
 
 // ==========================================
