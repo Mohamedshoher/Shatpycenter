@@ -6,8 +6,20 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const monthKey = searchParams.get('monthKey');
         const studentId = searchParams.get('studentId');
+        const date = searchParams.get('date');
 
         const supabase = createServerSupabase();
+
+        if (date) {
+            const { data, error } = await supabase
+                .from('attendance')
+                .select('id, student_id, date, status, created_at')
+                .eq('date', date);
+
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+            return NextResponse.json(data || []);
+        }
 
         if (monthKey) {
             const [year, month] = monthKey.split('-').map(Number);

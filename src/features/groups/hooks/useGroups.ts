@@ -6,6 +6,7 @@ export const useGroups = () => {
     return useQuery({
         queryKey: ['groups'],
         queryFn: () => getGroups(),
+        staleTime: 1000 * 60 * 5,
     });
 };
 

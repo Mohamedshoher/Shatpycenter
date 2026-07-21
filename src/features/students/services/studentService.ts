@@ -1,16 +1,20 @@
 import { Student } from "@/types";
 import { supabase } from "@/lib/supabase";
 
-export const getStudents = async (groupIds?: string[]): Promise<Student[]> => {
+export const getStudents = async (groupIds?: string[], status?: string): Promise<Student[]> => {
     try {
         const params = new URLSearchParams();
+        if (status) {
+            params.set('status', status);
+        }
         if (groupIds && groupIds.length > 0) {
             params.set('groupIds', groupIds.join(','));
         }
         const qs = params.toString();
         const res = await fetch(`/api/students${qs ? '?' + qs : ''}`);
         if (!res.ok) {
-            console.error("API error fetching students:", await res.text());
+            const errorText = await res.text();
+            console.error("API error fetching students:", errorText);
             return [];
         }
         return await res.json();

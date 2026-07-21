@@ -170,7 +170,8 @@ export const getAllExams = async (monthKey?: string, periodHalf?: 1 | 2, student
         const qs = params.toString();
         const res = await fetch(`/api/exams${qs ? '?' + qs : ''}`);
         if (!res.ok) {
-            console.error("API error fetching exams:", await res.text());
+            const errorText = await res.text();
+            console.error("API error fetching exams:", errorText);
             return [];
         }
         return await res.json();

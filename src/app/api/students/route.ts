@@ -9,9 +9,13 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
 
         const supabase = createServerSupabase();
+        const isListView = !searchParams.get('full');
         let query = supabase
             .from('students')
-            .select('*');
+            .select(isListView
+                ? 'id, full_name, group_id, parent_phone, status, appointment, monthly_amount, enrollment_date'
+                : '*'
+            );
 
         if (groupIds) {
             const ids = groupIds.split(',');

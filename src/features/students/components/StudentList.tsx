@@ -6,7 +6,7 @@ import { useStudents } from '../hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useTeachers } from '@/features/teachers/hooks/useTeachers';
+
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
 import Search from 'lucide-react/dist/esm/icons/search'
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
@@ -22,10 +22,7 @@ import User from 'lucide-react/dist/esm/icons/user'
 import BookOpen from 'lucide-react/dist/esm/icons/book-open'
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import Clock from 'lucide-react/dist/esm/icons/clock';
-import {
-    calculateTotalAbsence,
-    calculateContinuousAbsence
-} from '@/lib/attendance-utils';
+
 
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
 import { Student } from '@/types';
@@ -58,8 +55,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         }).map(g => g.id);
     }, [groups, user]);
 
-    const { data: students, isLoading } = useStudents(myGroupsIds);
-    const { data: teachers } = useTeachers();
+    const { data: students, isLoading } = useStudents(myGroupsIds, 'active');
 
     const myGroups = useMemo(() => {
         if (!groups) return [];
@@ -87,6 +83,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const [selectedTab, setSelectedTab] = useState('attendance');
     const [filter, setFilter] = useState('الكل');
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [scheduleFilterTime, setScheduleFilterTime] = useState('الكل');
@@ -112,11 +109,13 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         setScheduleFilterTime('الكل');
     }, [selectedDate, groupId]);
 
-
-    const currentMonthKey = useMemo(() => {
-        const [y, m] = selectedDate.split('-');
-        return `${y}-${m}`;
-    }, [selectedDate]);
+    // Debounce البحث: انتظار 300ms بعد آخر حرف قبل التصفية
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     const normalizeTime = (t: string) => {
         if (!t) return '';
@@ -167,52 +166,24 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     }, [students, currentDayName, groupId, user, myGroupsIds]);
 
 
-    const { data: attendanceData = { today: {}, monthMap: {} } as any, isFetching: isAttendanceFetching } = useQuery({
+    const { data: attendanceData = { today: {} } as any, isFetching: isAttendanceFetching } = useQuery({
         queryKey: ['attendance-context', selectedDate],
         queryFn: async () => {
-            if (!students || students.length === 0) return { today: {}, monthMap: {} };
-            const { getAllAttendanceForMonth } = await import('../services/recordsService');
+            if (!students || students.length === 0) return { today: {} };
 
-            const dateParts = selectedDate.split('-').map(Number);
-            const dayNum = dateParts[2];
-            const monthKey = `${dateParts[0]}-${String(dateParts[1]).padStart(2, '0')}`;
-
-            const prevDate = new Date(dateParts[0], dateParts[1] - 2, 1);
-            const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-
-            const [attendanceCurrent, attendancePrev] = await Promise.all([
-                getAllAttendanceForMonth(monthKey),
-                getAllAttendanceForMonth(prevMonthKey)
-            ]);
-
-            const mergedMap: Record<string, any[]> = {};
-            const allStudentIds = new Set([...Object.keys(attendanceCurrent), ...Object.keys(attendancePrev)]);
-
-            allStudentIds.forEach(id => {
-                mergedMap[id] = [
-                    ...(attendanceCurrent[id] || []),
-                    ...(attendancePrev[id] || [])
-                ];
-            });
+            const res = await fetch(`/api/attendance?date=${selectedDate}`);
+            if (!res.ok) return { today: {} };
+            const data = await res.json();
 
             const selectedDayMap: Record<string, 'present' | 'absent'> = {};
-            students.forEach(student => {
-                const studentIdStr = String(student.id);
-                const records = mergedMap[studentIdStr] || [];
-
-                // استخراج السجلات المطابقة للشهر واليوم المحددين
-                const dayRecords = records.filter(r => r.month === monthKey && Number(r.day) === dayNum);
-                const dayRec = dayRecords.length > 0 ? dayRecords[dayRecords.length - 1] : null;
-
-                if (dayRec) {
-                    selectedDayMap[studentIdStr] = dayRec.status;
-                }
+            (data || []).forEach((row: any) => {
+                selectedDayMap[row.student_id] = row.status;
             });
 
-            return { today: selectedDayMap, monthMap: mergedMap };
+            return { today: selectedDayMap };
         },
         enabled: !!(students && students.length > 0),
-        staleTime: 1000 * 30, // 30 seconds to stay fresh
+        staleTime: 1000 * 30,
     });
 
     const attendanceState = useMemo(() => attendanceData.today, [attendanceData.today]);
@@ -220,6 +191,19 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const isManagement = useMemo(() => {
         return user?.role === 'director' || user?.role === 'supervisor';
     }, [user]);
+
+    const dateConstraints = useMemo(() => {
+        const today = new Date();
+        const maxDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        let minDate = undefined;
+        if (!isManagement) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            minDate = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+        }
+        return { minDate, maxDate };
+    }, [isManagement]);
 
     const getGroupName = useCallback((groupId: string | null) => {
         if (!groupId) return '';
@@ -270,21 +254,16 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         });
 
         // تطبيق البحث المتدرج باستخدام الدالة الموحدة
-        const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
+        const finalResults = tieredSearchFilter(baseFiltered, debouncedSearchTerm, (s) => s.fullName);
 
         return finalResults.sort((a, b) => {
-            if (searchTerm) return 0;
-            if (filter === 'الأكثر غياباً') {
-                const absA = calculateTotalAbsence(attendanceData.monthMap[a.id] || [], currentMonthKey);
-                const absB = calculateTotalAbsence(attendanceData.monthMap[b.id] || [], currentMonthKey);
-                if (absA !== absB) return absB - absA;
-            }
+            if (debouncedSearchTerm) return 0;
             const groupA = getGroupName(a.groupId);
             const groupB = getGroupName(b.groupId);
             if (groupA !== groupB) return groupA.localeCompare(groupB, 'ar');
             return a.fullName.localeCompare(b.fullName, 'ar');
         });
-    }, [students, user, myGroupsIds, searchTerm, filter, scheduleFilterTime, currentDayName, groupId, getGroupName]);
+    }, [students, user, myGroupsIds, debouncedSearchTerm, filter, scheduleFilterTime, currentDayName, groupId, getGroupName]);
 
     const handleOpenModal = (student: Student, tab: string = 'attendance') => {
         setSelectedTab(tab);
@@ -431,7 +410,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                     {!isSearchOpen && (
                         <div className={cn(
                             "flex flex-col items-center absolute left-1/2 -translate-x-1/2",
-                            isManagement ? "pointer-events-auto" : "pointer-events-none"
+                            "pointer-events-auto"
                         )}>
                             <div className="flex items-center gap-2">
                                 <h1 className="text-base sm:text-xl font-bold text-gray-900 whitespace-nowrap flex items-center gap-2">
@@ -444,18 +423,17 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     </span>
                                 </h1>
 
-                                {isManagement && (
-                                    <div className="relative group w-8 h-8 flex items-center justify-center bg-white rounded-xl border border-gray-100 shadow-sm hover:border-blue-200 transition-all cursor-pointer">
-                                        <Calendar size={16} className={cn(isToday ? "text-gray-400" : "text-blue-600")} />
-                                        <input
-                                            type="date"
-                                            className="absolute inset-0 opacity-0 cursor-pointer z-50 w-full h-full"
-                                            value={selectedDate}
-                                            onChange={(e) => setSelectedDate(e.target.value)}
-                                            max={new Date().toISOString().split('T')[0]}
-                                        />
-                                    </div>
-                                )}
+                                <div className="relative group w-8 h-8 flex items-center justify-center bg-white rounded-xl border border-gray-100 shadow-sm hover:border-blue-200 transition-all cursor-pointer">
+                                    <Calendar size={16} className={cn(isToday ? "text-gray-400" : "text-blue-600")} />
+                                    <input
+                                        type="date"
+                                        className="absolute inset-0 opacity-0 cursor-pointer z-50 w-full h-full"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        max={dateConstraints.maxDate}
+                                        min={dateConstraints.minDate}
+                                    />
+                                </div>
                             </div>
                             {!isToday && (
                                 <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1 animate-pulse">

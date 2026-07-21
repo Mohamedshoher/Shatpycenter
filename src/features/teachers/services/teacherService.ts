@@ -12,7 +12,8 @@ export const getTeachers = async (): Promise<Teacher[]> => {
     try {
         const res = await fetch('/api/teachers');
         if (!res.ok) {
-            console.error("API error fetching teachers:", await res.text());
+            const errorText = await res.text();
+            console.error("API error fetching teachers:", errorText);
             return [];
         }
         return await res.json();

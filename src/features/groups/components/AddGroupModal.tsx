@@ -1,7 +1,7 @@
 "use client"; // توجيه Next.js بأن هذا المكون يعمل على جهة العميل (Client-Side)
 
 // --- الاستيرادات (Imports) ---
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import { addGroup } from '@/features/groups/services/groupService';
@@ -35,6 +35,14 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
         queryKey: ['teachers'],
         queryFn: () => getTeachers()
     });
+
+    // فلترة المدرسين النشطين فقط وترتيبهم أبجدياً
+    const activeSortedTeachers = useMemo(() => {
+        if (!teachers) return [];
+        return teachers
+            .filter(t => t.status === 'active')
+            .sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
+    }, [teachers]);
 
     // 2. إدارة حالة البيانات داخل النموذج (State Management)
     const [name, setName] = useState('');
@@ -125,7 +133,7 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
                         className="w-full h-12 bg-gray-50 border border-gray-100 rounded-xl px-4 text-right font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/10"
                     >
                         <option value="">اختر مدرساً</option>
-                        {teachers?.map((t) => (
+                        {activeSortedTeachers.map((t) => (
                             <option key={t.id} value={t.id}> 
                                 {t.fullName}
                             </option>

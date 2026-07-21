@@ -8,7 +8,6 @@ import BookOpen from 'lucide-react/dist/esm/icons/book-open'
 import FileText from 'lucide-react/dist/esm/icons/file-text'
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import { cn } from '../../../lib/utils';
-import { useStudents } from '../hooks/useStudents';
 import { useStudentRecords } from '../hooks/useStudentRecords';
 import { StudentDetailModalProps } from '../hooks/types';
 import dynamic from 'next/dynamic';
@@ -21,7 +20,6 @@ const FeesTab = dynamic(() => import('./FeesTab'), { ssr: false });
 const ExamsTab = dynamic(() => import('./ExamsTab'), { ssr: false });
 const ScheduleTab = dynamic(() => import('./ScheduleTab'), { ssr: false });
 const NotesTab = dynamic(() => import('./NotesTab'), { ssr: false });
-import { useGroups } from '@/features/groups/hooks/useGroups';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 
 
@@ -36,12 +34,7 @@ export default function StudentDetailModal({
     // تحديد التبويب النشط (الافتراضي هو الحضور)
     const [activeTab, setActiveTab] = useState(initialTab);
 
-    // جلب المجموعات للتحقق من نوع المجموعة
-    const { data: groups } = useGroups();
-    
-    // جلب بيانات الطلاب وتحديد الطالب الحالي لضمان تحديث البيانات فورياً
-    const { data: students } = useStudents();
-    const student = students?.find((s: any) => s.id === initialStudent?.id) || initialStudent;
+    const student = initialStudent;
 
     // استدعاء الهوك الخاص بسجلات الطالب (حضور، مصروفات، اختبارات، ملحوظات)
     const studentRecords = useStudentRecords(student?.id || '');

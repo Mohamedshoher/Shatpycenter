@@ -2,12 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStudents, updateStudent } from '../services/studentService';
 import { Student } from '@/types';
 
-export const useStudents = (groupIds?: string[]) => {
+export const useStudents = (groupIds?: string[], status?: string) => {
     const queryClient = useQueryClient();
 
     const studentsQuery = useQuery({
-        queryKey: ['students', groupIds?.length],
-        queryFn: () => getStudents(groupIds),
+        queryKey: ['students', groupIds?.length, status],
+        queryFn: () => getStudents(groupIds, status),
+        staleTime: 1000 * 60 * 2,
     });
 
     const updateStatusMutation = useMutation({

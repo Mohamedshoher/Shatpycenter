@@ -6,7 +6,8 @@ export const getGroups = async (): Promise<Group[]> => {
     try {
         const res = await fetch('/api/groups');
         if (!res.ok) {
-            console.error("API error fetching groups:", await res.text());
+            const errorText = await res.text();
+            console.error("API error fetching groups:", errorText);
             return [];
         }
         return await res.json();
@@ -106,7 +107,8 @@ export const getGroupsByTeacherId = async (teacherId: string): Promise<Group[]> 
     try {
         const res = await fetch(`/api/groups?teacherId=${encodeURIComponent(teacherId)}`);
         if (!res.ok) {
-            console.error("API error fetching teacher groups:", await res.text());
+            const errorText = await res.text();
+            console.error("API error fetching teacher groups:", errorText);
             return [];
         }
         return await res.json();

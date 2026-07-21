@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateGroup } from '@/features/groups/services/groupService';
 import { getTeachers } from '@/features/teachers/services/teacherService';
@@ -17,6 +17,13 @@ interface EditGroupModalProps {
 export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModalProps) {
     const queryClient = useQueryClient();
     const { data: teachers } = useQuery({ queryKey: ['teachers'], queryFn: () => getTeachers() });
+
+    const activeSortedTeachers = useMemo(() => {
+        if (!teachers) return [];
+        return teachers
+            .filter((t: any) => t.status === 'active')
+            .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName, 'ar'));
+    }, [teachers]);
 
     const [editGroupName, setEditGroupName] = useState('');
     const [editTeacherId, setEditTeacherId] = useState('');
@@ -81,7 +88,7 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
                         className="w-full h-11 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-right text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all shadow-inner appearance-none"
                     >
                         <option value="">اختر المدرس المسئول</option>
-                        {teachers?.map((t: any) => (
+                        {activeSortedTeachers.map((t: any) => (
                             <option key={t.id} value={t.id}>{t.fullName}</option>
                         ))}
                     </select>
