@@ -194,7 +194,7 @@ export default function FinancePage() {
         const exemptedIds = new Set(exemptions.map((e: any) => e.student_id));
         const totalDeficit = Object.entries(collectionsByTeacher).reduce((sum, [id, data]) => {
             const tGroups = groups.filter(g => g.teacherId === id).map(g => g.id);
-            const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && (!s.enrollmentDate || s.enrollmentDate.substring(0, 7) <= selectedMonth));
+            const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
             return sum + tStudents.reduce((acc, s) => {
                 const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
                 const amt = Number(s.monthlyAmount) || 0;
@@ -326,7 +326,7 @@ export default function FinancePage() {
         return Object.entries(collectionsByTeacher).map(([id, data]) => {
             const teacher = teachers.find(t => t.id === id);
             const tGroups = groups.filter(g => g.teacherId === id).map(g => g.id);
-            const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && (!s.enrollmentDate || s.enrollmentDate.substring(0, 7) <= selectedMonth));
+            const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
             let deficit = 0, expected = 0;
             tStudents.forEach(s => {
                 const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);

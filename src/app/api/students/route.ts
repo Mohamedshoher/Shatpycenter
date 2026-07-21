@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
         let query = supabase
             .from('students')
             .select(isListView
-                ? 'id, full_name, group_id, parent_phone, status, appointment, monthly_amount, enrollment_date'
+                ? 'id, full_name, group_id, parent_phone, status, appointment, monthly_amount, enrollment_date, created_at'
                 : '*'
             );
 

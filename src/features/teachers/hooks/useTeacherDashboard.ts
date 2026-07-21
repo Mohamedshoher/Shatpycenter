@@ -40,10 +40,7 @@ export const useTeacherDashboard = (
             .filter(s => {
                 const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
                 if (!isMember) return false;
-                if (s.enrollmentDate) {
-                    return s.enrollmentDate.substring(0, 7) <= selectedMonthRaw;
-                }
-                return true;
+                return s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonthRaw;
             })
             .reduce((sum, s) => sum + (Number(s.monthlyAmount) || 0), 0);
 
@@ -186,10 +183,7 @@ export const useTeacherDashboard = (
             .filter(s => {
                 const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
                 if (!isMember) return false;
-                if (s.enrollmentDate) {
-                    return s.enrollmentDate.substring(0, 7) <= selectedMonthRaw;
-                }
-                return true;
+                return s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonthRaw;
             })
             .map(student => {
                 const studentFees = allFees.filter(f => f.studentId === student.id);

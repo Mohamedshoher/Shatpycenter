@@ -112,7 +112,7 @@ export default function FinanceTeachersPage() {
         const collections = Object.entries(collectionsByTeacher).map(([id, data]) => {
             const teacher = teachers.find(t => t.id === id);
             const tGroups = groups.filter(g => g.teacherId === id).map(g => g.id);
-            const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && (!s.enrollmentDate || s.enrollmentDate.substring(0, 7) <= selectedMonth));
+            const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
             let deficit = 0, expected = 0;
             tStudents.forEach(s => {
                 const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((sum: number, f: any) => sum + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
