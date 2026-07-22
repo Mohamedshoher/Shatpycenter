@@ -58,8 +58,27 @@ export default function AutomationPage() {
         }
     };
 
-    const reportLogs = logs.filter(log => log.ruleName?.includes('تقارير') || log.ruleName?.includes('تقرير'));
-    const examLogs = logs.filter(log => log.ruleName?.includes('اختبار'));
+    const lastReportTimestamp = Math.max(
+        ...logs
+            .filter(log => log.ruleName?.includes('تقارير') || log.ruleName?.includes('تقرير'))
+            .map(log => new Date(log.timestamp).getTime()),
+        0
+    );
+    const lastExamTimestamp = Math.max(
+        ...logs
+            .filter(log => log.ruleName?.includes('اختبار'))
+            .map(log => new Date(log.timestamp).getTime()),
+        0
+    );
+
+    const reportLogs = logs.filter(log =>
+        (log.ruleName?.includes('تقارير') || log.ruleName?.includes('تقرير')) &&
+        new Date(log.timestamp).getTime() === lastReportTimestamp
+    );
+    const examLogs = logs.filter(log =>
+        log.ruleName?.includes('اختبار') &&
+        new Date(log.timestamp).getTime() === lastExamTimestamp
+    );
 
     const renderLogList = (items: typeof logs, title: string, Icon: any, colorClass: string, bgClass: string, borderClass: string) => (
         <div className={`rounded-3xl p-6 shadow-sm border ${borderClass} h-full flex flex-col ${bgClass}`}>
