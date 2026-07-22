@@ -145,7 +145,7 @@ export const getRules = async (): Promise<AutomationRule[]> => {
             schedule: {}
         },
         {
-            id: 'default-exam-rule', name: 'خصم نصف يوم لعدم تسجيل اختبار', trigger: 'repeated_exams',
+            id: 'default-exam-rule', name: 'خصم نصف يوم لعدم تسجيل اختبارات لمدار اسبوع', trigger: 'repeated_exams',
             recipients: ['teacher'], condition: { deductionAmount: 0.5 },
             action: { type: 'apply_deduction', messageTemplate: '' }, enabled: true, createdAt: new Date(),
             schedule: {}
@@ -204,6 +204,25 @@ export const executeDeduction = async (
         timestamp: logTs || new Date(), status: 'success'
     });
     logs.push(log);
+
+    try {
+        fetch('/api/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                teacherId: tId,
+                type: 'deduction',
+                title: 'خصم آلي',
+                message: `خصم: ${tName} - ${amt} يوم`,
+                reason,
+                amount: amt,
+                relatedDate: targetDate,
+            }),
+        });
+    } catch (e) {
+        console.error("Failed to create auto-deduction notification", e);
+    }
+
     return { deduction, logs };
 };
 
@@ -281,12 +300,22 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
 };
 
 export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
-    const target = new Date(); target.setDate(target.getDate() - 1);
-    const dateStr = normalizeDate(target);
-    const dayOfWeek = target.getDay();
+    const today = new Date();
     const startTime = new Date();
 
-    if (WEEKEND_DAYS.includes(dayOfWeek)) return [];
+    // حساب نطاق الأسبوع: من السبت الماضي (بداية الأسبوع الدراسي) إلى أمس
+    const dayOfWeek = today.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+    const daysSinceSaturday = (dayOfWeek - 6 + 7) % 7;
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - daysSinceSaturday);
+
+    const weekEnd = new Date(today);
+    weekEnd.setDate(weekEnd.getDate() - 1);
+
+    const startDateStr = normalizeDate(weekStart);
+    const endDateStr = normalizeDate(weekEnd);
+
+    if (weekStart > weekEnd) return [];
 
     const rules = await getRules();
     const rule = rules.find(r => r.trigger === 'repeated_exams' && r.enabled);
@@ -299,8 +328,8 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
 
     const [ groupsResult, examsResult, dedResult ] = await Promise.all([
         supabase.from('groups').select('id, teacher_id').in('teacher_id', teacherIds),
-        supabase.from('exams').select('student_id').eq('date', dateStr),
-        supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).eq('date', dateStr)
+        supabase.from('exams').select('student_id').gte('date', startDateStr).lte('date', endDateStr),
+        supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).gte('date', startDateStr).lte('date', endDateStr)
     ]);
 
     const examStudents = new Set(examsResult.data?.map(e => e.student_id));
@@ -329,13 +358,13 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
         if (studentIds.length === 0) continue;
 
         if (!studentIds.some(id => examStudents.has(id)) && !alreadyDeducted.has(t.id)) {
-                const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.5, 'عدم تسجيل الاختبارات الأسبوعية', rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
+                const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.5, 'عدم تسجيل الاختبارات لمدار اسبوع', rule.id, 'فحص الاختبارات الأسبوعية', endDateStr, startTime);
                 logs.push(...res.logs);
             }
     }
 
     if (logs.length === 0) {
-        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سجلوا اختبارات ليوم ${dateStr}`, timestamp: startTime, status: 'success' }));
+        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات الأسبوعية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سجلوا اختبارات من ${startDateStr} إلى ${endDateStr}`, timestamp: startTime, status: 'success' }));
     }
     return logs;
 };

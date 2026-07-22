@@ -1,17 +1,13 @@
 "use client";
 
 import { useUIStore } from '@/store/useUIStore';
-import { useAuthStore } from '@/store/useAuthStore';
 import Menu from 'lucide-react/dist/esm/icons/menu'
-import Bell from 'lucide-react/dist/esm/icons/bell';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function Header() {
     const { toggleSidebar } = useUIStore();
-    const { user } = useAuthStore();
-
-    // Format today's date in Arabic
     const today = format(new Date(), 'EEEE, d MMMM yyyy', { locale: ar });
 
     return (
@@ -30,10 +26,7 @@ export default function Header() {
             </div>
 
             <div className="flex items-center gap-3">
-                <button className="p-2 relative hover:bg-gray-100 rounded-full transition-colors text-gray-600">
-                    <Bell size={20} />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                </button>
+                <NotificationBell />
             </div>
         </header>
     );

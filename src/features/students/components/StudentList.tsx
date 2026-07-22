@@ -27,6 +27,7 @@ import Clock from 'lucide-react/dist/esm/icons/clock';
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
 import { Student } from '@/types';
 import dynamic from 'next/dynamic';
+import NotificationBell from '@/components/NotificationBell';
 
 const AddStudentModal = dynamic(() => import('./AddStudentModal'), { ssr: false });
 const StudentDetailModal = dynamic(() => import('./StudentDetailModal'), { ssr: false });
@@ -392,19 +393,13 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
                     <div className="relative z-50 flex items-center gap-2">
                         <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-600 rounded-[18px] sm:rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-95 transition-transform shrink-0"
-                            title="إضافة طالب جديد"
-                        >
-                            <UserPlus size={22} />
-                        </button>
-
-                        <button
                             onClick={toggleSidebar}
                             className="md:hidden w-11 h-11 bg-white rounded-[18px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
                         >
                             <Menu size={22} />
                         </button>
+
+                        <NotificationBell />
                     </div>
 
                     {!isSearchOpen && (
@@ -699,6 +694,14 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                     setIsEditModalOpen(true);
                 }}
             />
+            {/* Floating Add Student Button */}
+            <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="fixed bottom-20 left-6 z-[100] w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/40 active:scale-90 transition-transform hover:bg-blue-700"
+                title="إضافة طالب جديد"
+            >
+                <UserPlus size={26} />
+            </button>
         </div >
     );
 }

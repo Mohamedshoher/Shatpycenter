@@ -202,8 +202,8 @@ export default function SchedulesDashboard() {
                         <p className="text-lg font-black text-gray-500">لا توجد مجموعات لعرضها</p>
                     </div>
                 ) : (
-                    dashboardData.map((group) => (
-                        <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
+                    dashboardData.map((group, index) => (
+                        <div key={group.id || index} className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
                             {/* Group Header */}
                             <div className="bg-gray-50/80 p-4 md:p-5 border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between md:items-center">
                                 <div className="flex items-center gap-4">

@@ -100,6 +100,19 @@ export interface FinancialTransaction {
   performedBy: string; // User ID (Admin/Supervisor)
 }
 
+export interface AppNotification {
+  id: string;
+  teacherId: string | null;
+  type: 'deduction' | 'reward' | 'system';
+  title: string;
+  message: string;
+  reason: string;
+  amount: number;
+  relatedDate: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface DailyReport {
   id: string;
   teacherId: string;

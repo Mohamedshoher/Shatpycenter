@@ -51,6 +51,7 @@ import { getFeesByMonth, deleteFeeRecord } from '@/features/students/services/re
 import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction, addTransaction } from '@/features/finance/services/financeService';
 import { updateGroup } from '@/features/groups/services/groupService';
 import { automationService } from '@/features/automation/services/automationService';
+import { createNotification } from '@/features/notifications/services/notificationService';
 import { useTeacherDashboard } from '@/features/teachers/hooks/useTeacherDashboard';
 import { TeacherDeficitModal } from './TeacherDeficitModal';
 import { TeacherGroupsTab } from './TeacherGroupsTab';
@@ -398,15 +399,17 @@ export default function TeacherDetailModal({
         try {
             await applyDeduction(teacher.id, teacher.fullName, actualAmount, prefix + (manualEntryNote || 'بدون سبب'));
 
-            try {
-                await automationService.sendManualNotification(
-                    teacher.id, teacher.fullName, actualAmount,
-                    manualEntryType as 'reward' | 'deduction', manualEntryNote,
-                    { uid: user?.uid || 'director', displayName: user?.displayName || 'المدير العام' }
-                );
-            } catch (notifyError) {
-                console.error("Failed to notify teacher via chat:", notifyError);
-            }
+            const title = manualEntryType === 'reward' ? 'مكافأة' : 'خصم';
+            const relatedDate = new Date().toISOString().split('T')[0];
+            await createNotification({
+                teacherId: manualEntryType === 'reward' ? null : teacher.id,
+                type: manualEntryType as 'deduction' | 'reward',
+                title,
+                message: `${title}: ${teacher.fullName} - ${actualAmount} يوم`,
+                reason: manualEntryNote || 'بدون سبب',
+                amount: actualAmount,
+                relatedDate,
+            });
 
             setManualEntryAmount('');
             setManualEntryNote('');
@@ -562,19 +565,20 @@ export default function TeacherDetailModal({
             await updateAttendanceAsync({ date, status: finalStatus });
 
             if (tempStatus === 'discipline' || tempStatus === 'reward') {
-                try {
-                    const numericAmount = tempAmount === 'day' ? 1 : tempAmount === 'half' ? 0.5 : 0.25;
-                    const specificDate = `${selectedMonthRaw}-${String(activeDayMenu).padStart(2, '0')}`;
-                    const note = tempReason ? `${tempReason} (بتاريخ ${specificDate})` : `إجراء إداري لليوم الموافق ${specificDate}`;
+                const numericAmount = tempAmount === 'day' ? 1 : tempAmount === 'half' ? 0.5 : 0.25;
+                const specificDate = `${selectedMonthRaw}-${String(activeDayMenu).padStart(2, '0')}`;
+                const note = tempReason ? `${tempReason} (بتاريخ ${specificDate})` : `إجراء إداري لليوم الموافق ${specificDate}`;
+                const isReward = tempStatus === 'reward';
 
-                    automationService.sendManualNotification(
-                        teacher.id, teacher.fullName, numericAmount,
-                        tempStatus === 'reward' ? 'reward' : 'deduction', note,
-                        { uid: user?.uid || 'director', displayName: user?.displayName || 'المدير العام' }
-                    ).catch(err => console.error("Calendar notification failed", err));
-                } catch (notifyError) {
-                    console.error("Failed to notify teacher from calendar:", notifyError);
-                }
+                await createNotification({
+                    teacherId: isReward ? null : teacher.id,
+                    type: isReward ? 'reward' : 'deduction',
+                    title: isReward ? 'مكافأة' : 'خصم',
+                    message: `${isReward ? 'مكافأة' : 'خصم'}: ${teacher.fullName} - ${numericAmount} يوم`,
+                    reason: note,
+                    amount: numericAmount,
+                    relatedDate: specificDate,
+                });
             }
 
             if (tempReason) setDayDetails(prev => ({ ...prev, [activeDayMenu]: { reason: tempReason, type: tempStatus } }));
