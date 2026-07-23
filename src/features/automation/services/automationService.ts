@@ -276,6 +276,8 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
         }
 
         const logs = [];
+        let checkedTeachers = 0;
+        let nonCompliantTeachers = 0;
 
         for (const t of teachers) {
             const studentIds = teacherStudentsMap.get(t.id) || [];
@@ -283,14 +285,21 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
 
             if (absentTeachers.has(t.id)) continue;
 
-            if (!studentIds.some(id => submittedStudents.has(id)) && !alreadyDeducted.has(t.id)) {
-                const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسليم التقرير اليومي (أتمتة)', rule.id, 'فحص التقارير اليومية', dateStr, startTime);
-                logs.push(...res.logs);
+            checkedTeachers++;
+
+            if (!studentIds.some(id => submittedStudents.has(id))) {
+                nonCompliantTeachers++;
+                if (!alreadyDeducted.has(t.id)) {
+                    const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, 'عدم تسليم التقرير اليومي (أتمتة)', rule.id, 'فحص التقارير اليومية', dateStr, startTime);
+                    logs.push(...res.logs);
+                }
             }
         }
 
-        if (logs.length === 0) {
+        if (nonCompliantTeachers === 0 && checkedTeachers > 0) {
             logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص التقارير اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سلموا التقارير ليوم ${dateStr}`, timestamp: startTime, status: 'success' }));
+        } else if (checkedTeachers === 0) {
+            logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص التقارير اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '⚠️ تحذير', messageSent: `لم يتم العثور على معلمين للفحص ليوم ${dateStr}`, timestamp: startTime, status: 'failed' }));
         }
         return logs;
     } catch (error: any) {
@@ -352,19 +361,28 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
     }
 
     const logs = [];
+    let checkedTeachers = 0;
+    let nonCompliantTeachers = 0;
 
     for (const t of teachers) {
         const studentIds = teacherStudentsMap.get(t.id) || [];
         if (studentIds.length === 0) continue;
 
-        if (!studentIds.some(id => examStudents.has(id)) && !alreadyDeducted.has(t.id)) {
+        checkedTeachers++;
+
+        if (!studentIds.some(id => examStudents.has(id))) {
+            nonCompliantTeachers++;
+            if (!alreadyDeducted.has(t.id)) {
                 const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.5, 'عدم تسجيل الاختبارات لمدار اسبوع', rule.id, 'فحص الاختبارات الأسبوعية', endDateStr, startTime);
                 logs.push(...res.logs);
             }
+        }
     }
 
-    if (logs.length === 0) {
+    if (nonCompliantTeachers === 0 && checkedTeachers > 0) {
         logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات الأسبوعية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سجلوا اختبارات من ${startDateStr} إلى ${endDateStr}`, timestamp: startTime, status: 'success' }));
+    } else if (checkedTeachers === 0) {
+        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات الأسبوعية', triggeredBy: 'system', recipientId: 'system', recipientName: '⚠️ تحذير', messageSent: `لم يتم العثور على معلمين للفحص من ${startDateStr} إلى ${endDateStr}`, timestamp: startTime, status: 'failed' }));
     }
     return logs;
 };

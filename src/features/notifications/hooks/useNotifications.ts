@@ -7,6 +7,7 @@ export const useNotifications = (teacherId?: string) => {
         queryKey: ['notifications', teacherId],
         queryFn: () => getNotifications(teacherId),
         refetchInterval: 30000,
+        staleTime: 15000,
     });
 };
 

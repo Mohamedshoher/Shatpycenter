@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import Bell from 'lucide-react/dist/esm/icons/bell'
 import X from 'lucide-react/dist/esm/icons/x'
 import Check from 'lucide-react/dist/esm/icons/check'
@@ -10,6 +10,89 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, useDeleteNotification, useClearAllNotifications } from '@/features/notifications/hooks/useNotifications';
 import { AppNotification } from '@/types';
+
+const NotificationItem = memo(function NotificationItem({
+    notif,
+    onMarkAsRead,
+    onDelete
+}: {
+    notif: AppNotification;
+    onMarkAsRead: (id: string) => void;
+    onDelete: (id: string) => void;
+}) {
+    const getTypeStyles = (type: string) => {
+        switch (type) {
+            case 'deduction': return { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'خصم' };
+            case 'reward': return { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'مكافأة' };
+            default: return { dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', label: 'النظام' };
+        }
+    };
+
+    const styles = getTypeStyles(notif.type);
+    const formattedDate = new Date(notif.createdAt).toLocaleDateString('ar-EG', {
+        day: 'numeric', month: 'short',
+        hour: '2-digit', minute: '2-digit'
+    });
+
+    return (
+        <div className={cn(
+            "px-5 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors relative group",
+            !notif.isRead && "bg-blue-50/20"
+        )}>
+            <div className="flex items-start gap-3">
+                <div className={cn("w-2 h-2 rounded-full mt-1.5 shrink-0", styles.dot)} />
+
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full", styles.bg, styles.text)}>
+                            {styles.label}
+                        </span>
+                        {!notif.isRead && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        )}
+                    </div>
+
+                    <p className={cn(
+                        "text-xs leading-relaxed",
+                        notif.isRead ? "text-gray-500" : "text-gray-800 font-medium"
+                    )}>
+                        {notif.message}
+                    </p>
+
+                    {notif.reason && (
+                        <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">
+                            {notif.reason}
+                        </p>
+                    )}
+
+                    <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-[9px] text-gray-400">
+                            {formattedDate}
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => onDelete(notif.id)}
+                                className="opacity-60 hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 text-[10px] text-red-400 hover:text-red-600 font-bold flex items-center gap-0.5 transition-opacity"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                            {!notif.isRead && (
+                                <button
+                                    onClick={() => onMarkAsRead(notif.id)}
+                                    className="opacity-60 hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5 transition-opacity"
+                                >
+                                    <Check size={12} />
+                                    تم القراءة
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
 
 export default function NotificationBell() {
     const { user } = useAuthStore();
@@ -49,14 +132,6 @@ export default function NotificationBell() {
     const handleClearAll = () => {
         if (confirm('هل أنت متأكد من حذف جميع الإشعارات؟')) {
             clearAllMutation.mutate();
-        }
-    };
-
-    const getTypeStyles = (type: string) => {
-        switch (type) {
-            case 'deduction': return { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'خصم' };
-            case 'reward': return { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'مكافأة' };
-            default: return { dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', label: 'النظام' };
         }
     };
 
@@ -113,73 +188,14 @@ export default function NotificationBell() {
                                 <p className="text-sm text-gray-400 font-medium">لا توجد إشعارات</p>
                             </div>
                         ) : (
-                            notifications.map((notif: AppNotification) => {
-                                const styles = getTypeStyles(notif.type);
-                                return (
-                                    <div
-                                        key={notif.id}
-                                        className={cn(
-                                            "px-5 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors relative group",
-                                            !notif.isRead && "bg-blue-50/20"
-                                        )}
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <div className={cn("w-2 h-2 rounded-full mt-1.5 shrink-0", styles.dot)} />
-
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full", styles.bg, styles.text)}>
-                                                        {styles.label}
-                                                    </span>
-                                                    {!notif.isRead && (
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                    )}
-                                                </div>
-
-                                                <p className={cn(
-                                                    "text-xs leading-relaxed",
-                                                    notif.isRead ? "text-gray-500" : "text-gray-800 font-medium"
-                                                )}>
-                                                    {notif.message}
-                                                </p>
-
-                                                {notif.reason && (
-                                                    <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">
-                                                        {notif.reason}
-                                                    </p>
-                                                )}
-
-                                                <div className="flex items-center justify-between mt-1.5">
-                                                    <span className="text-[9px] text-gray-400">
-                                                        {new Date(notif.createdAt).toLocaleDateString('ar-EG', {
-                                                            day: 'numeric', month: 'short',
-                                                            hour: '2-digit', minute: '2-digit'
-                                                        })}
-                                                    </span>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => handleDeleteNotification(notif.id)}
-                                                            className="opacity-0 group-hover:opacity-100 text-[10px] text-red-400 hover:text-red-600 font-bold flex items-center gap-0.5 transition-opacity"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
-                                                        {!notif.isRead && (
-                                                            <button
-                                                                onClick={() => handleMarkAsRead(notif.id)}
-                                                                className="opacity-0 group-hover:opacity-100 text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5 transition-opacity"
-                                                            >
-                                                                <Check size={12} />
-                                                                تم القراءة
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })
+                            notifications.map((notif: AppNotification) => (
+                                <NotificationItem
+                                    key={notif.id}
+                                    notif={notif}
+                                    onMarkAsRead={handleMarkAsRead}
+                                    onDelete={handleDeleteNotification}
+                                />
+                            ))
                         )}
                     </div>
                 </div>
