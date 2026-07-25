@@ -15,6 +15,9 @@ export default function AutomationPage() {
     const { logs, loading: logsLoading, loadLogs, undoLogAction } = useAutomation();
 
     const [selectedDate, setSelectedDate] = useState<string>(''); // Empty means Latest
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const defaultCheckDate = yesterday.toISOString().split('T')[0];
+    const [reportCheckDate, setReportCheckDate] = useState<string>(defaultCheckDate);
 
     useEffect(() => {
         loadLogs(selectedDate);
@@ -29,16 +32,18 @@ export default function AutomationPage() {
     };
 
     const handleRunReportCheck = async () => {
-        if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص التقارير اليومية وتطبيق الخصومات على المخالفين؟")) {
-            const result = await executeMissingReportDeduction();
+        const checkDateStr = reportCheckDate;
+        const checkDateDisplay = new Date(checkDateStr + 'T12:00:00').toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
+        if (confirm(`هل أنت متأكد من رغبتك في تشغيل فحص التقارير ليوم ${checkDateDisplay} وتطبيق الخصومات على المخالفين؟`)) {
+            const result = await executeMissingReportDeduction(checkDateStr);
             setSelectedDate('');
 
             const violators = (result || []).filter((r: any) => r.recipientId !== 'system');
 
             if (violators.length > 0) {
-                alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة.`);
+                alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة ليوم ${checkDateDisplay}.`);
             } else {
-                alert("✨ تم الفحص: لم يتم العثور على مخالفات جديدة اليوم.");
+                alert(`✨ تم الفحص ليوم ${checkDateDisplay}: لم يتم العثور على مخالفات جديدة.`);
             }
         }
     };
@@ -199,17 +204,27 @@ export default function AutomationPage() {
             </div>
 
             {/* Main Action Header - Just Buttons */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden space-y-4">
                 <div className="absolute top-0 left-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
                 <div className="relative z-10 flex flex-row items-center justify-between gap-3">
-                    <button
-                        onClick={handleRunReportCheck}
-                        disabled={isExecuting}
-                        className="flex-1 flex flex-col md:flex-row items-center justify-center gap-2 px-4 py-4 md:py-3 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-sm md:text-base hover:bg-indigo-100 transition-all disabled:opacity-50"
-                    >
-                        <Calendar className="w-5 h-5 mb-1 md:mb-0" />
-                        <span>{isExecuting ? 'جاري فحص التقارير...' : 'فحص التقارير'}</span>
-                    </button>
+                    <div className="flex-1 flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                value={reportCheckDate}
+                                onChange={(e) => setReportCheckDate(e.target.value)}
+                                className="bg-white border border-gray-200 text-xs font-bold text-indigo-700 px-2 py-1 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                            <button
+                                onClick={handleRunReportCheck}
+                                disabled={isExecuting}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-sm md:text-base hover:bg-indigo-100 transition-all disabled:opacity-50"
+                            >
+                                <Calendar className="w-5 h-5" />
+                                <span>{isExecuting ? 'جاري الفحص...' : 'فحص التقارير'}</span>
+                            </button>
+                        </div>
+                    </div>
                     <button
                         onClick={handleRunExamCheck}
                         disabled={isExecutingExams}

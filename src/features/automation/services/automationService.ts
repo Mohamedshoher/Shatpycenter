@@ -226,14 +226,14 @@ export const executeDeduction = async (
     return { deduction, logs };
 };
 
-export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
+export const checkMissingDailyReports = async (customDate?: string): Promise<AutomationLog[]> => {
     try {
-        const target = new Date(); target.setDate(target.getDate() - 1);
-        const dateStr = normalizeDate(target);
+        const target = customDate ? new Date(customDate + 'T12:00:00') : (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d; })();
+        const dateStr = customDate || normalizeDate(target);
         const dayOfWeek = target.getDay();
         const startTime = new Date();
 
-        if (WEEKEND_DAYS.includes(dayOfWeek)) return [];
+        if (!customDate && WEEKEND_DAYS.includes(dayOfWeek)) return [];
 
         const rules = await getRules();
         const rule = rules.find(r => r.trigger === 'missing_daily_report' && r.enabled);
@@ -256,7 +256,7 @@ export const checkMissingDailyReports = async (): Promise<AutomationLog[]> => {
         if (attResult.error) console.error('attResult error:', attResult.error);
         if (teaResult.error) console.error('teaResult error:', teaResult.error);
 
-        const alreadyDeducted = new Set(dedResult.data?.filter(d => d.reason?.includes('تقرير')).map(d => d.teacher_id));
+        const alreadyDeducted = new Set(dedResult.data?.filter(d => d.reason?.includes('التقرير')).map(d => d.teacher_id));
         const submittedStudents = new Set(attResult.data?.map(a => a.student_id));
         const absentTeachers = new Set(teaResult.data?.filter(a => a.status === 'absent').map(a => a.teacher_id));
 

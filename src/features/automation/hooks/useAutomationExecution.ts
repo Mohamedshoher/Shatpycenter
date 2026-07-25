@@ -8,11 +8,11 @@ export const useAutomationExecution = () => {
     const [logs, setLogs] = useState<any[]>([]);
 
     // أتمتة التقارير اليومية
-    const executeMissingReportDeduction = useCallback(async () => {
+    const executeMissingReportDeduction = useCallback(async (customDate?: string) => {
         setIsExecuting(true);
         setError(null);
         try {
-            const createdLogs = await automationService.checkMissingDailyReports();
+            const createdLogs = await automationService.checkMissingDailyReports(customDate);
             setLogs(createdLogs);
             return createdLogs;
         } catch (err) {
