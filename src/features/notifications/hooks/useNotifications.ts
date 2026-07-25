@@ -47,7 +47,7 @@ export const useMarkAsRead = () => {
 export const useMarkAllAsRead = (teacherId?: string) => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: () => markAllAsRead(teacherId || ''),
+        mutationFn: () => markAllAsRead(teacherId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
         },
@@ -67,7 +67,7 @@ export const useDeleteNotification = () => {
 export const useClearAllNotifications = (teacherId?: string) => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: () => clearAllNotifications(teacherId || ''),
+        mutationFn: () => clearAllNotifications(teacherId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
         },

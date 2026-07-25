@@ -90,12 +90,14 @@ export async function PATCH(request: NextRequest) {
 
         const supabase = createServerSupabase();
 
-        if (all && teacherId) {
-            const { error } = await supabase
-                .from('notifications')
-                .update({ is_read: true })
-                .or(`teacher_id.is.null,teacher_id.eq.${teacherId}`)
-                .eq('is_read', false);
+        if (all) {
+            let query = supabase.from('notifications').update({ is_read: true });
+            if (teacherId) {
+                query = query.or(`teacher_id.is.null,teacher_id.eq.${teacherId}`).eq('is_read', false);
+            } else {
+                query = query.eq('is_read', false);
+            }
+            const { error } = await query;
             if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         } else if (id) {
             const { error } = await supabase
@@ -120,11 +122,12 @@ export async function DELETE(request: NextRequest) {
 
         const supabase = createServerSupabase();
 
-        if (all === 'true' && teacherId) {
-            const { error } = await supabase
-                .from('notifications')
-                .delete()
-                .or(`teacher_id.is.null,teacher_id.eq.${teacherId}`);
+        if (all === 'true') {
+            let query = supabase.from('notifications').delete();
+            if (teacherId) {
+                query = query.or(`teacher_id.is.null,teacher_id.eq.${teacherId}`);
+            }
+            const { error } = await query;
             if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         } else if (id) {
             const { error } = await supabase
