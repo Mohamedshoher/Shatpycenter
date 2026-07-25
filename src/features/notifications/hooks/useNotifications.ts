@@ -44,12 +44,15 @@ export const useMarkAsRead = () => {
     });
 };
 
-export const useMarkAllAsRead = (teacherId?: string) => {
+export const useMarkAllAsRead = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: () => markAllAsRead(teacherId),
+        mutationFn: (teacherId?: string) => markAllAsRead(teacherId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        },
+        onError: (err: Error) => {
+            console.error('فشل تحديث القراءة:', err.message);
         },
     });
 };
@@ -64,12 +67,15 @@ export const useDeleteNotification = () => {
     });
 };
 
-export const useClearAllNotifications = (teacherId?: string) => {
+export const useClearAllNotifications = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: () => clearAllNotifications(teacherId),
+        mutationFn: (teacherId?: string) => clearAllNotifications(teacherId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        },
+        onError: (err: Error) => {
+            console.error('فشل حذف الإشعارات:', err.message);
         },
     });
 };

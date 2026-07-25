@@ -126,6 +126,8 @@ export async function DELETE(request: NextRequest) {
             let query = supabase.from('notifications').delete();
             if (teacherId) {
                 query = query.or(`teacher_id.is.null,teacher_id.eq.${teacherId}`);
+            } else {
+                query = query.or('id.neq.00000000-0000-0000-0000-000000000000');
             }
             const { error } = await query;
             if (error) return NextResponse.json({ error: error.message }, { status: 500 });

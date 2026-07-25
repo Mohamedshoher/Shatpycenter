@@ -103,9 +103,9 @@ export default function NotificationBell() {
     const { data: notifications = [] } = useNotifications(teacherId);
     const unreadCount = useUnreadCount(teacherId);
     const markAsReadMutation = useMarkAsRead();
-    const markAllAsReadMutation = useMarkAllAsRead(teacherId);
+    const markAllAsReadMutation = useMarkAllAsRead();
     const deleteNotificationMutation = useDeleteNotification();
-    const clearAllMutation = useClearAllNotifications(teacherId);
+    const clearAllMutation = useClearAllNotifications();
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -122,7 +122,7 @@ export default function NotificationBell() {
     };
 
     const handleMarkAllAsRead = () => {
-        markAllAsReadMutation.mutate();
+        markAllAsReadMutation.mutate(teacherId);
     };
 
     const handleDeleteNotification = (id: string) => {
@@ -131,7 +131,7 @@ export default function NotificationBell() {
 
     const handleClearAll = () => {
         if (confirm('هل أنت متأكد من حذف جميع الإشعارات؟')) {
-            clearAllMutation.mutate();
+            clearAllMutation.mutate(teacherId);
         }
     };
 

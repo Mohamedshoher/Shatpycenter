@@ -61,14 +61,14 @@ export const deleteNotification = async (id: string): Promise<boolean> => {
 };
 
 export const clearAllNotifications = async (teacherId?: string): Promise<boolean> => {
-    try {
-        const params = new URLSearchParams({ all: 'true' });
-        if (teacherId) params.set('teacherId', teacherId);
-        const res = await fetch(`${BASE_URL}?${params}`, { method: 'DELETE' });
-        return res.ok;
-    } catch {
-        return false;
+    const params = new URLSearchParams({ all: 'true' });
+    if (teacherId) params.set('teacherId', teacherId);
+    const res = await fetch(`${BASE_URL}?${params}`, { method: 'DELETE' });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || 'فشل حذف الإشعارات');
     }
+    return true;
 };
 
 export const markAllAsRead = async (teacherId?: string): Promise<boolean> => {
