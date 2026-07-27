@@ -50,98 +50,43 @@ export default function ArchiveList() {
     const [targetGroupId, setTargetGroupId] = useState<string>('');
     const [isRestoring, setIsRestoring] = useState(false);
 
-    // جلب كافة المصروفات للطلاب المؤرشفين لفحص الدين
-    const { data: allFees = [] } = useQuery({
-        queryKey: ['all-fees', students?.filter(s => s.status === 'archived').length],
+    // جلب بيانات الأرشفة (الرسوم + الحضور + الإعفاءات) في API واحد
+    const archivedIds = useMemo(() =>
+        students?.filter(s => s.status === 'archived').map(s => s.id) || [],
+        [students]
+    );
+
+    const { data: archiveData, refetch: refetchArchiveData } = useQuery({
+        queryKey: ['archive-data', archivedIds.sort().join(',')],
         queryFn: async () => {
-            if (!students) return [];
-            const archivedIds = students.filter(s => s.status === 'archived').map(s => s.id);
-            if (archivedIds.length === 0) return [];
-
-            const { supabase } = await import('@/lib/supabase');
-            let allData: any[] = [];
-
-            const chunkSize = 100;
-            for (let i = 0; i < archivedIds.length; i += chunkSize) {
-                const chunk = archivedIds.slice(i, i + chunkSize);
-                let from = 0;
-                const step = 1000;
-                while (true) {
-                    const { data, error } = await supabase.from('fees').select('id, student_id, month, amount, date, created_by').in('student_id', chunk).range(from, from + step - 1);
-                    if (error || !data || data.length === 0) break;
-                    allData = [...allData, ...data];
-                    if (data.length < step) break;
-                    from += step;
-                }
-            }
-            return allData;
+            if (archivedIds.length === 0) return { fees: [], attendance: [], exemptions: [] };
+            const res = await fetch(`/api/archive-data?studentIds=${archivedIds.join(',')}`);
+            if (!res.ok) return { fees: [], attendance: [], exemptions: [] };
+            return res.json();
         },
-        enabled: !!students
+        enabled: archivedIds.length > 0
     });
 
-    // جلب كافة سجلات الحضور لفحص استحقاق الدين
-    const { data: allAttendance = [] } = useQuery({
-        queryKey: ['all-attendance', students?.filter(s => s.status === 'archived').length],
-        queryFn: async () => {
-            if (!students) return [];
-            const archivedIds = students.filter(s => s.status === 'archived').map(s => s.id);
-            if (archivedIds.length === 0) return [];
+    const allFees = archiveData?.fees || [];
+    const allAttendance = archiveData?.attendance || [];
+    const allExemptions = archiveData?.exemptions || [];
 
-            const { supabase } = await import('@/lib/supabase');
-            let allData: any[] = [];
-
-            const chunkSize = 100;
-            for (let i = 0; i < archivedIds.length; i += chunkSize) {
-                const chunk = archivedIds.slice(i, i + chunkSize);
-                let from = 0;
-                const step = 1000;
-                while (true) {
-                    const { data, error } = await supabase
-                        .from('attendance')
-                        .select('student_id, month_key, status, date')
-                        .in('student_id', chunk)
-                        .range(from, from + step - 1);
-                    if (error || !data || data.length === 0) break;
-                    allData = [...allData, ...data];
-                    if (data.length < step) break;
-                    from += step;
-                }
-            }
-            return allData;
-        },
-        enabled: !!students
-    });
-
-    // جلب كافة الإعفاءات للطلاب المؤرشفين
-    const { data: allExemptions = [], refetch: refetchExemptions } = useQuery({
-        queryKey: ['all-exemptions', students?.filter(s => s.status === 'archived').length],
-        queryFn: async () => {
-            if (!students) return [];
-            const archivedIds = students.filter(s => s.status === 'archived').map(s => s.id);
-            if (archivedIds.length === 0) return [];
-
-            const { supabase } = await import('@/lib/supabase');
-            const { data, error } = await supabase
-                .from('free_exemptions')
-                .select('id, student_id, student_name, month, amount, exempted_by, created_at')
-                .in('student_id', archivedIds);
-            
-            return data || [];
-        },
-        enabled: !!students
-    });
-
-    // منطق الدين المتطور: يعتمد على عدد أيام الحضور في الشهر
-    const calculateDebt = (student: Student) => {
-        const studentFees = allFees.filter(f => f.student_id === student.id);
-        const studentAttendance = allAttendance.filter(a => a.student_id === student.id);
+    // منطق الدين المحسّن: يستخدم Map للفهرسة المسبقة بدلاً من filter المتكرر
+    const calculateDebtForStudent = (
+        student: Student,
+        attendanceByStudentId: Map<string, any[]>,
+        feesByStudentId: Map<string, any[]>,
+        exemptionsByStudentId: Map<string, any[]>
+    ) => {
+        const studentFees = feesByStudentId.get(student.id) || [];
+        const studentAttendance = attendanceByStudentId.get(student.id) || [];
 
         let startDateStr = student.enrollmentDate;
         if (!startDateStr && studentAttendance.length > 0) {
-            startDateStr = studentAttendance.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date;
+            startDateStr = [...studentAttendance].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date;
         }
 
-        if (!startDateStr) return { isIndebted: false, label: '', amount: 0 };
+        if (!startDateStr) return { isIndebted: false, label: '', amount: 0, unpaidMonths: [] };
 
         const start = new Date(startDateStr);
         const end = student.archivedDate ? new Date(student.archivedDate) : new Date();
@@ -156,7 +101,6 @@ export default function ArchiveList() {
             const monthLabel = current.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
             const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
 
-            // حساب أيام الحضور في هذا الشهر
             const monthAttendanceCount = studentAttendance.filter(a => {
                 const recordDate = new Date(a.date);
                 const recordMonthKey = a.month_key || `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}`;
@@ -173,8 +117,7 @@ export default function ArchiveList() {
 
             if (monthDebtAmount > 0) {
                 const isPaid = studentFees.some(f => f.month === monthLabel || f.month === monthKey);
-                const isExempted = allExemptions.some(e => e.student_id === student.id && (e.month === monthLabel || e.month === monthKey));
-                
+                const isExempted = exemptionsByStudentId.get(student.id)?.some(e => e.month === monthLabel || e.month === monthKey);
                 if (!isPaid && !isExempted) {
                     totalMonthDebt += monthDebtAmount;
                     unpaidMonths.push({ label: monthLabel, key: monthKey });
@@ -189,13 +132,44 @@ export default function ArchiveList() {
         else if (totalMonthDebt === 1) label = 'مدين بشهر';
         else if (totalMonthDebt > 1) label = `مدين (${totalMonthDebt} أشهر)`;
 
-        return {
-            isIndebted: totalMonthDebt > 0,
-            amount: totalMonthDebt,
-            label,
-            unpaidMonths
-        };
+        return { isIndebted: totalMonthDebt > 0, amount: totalMonthDebt, label, unpaidMonths };
     };
+
+    // فصل حساب الدين في useMemo مستقل: يعيد الحساب فقط عند تغير البيانات المالية
+    // هذا يمنع إعادة الحساب عند تغيير searchTerm/filter/daysInArchiveFilter
+    const debtMap = useMemo(() => {
+        if (!students) return new Map<string, any>();
+
+        // فهرسة البيانات مرة واحدة باستخدام Map (O(A+F+E) بدلاً من O(S*(A+F+E)))
+        const feesByStudentId = new Map<string, any[]>();
+        for (const fee of allFees) {
+            const arr = feesByStudentId.get(fee.student_id);
+            if (arr) arr.push(fee);
+            else feesByStudentId.set(fee.student_id, [fee]);
+        }
+
+        const attendanceByStudentId = new Map<string, any[]>();
+        for (const att of allAttendance) {
+            const arr = attendanceByStudentId.get(att.student_id);
+            if (arr) arr.push(att);
+            else attendanceByStudentId.set(att.student_id, [att]);
+        }
+
+        const exemptionsByStudentId = new Map<string, any[]>();
+        for (const ex of allExemptions) {
+            const arr = exemptionsByStudentId.get(ex.student_id);
+            if (arr) arr.push(ex);
+            else exemptionsByStudentId.set(ex.student_id, [ex]);
+        }
+
+        // حساب الدين لكل طالب مؤرشف باستخدام البيانات المفهرسة
+        const archivedStudentsList = students.filter(s => s.status === 'archived');
+        const map = new Map<string, any>();
+        for (const student of archivedStudentsList) {
+            map.set(student.id, calculateDebtForStudent(student, attendanceByStudentId, feesByStudentId, exemptionsByStudentId));
+        }
+        return map;
+    }, [students, allFees, allAttendance, allExemptions]);
 
     const [isExempting, setIsExempting] = useState<string | null>(null);
     const handleExemptAll = async (student: Student, debtInfo: any) => {
@@ -223,7 +197,7 @@ export default function ArchiveList() {
             if (exemptionsToInsert.length > 0) {
                 const { error } = await supabase.from('free_exemptions').insert(exemptionsToInsert);
                 if (error) throw error;
-                await refetchExemptions();
+                await refetchArchiveData();
                 alert('تم العفو عن المتأخرات بنجاح');
             }
         } catch (e) {
@@ -237,44 +211,33 @@ export default function ArchiveList() {
     const archivedStudents = useMemo(() => {
         if (!students) return [];
 
-        // حساب الدين مسبقاً لكل طالب لتجنب التكرار وللتمكن من الترتيب
-        const withDebt = students
-            .filter(student => student.status === 'archived')
-            .map(student => ({
-                ...student,
-                debtInfo: calculateDebt(student)
-            }));
+        const archivedStudentsList = students.filter(student => student.status === 'archived');
 
-        const baseFiltered = withDebt.filter(student => {
-            const { debtInfo } = student;
+        const baseFiltered = archivedStudentsList.filter(student => {
+            const debtInfo = debtMap.get(student.id);
 
             let matchesFilter = true;
             if (filter === 'indebted') {
-                matchesFilter = debtInfo.isIndebted;
+                matchesFilter = debtInfo?.isIndebted || false;
             } else if (filter === 'half_indebted') {
-                matchesFilter = debtInfo.amount === 0.5;
+                matchesFilter = (debtInfo?.amount || 0) === 0.5;
             } else if (filter === 'full_indebted') {
-                matchesFilter = debtInfo.amount >= 1;
+                matchesFilter = (debtInfo?.amount || 0) >= 1;
             } else if (filter !== 'الكل') {
                 matchesFilter = student.groupId === filter;
             }
 
             if (matchesFilter && daysInArchiveFilter > 0) {
-                // استخدام تاريخ الأرشفة، أو تاريخ التحديث كبديل، أو تاريخ اليوم كآخر خيار
                 const archiveDateStr = student.archivedDate || (student as any).updated_at;
                 if (!archiveDateStr) {
-                    matchesFilter = false; 
+                    matchesFilter = false;
                 } else {
                     const start = new Date(archiveDateStr);
                     const today = new Date();
-                    
-                    // تحويل كلاهما لبداية اليوم للحصول على فرق دقيق بالأيام
                     const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
                     const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                    
                     const diffTime = t.getTime() - s.getTime();
                     const diffDays = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
-                    
                     matchesFilter = diffDays <= daysInArchiveFilter;
                 }
             }
@@ -284,14 +247,21 @@ export default function ArchiveList() {
 
         // ترتيب المدينين أولاً
         baseFiltered.sort((a, b) => {
-            if (a.debtInfo.isIndebted && !b.debtInfo.isIndebted) return -1;
-            if (!a.debtInfo.isIndebted && b.debtInfo.isIndebted) return 1;
-            if (b.debtInfo.amount !== a.debtInfo.amount) return b.debtInfo.amount - a.debtInfo.amount;
+            const debtA = debtMap.get(a.id);
+            const debtB = debtMap.get(b.id);
+            const aIndebted = debtA?.isIndebted || false;
+            const bIndebted = debtB?.isIndebted || false;
+            const aAmount = debtA?.amount || 0;
+            const bAmount = debtB?.amount || 0;
+
+            if (aIndebted && !bIndebted) return -1;
+            if (!aIndebted && bIndebted) return 1;
+            if (bAmount !== aAmount) return bAmount - aAmount;
             return 0;
         });
 
         return tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
-    }, [students, searchTerm, filter, allFees, allAttendance, daysInArchiveFilter]);
+    }, [students, searchTerm, filter, debtMap, daysInArchiveFilter]);
 
     // دالة حساب عدد الأيام في الأرشيف بدقة
     const getDaysInArchive = (archivedDate?: string) => {
@@ -507,7 +477,7 @@ export default function ArchiveList() {
                 ) : (
                     archivedStudents?.map((student) => {
                         const daysInArchive = getDaysInArchive(student.archivedDate);
-                        const debtInfo = student.debtInfo;
+                        const debtInfo = debtMap.get(student.id) || { isIndebted: false, label: '', amount: 0, unpaidMonths: [] };
 
                         return (
                             <div
