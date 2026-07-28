@@ -924,6 +924,8 @@ export default function TeacherDetailModal({
                         isDirector={isDirector}
                         handleExemptStudent={handleExemptStudent}
                         handleRemoveExemption={handleRemoveExemption}
+                        monthName={selectedMonth}
+                        senderName={isDirector ? (user?.displayName || 'إدارة المركز') : teacher?.fullName}
                     />
         </>
     );

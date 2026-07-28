@@ -199,7 +199,9 @@ export const useTeacherDashboard = (
                     paidAmount: totalPaidByStudent,
                     remaining: Math.max(0, remaining),
                     isExempted,
-                    enrollmentDate: student.enrollmentDate
+                    enrollmentDate: student.enrollmentDate,
+                    phone: student.phone,
+                    parentPhone: student.parentPhone
                 };
             })
             .filter(s => s.remaining > 0 || s.isExempted);

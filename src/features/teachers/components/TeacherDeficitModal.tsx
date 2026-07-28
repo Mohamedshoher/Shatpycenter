@@ -3,7 +3,8 @@ import { FadeIn, SlideIn } from '@/components/ui/transition';
 import X from 'lucide-react/dist/esm/icons/x'
 import Gift from 'lucide-react/dist/esm/icons/gift'
 import UserX from 'lucide-react/dist/esm/icons/user-x';
-import { cn } from '@/lib/utils';
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
+import { cn, getWhatsAppUrl } from '@/lib/utils';
 
 interface Props {
     isOpen: boolean;
@@ -15,16 +16,21 @@ interface Props {
     isDirector: boolean;
     handleExemptStudent: (id: string, name: string, amount: number) => void;
     handleRemoveExemption: (id: string, name: string) => void;
+    monthName?: string;
+    senderName?: string;
 }
 
 export const TeacherDeficitModal = ({
     isOpen, onClose, realDeficit, unpaidStudents, 
     deficitTab, setDeficitTab, isDirector, 
-    handleExemptStudent, handleRemoveExemption 
+    handleExemptStudent, handleRemoveExemption,
+    monthName, senderName
 }: Props) => {
     const displayedStudents = unpaidStudents
         .filter(s => deficitTab === 'unpaid' ? !s.isExempted : s.isExempted)
         .sort((a, b) => a.remaining - b.remaining);
+
+    const showWhatsApp = new Date().getDate() >= 20;
 
     return (
         <>
@@ -64,28 +70,45 @@ export const TeacherDeficitModal = ({
                         {displayedStudents.length === 0 ? (
                             <p className="text-center py-10 text-gray-400">لا يوجد طلاب في هذه القائمة</p>
                         ) : (
-                            displayedStudents.map((student) => (
-                                <div key={student.id} className="bg-white rounded-3xl p-5 border border-slate-100 mb-4 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="flex flex-row-reverse items-start justify-between">
-                                        <div className="text-right">
-                                            <h4 className="font-bold">{student.name}</h4>
-                                            <p className="text-[10px] text-gray-400">{student.groupName}</p>
+                            displayedStudents.map((student) => {
+                                const whatsappMessage = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: ${student.name}\nتحية طيبة وبعد،\n\nنود تذكيركم بلطف بقسط شهر ${monthName || ''} لمجموعة (${student.groupName}).\nالمبلغ المتبقي: ${student.remaining} ج.م.\n\nبما أن الشهر قد انتصف، نرجو التكرم بتسديد القسط في أقرب فرصة حيث تُستحق الرسوم مقدماً.\nشاكرين لكم حسن تعاونكم وجزاكم الله خيراً.\n\nمع تحيات: ${senderName || 'الإدارة'}`;
+                                
+                                return (
+                                    <div key={student.id} className="bg-white rounded-3xl p-5 border border-slate-100 mb-4 shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="flex flex-row-reverse items-start justify-between">
+                                            <div className="text-right">
+                                                <h4 className="font-bold">{student.name}</h4>
+                                                <p className="text-[10px] text-gray-400">{student.groupName}</p>
+                                            </div>
+                                            <p className={cn("text-lg font-black", student.isExempted ? "text-green-600 line-through" : "text-red-600")}>
+                                                {student.remaining} ج.م
+                                            </p>
                                         </div>
-                                        <p className={cn("text-lg font-black", student.isExempted ? "text-green-600 line-through" : "text-red-600")}>
-                                            {student.remaining} ج.م
-                                        </p>
-                                    </div>
-                                    {isDirector && (
-                                        <div className="mt-3 flex justify-start">
-                                            {student.isExempted ? (
-                                                <button onClick={() => handleRemoveExemption(student.id, student.name)} className="text-xs text-red-500 bg-red-50 px-3 py-1 rounded-lg flex items-center gap-1"><UserX size={12}/> إلغاء العفو</button>
-                                            ) : (
-                                                <button onClick={() => handleExemptStudent(student.id, student.name, student.remaining)} className="text-xs text-amber-600 bg-amber-50 px-3 py-1 rounded-lg flex items-center gap-1"><Gift size={12}/> العفو عن المبلغ</button>
+                                        <div className="mt-3 flex justify-start gap-2">
+                                            {isDirector && (
+                                                <>
+                                                    {student.isExempted ? (
+                                                        <button onClick={() => handleRemoveExemption(student.id, student.name)} className="text-xs text-red-500 bg-red-50 px-3 py-1 rounded-lg flex items-center gap-1"><UserX size={12}/> إلغاء العفو</button>
+                                                    ) : (
+                                                        <button onClick={() => handleExemptStudent(student.id, student.name, student.remaining)} className="text-xs text-amber-600 bg-amber-50 px-3 py-1 rounded-lg flex items-center gap-1"><Gift size={12}/> العفو عن المبلغ</button>
+                                                    )}
+                                                </>
+                                            )}
+                                            {!student.isExempted && showWhatsApp && (student.parentPhone || student.phone) && (
+                                                <a 
+                                                    href={getWhatsAppUrl(student.parentPhone || student.phone, whatsappMessage)}
+                                                    target="_blank" 
+                                                    rel="noreferrer"
+                                                    className="text-xs text-green-600 bg-green-50 px-3 py-1 rounded-lg flex items-center gap-1 hover:bg-green-100 transition-colors"
+                                                    title="إرسال تذكير لولي الأمر عبر الواتساب"
+                                                >
+                                                    <MessageCircle size={12}/> تذكير
+                                                </a>
                                             )}
                                         </div>
-                                    )}
-                                </div>
-                            ))
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
                 </div>
