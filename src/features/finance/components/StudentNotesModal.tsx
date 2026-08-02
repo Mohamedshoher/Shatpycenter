@@ -13,7 +13,7 @@ import ArrowRightLeft from 'lucide-react/dist/esm/icons/arrow-right-left'
 import Reply from 'lucide-react/dist/esm/icons/reply'
 import Send from 'lucide-react/dist/esm/icons/send';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -60,9 +60,49 @@ export default function StudentNotesModal({
     const [activeTab, setActiveTab] = useState<'unread' | 'read'>('unread');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyText, setReplyText] = useState('');
+    const [localHidden, setLocalHidden] = useState<string[]>([]);
+    const [readOverrides, setReadOverrides] = useState<Record<string, boolean>>({});
     const { user } = useAuthStore();
 
-    const filteredNotes = notes.filter(n => activeTab === 'read' ? n.isRead : !n.isRead);
+    useEffect(() => {
+        if (!isOpen) {
+            setLocalHidden([]);
+            setReadOverrides({});
+        }
+    }, [isOpen]);
+
+    const visibleNotes = notes
+        .filter(n => !localHidden.includes(n.id))
+        .map(n => ({
+            ...n,
+            isRead: n.id in readOverrides ? readOverrides[n.id] : n.isRead,
+        }));
+    const unreadCount = visibleNotes.filter(n => !n.isRead).length;
+    const filteredNotes = visibleNotes.filter(n => activeTab === 'read' ? n.isRead : !n.isRead);
+
+    const handleToggleRead = (noteId: string, currentStatus: boolean) => {
+        setReadOverrides(prev => ({ ...prev, [noteId]: !currentStatus }));
+        onToggleRead(noteId, currentStatus);
+    };
+
+    const handleDeleteNote = (noteId: string) => {
+        if (confirm("هل أنت متأكد من حذف هذه الملحوظة؟")) {
+            setLocalHidden(prev => [...prev, noteId]);
+            onDeleteNote(noteId);
+        }
+    };
+
+    const handleArchiveStudent = (noteId: string, studentId: string) => {
+        if (confirm("هل أنت متأكد من أرشفة هذا الطالب؟")) {
+            setLocalHidden(prev => [...prev, noteId]);
+            onArchiveStudent(studentId);
+        }
+    };
+
+    const handleTransferStudent = (noteId: string, studentId: string) => {
+        setLocalHidden(prev => [...prev, noteId]);
+        onTransferStudent(studentId);
+    };
 
     const handleSendReply = (noteId: string) => {
         if (!replyText.trim()) return;
@@ -101,9 +141,9 @@ export default function StudentNotesModal({
                         )}
                     >
                         ملحوظات جديدة
-                        {notes.filter(n => !n.isRead).length > 0 && (
+                        {unreadCount > 0 && (
                             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white">
-                                {notes.filter(n => !n.isRead).length}
+                                {unreadCount}
                             </span>
                         )}
                     </button>
@@ -165,28 +205,28 @@ export default function StudentNotesModal({
                                             </button>
                                         )}
                                         <button
-                                            onClick={() => onDeleteNote(note.id)}
+                                            onClick={() => handleDeleteNote(note.id)}
                                             className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white rounded-xl transition-all shadow-sm shadow-transparent hover:shadow-red-500/10"
                                             title="حذف الملحوظة"
                                         >
                                             <Trash2 size={18} />
                                         </button>
                                         <button
-                                            onClick={() => onArchiveStudent(note.studentId)}
+                                            onClick={() => handleArchiveStudent(note.id, note.studentId)}
                                             className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-amber-600 hover:bg-white rounded-xl transition-all shadow-sm shadow-transparent hover:shadow-amber-500/10"
                                             title="أرشفة الطالب"
                                         >
                                             <Archive size={18} />
                                         </button>
                                         <button
-                                            onClick={() => onTransferStudent(note.studentId)}
+                                            onClick={() => handleTransferStudent(note.id, note.studentId)}
                                             className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm shadow-transparent hover:shadow-blue-500/10"
                                             title="نقل الطالب لمجموعة أخرى"
                                         >
                                             <ArrowRightLeft size={18} />
                                         </button>
                                         <button
-                                            onClick={() => onToggleRead(note.id, note.isRead)}
+                                            onClick={() => handleToggleRead(note.id, note.isRead)}
                                             className={cn(
                                                 "w-9 h-9 flex items-center justify-center rounded-xl transition-all shadow-sm shadow-transparent",
                                                 note.isRead

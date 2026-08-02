@@ -297,16 +297,12 @@ export default function DashboardOverview() {
                 onClose={() => setIsNotesModalOpen(false)}
                 notes={recentNotes}
                 onArchiveStudent={async (id: string) => {
-                    if (confirm("هل أنت متأكد من أرشفة هذا الطالب؟")) {
-                        await archiveStudent(id);
-                        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-                    }
+                    await archiveStudent(id);
+                    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
                 }}
                 onDeleteNote={async (id: string) => {
-                    if (confirm("هل أنت متأكد من حذف هذه الملحوظة؟")) {
-                        await deleteStudentNote(id);
-                        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-                    }
+                    await deleteStudentNote(id);
+                    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
                 }}
                 onToggleRead={async (id: string, currentStatus: boolean) => {
                     await markNoteAsRead(id, !currentStatus);
