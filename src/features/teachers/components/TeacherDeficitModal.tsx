@@ -18,19 +18,22 @@ interface Props {
     handleRemoveExemption: (id: string, name: string) => void;
     monthName?: string;
     senderName?: string;
+    selectedMonthRaw?: string;
 }
 
 export const TeacherDeficitModal = ({
     isOpen, onClose, realDeficit, unpaidStudents, 
     deficitTab, setDeficitTab, isDirector, 
     handleExemptStudent, handleRemoveExemption,
-    monthName, senderName
+    monthName, senderName, selectedMonthRaw
 }: Props) => {
     const displayedStudents = unpaidStudents
         .filter(s => deficitTab === 'unpaid' ? !s.isExempted : s.isExempted)
         .sort((a, b) => a.remaining - b.remaining);
 
-    const showWhatsApp = new Date().getDate() >= 20;
+    const [year, month] = (selectedMonthRaw || '').split('-').map(Number);
+    const day20 = new Date(year, month - 1, 20);
+    const showWhatsApp = Number.isNaN(day20.getTime()) ? false : new Date() >= day20;
 
     return (
         <>

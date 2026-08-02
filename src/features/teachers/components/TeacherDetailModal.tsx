@@ -926,6 +926,7 @@ export default function TeacherDetailModal({
                         handleRemoveExemption={handleRemoveExemption}
                         monthName={selectedMonth}
                         senderName={isDirector ? (user?.displayName || 'إدارة المركز') : teacher?.fullName}
+                        selectedMonthRaw={selectedMonthRaw}
                     />
         </>
     );
