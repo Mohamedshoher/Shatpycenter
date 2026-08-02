@@ -20,6 +20,8 @@ import Check from 'lucide-react/dist/esm/icons/check'
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
 import Gift from 'lucide-react/dist/esm/icons/gift'
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days'
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import { useRouter } from 'next/navigation';
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
 import { Student } from '@/types';
@@ -43,6 +45,8 @@ export default function ArchiveList() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [daysInArchiveFilter, setDaysInArchiveFilter] = useState<number>(0);
+    const [monthFilter, setMonthFilter] = useState<'all' | 'current' | 'previous'>('all');
+    const [isMonthFilterOpen, setIsMonthFilterOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     // حالة نافذة استعادة طالب (اختيار المجموعة)
@@ -71,102 +75,101 @@ export default function ArchiveList() {
     const allAttendance = archiveData?.attendance || [];
     const allExemptions = archiveData?.exemptions || [];
 
-    // منطق الدين المحسّن: يستخدم Map للفهرسة المسبقة بدلاً من filter المتكرر
-    const calculateDebtForStudent = (
-        student: Student,
-        attendanceByStudentId: Map<string, any[]>,
-        feesByStudentId: Map<string, any[]>,
-        exemptionsByStudentId: Map<string, any[]>
-    ) => {
-        const studentFees = feesByStudentId.get(student.id) || [];
-        const studentAttendance = attendanceByStudentId.get(student.id) || [];
-
-        let startDateStr = student.enrollmentDate;
-        if (!startDateStr && studentAttendance.length > 0) {
-            startDateStr = [...studentAttendance].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date;
-        }
-
-        if (!startDateStr) return { isIndebted: false, label: '', amount: 0, unpaidMonths: [] };
-
-        const start = new Date(startDateStr);
-        const end = student.archivedDate ? new Date(student.archivedDate) : new Date();
-
-        let current = new Date(start.getFullYear(), start.getMonth(), 1);
-        const target = new Date(end.getFullYear(), end.getMonth(), 1);
-
-        let totalMonthDebt = 0;
-        const unpaidMonths: { label: string; key: string }[] = [];
-
-        while (current <= target) {
-            const monthLabel = current.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
-            const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-
-            const monthAttendanceCount = studentAttendance.filter(a => {
-                const recordDate = new Date(a.date);
-                const recordMonthKey = a.month_key || `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}`;
-                return recordMonthKey === monthKey && a.status === 'present';
-            }).length;
-
-            let monthDebtAmount = 0;
-
-            if (monthAttendanceCount >= 10) {
-                monthDebtAmount = 1;
-            } else if (monthAttendanceCount >= 5) {
-                monthDebtAmount = 0.5;
-            }
-
-            if (monthDebtAmount > 0) {
-                const isPaid = studentFees.some(f => f.month === monthLabel || f.month === monthKey);
-                const isExempted = exemptionsByStudentId.get(student.id)?.some(e => e.month === monthLabel || e.month === monthKey);
-                if (!isPaid && !isExempted) {
-                    totalMonthDebt += monthDebtAmount;
-                    unpaidMonths.push({ label: monthLabel, key: monthKey });
-                }
-            }
-
-            current.setMonth(current.getMonth() + 1);
-        }
-
-        let label = '';
-        if (totalMonthDebt === 0.5) label = 'مدين بنصف شهر';
-        else if (totalMonthDebt === 1) label = 'مدين بشهر';
-        else if (totalMonthDebt > 1) label = `مدين (${totalMonthDebt} أشهر)`;
-
-        return { isIndebted: totalMonthDebt > 0, amount: totalMonthDebt, label, unpaidMonths };
-    };
-
     // فصل حساب الدين في useMemo مستقل: يعيد الحساب فقط عند تغير البيانات المالية
     // هذا يمنع إعادة الحساب عند تغيير searchTerm/filter/daysInArchiveFilter
     const debtMap = useMemo(() => {
         if (!students) return new Map<string, any>();
 
-        // فهرسة البيانات مرة واحدة باستخدام Map (O(A+F+E) بدلاً من O(S*(A+F+E)))
-        const feesByStudentId = new Map<string, any[]>();
+        // فهرسة البيانات مرة واحدة باستخدام Map/Set بدلاً من الفلاتر المتكررة
+        const feeSetByStudentId = new Map<string, Set<string>>();
         for (const fee of allFees) {
-            const arr = feesByStudentId.get(fee.student_id);
-            if (arr) arr.push(fee);
-            else feesByStudentId.set(fee.student_id, [fee]);
+            let set = feeSetByStudentId.get(fee.student_id);
+            if (!set) { set = new Set(); feeSetByStudentId.set(fee.student_id, set); }
+            set.add(fee.month);
         }
 
-        const attendanceByStudentId = new Map<string, any[]>();
-        for (const att of allAttendance) {
-            const arr = attendanceByStudentId.get(att.student_id);
-            if (arr) arr.push(att);
-            else attendanceByStudentId.set(att.student_id, [att]);
-        }
-
-        const exemptionsByStudentId = new Map<string, any[]>();
+        const exemptSetByStudentId = new Map<string, Set<string>>();
         for (const ex of allExemptions) {
-            const arr = exemptionsByStudentId.get(ex.student_id);
-            if (arr) arr.push(ex);
-            else exemptionsByStudentId.set(ex.student_id, [ex]);
+            let set = exemptSetByStudentId.get(ex.student_id);
+            if (!set) { set = new Set(); exemptSetByStudentId.set(ex.student_id, set); }
+            set.add(ex.month);
         }
 
-        // حساب الدين لكل طالب مؤرشف باستخدام البيانات المفهرسة
+        // عدد أيام الحضور لكل طالب/شهر + أول يوم حضور (للبديل عن تاريخ الالتحاق)
+        const presentCountByStudentMonth = new Map<string, Map<string, number>>();
+        const earliestAttendanceByStudentId = new Map<string, string>();
+        for (const att of allAttendance) {
+            let byMonth = presentCountByStudentMonth.get(att.student_id);
+            if (!byMonth) { byMonth = new Map(); presentCountByStudentMonth.set(att.student_id, byMonth); }
+            const recordDate = new Date(att.date);
+            const monthKey = att.month_key || `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}`;
+            if (att.status === 'present') {
+                byMonth.set(monthKey, (byMonth.get(monthKey) || 0) + 1);
+            }
+            const currentEarliest = earliestAttendanceByStudentId.get(att.student_id);
+            if (!currentEarliest || att.date < currentEarliest) earliestAttendanceByStudentId.set(att.student_id, att.date);
+        }
+
+        const calculateDebtForStudent = (student: Student) => {
+            let startDateStr = student.enrollmentDate;
+            if (!startDateStr && earliestAttendanceByStudentId.has(student.id)) {
+                startDateStr = earliestAttendanceByStudentId.get(student.id) as string;
+            }
+
+            if (!startDateStr) return { isIndebted: false, label: '', amount: 0, unpaidMonths: [] };
+
+            const start = new Date(startDateStr);
+            const end = student.archivedDate ? new Date(student.archivedDate) : new Date();
+
+            let current = new Date(start.getFullYear(), start.getMonth(), 1);
+            const target = new Date(end.getFullYear(), end.getMonth(), 1);
+
+            const feeMonths = feeSetByStudentId.get(student.id) || new Set<string>();
+            const exemptMonths = exemptSetByStudentId.get(student.id) || new Set<string>();
+            const attendanceCounts = presentCountByStudentMonth.get(student.id) || new Map<string, number>();
+
+            let totalMonthDebt = 0;
+            const unpaidMonths: { label: string; key: string }[] = [];
+
+            while (current <= target) {
+                const monthLabel = current.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+                const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+
+                const monthAttendanceCount = attendanceCounts.get(monthKey) || 0;
+
+                let monthDebtAmount = 0;
+
+                if (monthAttendanceCount >= 10) {
+                    monthDebtAmount = 1;
+                } else if (monthAttendanceCount >= 5) {
+                    monthDebtAmount = 0.5;
+                }
+
+                if (monthDebtAmount > 0) {
+                    const isPaid = feeMonths.has(monthLabel) || feeMonths.has(monthKey);
+                    const isExempted = exemptMonths.has(monthLabel) || exemptMonths.has(monthKey);
+                    if (!isPaid && !isExempted) {
+                        totalMonthDebt += monthDebtAmount;
+                        unpaidMonths.push({ label: monthLabel, key: monthKey });
+                    }
+                }
+
+                current.setMonth(current.getMonth() + 1);
+            }
+
+            let label = '';
+            if (totalMonthDebt === 0.5) label = 'مدين بنصف شهر';
+            else if (totalMonthDebt === 1) label = 'مدين بشهر';
+            else if (totalMonthDebt > 1) label = `مدين (${totalMonthDebt} أشهر)`;
+
+            return { isIndebted: totalMonthDebt > 0, amount: totalMonthDebt, label, unpaidMonths };
+        };
+
+        // حساب الدين لكل طالب مؤرشف
         const archivedStudentsList = students.filter(s => s.status === 'archived');
         const map = new Map<string, any>();
         for (const student of archivedStudentsList) {
-            map.set(student.id, calculateDebtForStudent(student, attendanceByStudentId, feesByStudentId, exemptionsByStudentId));
+            map.set(student.id, calculateDebtForStudent(student));
         }
         return map;
     }, [students, allFees, allAttendance, allExemptions]);
@@ -242,6 +245,22 @@ export default function ArchiveList() {
                 }
             }
 
+            if (matchesFilter && monthFilter !== 'all') {
+                const archiveDateStr = student.archivedDate;
+                if (!archiveDateStr) {
+                    matchesFilter = false;
+                } else {
+                    const archivedDateObj = new Date(archiveDateStr);
+                    const now = new Date();
+                    if (monthFilter === 'current') {
+                        matchesFilter = archivedDateObj.getFullYear() === now.getFullYear() && archivedDateObj.getMonth() === now.getMonth();
+                    } else {
+                        const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        matchesFilter = archivedDateObj.getFullYear() === prev.getFullYear() && archivedDateObj.getMonth() === prev.getMonth();
+                    }
+                }
+            }
+
             return matchesFilter;
         });
 
@@ -261,12 +280,13 @@ export default function ArchiveList() {
         });
 
         return tieredSearchFilter(baseFiltered, searchTerm, (s) => s.fullName);
-    }, [students, searchTerm, filter, debtMap, daysInArchiveFilter]);
+    }, [students, searchTerm, filter, debtMap, daysInArchiveFilter, monthFilter]);
 
     // دالة حساب عدد الأيام في الأرشيف بدقة
-    const getDaysInArchive = (archivedDate?: string) => {
-        if (!archivedDate) return 0;
-        const start = new Date(archivedDate);
+    const getDaysInArchive = (archivedDate?: string, updatedAt?: string) => {
+        const dateStr = archivedDate || updatedAt;
+        if (!dateStr) return 0;
+        const start = new Date(dateStr);
         start.setHours(0, 0, 0, 0);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -339,7 +359,47 @@ export default function ArchiveList() {
                                 placeholder="0"
                                 className="w-10 h-8 bg-white border border-blue-200 rounded-lg text-center font-black text-xs text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
-                            <span className="text-[10px] font-black text-blue-400 whitespace-nowrap ml-1">يوم+</span>
+                            <span className="text-[10px] font-black text-blue-400 whitespace-nowrap ml-1">يوم فأقل</span>
+                        </div>
+                        <div className="relative shrink-0">
+                            {isMonthFilterOpen && (
+                                <div className="fixed inset-0 z-40" onClick={() => setIsMonthFilterOpen(false)} />
+                            )}
+                            <button
+                                onClick={() => setIsMonthFilterOpen(!isMonthFilterOpen)}
+                                className={cn(
+                                    "flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-[16px] border border-blue-100 h-10 text-[10px] font-black transition-all relative z-50",
+                                    monthFilter !== 'all' ? "text-blue-600" : "text-blue-400"
+                                )}
+                            >
+                                <CalendarDays size={14} />
+                                <span className="whitespace-nowrap">
+                                    {monthFilter === 'all' ? 'كل الأشهر' : monthFilter === 'current' ? 'الشهر الحالي' : 'الشهر السابق'}
+                                </span>
+                                <ChevronDown size={12} />
+                            </button>
+                            {isMonthFilterOpen && (
+                                <div className="absolute top-[115%] right-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[150px] animate-in fade-in zoom-in-95 duration-200">
+                                    <button
+                                        onClick={() => { setMonthFilter('all'); setIsMonthFilterOpen(false); }}
+                                        className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1", monthFilter === 'all' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
+                                    >
+                                        كل الأشهر
+                                    </button>
+                                    <button
+                                        onClick={() => { setMonthFilter('current'); setIsMonthFilterOpen(false); }}
+                                        className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1", monthFilter === 'current' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
+                                    >
+                                        الشهر الحالي
+                                    </button>
+                                    <button
+                                        onClick={() => { setMonthFilter('previous'); setIsMonthFilterOpen(false); }}
+                                        className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors", monthFilter === 'previous' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
+                                    >
+                                        الشهر السابق
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         {archivedStudents.length > 0 && user?.role === 'director' && (
                             <button
@@ -476,7 +536,7 @@ export default function ArchiveList() {
                     </div>
                 ) : (
                     archivedStudents?.map((student) => {
-                        const daysInArchive = getDaysInArchive(student.archivedDate);
+                        const daysInArchive = getDaysInArchive(student.archivedDate, (student as any).updated_at);
                         const debtInfo = debtMap.get(student.id) || { isIndebted: false, label: '', amount: 0, unpaidMonths: [] };
 
                         return (
