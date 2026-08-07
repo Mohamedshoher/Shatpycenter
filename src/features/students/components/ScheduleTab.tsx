@@ -15,6 +15,7 @@ export default function ScheduleTab({ student }: any) {
     const queryClient = useQueryClient();
     const [selectedSchedules, setSelectedSchedules] = useState<Record<string, string>>({});
     const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+    const [localAppointment, setLocalAppointment] = useState<string>(student?.appointment || '');
     const weekDaysNames = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
     const [swapState, setSwapState] = useState<{ day: string, time: string } | null>(null);
@@ -41,11 +42,16 @@ export default function ScheduleTab({ student }: any) {
     // عملية تحديث الطالب في قاعدة البيانات
     const updateMutation = useMutation({
         mutationFn: (appointment: string) => updateStudent(student.id, { appointment }),
-        onSuccess: () => {
+        onMutate: (appointment) => {
+            setLocalAppointment(appointment);
+            setSelectedSchedules({});
+            return null;
+        },
+        onSuccess: (_data, appointment) => {
             queryClient.invalidateQueries({ queryKey: ['students'] });
+            setLocalAppointment(appointment);
             setShowSaveSuccess(true);
             setTimeout(() => setShowSaveSuccess(false), 2000);
-            setSelectedSchedules({});
         }
     });
 
@@ -121,8 +127,8 @@ export default function ScheduleTab({ student }: any) {
         if (!confirm(`هل أنت متأكد من حذف موعد يوم ${dayToDelete}؟`)) return;
         
         const finalSchedules: Record<string, string> = {};
-        if (student.appointment) {
-            student.appointment.split(',').forEach((p: string) => {
+        if (localAppointment) {
+            localAppointment.split(',').forEach((p: string) => {
                 const parts = p.split(':');
                 if (parts.length < 2) return;
                 const d = parts[0].trim();
@@ -189,7 +195,7 @@ export default function ScheduleTab({ student }: any) {
                 .map(day => `${day}: ${finalSchedules[day]}`).join(', ');
         };
 
-        const myNewAppointment = replaceAppointmentSlot(student.appointment, swapState.day, swapState.time, targetDay, targetTime);
+        const myNewAppointment = replaceAppointmentSlot(localAppointment, swapState.day, swapState.time, targetDay, targetTime);
         const targetNewAppointment = replaceAppointmentSlot(targetStudent.appointment, targetDay, targetTime, swapState.day, swapState.time);
 
         setIsSwapping(true);
@@ -199,6 +205,7 @@ export default function ScheduleTab({ student }: any) {
                 updateStudent(targetStudent.id, { appointment: targetNewAppointment })
             ]);
             queryClient.invalidateQueries({ queryKey: ['students'] });
+            setLocalAppointment(myNewAppointment);
             setSwapState(null);
             setSelectedSwapStudentId('');
             setSelectedSlotKey('');
@@ -291,8 +298,8 @@ export default function ScheduleTab({ student }: any) {
 
         const finalSchedules: Record<string, string> = {};
         // دمج المواعيد القديمة مع الجديدة (الجديد يطغى على القديم لنفس اليوم)
-        if (student.appointment) {
-            student.appointment.split(',').forEach((p: string) => {
+        if (localAppointment) {
+            localAppointment.split(',').forEach((p: string) => {
                 const parts = p.split(':');
                 if (parts.length < 2) return;
                 const d = parts[0].trim();
@@ -451,12 +458,12 @@ export default function ScheduleTab({ student }: any) {
                         المواعيد المسجلة حالياً
                     </h5>
                     <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-                        {student.appointment ? student.appointment.split(',').length : 0} أيام
+                        {localAppointment ? localAppointment.split(',').length : 0} أيام
                     </span>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {student.appointment ? student.appointment.split(',').map((p: string, i: number) => {
+                    {localAppointment ? localAppointment.split(',').map((p: string, i: number) => {
                         const parts = p.split(':');
                         const day = parts[0]?.trim();
                         const time = parts.slice(1).join(':')?.trim();
