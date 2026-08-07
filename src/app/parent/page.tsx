@@ -154,7 +154,7 @@ export default function ParentDashboard() {
                             </p>
                         </div>
                         <a
-                            href={process.env.NEXT_PUBLIC_WHATSAPP_GROUP_LINK || 'https://chat.whatsapp.com/XXXXXXXXXXX'}
+                            href={process.env.NEXT_PUBLIC_WHATSAPP_GROUP_LINK || 'https://chat.whatsapp.com/DbCD3T6nDTdJEBm8V8dxOA'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-full md:w-auto h-14 md:h-12 bg-green-600 hover:bg-green-700 text-white rounded-2xl md:rounded-full px-8 flex items-center justify-center gap-2 text-sm font-black shadow-lg shadow-green-500/20 active:scale-95 transition-all"
