@@ -32,6 +32,7 @@ export default function StudentDetailParentPage() {
 
     const [activeTab, setActiveTab] = useState<TabType>("attendance");
     const [activeExamSubTab, setActiveExamSubTab] = useState("ماضي قريب");
+    const [currentDisplayDate, setCurrentDisplayDate] = useState(new Date());
     const {
         attendance,
         exams,
@@ -138,15 +139,88 @@ export default function StudentDetailParentPage() {
     };
 
     const renderAttendance = () => {
-        const presentCount = attendance.filter(a => a.status === 'present').length;
-        const absentCount = attendance.filter(a => a.status === 'absent').length;
+        const currentYear = currentDisplayDate.getFullYear();
+        const currentMonth = currentDisplayDate.getMonth();
+        const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const startDayIndex = (new Date(currentYear, currentMonth, 1).getDay() + 1) % 7;
+        const weekDays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+        const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+        const attendanceRecordsMap: Record<number, string> = {};
+        attendance.forEach((rec) => {
+            if (rec.month === monthKey) attendanceRecordsMap[rec.day] = rec.status;
+        });
+
+        const presentCount = Object.values(attendanceRecordsMap).filter(s => s === 'present').length;
+        const absentCount = Object.values(attendanceRecordsMap).filter(s => s === 'absent').length;
 
         return (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-lg font-black text-gray-900 px-4">بيانات الحصص</h3>
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 px-4 pb-20">
+                <h3 className="text-lg font-black text-gray-900">كشكول الحضور</h3>
 
-                {/* إحصائيات علوية */}
-                <div className="grid grid-cols-2 gap-4 px-4">
+                {/* التحكم في الشهور */}
+                <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-gray-100">
+                    <button
+                        onClick={() => setCurrentDisplayDate(new Date(currentYear, currentMonth + 1, 1))}
+                        className="text-gray-400 p-2 hover:text-teal-600 transition-colors"
+                        aria-label="الشهر التالي"
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <Calendar size={18} className="text-teal-600" />
+                        <h4 className="font-black text-gray-900">{monthNames[currentMonth]} {currentYear}</h4>
+                    </div>
+                    <button
+                        onClick={() => setCurrentDisplayDate(new Date(currentYear, currentMonth - 1, 1))}
+                        className="text-gray-400 p-2 hover:text-teal-600 transition-colors"
+                        aria-label="الشهر السابق"
+                    >
+                        <ChevronRight size={20} className="rotate-180" />
+                    </button>
+                </div>
+
+                {/* عرض أيام الأسبوع */}
+                <div className="grid grid-cols-7 gap-2 mb-2 text-center">
+                    {weekDays.map(day => <span key={day} className="text-[10px] text-gray-400 font-bold">{day}</span>)}
+                </div>
+
+                {/* عرض أيام الشهر */}
+                <div className="grid grid-cols-7 gap-2">
+                    {Array.from({ length: startDayIndex }).map((_, i) => <div key={`empty-${i}`} className="aspect-square" />)}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const day = i + 1;
+                        const dateObj = new Date(currentYear, currentMonth, day);
+                        const dayOfWeek = dateObj.getDay();
+                        const isWeekend = dayOfWeek === 4 || dayOfWeek === 5;
+                        const status = attendanceRecordsMap[day];
+                        const isFuture = dateObj > new Date();
+
+                        return (
+                            <div
+                                key={day}
+                                className={cn(
+                                    "aspect-square rounded-xl flex flex-col items-center justify-center border transition-all text-sm font-bold shadow-sm",
+                                    isFuture ? "bg-gray-50/50 text-gray-200" :
+                                    isWeekend ? "bg-amber-50/50 border-amber-100 text-amber-500/60" :
+                                    status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
+                                    status === 'present' ? "bg-green-50 border-green-100 text-green-600" : "bg-white text-gray-400"
+                                )}
+                            >
+                                <span>{day}</span>
+                                {isWeekend ? (
+                                    <span className="text-[8px] font-black mt-0.5">أجازة</span>
+                                ) : (
+                                    !isFuture && (status === 'absent' ? <XCircle size={14} /> : status === 'present' ? <CheckCircle2 size={14} /> : null)
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* إحصائيات الشهر */}
+                <div className="grid grid-cols-2 gap-4">
                     <div className="bg-green-50/50 p-6 rounded-[32px] border border-green-100 flex flex-col items-center justify-center text-center space-y-1">
                         <p className="text-xs font-bold text-green-600 flex items-center gap-1">
                             <CheckCircle2 size={14} />
@@ -163,31 +237,11 @@ export default function StudentDetailParentPage() {
                     </div>
                 </div>
 
-                {/* قائمة الحصص */}
-                <div className="space-y-3 px-4 pb-20">
-                    {attendance.sort((a, b) => b.day - a.day).map((item, idx) => (
-                        <div key={idx} className="bg-white p-4 rounded-3xl border border-gray-100 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className={cn(
-                                    "w-10 h-10 rounded-2xl flex items-center justify-center",
-                                    item.status === "present" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                )}>
-                                    {item.status === "present" ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
-                                </div>
-                                <span className="text-sm font-black text-gray-700">{item.day} {item.month === '2026-01' ? 'يناير 2026' : item.month}</span>
-                            </div>
-                            <span className={cn(
-                                "text-[10px] font-black px-3 py-1 rounded-full",
-                                item.status === "present" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                            )}>
-                                {item.status === "present" ? "حاضر" : "غائب"}
-                            </span>
-                        </div>
-                    ))}
-                    {attendance.length === 0 && (
-                        <div className="text-center py-10 text-gray-400 text-xs font-bold">لا يوجد سجل حضور مسجل حالياً</div>
-                    )}
-                </div>
+                {presentCount + absentCount === 0 && (
+                    <div className="text-center py-8 text-gray-400 text-xs font-bold bg-white rounded-[32px] border border-dashed border-gray-200">
+                        لا يوجد سجل حضور مسجل في هذا الشهر
+                    </div>
+                )}
             </div>
         );
     };

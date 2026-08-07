@@ -185,14 +185,7 @@ export default function ParentDashboard() {
                 />
             )}
 
-            {/* زر واتساب الدعم المباشر العائم */}
-            <button
-                onClick={() => window.open(`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_CENTER_WHATSAPP || '201234567890'}`, '_blank')}
-                className="fixed bottom-28 left-6 w-14 h-14 bg-green-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-all hover:bg-green-700"
-                title="التواصل المباشر عبر واتساب"
-            >
-                <MessageCircle size={28} />
-            </button>
+
 
         </div>
     );

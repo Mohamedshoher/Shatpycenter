@@ -13,7 +13,6 @@ import User from 'lucide-react/dist/esm/icons/user'
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
 import MapPin from 'lucide-react/dist/esm/icons/map-pin'
-import Phone from 'lucide-react/dist/esm/icons/phone'
 import Clock from 'lucide-react/dist/esm/icons/clock'
 import Book from 'lucide-react/dist/esm/icons/book'
 import Award from 'lucide-react/dist/esm/icons/award'
@@ -43,11 +42,14 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
     const [activeTab, setActiveTab] = useState<TabType>(
         'attendance'
     );
+    const [activeExamSubTab, setActiveExamSubTab] = useState("جديد");
+    const [currentDisplayDate, setCurrentDisplayDate] = useState(new Date());
     const {
         attendance,
         exams,
         fees,
         plans,
+        exemptions,
         isLoadingAttendance,
         isLoadingExams,
         isLoadingFees,
@@ -64,11 +66,85 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
     ];
 
     const renderAttendance = () => {
-        const presentCount = attendance.filter(a => a.status === 'present').length;
-        const total = attendance.length;
+        const currentYear = currentDisplayDate.getFullYear();
+        const currentMonth = currentDisplayDate.getMonth();
+        const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const startDayIndex = (new Date(currentYear, currentMonth, 1).getDay() + 1) % 7;
+        const weekDays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+        const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+        const attendanceRecordsMap: Record<number, string> = {};
+        attendance.forEach((rec) => {
+            if (rec.month === monthKey) attendanceRecordsMap[rec.day] = rec.status;
+        });
+
+        const presentCount = Object.values(attendanceRecordsMap).filter(s => s === 'present').length;
+        const absentCount = Object.values(attendanceRecordsMap).filter(s => s === 'absent').length;
 
         return (
             <div className="space-y-6">
+                {/* التحكم في الشهور */}
+                <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-gray-100">
+                    <button
+                        onClick={() => setCurrentDisplayDate(new Date(currentYear, currentMonth + 1, 1))}
+                        className="text-gray-400 p-2 hover:text-blue-600 transition-colors"
+                        aria-label="الشهر التالي"
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <Calendar size={18} className="text-blue-600" />
+                        <h4 className="font-black text-gray-900">{monthNames[currentMonth]} {currentYear}</h4>
+                    </div>
+                    <button
+                        onClick={() => setCurrentDisplayDate(new Date(currentYear, currentMonth - 1, 1))}
+                        className="text-gray-400 p-2 hover:text-blue-600 transition-colors"
+                        aria-label="الشهر السابق"
+                    >
+                        <ChevronRight size={20} className="rotate-180" />
+                    </button>
+                </div>
+
+                {/* عرض أيام الأسبوع */}
+                <div className="grid grid-cols-7 gap-2 mb-2 text-center">
+                    {weekDays.map(day => <span key={day} className="text-[10px] text-gray-400 font-bold">{day}</span>)}
+                </div>
+
+                {/* عرض أيام الشهر */}
+                <div className="grid grid-cols-7 gap-2">
+                    {Array.from({ length: startDayIndex }).map((_, i) => <div key={`empty-${i}`} className="aspect-square" />)}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const day = i + 1;
+                        const dateObj = new Date(currentYear, currentMonth, day);
+                        const dayOfWeek = dateObj.getDay();
+                        const isWeekend = dayOfWeek === 4 || dayOfWeek === 5;
+                        const status = attendanceRecordsMap[day];
+                        const isFuture = dateObj > new Date();
+
+                        return (
+                            <div
+                                key={day}
+                                className={cn(
+                                    "aspect-square rounded-xl flex flex-col items-center justify-center border transition-all text-sm font-bold shadow-sm",
+                                    isFuture ? "bg-gray-50/50 text-gray-200" :
+                                    isWeekend ? "bg-amber-50/50 border-amber-100 text-amber-500/60" :
+                                    status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
+                                    status === 'present' ? "bg-green-50 border-green-100 text-green-600" : "bg-white text-gray-400"
+                                )}
+                            >
+                                <span>{day}</span>
+                                {isWeekend ? (
+                                    <span className="text-[8px] font-black mt-0.5">أجازة</span>
+                                ) : (
+                                    !isFuture && (status === 'absent' ? <XCircle size={14} /> : status === 'present' ? <CheckCircle2 size={14} /> : null)
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* إحصائيات الشهر */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="bg-blue-50/50 p-6 rounded-[32px] border border-blue-100 flex flex-col items-center text-center">
                         <CheckCircle2 size={24} className="text-blue-500 mb-2" />
@@ -78,112 +154,186 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
                     <div className="bg-red-50/50 p-6 rounded-[32px] border border-red-100 flex flex-col items-center text-center">
                         <XCircle size={24} className="text-red-500 mb-2" />
                         <span className="text-[10px] font-black text-gray-400">مرات الغياب</span>
-                        <span className="text-3xl font-black text-red-700">{total - presentCount}</span>
+                        <span className="text-3xl font-black text-red-700">{absentCount}</span>
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <h4 className="text-sm font-black text-gray-900 pr-2">آخر السجلات</h4>
-                    <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                        {attendance.sort((a, b) => b.day - a.day).slice(0, 10).map((record, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className={cn(
-                                        "w-10 h-10 rounded-xl flex items-center justify-center",
-                                        record.status === 'present' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                    )}>
-                                        {record.status === 'present' ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
-                                    </div>
-                                    <span className="text-sm font-bold text-gray-700">{record.day} - {record.month}</span>
-                                </div>
-                                <span className={cn(
-                                    "text-[10px] font-black px-3 py-1 rounded-full",
-                                    record.status === 'present' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                                )}>
-                                    {record.status === 'present' ? 'حاضر' : 'غائب'}
-                                </span>
-                            </div>
-                        ))}
+                {presentCount + absentCount === 0 && (
+                    <div className="text-center py-10 text-gray-400 text-xs font-bold bg-white rounded-[32px] border border-dashed border-gray-200">
+                        لا يوجد سجل حضور مسجل في هذا الشهر
                     </div>
+                )}
+            </div>
+        );
+    };
+
+    const renderExams = () => {
+        const filteredExams = exams.filter(e => e.type === activeExamSubTab);
+
+        return (
+            <div className="space-y-6">
+                <div className="bg-teal-50/50 p-6 rounded-[32px] border border-teal-100 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-teal-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+                            <BookOpen size={28} />
+                        </div>
+                        <div>
+                            <h4 className="text-lg font-black text-teal-900">سجل الاختبارات</h4>
+                            <p className="text-xs text-teal-600 font-bold">إجمالي {exams.length} اختبار</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-teal-100 p-2 flex gap-2 relative">
+                    {["جديد", "ماضي قريب", "ماضي بعيد"].map((t) => (
+                        <button
+                            key={t}
+                            onClick={() => setActiveExamSubTab(t)}
+                            className={cn(
+                                "flex-1 py-3 px-2 rounded-xl text-[10px] font-black transition-all relative z-10",
+                                activeExamSubTab === t ? "text-white" : "text-gray-400 hover:bg-gray-50"
+                            )}
+                        >
+                            <span className="relative z-20">{t}</span>
+                            {activeExamSubTab === t && (
+                                <div className="absolute inset-0 bg-teal-600 rounded-xl z-10" />
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="space-y-3">
+                    {filteredExams.length === 0 && (
+                        <div className="text-center py-10 text-gray-400 text-xs font-bold">لا توجد اختبارات مسجلة في هذا القسم</div>
+                    )}
+                    {filteredExams.map((exam, i) => (
+                        <div key={i} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-teal-300 transition-all">
+                            <div className="space-y-1">
+                                <h5 className="text-sm font-black text-gray-900 group-hover:text-teal-600">{exam.surah}</h5>
+                                <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold">
+                                    <Calendar size={12} />
+                                    <span>{exam.date}</span>
+                                </div>
+                            </div>
+                            <div className={cn(
+                                "px-4 py-2 rounded-2xl text-xs font-black shadow-sm",
+                                exam.grade === 'ممتاز' ? "bg-green-500 text-white" : "bg-teal-50 text-teal-600"
+                            )}>
+                                {exam.grade}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         );
     };
 
-    const renderExams = () => (
-        <div className="space-y-6">
-            <div className="bg-teal-50/50 p-6 rounded-[32px] border border-teal-100 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-teal-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
-                        <BookOpen size={28} />
+    const renderFees = () => {
+        const monthsList = (() => {
+            if (!student?.enrollmentDate) return [];
+            const dateParts = student.enrollmentDate.split('-').map(Number);
+            const start = new Date(dateParts[0], dateParts[1] - 1, 1);
+            const now = new Date();
+            const list = [];
+            let curr = new Date(now.getFullYear(), now.getMonth(), 1);
+            while (curr >= start) {
+                list.push({
+                    label: curr.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' }),
+                    key: `${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`,
+                    date: new Date(curr)
+                });
+                curr.setMonth(curr.getMonth() - 1);
+            }
+            return list;
+        })();
+
+        const paidCount = monthsList.filter((m: any) => fees.find((f: any) => f.month === m.label || f.month === m.key)).length;
+        const unpaidMonths = monthsList.filter((m: any) => {
+            const paid = fees.find((f: any) => f.month === m.label || f.month === m.key);
+            const exempted = exemptions.find((e: any) => e.month === m.label || e.month === m.key);
+            return !paid && !exempted;
+        });
+
+        return (
+            <div className="space-y-6">
+                <div className="bg-purple-50/50 p-8 rounded-[40px] border border-purple-100 text-center space-y-3">
+                    <div className="w-16 h-16 bg-purple-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-purple-500/20 mx-auto">
+                        <CreditCard size={32} />
                     </div>
                     <div>
-                        <h4 className="text-lg font-black text-teal-900">سجل الاختبارات</h4>
-                        <p className="text-xs text-teal-600 font-bold">إجمالي {exams.length} اختبار</p>
+                        <h4 className="text-xl font-black text-gray-900">المصروفات الشهرية</h4>
+                        <p className="text-sm text-gray-400 font-bold">قيمة الاشتراك: {student.monthlyAmount || 0} ج.م</p>
                     </div>
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                {exams.slice(0, 8).map((exam, i) => (
-                    <div key={i} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-teal-300 transition-all">
-                        <div className="space-y-1">
-                            <h5 className="text-sm font-black text-gray-900 group-hover:text-teal-600">{exam.surah}</h5>
-                            <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold">
-                                <Calendar size={12} />
-                                <span>{exam.date}</span>
-                                <span>•</span>
-                                <span>{exam.type}</span>
-                            </div>
+                    <div className="flex justify-center gap-4 pt-2">
+                        <div className="bg-white px-4 py-2 rounded-2xl border border-green-100 text-center">
+                            <p className="text-[9px] font-black text-green-500">مدفوع</p>
+                            <p className="text-lg font-black text-green-600">{paidCount}</p>
                         </div>
-                        <div className={cn(
-                            "px-4 py-2 rounded-2xl text-xs font-black shadow-sm",
-                            exam.grade === 'ممتاز' ? "bg-green-500 text-white" : "bg-teal-50 text-teal-600"
-                        )}>
-                            {exam.grade}
+                        <div className="bg-white px-4 py-2 rounded-2xl border border-red-100 text-center">
+                            <p className="text-[9px] font-black text-red-500">متبقي</p>
+                            <p className="text-lg font-black text-red-600">{unpaidMonths.length}</p>
                         </div>
                     </div>
-                ))}
-            </div>
-        </div>
-    );
-
-    const renderFees = () => (
-        <div className="space-y-6">
-            <div className="bg-purple-50/50 p-8 rounded-[40px] border border-purple-100 text-center space-y-3">
-                <div className="w-16 h-16 bg-purple-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-purple-500/20 mx-auto">
-                    <CreditCard size={32} />
                 </div>
-                <div>
-                    <h4 className="text-xl font-black text-gray-900">المصروفات الشهرية</h4>
-                    <p className="text-sm text-gray-400 font-bold">قيمة الاشتراك: {student.monthlyAmount || 0} ج.م</p>
-                </div>
-            </div>
 
-            <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[400px] pr-1 custom-scrollbar">
-                {fees.map((fee, i) => (
-                    <div key={i} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-purple-50 group-hover:text-purple-600 transition-all">
-                                <span className="text-lg font-black">{i + 1}</span>
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-black text-gray-900">{fee.month}</h5>
-                                <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold">
-                                    <Phone size={10} />
-                                    <span>وصل رقم: {fee.receipt}</span>
+                <div className="space-y-2.5">
+                    <h4 className="text-sm font-black text-red-600 flex items-center gap-2 pr-1">
+                        <span className="w-2 h-2 rounded-full bg-red-500" />
+                        شهور غير مسددة ({unpaidMonths.length})
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                        {unpaidMonths.map((m: any) => (
+                            <div key={m.key} className="bg-red-50/60 border-2 border-red-100 rounded-2xl p-4 flex items-center justify-between">
+                                <div>
+                                    <h5 className="text-sm font-black text-red-700">{m.label}</h5>
+                                    <p className="text-[10px] font-bold text-red-400">مطلوب السداد</p>
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[9px] font-bold text-red-400 mb-0.5">المبلغ</p>
+                                    <p className="text-base font-black text-red-600">{student.monthlyAmount || 0} ج.م</p>
                                 </div>
                             </div>
-                        </div>
-                        <div className="text-left">
-                            <p className="text-xs text-gray-400 font-bold mb-1">المبلغ</p>
-                            <p className="text-lg font-black text-purple-600">{fee.amount}</p>
-                        </div>
+                        ))}
+                        {unpaidMonths.length === 0 && (
+                            <div className="col-span-full text-center py-6 text-gray-400 text-xs font-bold bg-white rounded-2xl border border-dashed border-gray-200">
+                                لا توجد شهور متأخرة 🎉
+                            </div>
+                        )}
                     </div>
-                ))}
+                </div>
+
+                <div className="space-y-2.5">
+                    <h4 className="text-sm font-black text-gray-900 flex items-center gap-2 pr-1">
+                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                        الشهور المسددة ({paidCount})
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+                        {monthsList.map((m: any) => {
+                            const fee = fees.find((f: any) => f.month === m.label || f.month === m.key);
+                            if (!fee) return null;
+                            return (
+                                <div key={m.key} className="bg-white p-4 rounded-2xl border border-green-100 shadow-sm flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center text-green-600">
+                                            <CheckCircle2 size={18} />
+                                        </div>
+                                        <div>
+                                            <h5 className="text-sm font-black text-gray-900">{m.label}</h5>
+                                            <p className="text-[9px] font-bold text-gray-400">وصل رقم: {fee.receipt}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[9px] font-bold text-gray-400 mb-0.5">المبلغ</p>
+                                        <p className="text-base font-black text-green-600">{fee.amount}</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderPlan = () => (
         <div className="space-y-6">
