@@ -17,10 +17,15 @@ import Clock from 'lucide-react/dist/esm/icons/clock'
 import Book from 'lucide-react/dist/esm/icons/book'
 import Award from 'lucide-react/dist/esm/icons/award'
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
+import Users from 'lucide-react/dist/esm/icons/users'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import { cn } from '@/lib/utils';
 import { useStudentRecords } from '../hooks/useStudentRecords';
 import { Group, Teacher } from '@/types';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getStudents, updateStudent } from '../services/studentService';
 
 interface ParentStudentDetailModalProps {
     isOpen: boolean;
@@ -44,6 +49,12 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
     );
     const [activeExamSubTab, setActiveExamSubTab] = useState("جديد");
     const [currentDisplayDate, setCurrentDisplayDate] = useState(new Date());
+    const [selectedSchedules, setSelectedSchedules] = useState<Record<string, string>>({});
+    const [showScheduleSuccess, setShowScheduleSuccess] = useState(false);
+    const [localAppointment, setLocalAppointment] = useState<string>(student?.appointment || '');
+
+    const queryClient = useQueryClient();
+    const { data: allStudents } = useQuery({ queryKey: ['students'], queryFn: () => getStudents() });
     const {
         attendance,
         exams,
@@ -55,6 +66,24 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
         isLoadingFees,
         isLoadingPlans,
     } = useStudentRecords(student?.id || '');
+
+    const saveScheduleMutation = useMutation({
+        mutationFn: (appointment: string) => updateStudent(student.id, { appointment }),
+        onMutate: (appointment) => {
+            setLocalAppointment(appointment);
+            setSelectedSchedules({});
+            return null;
+        },
+        onSuccess: (_data, appointment) => {
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            setLocalAppointment(appointment);
+            setShowScheduleSuccess(true);
+            setTimeout(() => setShowScheduleSuccess(false), 2000);
+        },
+        onError: () => {
+            alert('حدث خطأ أثناء حفظ المواعيد. حاول مرة أخرى.');
+        }
+    });
 
     if (!student) return null;
 
@@ -382,47 +411,207 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
         </div>
     );
 
-    const renderSchedule = () => (
-        <div className="space-y-6">
-            <div className="bg-indigo-50/50 p-6 rounded-[32px] border border-indigo-100 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                        <Clock size={28} />
+    const renderSchedule = () => {
+        const scheduleDays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء'];
+        const availableHours = [16, 17, 18, 19];
+        const maxPerHour = group?.maxStudentsPerHour || 5;
+
+        const formatHourArabic = (hour: number) => {
+            const period = hour >= 12 ? 'عصراً' : 'صباحاً';
+            const displayHours = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+            return `الساعة ${displayHours}:00 ${period}`;
+        };
+
+        const formatToStandardArabic = (timeStr: string) => {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const period = hours >= 12 ? 'عصراً' : 'صباحاً';
+            const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+            return `الساعة ${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+        };
+
+        const countOccupied = (day: string, timeArabic: string) => {
+            return (allStudents || []).filter(s =>
+                s.id !== student.id &&
+                s.groupId === student.groupId &&
+                s.status === 'active' &&
+                s.appointment?.split(',').some((p: string) => {
+                    const parts = p.split(':');
+                    if (parts.length < 2) return false;
+                    const d = parts[0].trim();
+                    const t = parts.slice(1).join(':').trim();
+                    return d === day && t === timeArabic;
+                })
+            ).length;
+        };
+
+        const handleToggle = (day: string, hour: number) => {
+            const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+            setSelectedSchedules(prev => {
+                const next = { ...prev };
+                if (next[day] === timeStr) delete next[day];
+                else next[day] = timeStr;
+                return next;
+            });
+        };
+
+        const handleSave = () => {
+            const inputDays = Object.keys(selectedSchedules);
+            if (inputDays.length === 0) return alert('اختر يوم وساعة واحداً على الأقل');
+
+            for (const day of inputDays) {
+                const newTime = formatToStandardArabic(selectedSchedules[day]);
+                const used = countOccupied(day, newTime);
+                if (used >= maxPerHour) {
+                    return alert(`عدد الطلاب في موعد ${day} - ${newTime} وصل إلى الحد الأقصى (${maxPerHour} طلاب). اختر ساعة أخرى.`);
+                }
+            }
+
+            const finalSchedules: Record<string, string> = {};
+            if (localAppointment) {
+                localAppointment.split(',').forEach((p: string) => {
+                    const parts = p.split(':');
+                    if (parts.length < 2) return;
+                    const d = parts[0].trim();
+                    const t = parts.slice(1).join(':').trim();
+                    if (d) finalSchedules[d] = t;
+                });
+            }
+            inputDays.forEach(day => { finalSchedules[day] = formatToStandardArabic(selectedSchedules[day]); });
+
+            const weekOrder = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+            const appointmentString = Object.keys(finalSchedules)
+                .sort((a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b))
+                .map(day => `${day}: ${finalSchedules[day]}`).join(', ');
+
+            saveScheduleMutation.mutate(appointmentString);
+        };
+
+        const handleDeleteDay = (day: string) => {
+            if (!confirm(`هل أنت متأكد من حذف موعد يوم ${day}؟`)) return;
+
+            const finalSchedules: Record<string, string> = {};
+            if (localAppointment) {
+                localAppointment.split(',').forEach((p: string) => {
+                    const parts = p.split(':');
+                    if (parts.length < 2) return;
+                    const d = parts[0].trim();
+                    const t = parts.slice(1).join(':').trim();
+                    if (d && d !== day) finalSchedules[d] = t;
+                });
+            }
+
+            const weekOrder = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+            const appointmentString = Object.keys(finalSchedules)
+                .sort((a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b))
+                .map(d => `${d}: ${finalSchedules[d]}`).join(', ');
+
+            saveScheduleMutation.mutate(appointmentString);
+        };
+
+        return (
+            <div className="space-y-6">
+                <div className="bg-indigo-50/50 p-6 rounded-[32px] border border-indigo-100 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                            <Clock size={28} />
+                        </div>
+                        <div>
+                            <h4 className="text-lg font-black text-indigo-900">تحديد مواعيد الحضور</h4>
+                            <p className="text-xs text-indigo-600 font-bold">اختر الأيام والساعات المتاحة لابنك</p>
+                        </div>
                     </div>
-                    <div>
-                        <h4 className="text-lg font-black text-indigo-900">مواعيد الحضور</h4>
-                        <p className="text-xs text-indigo-600 font-bold">الأيام والساعات المتفق عليها</p>
+                    <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full text-[10px] font-black text-indigo-600 border border-indigo-100 shadow-sm">
+                        <Users size={12} />
+                        الحد الأقصى: {maxPerHour} طلاب / ساعة
                     </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {student.appointment ? student.appointment.split(',').map((part: string, i: number) => {
-                    const colonIdx = part.indexOf(':');
-                    const day = colonIdx !== -1 ? part.slice(0, colonIdx).trim() : part.trim();
-                    const time = colonIdx !== -1 ? part.slice(colonIdx + 1).trim() : '';
-                    return (
-                        <div key={i} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between group hover:border-indigo-300 transition-all">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500">
-                                    <Calendar size={20} />
+                <div className="space-y-4">
+                    {scheduleDays.map(day => {
+                        const savedAppointment = localAppointment?.split(',').find((p: string) => p.trim().startsWith(day)) || '';
+                        const savedTime = savedAppointment ? savedAppointment.slice(savedAppointment.indexOf(':') + 1).trim() : '';
+
+                        return (
+                            <div key={day} className="bg-white p-5 rounded-[28px] border border-gray-100 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-black">{day[0]}</div>
+                                        <div>
+                                            <h5 className="text-sm font-black text-gray-900">{day}</h5>
+                                            {savedTime ? (
+                                                <p className="text-[10px] font-bold text-indigo-600">الموعد الحالي: {savedTime}</p>
+                                            ) : (
+                                                <p className="text-[10px] font-bold text-gray-400">لم يتم تحديد موعد</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {savedTime && (
+                                        <button
+                                            onClick={() => handleDeleteDay(day)}
+                                            className="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-xl transition-colors"
+                                            title="حذف موعد اليوم"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
                                 </div>
-                                <div>
-                                    <h5 className="text-sm font-black text-gray-900">{day}</h5>
-                                    <p className="text-xs font-bold text-indigo-600">{time}</p>
+
+                                <div className="grid grid-cols-4 gap-2">
+                                    {availableHours.map(hour => {
+                                        const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                                        const timeArabic = formatHourArabic(hour);
+                                        const isSelected = selectedSchedules[day] === timeStr;
+                                        const isCurrent = !isSelected && savedTime === timeArabic;
+                                        const occupied = countOccupied(day, timeArabic);
+                                        const remaining = maxPerHour - occupied;
+                                        const isFull = remaining <= 0;
+
+                                        return (
+                                            <button
+                                                key={hour}
+                                                onClick={() => !isFull && handleToggle(day, hour)}
+                                                disabled={isFull}
+                                                className={cn(
+                                                    "relative rounded-2xl border-2 p-3 text-center transition-all duration-300",
+                                                    isSelected
+                                                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 scale-[1.03]"
+                                                        : isCurrent
+                                                            ? "bg-indigo-50 border-indigo-300 text-indigo-700"
+                                                            : isFull
+                                                                ? "bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed opacity-60"
+                                                                : "bg-white border-gray-100 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50/30"
+                                                )}
+                                            >
+                                                <p className="text-xs font-black">{hour > 12 ? hour - 12 : hour}:00</p>
+                                                <p className={cn("text-[9px] font-bold mt-0.5", isSelected ? "text-indigo-100" : isFull ? "text-gray-300" : isCurrent ? "text-indigo-500" : "text-gray-400")}>
+                                                    {isFull ? `ممتلئ ${maxPerHour}/${maxPerHour}` : `متاح ${remaining} أماكن`}
+                                                </p>
+                                                {isCurrent && (
+                                                    <span className="absolute -top-2 -left-2 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-black shadow">
+                                                        ✓
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        </div>
-                    );
-                }) : (
-                    <div className="col-span-full py-16 text-center space-y-3 bg-white rounded-[40px] border border-dashed border-gray-200">
-                        <Clock size={40} className="mx-auto text-gray-200" />
-                        <p className="text-sm font-black text-gray-400">لم يتم تحديد مواعيد حضور بعد</p>
-                    </div>
-                )}
+                        );
+                    })}
+                </div>
+
+                <button
+                    onClick={handleSave}
+                    disabled={saveScheduleMutation.isPending}
+                    className="w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                >
+                    {saveScheduleMutation.isPending ? (
+                        <span className="flex items-center gap-2"><Loader2 className="animate-spin" size={18} /> جاري حفظ التعديلات...</span>
+                    ) : showScheduleSuccess ? 'تم حفظ المواعيد بنجاح ✓' : 'تأكيد وحفظ المواعيد'}
+                </button>
             </div>
-        </div>
-    );
+        );
+    };
 
 
 
