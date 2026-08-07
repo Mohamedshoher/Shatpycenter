@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/features/auth/services/authService";
+import { useMessagingStore } from "@/features/messaging/store/useMessagingStore";
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { Button } from "@/components/ui/button";
 
@@ -39,6 +40,7 @@ export default function ParentDashboard() {
     const handleLogout = async () => {
         await logout();
         setUser(null);
+        useMessagingStore.getState().clearSession();
         router.push("/login");
     };
 
@@ -74,6 +76,13 @@ export default function ParentDashboard() {
 
                     {/* الجانب الأيسر: أزرار التنقل السريع */}
                     <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            onClick={() => router.push("/parent/messages")}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-sky-50 text-sky-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-sky-600 hover:text-white transition-all active:scale-95"
+                        >
+                            <MessageCircle size={16} />
+                            <span className="hidden sm:inline">الرسائل</span>
+                        </button>
                         <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-blue-600 hover:text-white transition-all active:scale-95">
                             <Home size={16} />
                             <span className="hidden sm:inline">الرئيسية</span>

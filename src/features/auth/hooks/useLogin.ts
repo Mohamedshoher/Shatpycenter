@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginWithRole } from '../services/authService';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useMessagingStore } from '@/features/messaging/store/useMessagingStore';
+import { getMessagingActor } from '@/features/messaging/utils';
+import { getMessagingToken } from '@/features/messaging/services/messagingService';
 
 /**
  * هوك مخصص (Custom Hook) لإدارة عملية تسجيل الدخول
@@ -31,6 +34,17 @@ export const useLogin = () => {
             
             // 2. حفظ بيانات المستخدم المسترجعة في المتجر العالمي
             setUser(user);
+
+            // 2.1 إصدار توكن المراسلة الداخلية (اختياري - لا يمنع الدخول عند فشله)
+            try {
+                const actor = getMessagingActor(user);
+                if (actor) {
+                    const { token, actor: canonicalActor } = await getMessagingToken(actor, pass);
+                    useMessagingStore.getState().setSession(token, canonicalActor);
+                }
+            } catch (e) {
+                console.warn('تعذر تفعيل نظام المراسلة:', e);
+            }
             
             // 3. التوجيه (Routing) بناءً على دور المستخدم
             if (user.role === 'parent') {

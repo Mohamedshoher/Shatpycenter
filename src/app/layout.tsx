@@ -46,6 +46,7 @@ export const viewport: Viewport = {
 
 import BottomNavigation from "@/components/layout/BottomNavigation";
 import NetworkStatusBar from "@/components/ui/NetworkStatusBar";
+import GlobalMessageFAB from "@/components/layout/GlobalMessageFAB";
 
 export default function RootLayout({
   children,
@@ -61,6 +62,7 @@ export default function RootLayout({
             <main className="min-h-screen pb-20 md:pb-0">
               {children}
             </main>
+            <GlobalMessageFAB />
             <BottomNavigation />
           </AuthProvider>
         </QueryProvider>

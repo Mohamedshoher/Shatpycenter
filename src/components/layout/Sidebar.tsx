@@ -19,8 +19,10 @@ import Archive from 'lucide-react/dist/esm/icons/archive'
 import Zap from 'lucide-react/dist/esm/icons/zap'
 import UserCheck from 'lucide-react/dist/esm/icons/user-check'
 import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import { FadeIn } from '@/components/ui/transition';
 import { logout } from '@/features/auth/services/authService';
+import { useMessagingStore } from '@/features/messaging/store/useMessagingStore';
 import { useRouter } from 'next/navigation';
 
 export default function Sidebar() {
@@ -32,6 +34,7 @@ export default function Sidebar() {
     const handleLogout = async () => {
         await logout();
         setUser(null);
+        useMessagingStore.getState().clearSession();
         router.replace('/login');
     };
 
@@ -100,6 +103,12 @@ export default function Sidebar() {
             label: 'تقارير الاختبارات',
             href: '/exams-report',
             icon: FileText,
+            roles: ['director', 'supervisor', 'teacher']
+        },
+        {
+            label: 'الرسائل',
+            href: '/messages',
+            icon: MessageCircle,
             roles: ['director', 'supervisor', 'teacher']
         },
         {

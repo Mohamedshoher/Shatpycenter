@@ -38,6 +38,7 @@ export default function FinanceIncomePage() {
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [detailType, setDetailType] = useState<'manager' | 'teachers' | 'other' | null>(null);
+    const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
     const queryClient = useQueryClient();
     const { data: teachers = [] } = useTeachers();
     const { data: students = [] } = useStudents();
@@ -116,6 +117,27 @@ export default function FinanceIncomePage() {
         return { feesByManager, fromTeachers, otherIncome, totalReceived: feesByManager + fromTeachers + otherIncome, managerDirectFeesList, feeTransactions, otherIncomeTransactions, incomeTransactions };
     }, [filteredTransactions, allFees, teachers, user?.displayName]);
 
+    const teacherGroups = useMemo(() => {
+        const map = new Map<string, { teacherId: string; teacherName: string; total: number; count: number; transactions: typeof incomeData.feeTransactions }>();
+        incomeData.feeTransactions.forEach(tr => {
+            let teacherId: string;
+            let teacherName: string;
+            const relatedId = tr.relatedUserId as string | undefined;
+            const matched = relatedId ? teachers.find(t => t.id === relatedId) : teachers.find(t => tr.title.includes(t.fullName) || normalize(tr.title).includes(normalize(t.fullName)));
+            if (matched) { teacherId = matched.id; teacherName = matched.fullName; }
+            else { teacherId = 'unknown'; teacherName = 'مدرس غير محدد'; }
+            const entry = map.get(teacherId) || { teacherId, teacherName, total: 0, count: 0, transactions: [] };
+            entry.total += Number(tr.amount) || 0;
+            entry.count += 1;
+            entry.transactions.push(tr);
+            map.set(teacherId, entry);
+        });
+        return Array.from(map.values()).sort((a, b) => b.total - a.total);
+    }, [incomeData.feeTransactions, teachers]);
+
+    const selectedTeacher = teacherGroups.find(g => g.teacherId === selectedTeacherId) || null;
+    const selectedTeacherTxns = selectedTeacher?.transactions || [];
+
     const handleAddTransaction = () => {
         setIsModalOpen(false);
         queryClient.invalidateQueries({ queryKey: ['transactions', selectedMonth] });
@@ -169,15 +191,15 @@ export default function FinanceIncomePage() {
             <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div onClick={() => setDetailType('manager')} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                    <div onClick={() => { setDetailType('manager'); setSelectedTeacherId(null); }} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all">
                         <p className="text-xs font-bold text-gray-400 mb-1">تحصيل الإدارة</p>
                         <p className="text-2xl font-black text-blue-600 font-sans">{incomeData.feesByManager.toLocaleString()} <span className="text-xs">ج.م</span></p>
                     </div>
-                    <div onClick={() => setDetailType('teachers')} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                    <div onClick={() => { setDetailType('teachers'); setSelectedTeacherId(null); }} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all">
                         <p className="text-xs font-bold text-gray-400 mb-1">مستلم من المدرسين</p>
                         <p className="text-2xl font-black text-sky-600 font-sans">{incomeData.fromTeachers.toLocaleString()} <span className="text-xs">ج.م</span></p>
                     </div>
-                    <div onClick={() => setDetailType('other')} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                    <div onClick={() => { setDetailType('other'); setSelectedTeacherId(null); }} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all">
                         <p className="text-xs font-bold text-gray-400 mb-1">إيرادات أخرى</p>
                         <p className="text-2xl font-black text-purple-600 font-sans">{incomeData.otherIncome.toLocaleString()} <span className="text-xs">ج.م</span></p>
                     </div>
@@ -216,22 +238,56 @@ export default function FinanceIncomePage() {
 
                 {detailType === 'teachers' && (
                     <div className="space-y-3">
-                        <h3 className="font-black text-gray-700 text-sm">تفاصيل المستلم من المدرسين</h3>
-                        {incomeData.feeTransactions.length === 0 ? (
-                            <p className="text-xs text-gray-400 font-bold text-center py-8 bg-white rounded-2xl border border-dashed border-gray-100">لا توجد مبالغ مستلمة من المدرسين هذا الشهر.</p>
+                        {selectedTeacherId === null ? (
+                            <>
+                                <h3 className="font-black text-gray-700 text-sm">إجمالي المستلم من كل مدرس</h3>
+                                {teacherGroups.length === 0 ? (
+                                    <p className="text-xs text-gray-400 font-bold text-center py-8 bg-white rounded-2xl border border-dashed border-gray-100">لا توجد مبالغ مستلمة من المدرسين هذا الشهر.</p>
+                                ) : (
+                                    teacherGroups.map(g => (
+                                        <button key={g.teacherId} onClick={() => setSelectedTeacherId(g.teacherId)} className="w-full bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-0.5 transition-all text-right">
+                                            <div className="text-right">
+                                                <p className="font-black text-gray-900 text-sm">{g.teacherName}</p>
+                                                <p className="text-[10px] text-gray-400 font-bold">{g.count} عملية استلام</p>
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-lg font-black text-sky-600 font-sans">{g.total.toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
+                            </>
                         ) : (
-                            incomeData.feeTransactions.map((tr: any) => (
-                                <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
-                                    <div className="text-right">
-                                        <p className="font-black text-gray-900 text-sm">{tr.title}</p>
-                                        <p className="text-[10px] text-gray-400 font-bold">{tr.date}</p>
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="text-lg font-black text-sky-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[9px]">ج.م</span></p>
-                                        {tr.performedBy && <p className="text-[9px] text-gray-400">بواسطة: {tr.performedBy}</p>}
-                                    </div>
+                            <>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-black text-gray-700 text-sm">تفاصيل استلام {selectedTeacher?.teacherName || 'المدرس'}</h3>
+                                    <button onClick={() => setSelectedTeacherId(null)} className="text-[11px] font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-full hover:bg-sky-100 transition-colors">
+                                        كل المدرسين
+                                    </button>
                                 </div>
-                            ))
+                                {selectedTeacher && (
+                                    <div className="bg-sky-50/70 rounded-2xl p-4 border border-sky-100 flex items-center justify-between">
+                                        <p className="text-xs font-bold text-gray-500">إجمالي المستلم من {selectedTeacher.teacherName}</p>
+                                        <p className="text-xl font-black text-sky-600 font-sans">{selectedTeacher.total.toLocaleString()} <span className="text-[10px]">ج.م</span></p>
+                                    </div>
+                                )}
+                                {selectedTeacherTxns.length === 0 ? (
+                                    <p className="text-xs text-gray-400 font-bold text-center py-8 bg-white rounded-2xl border border-dashed border-gray-100">لا توجد مبالغ مستلمة من هذا المدرس هذا الشهر.</p>
+                                ) : (
+                                    selectedTeacherTxns.map((tr: any) => (
+                                        <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
+                                            <div className="text-right">
+                                                <p className="font-black text-gray-900 text-sm">{tr.title}</p>
+                                                <p className="text-[10px] text-gray-400 font-bold">{tr.date}</p>
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-lg font-black text-sky-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                                                {tr.performedBy && <p className="text-[9px] text-gray-400">بواسطة: {tr.performedBy}</p>}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </>
                         )}
                     </div>
                 )}

@@ -45,6 +45,7 @@ export default function FinancePage() {
     const [isDeficitOpen, setIsDeficitOpen] = useState(false);
     const [isManagerDirectOpen, setIsManagerDirectOpen] = useState(false);
     const [isFromTeachersOpen, setIsFromTeachersOpen] = useState(false);
+    const [selectedFromTeacherId, setSelectedFromTeacherId] = useState<string | null>(null);
     const [isOtherIncomeOpen, setIsOtherIncomeOpen] = useState(false);
     const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
     const [isExemptionsOpen, setIsExemptionsOpen] = useState(false);
@@ -261,6 +262,27 @@ export default function FinancePage() {
         const otherTxns = incomeTransactions.filter(tr => tr.category === 'donation' || tr.category === 'other');
         return { managerFees, fromTeacherTxns, otherTxns };
     }, [filteredTransactions, allFees, teachers, user?.displayName]);
+
+    const fromTeacherGroups = useMemo(() => {
+        const map = new Map<string, { teacherId: string; teacherName: string; total: number; count: number; transactions: typeof incomeDetails.fromTeacherTxns }>();
+        incomeDetails.fromTeacherTxns.forEach(tr => {
+            let teacherId: string;
+            let teacherName: string;
+            const relatedId = tr.relatedUserId as string | undefined;
+            const matched = relatedId ? teachers.find(t => t.id === relatedId) : teachers.find(t => tr.title.includes(t.fullName) || normalize(tr.title).includes(normalize(t.fullName)));
+            if (matched) { teacherId = matched.id; teacherName = matched.fullName; }
+            else { teacherId = 'unknown'; teacherName = 'مدرس غير محدد'; }
+            const entry = map.get(teacherId) || { teacherId, teacherName, total: 0, count: 0, transactions: [] };
+            entry.total += Number(tr.amount) || 0;
+            entry.count += 1;
+            entry.transactions.push(tr);
+            map.set(teacherId, entry);
+        });
+        return Array.from(map.values()).sort((a, b) => b.total - a.total);
+    }, [incomeDetails.fromTeacherTxns, teachers]);
+
+    const selectedFromTeacher = fromTeacherGroups.find(g => g.teacherId === selectedFromTeacherId) || null;
+    const selectedFromTeacherTxns = selectedFromTeacher?.transactions || [];
 
     const teacherPaymentStatus = useMemo(() => {
         const salaryPaymentsThisMonth = filteredTransactions.filter(tr => tr.type === 'expense' && tr.category === 'salary');
@@ -617,23 +639,60 @@ export default function FinancePage() {
                     </button>
                 </div>
                 <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
-                    {incomeDetails.fromTeacherTxns.length === 0 ? (
-                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
-                            لا توجد مبالغ مستلمة من المدرسين هذا الشهر.
-                        </div>
+                    {selectedFromTeacherId === null ? (
+                        <>
+                            <h3 className="font-black text-gray-700 text-sm">إجمالي المستلم من كل مدرس</h3>
+                            {fromTeacherGroups.length === 0 ? (
+                                <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                                    لا توجد مبالغ مستلمة من المدرسين هذا الشهر.
+                                </div>
+                            ) : (
+                                fromTeacherGroups.map(g => (
+                                    <button key={g.teacherId} onClick={() => setSelectedFromTeacherId(g.teacherId)} className="w-full bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-0.5 transition-all text-right">
+                                        <div className="text-right">
+                                            <p className="font-black text-gray-900 text-sm">{g.teacherName}</p>
+                                            <p className="text-[10px] text-gray-400 font-bold">{g.count} عملية استلام</p>
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-lg font-black text-sky-600 font-sans">{g.total.toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                                        </div>
+                                    </button>
+                                ))
+                            )}
+                        </>
                     ) : (
-                        incomeDetails.fromTeacherTxns.map((tr: any) => (
-                            <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
-                                <div className="text-right">
-                                    <p className="font-black text-gray-900 text-sm">{tr.title}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold">{tr.date}</p>
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-lg font-black text-sky-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[9px]">ج.م</span></p>
-                                    {tr.performedBy && <p className="text-[9px] text-gray-400">بواسطة: {tr.performedBy}</p>}
-                                </div>
+                        <>
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-black text-gray-700 text-sm">تفاصيل استلام {selectedFromTeacher?.teacherName || 'المدرس'}</h3>
+                                <button onClick={() => setSelectedFromTeacherId(null)} className="text-[11px] font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-full hover:bg-sky-100 transition-colors">
+                                    كل المدرسين
+                                </button>
                             </div>
-                        ))
+                            {selectedFromTeacher && (
+                                <div className="bg-sky-50/70 rounded-2xl p-4 border border-sky-100 flex items-center justify-between">
+                                    <p className="text-xs font-bold text-gray-500">إجمالي المستلم من {selectedFromTeacher.teacherName}</p>
+                                    <p className="text-xl font-black text-sky-600 font-sans">{selectedFromTeacher.total.toLocaleString()} <span className="text-[10px]">ج.م</span></p>
+                                </div>
+                            )}
+                            {selectedFromTeacherTxns.length === 0 ? (
+                                <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                                    لا توجد مبالغ مستلمة من هذا المدرس هذا الشهر.
+                                </div>
+                            ) : (
+                                selectedFromTeacherTxns.map((tr: any) => (
+                                    <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
+                                        <div className="text-right">
+                                            <p className="font-black text-gray-900 text-sm">{tr.title}</p>
+                                            <p className="text-[10px] text-gray-400 font-bold">{tr.date}</p>
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-lg font-black text-sky-600 font-sans">{Number(tr.amount).toLocaleString()} <span className="text-[9px]">ج.م</span></p>
+                                            {tr.performedBy && <p className="text-[9px] text-gray-400">بواسطة: {tr.performedBy}</p>}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </>
                     )}
                 </div>
                 <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
@@ -1002,7 +1061,7 @@ export default function FinancePage() {
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">تحصيل الإدارة</p>
                                     <p className="text-lg font-black text-blue-600 font-sans">{feesByManager.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
                                 </button>
-                                <button onClick={() => setIsFromTeachersOpen(true)} className="p-4 bg-sky-50/50 rounded-2xl border border-sky-100/50 hover:border-sky-300 hover:shadow-sm transition-all text-right w-full">
+                                <button onClick={() => { setSelectedFromTeacherId(null); setIsFromTeachersOpen(true); }} className="p-4 bg-sky-50/50 rounded-2xl border border-sky-100/50 hover:border-sky-300 hover:shadow-sm transition-all text-right w-full">
                                     <p className="text-[10px] font-bold text-gray-400 mb-1">مستلم من المدرسين</p>
                                     <p className="text-lg font-black text-sky-600 font-sans">{fromTeachers.toLocaleString()} <span className="text-[8px]">ج.م</span></p>
                                 </button>
