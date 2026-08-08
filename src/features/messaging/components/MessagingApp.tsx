@@ -528,10 +528,14 @@ function NewChatModal({
     const isTeacher = user.role === 'teacher' || user.role === 'supervisor';
 
     const q = search.trim().toLowerCase();
+    const phoneQ = q.replace(/[^0-9]/g, '');
     const filter = (list: MessagingContact[]) =>
-        list.filter(
-            (c) => !q || c.name.toLowerCase().includes(q) || c.phone.toLowerCase().includes(q.replace(/[^0-9]/g, ''))
-        );
+        list.filter((c) => {
+            if (!q) return true;
+            const nameMatch = c.name.toLowerCase().includes(q);
+            const phoneMatch = phoneQ.length > 0 && (c.phone ?? '').toLowerCase().includes(phoneQ);
+            return nameMatch || phoneMatch;
+        });
 
     const teachers = filter(contacts.teachers);
     const parents = filter(contacts.parents);
