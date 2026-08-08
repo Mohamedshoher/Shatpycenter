@@ -380,6 +380,7 @@ export default function GroupsPage() {
                                         ) : (
                                             <>
                                                 <div className="flex flex-col text-right min-w-0">
+                                                    <span className="text-[10px] font-black text-indigo-400 mb-0.5">⏰ {Number(group.hours) || 4} ساعات/يوم</span>
                                                     <span className="text-base font-bold text-gray-500 truncate leading-tight">{group.teacher}</span>
                                                 </div>
 

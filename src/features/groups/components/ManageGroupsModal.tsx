@@ -133,9 +133,15 @@ export default function ManageGroupsModal({ isOpen, onClose }: ManageGroupsModal
                                         <span className="text-[10px] font-black text-blue-400">سعة الساعة:</span>
                                         <span className="text-[11px] font-bold">{group.maxStudentsPerHour || 5}</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-gray-500">
-                                        <span className="text-sm font-bold">{group.teacher}</span>
-                                        <User size={14} />
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg border border-indigo-100">
+                                            <span className="text-[10px] font-black text-indigo-400">ساعات المجموعة:</span>
+                                            <span className="text-[11px] font-bold">{Number(group.hours) || 4} ساعات</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-gray-500">
+                                            <span className="text-sm font-bold">{group.teacher}</span>
+                                            <User size={14} />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

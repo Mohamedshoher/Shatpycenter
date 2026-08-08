@@ -282,7 +282,10 @@ export default function TeacherDetailModal({
             totalWorkingDays: 22,
             attendedDays: 0,
             absentDays: 0,
-            totalAbsentDays: 0
+            totalAbsentDays: 0,
+            hourlyRate: 0,
+            dailyHours: 4,
+            weeklyWorkingDays: 5
         }
     } = dashboard || {};
 
@@ -304,7 +307,10 @@ export default function TeacherDetailModal({
         totalWorkingDays,
         attendedDays,
         absentDays,
-        totalAbsentDays
+        totalAbsentDays,
+        hourlyRate,
+        dailyHours,
+        weeklyWorkingDays
     } = salaryStats;
 
     // ==========================================
@@ -792,6 +798,9 @@ export default function TeacherDetailModal({
                             absentDays={absentDays}
                             totalAbsentDays={totalAbsentDays}
                             dailyRate={dailyRate}
+                            hourlyRate={hourlyRate}
+                            dailyHours={dailyHours}
+                            weeklyWorkingDays={weeklyWorkingDays}
                             isTeacher={isTeacher}
                             paymentsHistory={paymentsHistory}
                             handlePaySalary={handlePaySalary}

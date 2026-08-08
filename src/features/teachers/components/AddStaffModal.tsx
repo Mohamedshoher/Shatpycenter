@@ -18,6 +18,8 @@ import UserCircle from 'lucide-react/dist/esm/icons/user-circle'
 import GraduationCap from 'lucide-react/dist/esm/icons/graduation-cap'
 import Coins from 'lucide-react/dist/esm/icons/coins'
 import Handshake from 'lucide-react/dist/esm/icons/handshake'
+import Clock from 'lucide-react/dist/esm/icons/clock'
+import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days'
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
@@ -54,6 +56,8 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
         accountingType: (initialTeacher as any)?.accountingType || 'fixed' as 'fixed' | 'partnership',
         salary: (initialTeacher as any)?.salary || 0,
         partnershipPercentage: (initialTeacher as any)?.partnershipPercentage || 30,
+        dailyHours: Number(initialTeacher?.dailyHours) || 4,
+        weeklyWorkingDays: Number(initialTeacher?.weeklyWorkingDays) || 5,
         password: (initialTeacher as any)?.password || '',
         status: (initialTeacher?.status as any) || 'active' as 'active' | 'inactive',
         responsibleSections: (initialTeacher as any)?.responsibleSections || ['قرآن'] as string[],
@@ -76,6 +80,8 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                 accountingType: (initialTeacher as any).accountingType || 'fixed',
                 salary: (initialTeacher as any).salary || 0,
                 partnershipPercentage: (initialTeacher as any).partnershipPercentage || 30,
+                dailyHours: Number(initialTeacher?.dailyHours) || 4,
+                weeklyWorkingDays: Number(initialTeacher?.weeklyWorkingDays) || 5,
                 password: (initialTeacher as any).password || '',
                 status: (initialTeacher.status as any) || 'active',
                 responsibleSections: (initialTeacher as any).responsibleSections || ['قرآن'],
@@ -137,6 +143,8 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     accountingType: 'fixed',
                     salary: 0,
                     partnershipPercentage: 30,
+                    dailyHours: 4,
+                    weeklyWorkingDays: 5,
                     password: '',
                     status: 'active',
                     responsibleSections: ['قرآن'],
@@ -268,7 +276,48 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 </div>
 
-                {/* 5. الحقول الديناميكية (الراتب/النسبة) وحقل كلمة المرور (Dynamic Fields Grid) */}
+                {/* 5. مواعيد العمل: ساعات اليوم وأيام الأسبوع */}
+                <div className="bg-indigo-50/40 p-4 rounded-[28px] border border-indigo-50 space-y-4">
+                    <h4 className="text-xs font-black text-indigo-700 text-center uppercase tracking-wider">مواعيد العمل:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5 text-right">
+                            <label className="text-[10px] font-black text-gray-400 uppercase mr-1">عدد ساعات العمل اليومية</label>
+                            <div className="relative group">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={12}
+                                    placeholder="مثال: 4"
+                                    value={formData.dailyHours || ''}
+                                    onChange={(e) => setFormData({ ...formData, dailyHours: Number(e.target.value) })}
+                                    className="w-full h-12 bg-white border border-gray-100 rounded-[18px] px-10 text-right text-sm font-black text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:bg-white transition-all"
+                                    required
+                                />
+                                <Clock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-indigo-500" size={18} />
+                            </div>
+                            <p className="text-[9px] text-gray-400 text-right mr-1 leading-relaxed">مثال: 4 ساعات يومياً</p>
+                        </div>
+                        <div className="space-y-1.5 text-right">
+                            <label className="text-[10px] font-black text-gray-400 uppercase mr-1">عدد أيام العمل أسبوعياً</label>
+                            <div className="relative group">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={7}
+                                    placeholder="مثال: 5"
+                                    value={formData.weeklyWorkingDays || ''}
+                                    onChange={(e) => setFormData({ ...formData, weeklyWorkingDays: Number(e.target.value) })}
+                                    className="w-full h-12 bg-white border border-gray-100 rounded-[18px] px-10 text-right text-sm font-black text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:bg-white transition-all"
+                                    required
+                                />
+                                <CalendarDays className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-indigo-500" size={18} />
+                            </div>
+                            <p className="text-[9px] text-gray-400 text-right mr-1 leading-relaxed">مثال: 5 أيام في الأسبوع (≈ 22 يوم شهرياً)</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 6. الحقول الديناميكية (الراتب/النسبة) وحقل كلمة المرور (Dynamic Fields Grid) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
                     {/* عرض حقل الراتب إذا كان النوع "ثابت"، وعرض حقل النسبة إذا كان "شراكة" */}

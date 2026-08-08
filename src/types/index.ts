@@ -44,6 +44,8 @@ export interface Teacher {
   accountingType?: 'fixed' | 'partnership';
   salary?: number;
   partnershipPercentage?: number;
+  dailyHours?: number; // عدد ساعات العمل اليومية
+  weeklyWorkingDays?: number; // عدد أيام العمل أسبوعياً
   password?: string;
   responsibleSections?: string[];
 }
@@ -57,6 +59,7 @@ export interface Group {
   count?: number; // عدد الطلاب في المجموعة
   color?: string; // لون المجموعة للعرض
   maxStudentsPerHour?: number; // الحد الأقصى لعدد الطلاب في الساعة
+  hours?: number; // عدد ساعات عمل المجموعة يومياً (لا يزيد عن ساعات المدرس المسؤول)
 }
 
 export interface AttendanceRecord {

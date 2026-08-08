@@ -49,6 +49,11 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
     const [teacherId, setTeacherId] = useState('');
     const [type, setType] = useState<keyof typeof GROUP_COLORS>('قرآن');
     const [maxStudentsPerHour, setMaxStudentsPerHour] = useState(5);
+    const [hours, setHours] = useState(4);
+
+    // المدرس المختار + أقصى ساعات المجموعة المسموح بها (حسب ساعات المدرس اليومية)
+    const selectedTeacher = teachers?.find(t => t.id === teacherId);
+    const maxHours = Number(selectedTeacher?.dailyHours) || 4;
 
     // 3. إعداد عملية الإضافة (Mutation) لإرسال البيانات للخادم
     const addMutation = useMutation({
@@ -79,7 +84,8 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
             schedule: '',
             count: 0,
             color: GROUP_COLORS[type] || 'bg-gray-100 text-gray-600',
-            maxStudentsPerHour: maxStudentsPerHour || 5
+            maxStudentsPerHour: maxStudentsPerHour || 5,
+            hours: Math.min(hours || 4, maxHours)
         });
     };
 
@@ -129,16 +135,42 @@ export default function AddGroupModal({ isOpen, onClose }: AddGroupModalProps) {
                     <select
                         required
                         value={teacherId} // نستخدم الـ ID كقيمة
-                        onChange={(e) => setTeacherId(e.target.value)}
+                        onChange={(e) => {
+                            const tid = e.target.value;
+                            setTeacherId(tid);
+                            const t = teachers?.find(x => x.id === tid);
+                            setHours(Number(t?.dailyHours) || 4);
+                        }}
                         className="w-full h-12 bg-gray-50 border border-gray-100 rounded-xl px-4 text-right font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/10"
                     >
                         <option value="">اختر مدرساً</option>
                         {activeSortedTeachers.map((t) => (
                             <option key={t.id} value={t.id}> 
-                                {t.fullName}
+                                {t.fullName} {t.dailyHours ? `(${t.dailyHours} ساعات/يوم)` : ''}
                             </option>
                         ))}
                     </select>
+                </div>
+
+                {/* --- حقل: عدد ساعات عمل المجموعة (لا يزيد عن ساعات المدرس) --- */}
+                <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-600 block">عدد ساعات عمل المجموعة يومياً</label>
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="number"
+                            min="1"
+                            max={maxHours}
+                            value={hours}
+                            onChange={(e) => {
+                                const v = Number(e.target.value);
+                                setHours(Math.min(Math.max(v || 0, 1), maxHours));
+                            }}
+                            className="w-24 h-12 bg-gray-50 border border-gray-100 rounded-xl px-4 text-center font-black text-lg focus:outline-none focus:ring-2 focus:ring-purple-500/10"
+                        />
+                        <p className="text-xs text-gray-400 font-bold leading-relaxed">
+                            الحد الأقصى {maxHours} ساعات (حسب ساعات عمل المدرس المسؤول {selectedTeacher?.fullName ? `- ${selectedTeacher.fullName}` : ''})
+                        </p>
+                    </div>
                 </div>
 
                 {/* --- حقل: أقصى عدد طلاب في الساعة --- */}

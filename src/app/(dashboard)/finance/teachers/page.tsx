@@ -128,7 +128,9 @@ export default function FinanceTeachersPage() {
             const manualDays = filteredDeductions.filter((d: any) => d.teacherId === t.id).reduce((sum: number, d: any) => sum + d.amount, 0);
             const att = allAttendanceMap[t.id] || {};
             const absenceDays = Object.values(att).reduce((acc: number, s: any) => { if (s === 'absent') return acc + 1; if (s === 'half') return acc + 0.5; if (s === 'quarter') return acc + 0.25; return acc; }, 0);
-            const dailyRate = t.accountingType === 'partnership' ? ((Number(t.partnershipPercentage) || 0) / 22) : ((Number(t.salary) || 1000) / 22);
+            const weeklyWorkingDays = Number(t.weeklyWorkingDays) || 5;
+            const standardWorkingDays = Math.max(1, Math.round(weeklyWorkingDays * 4.33));
+            const dailyRate = t.accountingType === 'partnership' ? ((Number(t.partnershipPercentage) || 0) / standardWorkingDays) : ((Number(t.salary) || 1000) / standardWorkingDays);
             const totalDays = manualDays + absenceDays;
             const totalAmount = Math.max(0, Math.round(totalDays * dailyRate));
             return { teacherId: t.id, teacherName: t.fullName, manualDays, absenceDays, totalDays, totalAmount, dailyRate };

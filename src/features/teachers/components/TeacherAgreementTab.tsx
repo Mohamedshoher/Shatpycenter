@@ -44,7 +44,7 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
                             <span>⏰</span> ثانيًا: ساعات العمل
                         </h4>
                         <p className="text-sm text-gray-700 leading-relaxed">
-                            ساعات العمل هي 4 ساعات يوميًا، لمدة 5 أيام في الأسبوع،
+                            ساعات العمل هي {Number(teacher?.dailyHours) || 4} ساعات يوميًا، لمدة {Number(teacher?.weeklyWorkingDays) || 5} أيام في الأسبوع،
                             وذلك وفق الجدول الزمني المعتمد من إدارة المركز.
                         </p>
                     </div>

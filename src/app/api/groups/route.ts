@@ -8,16 +8,18 @@ export async function GET(request: NextRequest) {
         const teacherId = searchParams.get('teacherId');
 
         const supabase = createServerSupabase();
-        let query = supabase
-            .from('groups')
-            .select('id, name, teacher_id, schedule, max_students_per_hour')
-            .order('name', { ascending: true });
+        const buildQuery = (cols: string) => {
+            let q = supabase.from('groups').select(cols).order('name', { ascending: true });
+            if (teacherId) q = q.eq('teacher_id', teacherId);
+            return q;
+        };
 
-        if (teacherId) {
-            query = query.eq('teacher_id', teacherId);
+        let { data, error } = await buildQuery('id, name, teacher_id, schedule, max_students_per_hour, hours');
+
+        // إذا كان عمود "hours" غير موجود بعد في قاعدة البيانات، نعيد الاستعلام بدونه
+        if (error) {
+            ({ data, error } = await buildQuery('id, name, teacher_id, schedule, max_students_per_hour'));
         }
-
-        const { data, error } = await query;
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
@@ -29,6 +31,7 @@ export async function GET(request: NextRequest) {
             teacherId: row.teacher_id,
             schedule: row.schedule || '',
             maxStudentsPerHour: row.max_students_per_hour || 5,
+            hours: Number(row.hours) || 4,
             students: [],
         })) as unknown as Group[];
 

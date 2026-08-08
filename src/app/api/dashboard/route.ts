@@ -20,10 +20,31 @@ export async function GET(request: NextRequest) {
         // 1. Groups
         let groups: any[] = [];
         if (canLoadData) {
-            const { data } = await supabase
+            type GroupRow = {
+                id: string;
+                name: string;
+                teacher_id: string | null;
+                schedule: string | null;
+                max_students_per_hour: number | null;
+                hours?: number | null;
+            };
+            let groupRows: GroupRow[] | null = null;
+            const firstGroupsResult = await supabase
                 .from('groups')
-                .select('id, name, teacher_id, schedule, max_students_per_hour')
+                .select('id, name, teacher_id, schedule, max_students_per_hour, hours')
                 .order('name', { ascending: true });
+            groupRows = firstGroupsResult.data;
+
+            // إذا كان عمود "hours" غير موجود بعد في قاعدة البيانات، نعيد الاستعلام بدونه
+            if (firstGroupsResult.error) {
+                const fb = await supabase
+                    .from('groups')
+                    .select('id, name, teacher_id, schedule, max_students_per_hour')
+                    .order('name', { ascending: true });
+                groupRows = fb.data;
+            }
+            const data = groupRows;
+
             if (data) {
                 let filtered = data;
                 if (role === 'teacher' && teacherId) {
@@ -40,6 +61,7 @@ export async function GET(request: NextRequest) {
                     teacherId: row.teacher_id,
                     schedule: row.schedule || '',
                     maxStudentsPerHour: row.max_students_per_hour || 5,
+                    hours: Number(row.hours) || 4,
                     students: [],
                 }));
             }

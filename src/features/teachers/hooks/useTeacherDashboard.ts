@@ -99,7 +99,10 @@ export const useTeacherDashboard = (
         // 4. الراتب
         let basicSalary = 0;
         const isPartnership = teacher.accountingType === 'partnership';
-        const standardWorkingDays = 22;
+        // أيام العمل الأسبوعية والساعات اليومية محددة لكل معلم (افتراضياً 5 أيام × 4 ساعات)
+        const dailyHours = Number(teacher.dailyHours) || 4;
+        const weeklyWorkingDays = Number(teacher.weeklyWorkingDays) || 5;
+        const standardWorkingDays = Math.max(1, Math.round(weeklyWorkingDays * 4.33));
         
         // حساب إجمالي محصل المجموعة (كل الطلاب التابعين لمجموعات المدرس)
         const totalCollectedForGroup = allFees.filter(f => {
@@ -119,6 +122,9 @@ export const useTeacherDashboard = (
             ? ((expectedExpenses * (Number(teacher.partnershipPercentage) || 0)) / 100) / standardWorkingDays
             : (Number(teacher.salary) || 1000) / standardWorkingDays;
 
+        // أجر الساعة الواحدة بناءً على ساعات العمل اليومية للمعلم
+        const hourlyRate = dailyHours > 0 ? dailyRate / dailyHours : 0;
+
         // حساب أيام الغياب من سجل الحضور (بما في ذلك partial)
         let absentDays = 0;
         Object.values(attendanceData || {}).forEach((status: any) => {
@@ -127,7 +133,7 @@ export const useTeacherDashboard = (
             else if (status === 'quarter') absentDays += 0.25;
         });
 
-        // إجمالي أيام العمل في الشهر = 22 يوم افتراضي (ثابت)
+        // إجمالي أيام العمل في الشهر (محسوب من أيام عمل المدرس الأسبوعية)
         const totalWorkingDays = standardWorkingDays;
 
         // إجمالي أيام الغياب (سجل الحضور فقط)
@@ -247,6 +253,9 @@ export const useTeacherDashboard = (
                 totalEntitlement,
                 remainingToPay,
                 dailyRate,
+                hourlyRate,
+                dailyHours,
+                weeklyWorkingDays,
                 isPartnership,
                 partnershipPercentage: teacher.partnershipPercentage,
                 totalCollectedForGroup,

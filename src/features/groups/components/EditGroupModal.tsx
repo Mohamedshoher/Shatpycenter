@@ -28,6 +28,11 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
     const [editGroupName, setEditGroupName] = useState('');
     const [editTeacherId, setEditTeacherId] = useState('');
     const [editMaxStudentsPerHour, setEditMaxStudentsPerHour] = useState(5);
+    const [editHours, setEditHours] = useState(4);
+
+    // المدرس المختار + أقصى ساعات المجموعة المسموح بها (حسب ساعات المدرس اليومية)
+    const selectedTeacher = teachers?.find(t => t.id === editTeacherId);
+    const maxHours = Number(selectedTeacher?.dailyHours) || 4;
 
     // تحديث البيانات عند فتح النافذة لمجموعة معينة
     useEffect(() => {
@@ -35,6 +40,7 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
             setEditGroupName(group.name || '');
             setEditTeacherId(group.teacherId || '');
             setEditMaxStudentsPerHour(group.maxStudentsPerHour || 5);
+            setEditHours(Number(group.hours) || 4);
         }
     }, [group]);
 
@@ -55,7 +61,8 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
                 name: editGroupName,
                 teacherId: editTeacherId || null,
                 teacher: selectedTeacher?.fullName || 'غير محدد',
-                maxStudentsPerHour: Number(editMaxStudentsPerHour) || 5
+                maxStudentsPerHour: Number(editMaxStudentsPerHour) || 5,
+                hours: Math.min(editHours || 4, maxHours)
             }
         });
     };
@@ -84,14 +91,41 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
                     <label className="text-[11px] font-black text-gray-400 pr-1">المدرس المسئول</label>
                     <select
                         value={editTeacherId}
-                        onChange={(e) => setEditTeacherId(e.target.value)}
+                        onChange={(e) => {
+                            const tid = e.target.value;
+                            setEditTeacherId(tid);
+                            const t = teachers?.find(x => x.id === tid);
+                            const tHours = Number(t?.dailyHours) || 4;
+                            setEditHours(prev => Math.min(prev || 4, tHours));
+                        }}
                         className="w-full h-11 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-right text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all shadow-inner appearance-none"
                     >
                         <option value="">اختر المدرس المسئول</option>
                         {activeSortedTeachers.map((t: any) => (
-                            <option key={t.id} value={t.id}>{t.fullName}</option>
+                            <option key={t.id} value={t.id}>{t.fullName} {t.dailyHours ? `(${t.dailyHours} ساعات/يوم)` : ''}</option>
                         ))}
                     </select>
+                </div>
+
+                {/* حقل عدد ساعات المجموعة (لا يزيد عن ساعات المدرس المسؤول) */}
+                <div className="space-y-1.5">
+                    <label className="text-[11px] font-black text-gray-400 pr-1">عدد ساعات عمل المجموعة يومياً</label>
+                    <div className="relative">
+                        <input
+                            type="number"
+                            min="1"
+                            max={maxHours}
+                            value={editHours}
+                            onChange={(e) => {
+                                const v = Number(e.target.value);
+                                setEditHours(Math.min(Math.max(v || 0, 1), maxHours));
+                            }}
+                            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-center text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all shadow-inner"
+                        />
+                    </div>
+                    <p className="text-[10px] font-bold text-indigo-500 pr-1">
+                        لا يمكن أن تتجاوز ساعات المجموعة {maxHours} ساعات (حسب ساعات عمل {selectedTeacher?.fullName || 'المدرس المسؤول'})
+                    </p>
                 </div>
 
                 {/* حقل السعة القصوى */}

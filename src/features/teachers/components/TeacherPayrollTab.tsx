@@ -41,6 +41,9 @@ interface TeacherPayrollTabProps {
     absentDays?: number;
     totalAbsentDays?: number;
     dailyRate?: number;
+    hourlyRate?: number;
+    dailyHours?: number;
+    weeklyWorkingDays?: number;
 }
 
 export const TeacherPayrollTab = ({
@@ -68,7 +71,10 @@ export const TeacherPayrollTab = ({
     attendedDays = 0,
     absentDays = 0,
     totalAbsentDays = 0,
-    dailyRate = 0
+    dailyRate = 0,
+    hourlyRate = 0,
+    dailyHours = 4,
+    weeklyWorkingDays = 5
 }: TeacherPayrollTabProps) => {
 
     const [showPayModal, setShowPayModal] = useState(false);
@@ -178,6 +184,8 @@ export const TeacherPayrollTab = ({
                                 <span className="bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100">{attendedDays} يوم حضور</span>
                                 {absentDays > 0 && <span className="bg-red-50 text-red-600 px-3 py-1.5 rounded-full border border-red-100">{absentDays} يوم غياب</span>}
                                 <span className="bg-gray-50 text-gray-500 px-3 py-1.5 rounded-full border border-gray-100">{dailyRate.toLocaleString()} ج.م/يوم</span>
+                                <span className="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full border border-indigo-100">{hourlyRate.toLocaleString()} ج.م/ساعة</span>
+                                <span className="bg-indigo-50 text-indigo-500 px-3 py-1.5 rounded-full border border-indigo-100">{dailyHours} ساعات × {weeklyWorkingDays} أيام/أسبوع</span>
                             </div>
                         )}
                     </div>

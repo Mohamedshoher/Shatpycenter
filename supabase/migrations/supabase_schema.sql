@@ -30,6 +30,8 @@ create table teachers (
   accounting_type text default 'fixed',           
   salary numeric default 0,                       
   partnership_percentage numeric default 0,       
+  daily_hours numeric default 4,                  
+  weekly_working_days numeric default 5,          
   password text,                                  
   responsible_sections text[],                    
   status text default 'active',                   
@@ -44,6 +46,8 @@ create table groups (
   name text not null,                             
   teacher_id uuid references teachers(id),        
   schedule text,                                  
+  hours numeric default 4,                        
+  max_students_per_hour numeric default 5,        
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

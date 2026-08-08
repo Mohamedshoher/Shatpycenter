@@ -6,7 +6,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { deleteTeacher } from '../services/teacherService';
+import { deleteTeacher, updateTeacher } from '../services/teacherService';
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
 import Search from 'lucide-react/dist/esm/icons/search'
 import Menu from 'lucide-react/dist/esm/icons/menu'
@@ -17,6 +17,7 @@ import Briefcase from 'lucide-react/dist/esm/icons/briefcase'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
 import XCircle from 'lucide-react/dist/esm/icons/x-circle'
 import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
+import Pencil from 'lucide-react/dist/esm/icons/pencil';
 
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Teacher } from '@/types';
@@ -49,6 +50,7 @@ export default function TeacherList() {
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+    const [statusMenuTeacherId, setStatusMenuTeacherId] = useState<string | null>(null);
 
     // حالة الحضور
     const today = new Date();
@@ -74,6 +76,27 @@ export default function TeacherList() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['teachers'] });
             setIsDetailOpen(false);
+        }
+    });
+
+    // تغيير حالة المدرس (نشط / غير نشط)
+    const statusMutation = useMutation({
+        mutationFn: ({ id, status }: { id: string; status: 'active' | 'inactive' }) => updateTeacher(id, { status }),
+        onMutate: async ({ id, status }) => {
+            await queryClient.cancelQueries({ queryKey: ['teachers'] });
+            const previousTeachers = queryClient.getQueryData(['teachers']);
+            queryClient.setQueryData(['teachers'], (old: Teacher[] | undefined) => {
+                if (!old) return old;
+                return old.map((t) => t.id === id ? { ...t, status } : t);
+            });
+            return { previousTeachers };
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teachers'] });
+            setStatusMenuTeacherId(null);
+        },
+        onError: (_, _v, context) => {
+            if (context?.previousTeachers) queryClient.setQueryData(['teachers'], context.previousTeachers);
         }
     });
 
@@ -301,28 +324,83 @@ export default function TeacherList() {
                                 <div className="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-500 shrink-0">
                                     <Briefcase size={20} />
                                 </div>
-                                <div className="flex flex-col min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-gray-800 text-lg group-hover/card:text-teal-600 transition-colors truncate">
-                                            {teacher.fullName}
-                                        </h3>
-                                        <span className={cn(
-                                            "shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black",
-                                            teacher.status === 'active' ? "bg-green-100 text-green-700 border border-green-200" : "bg-red-100 text-red-700 border border-red-200"
-                                        )}>
-                                            {teacher.status === 'active' ? 'نشط' : 'غير نشط'}
-                                        </span>
+                                    <div className="flex flex-col min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-gray-800 text-lg group-hover/card:text-teal-600 transition-colors truncate">
+                                                {teacher.fullName}
+                                            </h3>
+                                            <span className={cn(
+                                                "shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black",
+                                                teacher.status === 'active' ? "bg-green-100 text-green-700 border border-green-200" : "bg-red-100 text-red-700 border border-red-200"
+                                            )}>
+                                                {teacher.status === 'active' ? 'نشط' : 'غير نشط'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-gray-400">
+                                            <span className="bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full border border-indigo-100">
+                                                {teacher.dailyHours || 4} ساعة/يوم
+                                            </span>
+                                            <span className="bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full border border-indigo-100">
+                                                {teacher.weeklyWorkingDays || 5} أيام/أسبوع
+                                            </span>
+                                        </div>
                                     </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <a
+                                    href={`tel:${teacher.phone}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-10 h-10 flex items-center justify-center bg-teal-50 text-teal-400 rounded-xl hover:bg-teal-500 hover:text-white transition-all active:scale-90 shadow-sm"
+                                    title="اتصال هاتفي"
+                                >
+                                    <Phone size={18} />
+                                </a>
+                                <div className="relative">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setStatusMenuTeacherId(statusMenuTeacherId === teacher.id ? null : teacher.id);
+                                        }}
+                                        className="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 rounded-xl hover:bg-blue-500 hover:text-white transition-all active:scale-90 shadow-sm border border-gray-100"
+                                        title="تغيير الحالة"
+                                    >
+                                        <Pencil size={18} />
+                                    </button>
+
+                                    {statusMenuTeacherId === teacher.id && (
+                                        <div
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="absolute left-0 top-[115%] z-50 w-40 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 animate-in fade-in zoom-in-95 duration-150 origin-top-left"
+                                        >
+                                            <p className="px-3 py-1.5 text-[10px] font-black text-gray-400 uppercase text-right">الحالة</p>
+                                            <button
+                                                onClick={() => statusMutation.mutate({ id: teacher.id, status: 'active' })}
+                                                className={cn(
+                                                    "w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all",
+                                                    teacher.status === 'active'
+                                                        ? "bg-green-50 text-green-700"
+                                                        : "text-gray-600 hover:bg-green-50 hover:text-green-700"
+                                                )}
+                                            >
+                                                <CheckCircle2 size={14} />
+                                                نشط
+                                            </button>
+                                            <button
+                                                onClick={() => statusMutation.mutate({ id: teacher.id, status: 'inactive' })}
+                                                className={cn(
+                                                    "w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all",
+                                                    teacher.status === 'inactive'
+                                                        ? "bg-red-50 text-red-700"
+                                                        : "text-gray-600 hover:bg-red-50 hover:text-red-700"
+                                                )}
+                                            >
+                                                <XCircle size={14} />
+                                                غير نشط
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <a
-                                href={`tel:${teacher.phone}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-10 h-10 flex items-center justify-center bg-teal-50 text-teal-400 rounded-xl hover:bg-teal-500 hover:text-white transition-all active:scale-90 shadow-sm shrink-0"
-                                title="اتصال هاتفي"
-                            >
-                                <Phone size={18} />
-                            </a>
                         </div>
 
                         {/* الجزء السفلي: الحضور */}

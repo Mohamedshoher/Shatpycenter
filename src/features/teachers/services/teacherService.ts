@@ -37,6 +37,8 @@ export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<string> 
                 accounting_type: teacher.accountingType || 'fixed',
                 salary: teacher.salary || 0,
                 partnership_percentage: teacher.partnershipPercentage || 0,
+                daily_hours: teacher.dailyHours || 4,
+                weekly_working_days: teacher.weeklyWorkingDays || 5,
                 password: teacher.password,
                 responsible_sections: teacher.responsibleSections || [],
                 status: teacher.status || 'active'
@@ -44,7 +46,28 @@ export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<string> 
             .select('id')
             .single();
 
-        if (error) throw error;
+        // إذا كانت أعمدة ساعات العمل غير موجودة بعد في قاعدة البيانات، نعيد الإضافة بدونها
+        if (error) {
+            const { data: retryData, error: retryError } = await supabase
+                .from('teachers')
+                .insert([{
+                    full_name: teacher.fullName,
+                    phone: teacher.phone,
+                    role: teacher.role || 'teacher',
+                    accounting_type: teacher.accountingType || 'fixed',
+                    salary: teacher.salary || 0,
+                    partnership_percentage: teacher.partnershipPercentage || 0,
+                    password: teacher.password,
+                    responsible_sections: teacher.responsibleSections || [],
+                    status: teacher.status || 'active'
+                }])
+                .select('id')
+                .single();
+
+            if (retryError) throw retryError;
+            return retryData.id;
+        }
+
         return data.id;
     } catch (error) {
         console.error("Error adding teacher:", error);
@@ -65,6 +88,8 @@ export const updateTeacher = async (id: string, data: Partial<Teacher>): Promise
         if (data.accountingType !== undefined) updates.accounting_type = data.accountingType;
         if (data.salary !== undefined) updates.salary = data.salary;
         if (data.partnershipPercentage !== undefined) updates.partnership_percentage = data.partnershipPercentage;
+        if (data.dailyHours !== undefined) updates.daily_hours = data.dailyHours;
+        if (data.weeklyWorkingDays !== undefined) updates.weekly_working_days = data.weeklyWorkingDays;
         if (data.password !== undefined) updates.password = data.password;
         if (data.responsibleSections !== undefined) updates.responsible_sections = data.responsibleSections;
         if (data.status !== undefined) updates.status = data.status;
@@ -74,7 +99,19 @@ export const updateTeacher = async (id: string, data: Partial<Teacher>): Promise
             .update(updates)
             .eq('id', id);
 
-        if (error) throw error;
+        // إذا كانت أعمدة ساعات العمل غير موجودة بعد في قاعدة البيانات، نعيد التحديث بدونها
+        if (error && (updates.daily_hours !== undefined || updates.weekly_working_days !== undefined)) {
+            delete updates.daily_hours;
+            delete updates.weekly_working_days;
+            const { error: retryError } = await supabase
+                .from('teachers')
+                .update(updates)
+                .eq('id', id);
+
+            if (retryError) throw retryError;
+        } else if (error) {
+            throw error;
+        }
     } catch (error) {
         console.error("Error updating teacher:", error);
         throw error;
