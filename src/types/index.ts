@@ -30,6 +30,7 @@ export interface Student {
   appointment?: string; // موعد الحضور المتفق عليه
   notes?: string;
   archivedDate?: string; // تاريخ الأرشفة ISO Date YYYY-MM-DD
+  updated_at?: string; // آخر تحديث للسجل
 }
 
 export interface Teacher {

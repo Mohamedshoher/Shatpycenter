@@ -20,8 +20,6 @@ import Check from 'lucide-react/dist/esm/icons/check'
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
 import Gift from 'lucide-react/dist/esm/icons/gift'
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days'
-import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import { useRouter } from 'next/navigation';
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
 import { Student } from '@/types';
@@ -46,7 +44,6 @@ export default function ArchiveList() {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [daysInArchiveFilter, setDaysInArchiveFilter] = useState<number>(0);
     const [monthFilter, setMonthFilter] = useState<'all' | 'current' | 'previous'>('all');
-    const [isMonthFilterOpen, setIsMonthFilterOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     // حالة نافذة استعادة طالب (اختيار المجموعة)
@@ -231,7 +228,7 @@ export default function ArchiveList() {
             }
 
             if (matchesFilter && daysInArchiveFilter > 0) {
-                const archiveDateStr = student.archivedDate || (student as any).updated_at;
+                const archiveDateStr = student.archivedDate || student.updated_at;
                 if (!archiveDateStr) {
                     matchesFilter = false;
                 } else {
@@ -246,7 +243,7 @@ export default function ArchiveList() {
             }
 
             if (matchesFilter && monthFilter !== 'all') {
-                const archiveDateStr = student.archivedDate;
+                const archiveDateStr = student.archivedDate || student.updated_at;
                 if (!archiveDateStr) {
                     matchesFilter = false;
                 } else {
@@ -346,82 +343,14 @@ export default function ArchiveList() {
             {/* Sticky Header */}
             <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
                 <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
-                    <div className="flex items-center gap-1.5 relative z-50">
-                        <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-[16px] border border-blue-100 min-w-[90px] shrink-0">
-                            <input 
-                                type="number" 
-                                min="0"
-                                value={daysInArchiveFilter || ''}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    setDaysInArchiveFilter(isNaN(val) ? 0 : val);
-                                }}
-                                placeholder="0"
-                                className="w-10 h-8 bg-white border border-blue-200 rounded-lg text-center font-black text-xs text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                            <span className="text-[10px] font-black text-blue-400 whitespace-nowrap ml-1">يوم فأقل</span>
-                        </div>
-                        <div className="relative shrink-0">
-                            {isMonthFilterOpen && (
-                                <div className="fixed inset-0 z-40" onClick={() => setIsMonthFilterOpen(false)} />
-                            )}
-                            <button
-                                onClick={() => setIsMonthFilterOpen(!isMonthFilterOpen)}
-                                className={cn(
-                                    "flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-[16px] border border-blue-100 h-10 text-[10px] font-black transition-all relative z-50",
-                                    monthFilter !== 'all' ? "text-blue-600" : "text-blue-400"
-                                )}
-                            >
-                                <CalendarDays size={14} />
-                                <span className="whitespace-nowrap">
-                                    {monthFilter === 'all' ? 'كل الأشهر' : monthFilter === 'current' ? 'الشهر الحالي' : 'الشهر السابق'}
-                                </span>
-                                <ChevronDown size={12} />
-                            </button>
-                            {isMonthFilterOpen && (
-                                <div className="absolute top-[115%] right-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[150px] animate-in fade-in zoom-in-95 duration-200">
-                                    <button
-                                        onClick={() => { setMonthFilter('all'); setIsMonthFilterOpen(false); }}
-                                        className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1", monthFilter === 'all' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
-                                    >
-                                        كل الأشهر
-                                    </button>
-                                    <button
-                                        onClick={() => { setMonthFilter('current'); setIsMonthFilterOpen(false); }}
-                                        className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1", monthFilter === 'current' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
-                                    >
-                                        الشهر الحالي
-                                    </button>
-                                    <button
-                                        onClick={() => { setMonthFilter('previous'); setIsMonthFilterOpen(false); }}
-                                        className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors", monthFilter === 'previous' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
-                                    >
-                                        الشهر السابق
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                        {archivedStudents.length > 0 && user?.role === 'director' && (
-                            <button
-                                onClick={() => {
-                                    if (selectedIds.size === archivedStudents.length) setSelectedIds(new Set());
-                                    else setSelectedIds(new Set(archivedStudents.map(s => s.id)));
-                                }}
-                                className={cn(
-                                    "px-3 h-11 sm:h-12 rounded-[18px] sm:rounded-[20px] font-black text-[10px] transition-all border",
-                                    selectedIds.size === archivedStudents.length 
-                                        ? "bg-blue-600 border-blue-600 text-white shadow-lg" 
-                                        : "bg-white border-gray-100 text-gray-400 hover:text-blue-600 shadow-sm"
-                                )}
-                            >
-                                {selectedIds.size === archivedStudents.length ? 'إلغاء الكل' : 'تحديد الكل'}
-                            </button>
-                        )}
-                    </div>
+                    <div className="flex items-center gap-1.5 relative z-50" />
 
                     {!isSearchOpen && (
-                        <h1 className="text-lg sm:text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
-                            أرشيف الطلاب <span className="text-blue-500 font-black">({archivedStudents?.length || 0})</span>
+                        <h1 className="text-base sm:text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap flex items-center gap-2">
+                            أرشيف الطلاب
+                            <span className="px-2 py-0.5 rounded-lg text-sm bg-blue-600 text-white">
+                                ({archivedStudents?.length || 0})
+                            </span>
                         </h1>
                     )}
 
@@ -446,12 +375,6 @@ export default function ArchiveList() {
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setIsSearchOpen(true)}
-                                    className="w-11 h-11 sm:w-12 sm:h-12 bg-gray-50 rounded-[18px] sm:rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
-                                >
-                                    <Search size={22} />
-                                </button>
                                 {selectedIds.size > 0 && user?.role === 'director' && (
                                     <button
                                         onClick={handleBatchDelete}
@@ -461,6 +384,14 @@ export default function ArchiveList() {
                                         <span>حذف ({selectedIds.size})</span>
                                     </button>
                                 )}
+                                {/* أيقونة البحث */}
+                                <button
+                                    onClick={() => setIsSearchOpen(true)}
+                                    className="w-11 h-11 sm:w-12 sm:h-12 bg-gray-50 rounded-[18px] sm:rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
+                                >
+                                    <Search size={22} />
+                                </button>
+                                {/* أيقونة الفلاتر الموحدة */}
                                 <div className="relative">
                                     {isFilterOpen && (
                                         <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
@@ -469,48 +400,86 @@ export default function ArchiveList() {
                                         onClick={() => setIsFilterOpen(!isFilterOpen)}
                                         className={cn(
                                             "w-11 h-11 sm:w-12 sm:h-12 rounded-[18px] sm:rounded-[20px] border flex items-center justify-center transition-all active:scale-95 relative z-50",
-                                            isFilterOpen || filter !== 'الكل' ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
+                                            isFilterOpen || filter !== 'الكل' || daysInArchiveFilter > 0 || monthFilter !== 'all'
+                                                ? "bg-blue-50 border-blue-200 text-blue-600"
+                                                : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
                                         )}
                                     >
                                         <SlidersHorizontal size={22} />
                                     </button>
                                     {isFilterOpen && (
-                                        <div className="absolute top-[115%] left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[170px] animate-in fade-in zoom-in-95 duration-200">
+                                        <div className="absolute top-[115%] left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 w-64 animate-in fade-in zoom-in-95 duration-200 max-h-[70vh] overflow-y-auto">
                                             <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-50 mb-1">الحالة العامة</div>
                                             <button
-                                                onClick={() => { setFilter('الكل'); setIsFilterOpen(false); }}
+                                                onClick={() => { setFilter('الكل'); }}
                                                 className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1", filter === 'الكل' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
                                             >
                                                 الكل
                                             </button>
                                             <button
-                                                onClick={() => { setFilter('indebted'); setIsFilterOpen(false); }}
+                                                onClick={() => { setFilter('indebted'); }}
                                                 className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between", filter === 'indebted' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50")}
                                             >
                                                 المدينين (الكل)
                                                 <AlertCircle size={14} className={filter === 'indebted' ? "opacity-100" : "opacity-40"} />
                                             </button>
                                             <button
-                                                onClick={() => { setFilter('half_indebted'); setIsFilterOpen(false); }}
+                                                onClick={() => { setFilter('half_indebted'); }}
                                                 className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between", filter === 'half_indebted' ? "bg-orange-50 text-orange-600" : "text-gray-600 hover:bg-gray-50")}
                                             >
                                                 مدين (نصف شهر)
                                                 <AlertCircle size={14} className={filter === 'half_indebted' ? "opacity-100" : "opacity-40"} />
                                             </button>
                                             <button
-                                                onClick={() => { setFilter('full_indebted'); setIsFilterOpen(false); }}
+                                                onClick={() => { setFilter('full_indebted'); }}
                                                 className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between", filter === 'full_indebted' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50")}
                                             >
                                                 مدين (شهر كامل)
                                                 <AlertCircle size={14} className={filter === 'full_indebted' ? "opacity-100" : "opacity-40"} />
                                             </button>
 
+                                            <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider border-y border-gray-50 my-1">مدة الأرشفة</div>
+                                            <div className="flex items-center gap-2 px-1 pb-2">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={daysInArchiveFilter || ''}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value);
+                                                        setDaysInArchiveFilter(isNaN(val) ? 0 : val);
+                                                    }}
+                                                    placeholder="0"
+                                                    className="w-12 h-9 bg-gray-50 border border-gray-200 rounded-lg text-center font-black text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                />
+                                                <span className="text-[10px] font-black text-gray-400 flex-1 text-right">يوم فأقل</span>
+                                            </div>
+
+                                            <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider border-y border-gray-50 my-1">الشهر</div>
+                                            <button
+                                                onClick={() => { setMonthFilter('all'); }}
+                                                className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1", monthFilter === 'all' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
+                                            >
+                                                كل الأشهر
+                                            </button>
+                                            <button
+                                                onClick={() => { setMonthFilter('current'); }}
+                                                className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1", monthFilter === 'current' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
+                                            >
+                                                الشهر الحالي
+                                            </button>
+                                            <button
+                                                onClick={() => { setMonthFilter('previous'); }}
+                                                className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors", monthFilter === 'previous' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
+                                            >
+                                                الشهر السابق
+                                            </button>
+
                                             <div className="px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider border-y border-gray-50 my-1">المجموعات</div>
-                                            <div className="max-h-48 overflow-y-auto pr-1">
+                                            <div className="max-h-40 overflow-y-auto pr-1">
                                                 {groups?.map((group) => (
                                                     <button
                                                         key={group.id}
-                                                        onClick={() => { setFilter(group.id); setIsFilterOpen(false); }}
+                                                        onClick={() => { setFilter(group.id); }}
                                                         className={cn("w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors", filter === group.id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50")}
                                                     >
                                                         {group.name}
@@ -536,7 +505,7 @@ export default function ArchiveList() {
                     </div>
                 ) : (
                     archivedStudents?.map((student) => {
-                        const daysInArchive = getDaysInArchive(student.archivedDate, (student as any).updated_at);
+                        const daysInArchive = getDaysInArchive(student.archivedDate, student.updated_at);
                         const debtInfo = debtMap.get(student.id) || { isIndebted: false, label: '', amount: 0, unpaidMonths: [] };
 
                         return (
@@ -745,4 +714,5 @@ export default function ArchiveList() {
         </div>
     );
 }
+
 
