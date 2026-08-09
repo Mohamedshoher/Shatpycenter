@@ -26,8 +26,10 @@ import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useAllTeachersAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
 import { teacherDeductionService } from '@/features/teachers/services/deductionService';
+import { computeTeacherSalaryStats } from '@/features/teachers/services/salaryCalculation';
 
 const AddTransactionModal = dynamic(() => import('@/features/finance/components/AddTransactionModal'), { ssr: false });
+const TeacherDetailModal = dynamic(() => import('@/features/teachers/components/TeacherDetailModal'), { ssr: false });
 
 interface Transaction extends TransactionData {
     id: string;
@@ -42,6 +44,8 @@ export default function FinancePage() {
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSalaryStatusOpen, setIsSalaryStatusOpen] = useState(false);
+    const [selectedSalaryTeacher, setSelectedSalaryTeacher] = useState<any>(null);
+    const [isSalaryTeacherOpen, setIsSalaryTeacherOpen] = useState(false);
     const [isDeficitOpen, setIsDeficitOpen] = useState(false);
     const [isManagerDirectOpen, setIsManagerDirectOpen] = useState(false);
     const [isFromTeachersOpen, setIsFromTeachersOpen] = useState(false);
@@ -287,40 +291,41 @@ export default function FinancePage() {
     const selectedFromTeacherTxns = selectedFromTeacher?.transactions || [];
 
     const teacherPaymentStatus = useMemo(() => {
-        const salaryPaymentsThisMonth = filteredTransactions.filter(tr => tr.type === 'expense' && tr.category === 'salary');
-        const paidMap = new Map<string, number>();
-        salaryPaymentsThisMonth.forEach(p => {
-            if (p.relatedUserId) paidMap.set(p.relatedUserId, (paidMap.get(p.relatedUserId) || 0) + p.amount);
-        });
-
-        const deductionMap = new Map<string, number>();
-        const filteredDeductions = monthDeductions.filter(d => {
-            const dm = `${new Date(d.appliedDate).getFullYear()}-${String(new Date(d.appliedDate).getMonth() + 1).padStart(2, '0')}`;
-            return dm === selectedMonth && d.status === 'applied' && !d.reason.startsWith('مكافأة:');
-        });
-        teachers.forEach(t => {
-            const manual = filteredDeductions.filter(d => d.teacherId === t.id).reduce((a, d) => a + d.amount, 0);
-            const att = allAttendanceMap[t.id] || {};
-            const absence = Object.values(att).reduce((acc: number, stat: any) => { if (stat === 'absent') return acc + 1; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
-            const weeklyWorkingDays = Number(t.weeklyWorkingDays) || 5;
-            const standardWorkingDays = Math.max(1, Math.round(weeklyWorkingDays * 4.33));
-            const daily = t.accountingType === 'partnership' ? ((Number(t.partnershipPercentage) || 0) / standardWorkingDays) : ((Number(t.salary) || 1000) / standardWorkingDays);
-            deductionMap.set(t.id, Math.round((manual + absence) * daily));
-        });
-
         const activeTeachers = teachers.filter(t => {
             if (t.status === 'inactive') return false;
             const joinDate = (t as any).joinDate;
             if (joinDate) return joinDate.substring(0, 7) <= selectedMonth;
             return true;
         });
+
+        // نفس الحساب المعتمد في صفحة المعلم (تبويب الراتب) لضمان تطابق دقيق
         const allWithStatus = activeTeachers.map(t => {
-            const paidAmount = paidMap.get(t.id) || 0;
-            const entitlement = Number(t.salary) || 0;
-            const deduction = deductionMap.get(t.id) || 0;
-            const afterDeduction = Math.max(0, entitlement - deduction);
-            const remaining = Math.max(0, afterDeduction - paidAmount);
-            return { teacher: t, paidAmount, entitlement, deduction, afterDeduction, remaining };
+            const stats = computeTeacherSalaryStats({
+                teacher: t,
+                students,
+                groups,
+                allFees,
+                handovers: filteredTransactions.filter(tr => tr.type === 'income' && tr.relatedUserId === t.id),
+                exemptions,
+                attendanceData: allAttendanceMap[t.id] || {},
+                deductions: monthDeductions,
+                paymentsHistory: filteredTransactions.filter(tr => tr.type === 'expense' && tr.category === 'salary' && tr.relatedUserId === t.id),
+                selectedMonthRaw: selectedMonth,
+                allTeachers: teachers
+            });
+            const deduction = stats.manualDeductionsTotal + (stats.isPartnership ? stats.autoDeductions : 0);
+            return {
+                teacher: t,
+                paidAmount: stats.totalPaid,
+                entitlement: stats.totalEntitlement,
+                deduction,
+                afterDeduction: stats.totalEntitlement,
+                remaining: stats.remainingToPay,
+                isPartnership: stats.isPartnership,
+                partnershipPercentage: stats.partnershipPercentage,
+                directorReceivedTotal: stats.directorReceivedTotal,
+                basicSalary: stats.basicSalary,
+            };
         });
 
         const paid = allWithStatus.filter(t => t.paidAmount > 0);
@@ -331,7 +336,7 @@ export default function FinancePage() {
             totalRemaining: allWithStatus.reduce((s, t) => s + t.remaining, 0),
             paidCount: paid.length, unpaidCount: unpaid.length, totalCount: activeTeachers.length,
         };
-    }, [filteredTransactions, teachers, selectedMonth, monthDeductions, allAttendanceMap]);
+    }, [filteredTransactions, teachers, selectedMonth, monthDeductions, allAttendanceMap, students, groups, allFees, exemptions]);
 
     const deficitPerTeacher = useMemo(() => {
         const normalize = (s: string) => { if (!s) return ''; return s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/[ًٌٍَُِّ]/g, '').replace(/\s+/g, '').trim(); };
@@ -448,6 +453,12 @@ export default function FinancePage() {
         <div className="pb-32 transition-all duration-500 bg-gray-50/50 min-h-screen font-sans">
             <AddTransactionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={handleAddTransaction} />
 
+            <TeacherDetailModal
+                teacher={selectedSalaryTeacher}
+                isOpen={isSalaryTeacherOpen}
+                onClose={() => setIsSalaryTeacherOpen(false)}
+            />
+
             {/* Salary Status Modal */}
             <FadeIn show={isSalaryStatusOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsSalaryStatusOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
@@ -460,7 +471,7 @@ export default function FinancePage() {
                         </div>
                         <div className="text-right">
                             <h3 className="text-xl font-black text-gray-900">حالة صرف الرواتب</h3>
-                            <p className="text-xs font-bold text-gray-400 mt-0.5">المدرسين الذين قبضوا والذين لم يقبضوا</p>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">المدرسين الذين قبضوا والذين لم يقبضوا — اضغط على أي مدرس لفتح صفحته</p>
                         </div>
                     </div>
                     <button onClick={() => setIsSalaryStatusOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
@@ -478,16 +489,17 @@ export default function FinancePage() {
                                 <p className="text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">لم يتم صرف راتب أي مدرس هذا الشهر.</p>
                             ) : (
                                 teacherPaymentStatus.paid.map(t => (
-                                    <div key={t.teacher.id} className="flex items-center justify-between p-3 bg-green-50/50 rounded-2xl border border-green-100/50">
+                                    <button key={t.teacher.id} onClick={() => { setSelectedSalaryTeacher(t.teacher); setIsSalaryTeacherOpen(true); }} className="w-full flex items-center justify-between p-3 bg-green-50/50 rounded-2xl border border-green-100/50 hover:border-green-300 hover:shadow-sm transition-all text-right">
                                         <div className="text-right">
                                             <span className="font-black text-green-700 text-sm block">{t.teacher.fullName}</span>
-                                            {t.remaining > 0 && <span className="text-[10px] font-bold text-amber-500">بقي: {t.remaining.toLocaleString()} ج.م</span>}
+                                            <span className="text-[10px] font-bold text-gray-500 block">المستحق: {t.entitlement.toLocaleString()} ج.م</span>
+                                            {t.isPartnership && <span className="text-[9px] font-bold text-blue-500 block">شراكة {t.partnershipPercentage || 0}% من {t.directorReceivedTotal.toLocaleString()} ج.م</span>}
                                         </div>
                                         <div className="text-left">
-                                            <span className="font-black text-green-600 text-sm font-sans block">صرف: {t.paidAmount.toLocaleString()} ج.م</span>
-                                            <span className="text-[9px] text-gray-400 font-bold">صافي: {t.afterDeduction.toLocaleString()} ج.م</span>
+                                            <span className="font-black text-green-600 text-sm font-sans block">أخذ: {t.paidAmount.toLocaleString()} ج.م</span>
+                                            <span className={`text-[10px] font-black font-sans ${t.remaining > 0 ? 'text-amber-500' : 'text-green-700'}`}>بقي: {t.remaining.toLocaleString()} ج.م</span>
                                         </div>
-                                    </div>
+                                    </button>
                                 ))
                             )}
                         </div>
@@ -502,13 +514,17 @@ export default function FinancePage() {
                                 <p className="text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">تم صرف رواتب جميع المدرسين لهذا الشهر.</p>
                             ) : (
                                 teacherPaymentStatus.unpaid.map(t => (
-                                    <div key={t.teacher.id} className="flex items-center justify-between p-3 bg-amber-50/50 rounded-2xl border border-amber-100/50">
-                                        <span className="font-black text-amber-700 text-sm">{t.teacher.fullName}</span>
+                                    <button key={t.teacher.id} onClick={() => { setSelectedSalaryTeacher(t.teacher); setIsSalaryTeacherOpen(true); }} className="w-full flex items-center justify-between p-3 bg-amber-50/50 rounded-2xl border border-amber-100/50 hover:border-amber-300 hover:shadow-sm transition-all text-right">
+                                        <div className="text-right">
+                                            <span className="font-black text-amber-700 text-sm block">{t.teacher.fullName}</span>
+                                            <span className="text-[10px] font-bold text-gray-500 block">المستحق: {t.entitlement.toLocaleString()} ج.م</span>
+                                            {t.isPartnership && <span className="text-[9px] font-bold text-blue-500 block">شراكة {t.partnershipPercentage || 0}% من {t.directorReceivedTotal.toLocaleString()} ج.م</span>}
+                                        </div>
                                         <div className="text-left">
                                             <span className="font-black text-amber-600 text-sm font-sans block">بقي: {t.remaining.toLocaleString()} ج.م</span>
-                                            <span className="text-[9px] text-gray-400 font-bold">صافي بعد الخصم: {t.afterDeduction.toLocaleString()} ج.م</span>
+                                            <span className="text-[10px] font-bold text-gray-500 font-sans block">أخذ: {t.paidAmount.toLocaleString()} ج.م</span>
                                         </div>
-                                    </div>
+                                    </button>
                                 ))
                             )}
                         </div>

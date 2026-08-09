@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { normalize } from '@/lib/utils';
+import { computeTeacherSalaryStats, TeacherSalaryStats } from '@/features/teachers/services/salaryCalculation';
 
 export const useTeacherDashboard = (
     teacher: any,
@@ -17,10 +18,6 @@ export const useTeacherDashboard = (
     return useMemo(() => {
         if (!teacher) return null;
 
-        const now = new Date();
-        const currentDay = now.getDate();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-
         const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
 
         // وظيفة للتحقق إذا كان المنشئ معلماً آخر
@@ -35,16 +32,7 @@ export const useTeacherDashboard = (
             );
         };
 
-        // 1. حساب المصروفات المتوقعة
-        const expectedExpenses = students
-            .filter(s => {
-                const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
-                if (!isMember) return false;
-                return s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonthRaw;
-            })
-            .reduce((sum, s) => sum + (Number(s.monthlyAmount) || 0), 0);
-
-        // 2. حساب ما حصله المعلم
+        // 1. حساب ما حصله المعلم (قائمة تفاصيل)
         const collectedPayments = allFees
             .filter(f => {
                 const student = students.find(s => s.id === f.studentId);
@@ -70,9 +58,8 @@ export const useTeacherDashboard = (
                     isTransferred: student && !isTeacherStudent // وسم "منقول" إذا لم يعد في مجموعات هذا المعلم
                 };
             });
-        const totalCollected = collectedPayments.reduce((sum, p) => sum + p.amount, 0);
 
-        // 3. حساب ما حصله المدير
+        // 2. حساب ما حصله المدير (قائمة تفاصيل)
         const managerCollectedPayments = allFees
             .filter(f => {
                 const student = students.find(s => s.id === f.studentId);
@@ -94,96 +81,52 @@ export const useTeacherDashboard = (
                     groupName: groups.find(g => g.id === student?.groupId)?.name || '-'
                 };
             });
-        const totalCollectedByManager = managerCollectedPayments.reduce((sum, p) => sum + p.amount, 0);
 
-        // 4. الراتب
-        let basicSalary = 0;
-        const isPartnership = teacher.accountingType === 'partnership';
-        // أيام العمل الأسبوعية والساعات اليومية محددة لكل معلم (افتراضياً 5 أيام × 4 ساعات)
-        const dailyHours = Number(teacher.dailyHours) || 4;
-        const weeklyWorkingDays = Number(teacher.weeklyWorkingDays) || 5;
-        const standardWorkingDays = Math.max(1, Math.round(weeklyWorkingDays * 4.33));
-        
-        // حساب إجمالي محصل المجموعة (كل الطلاب التابعين لمجموعات المدرس)
-        const totalCollectedForGroup = allFees.filter(f => {
-            const student = students.find(s => s.id === f.studentId);
-            return student && student.groupId && teacherGroupIds.includes(student.groupId);
-        }).reduce((sum, f) => sum + (Number(f.amount.replace(/[^0-9.]/g, '')) || 0), 0);
-
-        if (isPartnership) {
-            const percentage = Number(teacher.partnershipPercentage) || 0;
-            basicSalary = (totalCollectedForGroup * percentage) / 100;
-        } else {
-            basicSalary = Number(teacher.salary) || 0;
-        }
-
-        // القيمة اليومية: للمرتب الثابت من راتبه، وللنسبة من المتوقع جمعه للمجموعة
-        const dailyRate = isPartnership
-            ? ((expectedExpenses * (Number(teacher.partnershipPercentage) || 0)) / 100) / standardWorkingDays
-            : (Number(teacher.salary) || 1000) / standardWorkingDays;
-
-        // أجر الساعة الواحدة بناءً على ساعات العمل اليومية للمعلم
-        const hourlyRate = dailyHours > 0 ? dailyRate / dailyHours : 0;
-
-        // حساب أيام الغياب من سجل الحضور (بما في ذلك partial)
-        let absentDays = 0;
-        Object.values(attendanceData || {}).forEach((status: any) => {
-            if (status === 'absent') absentDays += 1;
-            else if (status === 'half') absentDays += 0.5;
-            else if (status === 'quarter') absentDays += 0.25;
+        // 3. حساب الراتب والإحصائيات المالية (دالة موحّدة مع صفحة المالية لضمان التطابق)
+        const salaryStats: TeacherSalaryStats = computeTeacherSalaryStats({
+            teacher,
+            students,
+            groups,
+            allFees,
+            handovers,
+            exemptions,
+            attendanceData,
+            deductions,
+            paymentsHistory,
+            selectedMonthRaw,
+            allTeachers
         });
 
-        // إجمالي أيام العمل في الشهر (محسوب من أيام عمل المدرس الأسبوعية)
-        const totalWorkingDays = standardWorkingDays;
+        const {
+            expectedExpenses,
+            totalCollected,
+            totalCollectedByManager,
+            totalHandedOver,
+            directorReceivedTotal,
+            totalCollectedForGroup,
+            basicSalary,
+            attendanceBasedSalary,
+            autoRewards,
+            manualRewardsTotal,
+            autoDeductions,
+            manualDeductionsTotal,
+            totalPaid,
+            totalEntitlement,
+            remainingToPay,
+            dailyRate,
+            hourlyRate,
+            dailyHours,
+            weeklyWorkingDays,
+            isPartnership,
+            partnershipPercentage,
+            expectedPartnershipSalary,
+            totalWorkingDays,
+            attendedDays,
+            absentDays,
+            totalAbsentDays
+        } = salaryStats;
 
-        // إجمالي أيام الغياب (سجل الحضور فقط)
-        const totalAbsentDays = absentDays;
-
-        // أيام الحضور الفعلية
-        const attendedDays = Math.max(0, totalWorkingDays - totalAbsentDays);
-
-        // الراتب الأساسي على أساس أيام الحضور فقط (للمرتب الثابت)
-        const attendanceBasedSalary = isPartnership
-            ? basicSalary
-            : Math.round((dailyRate * attendedDays) * 100) / 100;
-
-        // خصومات تلقائية (حسب الحضور)
-        const autoDeductions = Math.round((absentDays * dailyRate) * 100) / 100;
-
-        // مكافآت تلقائية (حسب الحضور)
-        const autoRewards = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
-            if (status === 'full_reward') return acc + dailyRate;
-            if (status === 'half_reward') return acc + (dailyRate * 0.5);
-            if (status === 'quarter_reward') return acc + (dailyRate * 0.25);
-            return acc;
-        }, 0);
-
-        // مكافآت يدوية
-        const manualRewardsTotal = deductions
-            .filter(d => {
-                const dDate = new Date(d.appliedDate);
-                const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
-                return dMonthRaw === selectedMonthRaw && d.reason.startsWith('مكافأة:');
-            })
-            .reduce((acc: number, curr) => acc + Math.abs(curr.amount), 0);
-
-        // خصومات يدوية
-        const manualDeductionsTotal = deductions
-            .filter(d => {
-                const dDate = new Date(d.appliedDate);
-                const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
-                return dMonthRaw === selectedMonthRaw && !d.reason.startsWith('مكافأة:') && d.appliedBy !== 'system-automation';
-            })
-            .reduce((acc: number, curr) => acc + curr.amount, 0);
-
-        const totalPaid = paymentsHistory.reduce((acc, curr) => acc + Number(curr.amount), 0);
-        // الخصومات اليدوية تطبق دائماً
-        // خصومات الغياب تطبق فقط لنظام النسبة (لأن المرتب الثابت محسوب على أيام الحضور)
-        const totalDeductionsToApply = isPartnership ? autoDeductions : 0;
-        const totalEntitlement = Math.round((attendanceBasedSalary + autoRewards + manualRewardsTotal - manualDeductionsTotal - totalDeductionsToApply) * 100) / 100;
-        const remainingToPay = Math.max(0, Math.round((totalEntitlement - totalPaid) * 100) / 100);
-
-        // 5. الطلاب الذين لم يدفعوا
+        // 4. الطلاب الذين لم يدفعوا
         const exemptedStudentIds = exemptions.map((e: any) => e.student_id);
         const unpaidStudents = students
             .filter(s => {
@@ -216,7 +159,7 @@ export const useTeacherDashboard = (
             .filter(s => !s.isExempted)
             .reduce((sum, s) => sum + s.remaining, 0);
 
-        // 6. تاريخ التسليمات
+        // 5. تاريخ التسليمات
         const collectionHistoryMapped = handovers.map(h => ({
             id: h.id,
             date: h.date,
@@ -226,9 +169,8 @@ export const useTeacherDashboard = (
             notes: h.description || '-',
             type: 'تحصيل نقدي'
         }));
-        const totalHandedOver = handovers.reduce((sum, h) => sum + Number(h.amount), 0);
 
-        // 7. فارق الأخذ - المبلغ الزائد الذي استلمه المدير فوق ما حصله المدرس
+        // 6. فارق الأخذ - المبلغ الزائد الذي استلمه المدير فوق ما حصله المدرس
         const collectionOverage = Math.max(0, totalHandedOver - totalCollected);
 
         return {
@@ -242,29 +184,7 @@ export const useTeacherDashboard = (
             collectionHistoryMapped,
             totalHandedOver,
             collectionOverage,
-            salaryStats: {
-                basicSalary,
-                attendanceBasedSalary,
-                autoRewards,
-                manualRewardsTotal,
-                autoDeductions,
-                manualDeductionsTotal,
-                totalPaid,
-                totalEntitlement,
-                remainingToPay,
-                dailyRate,
-                hourlyRate,
-                dailyHours,
-                weeklyWorkingDays,
-                isPartnership,
-                partnershipPercentage: teacher.partnershipPercentage,
-                totalCollectedForGroup,
-                expectedPartnershipSalary: isPartnership ? (expectedExpenses * (Number(teacher.partnershipPercentage) || 0)) / 100 : 0,
-                totalWorkingDays,
-                attendedDays,
-                absentDays,
-                totalAbsentDays
-            }
+            salaryStats
         };
     }, [teacher, students, groups, allFees, selectedMonthRaw, attendanceData, handovers, exemptions, deductions, paymentsHistory, allTeachers]);
 };

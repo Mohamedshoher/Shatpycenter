@@ -278,6 +278,7 @@ export default function TeacherDetailModal({
             isPartnership: false,
             partnershipPercentage: 0,
             totalCollectedForGroup: 0,
+            directorReceivedTotal: 0,
             expectedPartnershipSalary: 0,
             totalWorkingDays: 22,
             attendedDays: 0,
@@ -302,7 +303,7 @@ export default function TeacherDetailModal({
         dailyRate,
         isPartnership,
         partnershipPercentage,
-        totalCollectedForGroup,
+        directorReceivedTotal,
         expectedPartnershipSalary,
         totalWorkingDays,
         attendedDays,
@@ -808,7 +809,7 @@ export default function TeacherDetailModal({
                             deleteSalaryMutation={deleteSalaryMutation}
                             isPartnership={isPartnership}
                             partnershipPercentage={partnershipPercentage}
-                            totalCollectedForGroup={totalCollectedForGroup}
+                            directorReceivedTotal={directorReceivedTotal}
                             expectedPartnershipSalary={salaryStats.expectedPartnershipSalary}
                         />
                     </Suspense>

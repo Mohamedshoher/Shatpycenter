@@ -34,7 +34,7 @@ interface TeacherPayrollTabProps {
     deleteSalaryMutation: any;
     isPartnership?: boolean;
     partnershipPercentage?: number;
-    totalCollectedForGroup?: number;
+    directorReceivedTotal?: number;
     expectedPartnershipSalary?: number;
     totalWorkingDays?: number;
     attendedDays?: number;
@@ -65,7 +65,7 @@ export const TeacherPayrollTab = ({
     deleteSalaryMutation,
     isPartnership,
     partnershipPercentage,
-    totalCollectedForGroup,
+    directorReceivedTotal = 0,
     expectedPartnershipSalary = 0,
     totalWorkingDays = 22,
     attendedDays = 0,
@@ -176,7 +176,7 @@ export const TeacherPayrollTab = ({
                         </div>
                         {isPartnership && (
                             <div className="text-right text-[10px] font-bold text-blue-500 bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
-                                محسوب بنسبة {partnershipPercentage}% من إجمالي تحصيل المجموعة ({totalCollectedForGroup?.toLocaleString()} ج.م)
+                                محسوب بنسبة {partnershipPercentage}% من إجمالي المحصل من المدير والمسلّم للمدير ({directorReceivedTotal?.toLocaleString()} ج.م)
                             </div>
                         )}
                         {!isPartnership && (
