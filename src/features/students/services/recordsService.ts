@@ -596,6 +596,37 @@ export const getAllStudentNotesWithDetails = async (limit: number = 20) => {
     }
 };
 
+export const getNotesPage = async (params?: { teacherId?: string; isRead?: boolean }) => {
+    try {
+        const searchParams = new URLSearchParams({ limit: '500' });
+        if (params?.teacherId) searchParams.set('teacherId', params.teacherId);
+        if (typeof params?.isRead === 'boolean') searchParams.set('isRead', String(params.isRead));
+        const res = await fetch(`/api/records/notes?${searchParams.toString()}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((n: any) => ({
+            id: n.id,
+            content: n.content,
+            createdAt: n.created_at,
+            createdBy: n.created_by,
+            studentId: n.student_id,
+            studentName: n.students?.full_name || n.student_name || 'غير معروف',
+            parentPhone: n.students?.parent_phone || '',
+            groupName: n.students?.groups?.name || n.group_name || 'بدون مجموعة',
+            groupId: n.students?.groups?.id || n.group_id || null,
+            teacherId: n.students?.groups?.teacher_id || null,
+            teacherName: n.students?.groups?.teachers?.full_name || 'غير معروف',
+            isRead: n.is_read || false,
+            reply: n.reply,
+            repliedBy: n.replied_by,
+            repliedAt: n.replied_at
+        }));
+    } catch (error: any) {
+        console.error("Error fetching notes page:", error);
+        return [];
+    }
+};
+
 export const replyToNote = async (id: string, reply: string, repliedBy: string) => {
     try {
         const res = await fetch('/api/records/notes', {

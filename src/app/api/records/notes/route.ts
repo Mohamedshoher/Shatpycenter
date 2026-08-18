@@ -5,7 +5,9 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const studentId = searchParams.get('studentId');
-        const limit = parseInt(searchParams.get('limit') || '50');
+        const teacherId = searchParams.get('teacherId');
+        const isReadParam = searchParams.get('isRead');
+        const limit = parseInt(searchParams.get('limit') || '500');
 
         const supabase = createServerSupabase();
         let query = supabase
@@ -13,6 +15,9 @@ export async function GET(request: NextRequest) {
             .select('*, students!inner(full_name, parent_phone, group_id, groups!inner(name, teacher_id, teachers!inner(full_name)))');
 
         if (studentId) query = query.eq('student_id', studentId);
+        if (teacherId) query = query.eq('students.groups.teacher_id', teacherId);
+        if (isReadParam === 'true') query = query.eq('is_read', true);
+        if (isReadParam === 'false') query = query.eq('is_read', false);
         query = query.eq('students.status', 'active').order('created_at', { ascending: false }).limit(limit);
 
         const { data, error } = await query;

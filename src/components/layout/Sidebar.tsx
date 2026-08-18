@@ -20,6 +20,7 @@ import Zap from 'lucide-react/dist/esm/icons/zap'
 import UserCheck from 'lucide-react/dist/esm/icons/user-check'
 import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
 import { FadeIn } from '@/components/ui/transition';
 import { logout } from '@/features/auth/services/authService';
 import { useMessagingStore } from '@/features/messaging/store/useMessagingStore';
@@ -109,6 +110,12 @@ export default function Sidebar() {
             label: 'الرسائل',
             href: '/messages',
             icon: MessageCircle,
+            roles: ['director', 'supervisor', 'teacher']
+        },
+        {
+            label: 'ملحوظات الطلاب',
+            href: '/notes',
+            icon: MessageSquare,
             roles: ['director', 'supervisor', 'teacher']
         },
         {
