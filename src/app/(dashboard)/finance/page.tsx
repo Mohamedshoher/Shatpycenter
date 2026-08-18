@@ -217,7 +217,7 @@ export default function FinancePage() {
         const totalDeductions = teachers.reduce((sum, t) => {
             const manual = filteredDeductions.filter(d => d.teacherId === t.id).reduce((a, d) => a + d.amount, 0);
             const att = allAttendanceMap[t.id] || {};
-            const absence = Object.values(att).reduce((acc: number, stat: any) => { if (stat === 'absent') return acc + 1; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
+            const absence = Object.values(att).reduce((acc: number, stat: any) => { if (stat === 'absent') return acc + 1; if (stat === 'double_absent') return acc + 2; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
             const weeklyWorkingDays = Number(t.weeklyWorkingDays) || 5;
             const standardWorkingDays = Math.max(1, Math.round(weeklyWorkingDays * 4.33));
             const daily = t.accountingType === 'partnership' ? ((Number(t.partnershipPercentage) || 0) / standardWorkingDays) : ((Number(t.salary) || 1000) / standardWorkingDays);
@@ -415,7 +415,7 @@ export default function FinancePage() {
         const deductionList = teachers.map(t => {
             const manual = filteredDeductions.filter((d: any) => d.teacherId === t.id).reduce((a, d) => a + d.amount, 0);
             const att = allAttendanceMap[t.id] || {};
-            const absence = Object.values(att).reduce((acc: number, stat: any) => { if (stat === 'absent') return acc + 1; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
+            const absence = Object.values(att).reduce((acc: number, stat: any) => { if (stat === 'absent') return acc + 1; if (stat === 'double_absent') return acc + 2; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
             const weeklyWorkingDays = Number(t.weeklyWorkingDays) || 5;
             const standardWorkingDays = Math.max(1, Math.round(weeklyWorkingDays * 4.33));
             const daily = t.accountingType === 'partnership' ? ((Number(t.partnershipPercentage) || 0) / standardWorkingDays) : ((Number(t.salary) || 1000) / standardWorkingDays);

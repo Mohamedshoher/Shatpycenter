@@ -22,8 +22,8 @@ interface TeacherAttendanceTabProps {
     activeDayMenu: number | null;
     handleAddDiscipline: () => void;
     tempStatus: string;
-    tempAmount: 'day' | 'half' | 'quarter';
-    setTempAmount: (amt: 'day' | 'half' | 'quarter') => void;
+    tempAmount: 'day' | 'half' | 'quarter' | 'double';
+    setTempAmount: (amt: 'day' | 'half' | 'quarter' | 'double') => void;
     tempReason: string;
     setTempReason: (val: string) => void;
     dayDetails: Record<number, { reason: string, type: string }>;
@@ -46,6 +46,7 @@ export const TeacherAttendanceTab = ({
     // حسابات إحصائية سريعة
     const totalAbsenceDays = Object.values(attendanceData || {}).reduce((acc: number, status: TeacherAttendanceStatus) => {
         if (status === 'absent') return acc + 1;
+        if (status === 'double_absent') return acc + 2;
         if (status === 'half') return acc + 0.5;
         if (status === 'quarter') return acc + 0.25;
         return acc;
@@ -212,7 +213,8 @@ export const TeacherAttendanceTab = ({
                                             isWeekend || isTeacher ? "bg-red-50/10 border-red-50 text-red-400 cursor-default" :
                                                 status === 'present' ? "bg-green-50 border-green-100 text-green-600" :
                                                     (status === 'quarter' || status === 'half') ? "bg-orange-50 border-orange-100 text-orange-600" :
-                                                        (status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') ? "bg-green-50 border-green-200 text-green-600" :
+                                                        status === 'double_absent' ? "bg-red-100 border-red-200 text-red-700" :
+                                                            (status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') ? "bg-green-50 border-green-200 text-green-600" :
                                                             status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
                                                                 "bg-gray-50/50 text-gray-400 border-gray-100 hover:border-blue-200"
                                         )}
@@ -222,7 +224,7 @@ export const TeacherAttendanceTab = ({
                                         {(status === 'present' || status?.includes('reward')) && !isWeekend && (
                                             <CheckCircle2 size={10} className="md:w-[14px] md:h-[14px] text-green-600/80" />
                                         )}
-                                        {status && (status === 'quarter' || status === 'half' || status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') && !isWeekend && (
+                                        {status && (status === 'quarter' || status === 'half' || status === 'double_absent' || status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') && !isWeekend && (
                                             <div className={cn(
                                                 "w-1 h-1 rounded-full mt-1",
                                                 status?.includes('reward') ? "bg-green-400" : "bg-orange-400"
@@ -265,7 +267,7 @@ export const TeacherAttendanceTab = ({
                                         {(tempStatus === 'discipline' || tempStatus === 'reward') && (
                                             <div className="space-y-3 pt-2">
                                                 <div className="flex flex-row-reverse items-center gap-2">
-                                                    {['day', 'half', 'quarter'].map(amt => (
+                                                    {(tempStatus === 'discipline' ? ['day', 'double', 'half', 'quarter'] : ['day', 'half', 'quarter']).map(amt => (
                                                         <button
                                                             key={amt}
                                                             onClick={() => setTempAmount(amt as any)}
@@ -274,7 +276,7 @@ export const TeacherAttendanceTab = ({
                                                                 tempAmount === amt ? "bg-gray-900 text-white border-transparent" : "bg-white text-gray-400 border-gray-100"
                                                             )}
                                                         >
-                                                            {amt === 'day' ? 'يوم' : amt === 'half' ? 'نصف' : 'ربع'}
+                                                            {amt === 'day' ? 'يوم' : amt === 'double' ? 'يومين' : amt === 'half' ? 'نصف' : 'ربع'}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -322,7 +324,8 @@ export const TeacherAttendanceTab = ({
                                 if (status === 'present' || isWeekend) return;
 
                                 const amount = status === 'absent' ? dailyRate :
-                                    status === 'half' ? (dailyRate * 0.5) :
+                                    status === 'double_absent' ? (dailyRate * 2) :
+                                        status === 'half' ? (dailyRate * 0.5) :
                                         status === 'quarter' ? (dailyRate * 0.25) :
                                             status === 'half_reward' ? (dailyRate * 0.5) :
                                             status === 'full_reward' ? dailyRate :
@@ -335,6 +338,7 @@ export const TeacherAttendanceTab = ({
                                 else if (status === 'half_reward') actionText = 'مكافأة (نصف يوم)';
                                 else if (status === 'quarter_reward') actionText = 'مكافأة (ربع يوم)';
                                 else if (status === 'absent') actionText = 'غياب اليوم كاملاً';
+                                else if (status === 'double_absent') actionText = 'خصم يومين (غياب يومين)';
                                 else if (status === 'half') actionText = 'غياب نصف يوم';
                                 else if (status === 'quarter') actionText = 'غياب ربع يوم';
                                 

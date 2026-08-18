@@ -335,7 +335,7 @@ export default function TeacherDetailModal({
     // حالات تقويم الحضور
     const [activeDayMenu, setActiveDayMenu] = useState<number | null>(null);
     const [tempStatus, setTempStatus] = useState<'present' | 'absent' | 'discipline' | 'reward'>('present');
-    const [tempAmount, setTempAmount] = useState<'day' | 'half' | 'quarter'>('day');
+    const [tempAmount, setTempAmount] = useState<'day' | 'half' | 'quarter' | 'double'>('day');
     const [tempReason, setTempReason] = useState('');
     const [dayDetails, setDayDetails] = useState<Record<number, { reason: string, type: string }>>({});
 
@@ -565,14 +565,14 @@ export default function TeacherDetailModal({
             let finalStatus: any = 'present';
             if (tempStatus === 'present') finalStatus = 'present';
             else if (tempStatus === 'absent') finalStatus = 'absent';
-            else if (tempStatus === 'discipline') finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half' : 'quarter';
+            else if (tempStatus === 'discipline') finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half' : tempAmount === 'double' ? 'double_absent' : 'quarter';
             else if (tempStatus === 'reward') finalStatus = tempAmount === 'day' ? 'full_reward' : tempAmount === 'half' ? 'half_reward' : 'quarter_reward';
 
             const date = `${selectedMonthRaw}-${String(activeDayMenu).padStart(2, '0')}`;
             await updateAttendanceAsync({ date, status: finalStatus });
 
             if (tempStatus === 'discipline' || tempStatus === 'reward') {
-                const numericAmount = tempAmount === 'day' ? 1 : tempAmount === 'half' ? 0.5 : 0.25;
+                const numericAmount = tempAmount === 'day' ? 1 : tempAmount === 'double' ? 2 : tempAmount === 'half' ? 0.5 : 0.25;
                 const specificDate = `${selectedMonthRaw}-${String(activeDayMenu).padStart(2, '0')}`;
                 const note = tempReason ? `${tempReason} (بتاريخ ${specificDate})` : `إجراء إداري لليوم الموافق ${specificDate}`;
                 const isReward = tempStatus === 'reward';

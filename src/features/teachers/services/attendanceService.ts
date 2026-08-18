@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 // ==========================================================
 // 1. التعريفات والأنواع (Types)
 // ==========================================================
-export type TeacherAttendanceStatus = 'present' | 'absent' | 'quarter' | 'half' | 'quarter_reward' | 'half_reward' | 'full_reward';
+export type TeacherAttendanceStatus = 'present' | 'absent' | 'quarter' | 'half' | 'double_absent' | 'quarter_reward' | 'half_reward' | 'full_reward';
 
 export interface TeacherAttendanceRecord {
     id: string;

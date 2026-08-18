@@ -147,6 +147,7 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     let absentDays = 0;
     Object.values(attendanceData || {}).forEach((status: any) => {
         if (status === 'absent') absentDays += 1;
+        else if (status === 'double_absent') absentDays += 2;
         else if (status === 'half') absentDays += 0.5;
         else if (status === 'quarter') absentDays += 0.25;
     });
