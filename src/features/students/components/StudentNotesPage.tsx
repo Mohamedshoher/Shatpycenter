@@ -367,7 +367,7 @@ export default function StudentNotesPage() {
                 </div>
 
                 {/* Quick Filters */}
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                <div className="flex flex-wrap items-center gap-2">
                     <button
                         onClick={() => setStatusFilter(statusFilter === 'unread' ? 'all' : 'unread')}
                         className={cn(
