@@ -4,16 +4,20 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getNotesPage, replyToNote, deleteStudentNote, markNoteAsRead } from '@/features/students/services/recordsService';
+import { getStudentById } from '@/features/students/services/studentService';
+import EditStudentModal from '@/features/students/components/EditStudentModal';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { Student } from '@/types';
 import MessageSquare from 'lucide-react/dist/esm/icons/message-square'
 import Loader from 'lucide-react/dist/esm/icons/loader'
 import Users from 'lucide-react/dist/esm/icons/users'
 import User from 'lucide-react/dist/esm/icons/user'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import Archive from 'lucide-react/dist/esm/icons/archive'
+import Pencil from 'lucide-react/dist/esm/icons/pencil'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
 import Circle from 'lucide-react/dist/esm/icons/circle'
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
@@ -66,6 +70,8 @@ export default function StudentNotesPage() {
     const [replyText, setReplyText] = useState('');
     const [hiddenIds, setHiddenIds] = useState<string[]>([]);
     const [readOverrides, setReadOverrides] = useState<Record<string, boolean>>({});
+    const [editStudent, setEditStudent] = useState<Student | null>(null);
+    const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
     const { data: allNotes = [], isLoading } = useQuery({
         queryKey: ['student-notes-page', teacherId ?? 'all'],
@@ -158,6 +164,14 @@ export default function StudentNotesPage() {
         }
     };
 
+    const handleEdit = async (note: NoteItem) => {
+        setEditingNoteId(note.id);
+        const student = await getStudentById(note.studentId);
+        setEditingNoteId(null);
+        if (student) setEditStudent(student);
+        else alert('تعذر تحميل بيانات الطالب');
+    };
+
     const handleSendReply = async (noteId: string) => {
         if (!replyText.trim()) return;
         const text = replyText.trim();
@@ -195,11 +209,6 @@ export default function StudentNotesPage() {
                             <p className="text-[10px] text-gray-400 font-bold">{formatNoteDate(note.createdAt)}</p>
                         </div>
                     </div>
-                    {note.createdBy && (
-                        <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-                            كتبها: {note.createdBy}
-                        </span>
-                    )}
                 </div>
 
                 {/* Line 2: Action Icons */}
@@ -225,6 +234,18 @@ export default function StudentNotesPage() {
                             <Trash2 size={18} />
                         </button>
                     )}
+                    <button
+                        onClick={() => handleEdit(note)}
+                        disabled={editingNoteId === note.id}
+                        className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all disabled:opacity-50"
+                        title="تعديل بيانات الطالب"
+                    >
+                        {editingNoteId === note.id ? (
+                            <Loader size={16} className="animate-spin" />
+                        ) : (
+                            <Pencil size={18} />
+                        )}
+                    </button>
                     <button
                         onClick={() => handleArchive(note)}
                         className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-amber-600 hover:bg-white rounded-xl transition-all"
@@ -346,7 +367,7 @@ export default function StudentNotesPage() {
                 </div>
 
                 {/* Quick Filters */}
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                     <button
                         onClick={() => setStatusFilter(statusFilter === 'unread' ? 'all' : 'unread')}
                         className={cn(
@@ -461,6 +482,15 @@ export default function StudentNotesPage() {
                     </div>
                 )}
             </div>
+
+            <EditStudentModal
+                student={editStudent}
+                isOpen={!!editStudent}
+                onClose={() => {
+                    setEditStudent(null);
+                    refresh();
+                }}
+            />
         </div>
     );
 }

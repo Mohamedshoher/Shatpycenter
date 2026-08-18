@@ -635,8 +635,8 @@ export const replyToNote = async (id: string, reply: string, repliedBy: string) 
             body: JSON.stringify({ id, reply, repliedBy })
         });
         if (!res.ok) throw new Error('Failed to reply to note');
-    } catch (error: any) {
-        console.error("Error replying to note:", error?.message || error);
+    } catch (error: unknown) {
+        console.error("Error replying to note:", error instanceof Error ? error.message : error);
         throw error;
     }
 };

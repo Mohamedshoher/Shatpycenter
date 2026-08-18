@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const groupIds = searchParams.get('groupIds');
         const status = searchParams.get('status');
+        const studentId = searchParams.get('studentId');
 
         const supabase = createServerSupabase();
         const isListView = !searchParams.get('full');
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest) {
                 : '*'
             );
 
-        if (groupIds) {
+        if (studentId) {
+            query = query.eq('id', studentId);
+        } else if (groupIds) {
             const ids = groupIds.split(',');
             query = query.in('group_id', ids);
         }

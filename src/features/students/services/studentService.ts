@@ -24,6 +24,18 @@ export const getStudents = async (groupIds?: string[], status?: string): Promise
     }
 };
 
+export const getStudentById = async (id: string): Promise<Student | null> => {
+    try {
+        const res = await fetch(`/api/students?studentId=${encodeURIComponent(id)}`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        return Array.isArray(data) && data.length > 0 ? data[0] : null;
+    } catch (error) {
+        console.error("Error fetching student by id:", error);
+        return null;
+    }
+};
+
 export const addStudent = async (student: Omit<Student, 'id'>): Promise<string> => {
     try {
         const { data, error } = await supabase
