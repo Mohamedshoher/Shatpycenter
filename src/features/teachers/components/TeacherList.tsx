@@ -325,25 +325,9 @@ export default function TeacherList() {
                                     <Briefcase size={20} />
                                 </div>
                                     <div className="flex flex-col min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-gray-800 text-lg group-hover/card:text-teal-600 transition-colors truncate">
-                                                {teacher.fullName}
-                                            </h3>
-                                            <span className={cn(
-                                                "shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black",
-                                                teacher.status === 'active' ? "bg-green-100 text-green-700 border border-green-200" : "bg-red-100 text-red-700 border border-red-200"
-                                            )}>
-                                                {teacher.status === 'active' ? 'نشط' : 'غير نشط'}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-gray-400">
-                                            <span className="bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full border border-indigo-100">
-                                                {teacher.dailyHours || 4} ساعة/يوم
-                                            </span>
-                                            <span className="bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full border border-indigo-100">
-                                                {teacher.weeklyWorkingDays || 5} أيام/أسبوع
-                                            </span>
-                                        </div>
+                                        <h3 className="font-bold text-gray-800 text-lg group-hover/card:text-teal-600 transition-colors truncate whitespace-nowrap">
+                                            {teacher.fullName}
+                                        </h3>
                                     </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
