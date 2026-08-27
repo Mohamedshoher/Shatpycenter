@@ -71,10 +71,10 @@ export default function Sidebar() {
             roles: ['director']
         },
         {
-            label: user?.role === 'teacher' ? 'صفحتي' : 'المعلمين',
+            label: (user?.role === 'teacher' || user?.role === 'schedule_secretary') ? 'صفحتي' : 'المعلمين',
             href: '/teachers',
             icon: Users,
-            roles: ['director', 'supervisor', 'teacher']
+            roles: ['director', 'supervisor', 'teacher', 'schedule_secretary']
         },
         {
             label: 'المجموعات',
@@ -92,13 +92,13 @@ export default function Sidebar() {
             label: 'تحليل المواعيد',
             href: '/schedules',
             icon: CalendarClock,
-            roles: ['director', 'supervisor', 'teacher']
+            roles: ['director', 'supervisor', 'teacher', 'schedule_secretary']
         },
         {
             label: 'تقارير الحضور',
             href: '/attendance-report',
             icon: CalendarCheck,
-            roles: ['director', 'supervisor', 'teacher']
+            roles: ['director', 'supervisor', 'teacher', 'schedule_secretary']
         },
         {
             label: 'تقارير الاختبارات',
@@ -110,13 +110,13 @@ export default function Sidebar() {
             label: 'الرسائل',
             href: '/messages',
             icon: MessageCircle,
-            roles: ['director', 'supervisor', 'teacher']
+            roles: ['director', 'supervisor', 'teacher', 'schedule_secretary']
         },
         {
             label: 'ملحوظات الطلاب',
             href: '/notes',
             icon: MessageSquare,
-            roles: ['director', 'supervisor', 'teacher']
+            roles: ['director', 'supervisor', 'teacher', 'schedule_secretary']
         },
         {
             label: 'الأتمتة',
@@ -223,7 +223,7 @@ export default function Sidebar() {
                                     {user?.displayName || 'مستخدم'}
                                 </p>
                                 <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider truncate">
-                                    {user?.role === 'director' ? 'المدير العام' : user?.role === 'teacher' ? 'مدرس' : 'مراقب'}
+                                    {user?.role === 'director' ? 'المدير العام' : user?.role === 'teacher' ? 'مدرس' : user?.role === 'schedule_secretary' ? 'سكرتارية المواعيد' : 'مراقب'}
                                 </p>
                             </div>
                         </div>

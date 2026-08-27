@@ -12,11 +12,12 @@ import Lock from 'lucide-react/dist/esm/icons/lock'
 import Briefcase from 'lucide-react/dist/esm/icons/briefcase'
 import UserCheck from 'lucide-react/dist/esm/icons/user-check'
 import UserCircle from 'lucide-react/dist/esm/icons/user-circle';
+import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { cn } from '@/lib/utils';
 
 type MainTab = 'parent' | 'teacher';
-type RoleTab = 'director' | 'supervisor' | 'teacher';
+type RoleTab = 'director' | 'supervisor' | 'teacher' | 'schedule_secretary';
 
 export default function LoginForm() {
     const { login, loading, error } = useLogin();
@@ -55,9 +56,10 @@ export default function LoginForm() {
             localStorage.setItem('shatibi_parent_phone', phone);
         } else {
             localStorage.setItem('shatibi_last_role_tab', roleTab);
-            if (roleTab === 'teacher' || roleTab === 'supervisor') {
+            if (roleTab === 'teacher' || roleTab === 'supervisor' || roleTab === 'schedule_secretary') {
                 if (!selectedTeacherId) return;
-                loginIdentifier = `${roleTab}-${selectedTeacherId}`;
+                const prefix = roleTab === 'schedule_secretary' ? 'secretary' : roleTab;
+                loginIdentifier = `${prefix}-${selectedTeacherId}`;
                 localStorage.setItem('shatibi_last_teacher_id', selectedTeacherId);
             }
         }
@@ -129,6 +131,7 @@ export default function LoginForm() {
                 { id: 'director' as RoleTab, label: 'مدير', icon: Briefcase },
                 { id: 'supervisor' as RoleTab, label: 'مشرف', icon: UserCheck },
                 { id: 'teacher' as RoleTab, label: 'مدرس', icon: GraduationCap },
+                { id: 'schedule_secretary' as RoleTab, label: 'سكرتارية', icon: CalendarClock },
             ].map((role) => {
                 const Icon = role.icon;
                 return (
@@ -137,13 +140,15 @@ export default function LoginForm() {
                         type="button"
                         onClick={() => setRoleTab(role.id)}
                         className={cn(
-                            "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs md:text-sm font-black transition-all",
+                            "flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl text-[10px] md:text-xs font-black transition-all",
                             roleTab === role.id
-                                ? "bg-white text-teal-600 shadow-sm scale-105"
+                                ? role.id === 'schedule_secretary'
+                                    ? "bg-white text-purple-600 shadow-sm scale-105"
+                                    : "bg-white text-teal-600 shadow-sm scale-105"
                                 : "text-gray-400 hover:text-gray-600"
                         )}
                     >
-                        <Icon size={16} />
+                        <Icon size={14} />
                         {role.label}
                     </button>
                 );
@@ -166,21 +171,22 @@ export default function LoginForm() {
                 </div>
                 <div className="text-center">
                     <h2 className="text-xl md:text-2xl font-bold text-[#344767]">
-                        دخول {roleTab === 'director' ? 'المدير' : roleTab === 'supervisor' ? 'المشرف' : 'المدرس'}
+                        دخول {roleTab === 'director' ? 'المدير' : roleTab === 'supervisor' ? 'المشرف' : roleTab === 'schedule_secretary' ? 'سكرتارية المواعيد' : 'المدرس'}
                     </h2>
                     <p className="text-[#7b809a] text-xs md:text-sm mt-1">
                         {roleTab === 'director' ? 'وصول كامل لجميع البيانات والصلاحيات' :
                             roleTab === 'supervisor' ? 'متابعة سير العمل والمعلمين' :
+                            roleTab === 'schedule_secretary' ? 'إدارة وتبديل مواعيد الطلاب والتواصل مع أولياء الأمور' :
                                 'المتابعة العلمية للطلاب والمجموعات'}
                     </p>
                 </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-                {(roleTab === 'teacher' || roleTab === 'supervisor') && (
+                {(roleTab === 'teacher' || roleTab === 'supervisor' || roleTab === 'schedule_secretary') && (
                     <div className="space-y-2">
                         <label className="text-xs md:text-sm font-bold text-[#344767] pr-2">
-                            {roleTab === 'teacher' ? 'اسم المدرس' : 'اسم المشرف'}
+                            {roleTab === 'teacher' ? 'اسم المدرس' : roleTab === 'supervisor' ? 'اسم المشرف' : 'اسم السكرتارية'}
                         </label>
                         <div className="relative">
                             <select
@@ -190,7 +196,7 @@ export default function LoginForm() {
                                 required
                             >
                                 <option value="">-- اختر الاسم من القائمة --</option>
-                                {teachers?.filter(t => t.status === 'active' && t.role === roleTab).sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar')).map(t => (
+                                {teachers?.filter(t => t.status === 'active' && (t as any).role === roleTab).sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar')).map(t => (
                                     <option key={t.id} value={t.id}>{t.fullName}</option>
                                 ))}
                             </select>

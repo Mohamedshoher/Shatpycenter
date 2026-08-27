@@ -8,7 +8,7 @@ import { User } from '@/types';
 export function getMessagingActor(user: User | null): string | null {
     if (!user) return null;
     if (user.role === 'director') return 'director:main';
-    if ((user.role === 'teacher' || user.role === 'supervisor') && user.teacherId) {
+    if ((user.role === 'teacher' || user.role === 'supervisor' || user.role === 'schedule_secretary') && user.teacherId) {
         return `teacher:${user.teacherId}`;
     }
     if (user.role === 'parent' && user.displayName) {

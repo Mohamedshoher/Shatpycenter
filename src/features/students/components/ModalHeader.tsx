@@ -15,7 +15,8 @@ export default function ModalHeader({ student, onClose, onEdit }: any) {
     const { archiveStudent, restoreStudent } = useStudents();
     
     const isArchived = student?.status === 'archived';
-    const canManage = user?.role !== 'teacher'; // المعلم لا يملك صلاحية الأرشفة أو التعديل
+    const canContact = user?.role !== 'teacher'; // المعلم لا يملك أزرار التواصل
+    const canManage = user?.role !== 'teacher' && user?.role !== 'schedule_secretary'; // المعلم وسكرتارية المواعيد لا يملكون صلاحية التعديل أو الأرشفة
 
     // وظيفة التواصل عبر واتساب
     const handleWhatsApp = () => {
@@ -59,13 +60,18 @@ export default function ModalHeader({ student, onClose, onEdit }: any) {
                     <div className="flex items-center gap-2">
                         {canManage && (
                             <>
-                                {/* أزرار التحكم (أرشفة، تعديل، واتساب، اتصال) */}
-                                <button onClick={handleCall} className="w-9 h-9 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center"><Phone size={16} /></button>
-                                <button onClick={handleWhatsApp} className="w-9 h-9 rounded-xl bg-green-50 text-green-500 flex items-center justify-center"><MessageCircle size={16} /></button>
+                                {/* أزرار التحكم (أرشفة، تعديل) */}
                                 <button onClick={() => onEdit?.(student)} className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Edit3 size={16} /></button>
                                 <button onClick={handleArchiveToggle} className={cn("w-9 h-9 rounded-xl flex items-center justify-center transition-all", isArchived ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-500")}>
                                     {isArchived ? <RotateCcw size={16} /> : <Archive size={16} />}
                                 </button>
+                            </>
+                        )}
+                        {canContact && (
+                            <>
+                                {/* أزرار التواصل (واتساب، اتصال) */}
+                                <button onClick={handleCall} className="w-9 h-9 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center"><Phone size={16} /></button>
+                                <button onClick={handleWhatsApp} className="w-9 h-9 rounded-xl bg-green-50 text-green-500 flex items-center justify-center"><MessageCircle size={16} /></button>
                             </>
                         )}
                     </div>

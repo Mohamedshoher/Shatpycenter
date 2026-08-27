@@ -54,25 +54,27 @@ export default function ExamsTab({ student, records }: any) {
     return (
         <div className="space-y-4">
             {/* نموذج تسجيل اختبار جديد */}
-            <div className="bg-gray-50 p-5 rounded-[24px] border border-gray-100 space-y-4">
-                <h4 className="font-bold text-sm">تسجيل اختبار</h4>
-                <input
-                    type="text"
-                    value={surahName}
-                    onChange={e => setSurahName(e.target.value)}
-                    placeholder="اسم السورة"
-                    className="w-full h-11 rounded-xl px-4 text-sm border-gray-100"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                    <select value={examType} onChange={e => setExamType(e.target.value)} className="h-11 rounded-xl text-xs font-bold">
-                        <option>جديد</option><option>ماضي قريب</option><option>ماضي بعيد</option>
-                    </select>
-                    <select value={examGrade} onChange={e => setExamGrade(e.target.value)} className="h-11 rounded-xl text-xs font-bold">
-                        <option>ممتاز</option><option>جيد جداً</option><option>جيد</option><option>يعاد</option>
-                    </select>
+            {canEdit && (
+                <div className="bg-gray-50 p-5 rounded-[24px] border border-gray-100 space-y-4">
+                    <h4 className="font-bold text-sm">تسجيل اختبار</h4>
+                    <input
+                        type="text"
+                        value={surahName}
+                        onChange={e => setSurahName(e.target.value)}
+                        placeholder="اسم السورة"
+                        className="w-full h-11 rounded-xl px-4 text-sm border-gray-100"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                        <select value={examType} onChange={e => setExamType(e.target.value)} className="h-11 rounded-xl text-xs font-bold">
+                            <option>جديد</option><option>ماضي قريب</option><option>ماضي بعيد</option>
+                        </select>
+                        <select value={examGrade} onChange={e => setExamGrade(e.target.value)} className="h-11 rounded-xl text-xs font-bold">
+                            <option>ممتاز</option><option>جيد جداً</option><option>جيد</option><option>يعاد</option>
+                        </select>
+                    </div>
+                    <Button onClick={handleAdd} className="w-full bg-blue-600">حفظ النتيجة</Button>
                 </div>
-                <Button onClick={handleAdd} className="w-full bg-blue-600">حفظ النتيجة</Button>
-            </div>
+            )}
 
             {/* التبويبات */}
             <div className="flex bg-gray-100 p-1 rounded-xl">

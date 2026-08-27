@@ -24,6 +24,9 @@ export default function AttendanceReportPage() {
     const { data: groups } = useGroups();
     const { user } = useAuthStore();
 
+    // سكرتارية المواعيد ترى التقارير مثل المدير تماما
+    const isControlRole = user?.role === 'director' || user?.role === 'schedule_secretary';
+
     // حالة التاريخ المختار
     const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
         const d = new Date();
@@ -37,6 +40,7 @@ export default function AttendanceReportPage() {
     const [showAbsentChart, setShowAbsentChart] = useState(false);
     const [showPresentChart, setShowPresentChart] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [selectedStudentTab, setSelectedStudentTab] = useState<'attendance' | 'notes'>('attendance');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [studentToEdit, setStudentToEdit] = useState<any>(null);
 
@@ -52,11 +56,11 @@ export default function AttendanceReportPage() {
             return true;
         });
         const gIds = filteredGroups.map(g => g.id);
-        return students.filter(s => s.status === 'active' && (user.role === 'director' || gIds.includes(s.groupId!))).map(s => s.id);
+        return students.filter(s => s.status === 'active' && (isControlRole || gIds.includes(s.groupId!))).map(s => s.id);
     }, [students, groups, user]);
 
     const groupIdsForQuery = useMemo(() => {
-        if (user?.role === 'director') return 'all';
+        if (isControlRole) return 'all';
         return groups?.filter(g => {
             if (user?.role === 'teacher') return g.teacherId === user.teacherId;
             if (user?.role === 'supervisor') return (user.responsibleSections || []).some(sec => g.name.includes(sec));
@@ -86,7 +90,7 @@ export default function AttendanceReportPage() {
                         .gte('date', sinceDate);
 
                     // فلترة البيانات على السيرفر بدلاً من جلب الكل
-                    if (user?.role !== 'director' && relevantStudentIds.length > 0) {
+                    if (!isControlRole && relevantStudentIds.length > 0) {
                         query = query.in('student_id', relevantStudentIds);
                     }
 
@@ -116,7 +120,7 @@ export default function AttendanceReportPage() {
 
             return { attendanceMap: map };
         },
-        enabled: !!students && (user?.role === 'director' || relevantStudentIds.length > 0)
+        enabled: !!students && (isControlRole || relevantStudentIds.length > 0)
     });
 
     // 2. معالجة البيانات وحساب الغياب المتصل والكلي
@@ -132,7 +136,6 @@ export default function AttendanceReportPage() {
             return true;
         }) || [];
         const groupIds = filteredGroups.map(g => g.id);
-        const isControlRole = user?.role === 'director'
 
         const selectedDate = new Date(selectedDateStr);
         const dayOfWeek = selectedDate.getDay();
@@ -305,13 +308,20 @@ export default function AttendanceReportPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {displayStudents.length > 0 ? (
                                 displayStudents.map((s, i) => (
-                                    <StudentReportCard 
-                                        key={s.id} 
-                                        student={s} 
-                                        index={i} 
-                                        userRole={user?.role} 
-                                        onArchive={archiveStudent} 
-                                        onOpenDetails={setSelectedStudent} 
+                                    <StudentReportCard
+                                        key={s.id}
+                                        student={s}
+                                        index={i}
+                                        userRole={user?.role}
+                                        onArchive={archiveStudent}
+                                        onOpenDetails={(st: any) => {
+                                            setSelectedStudentTab('attendance');
+                                            setSelectedStudent(st);
+                                        }}
+                                        onOpenNotes={(st: any) => {
+                                            setSelectedStudentTab('notes');
+                                            setSelectedStudent(st);
+                                        }}
                                         onEdit={(s: any) => {
                                             setStudentToEdit(s);
                                             setIsEditModalOpen(true);
@@ -329,11 +339,11 @@ export default function AttendanceReportPage() {
             <AttendanceChartModal isOpen={showAbsentChart} onClose={() => setShowAbsentChart(false)} type="absent" title="توزيع الغياب" data={chartData.absent} />
             <AttendanceChartModal isOpen={showPresentChart} onClose={() => setShowPresentChart(false)} type="present" title="توزيع الحضور" data={chartData.present} />
 
-            <StudentDetailModal 
-                student={selectedStudent} 
-                isOpen={!!selectedStudent} 
-                onClose={() => setSelectedStudent(null)} 
-                initialTab="attendance" 
+            <StudentDetailModal
+                student={selectedStudent}
+                isOpen={!!selectedStudent}
+                onClose={() => setSelectedStudent(null)}
+                initialTab={selectedStudentTab}
                 onEdit={(s: any) => {
                     setSelectedStudent(null);
                     setStudentToEdit(s);

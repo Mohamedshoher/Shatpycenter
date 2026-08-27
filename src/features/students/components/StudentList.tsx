@@ -615,10 +615,10 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                             <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
 
                             <div className="flex items-center gap-1 sm:gap-1.5 bg-gray-100/50 p-1 rounded-xl border border-gray-50 shrink-0">
-                                {user?.role !== 'director' && (
+                                {user?.role !== 'director' && user?.role !== 'schedule_secretary' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 transition-colors" title="المالية"><CreditCard size={18} /></button>
                                 )}
-                                {(isManagement || user?.role === 'teacher') ? (
+                                {(isManagement || user?.role === 'teacher' || user?.role === 'schedule_secretary') ? (
                                     <button 
                                         onClick={(e) => { 
                                             e.stopPropagation(); 
@@ -654,11 +654,28 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'notes'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="الملاحظات"><FileText size={18} /></button>
                                 )}
 
-                                {(user?.role === 'director' || user?.role === 'supervisor') && (
+                                {(user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'schedule_secretary') && (
                                     <>
                                         <button onClick={(e) => { e.stopPropagation(); handleCall(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors" title="اتصال"><Phone size={18} /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleArchive(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-amber-500 transition-colors" title="أرشفة"><Archive size={18} /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); setStudentToEdit(student); setIsEditModalOpen(true); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-colors" title="تعديل"><Edit3 size={18} /></button>
+                                        {user?.role !== 'schedule_secretary' && (
+                                            <button onClick={(e) => { e.stopPropagation(); handleArchive(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-amber-500 transition-colors" title="أرشفة"><Archive size={18} /></button>
+                                        )}
+                                        {user?.role !== 'schedule_secretary' ? (
+                                            <button onClick={(e) => { e.stopPropagation(); setStudentToEdit(student); setIsEditModalOpen(true); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-colors" title="تعديل"><Edit3 size={18} /></button>
+                                        ) : (
+                                            <button onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                const newPhone = window.prompt('أدخل رقم الهاتف الجديد لولي أمر الطالب:', student.parentPhone);
+                                                if (newPhone !== null && newPhone.trim() !== '' && newPhone !== student.parentPhone) {
+                                                    const { updateStudent } = require('../services/studentService');
+                                                    updateStudent(student.id, { parentPhone: newPhone.trim() }).then(() => {
+                                                        queryClient.invalidateQueries({ queryKey: ['students'] });
+                                                    }).catch((err: any) => {
+                                                        alert('حدث خطأ أثناء التحديث');
+                                                    });
+                                                }
+                                            }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="تعديل الهاتف"><Edit3 size={18} /></button>
+                                        )}
                                     </>
                                 )}
                             </div>
@@ -695,13 +712,15 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 }}
             />
             {/* Floating Add Student Button */}
-            <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="fixed bottom-20 left-6 z-[100] w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/40 active:scale-90 transition-transform hover:bg-blue-700"
-                title="إضافة طالب جديد"
-            >
-                <UserPlus size={26} />
-            </button>
+            {user?.role !== 'schedule_secretary' && (
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="fixed bottom-20 left-6 z-[100] w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/40 active:scale-90 transition-transform hover:bg-blue-700"
+                    title="إضافة طالب جديد"
+                >
+                    <UserPlus size={26} />
+                </button>
+            )}
         </div >
     );
 }

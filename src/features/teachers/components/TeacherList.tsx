@@ -18,6 +18,7 @@ import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
 import XCircle from 'lucide-react/dist/esm/icons/x-circle'
 import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
 import Pencil from 'lucide-react/dist/esm/icons/pencil';
+import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
 
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Teacher } from '@/types';
@@ -137,8 +138,8 @@ export default function TeacherList() {
         if (!teachers) return [];
 
         const baseFiltered = teachers.filter(teacher => {
-            // إذا كان مدرساً، يظهر له صفحته فقط
-            if (user?.role === 'teacher') {
+            // إذا كان مدرساً أو سكرتارية، يظهر له صفحته فقط
+            if (user?.role === 'teacher' || user?.role === 'schedule_secretary') {
                 return teacher.id === user.teacherId;
             }
 
@@ -205,11 +206,11 @@ export default function TeacherList() {
 
                     {!isSearchOpen && (
                         <h1 className="text-lg sm:text-xl font-bold text-gray-900 absolute left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap">
-                            {user?.role === 'teacher' ? 'بياناتي الشخصية' : <>المعلمون <span className="text-blue-500 font-black">({filteredTeachers?.length || 0})</span></>}
+                            {(user?.role === 'teacher' || user?.role === 'schedule_secretary') ? 'بياناتي الشخصية' : <>المعلمون <span className="text-blue-500 font-black">({filteredTeachers?.length || 0})</span></>}
                         </h1>
                     )}
 
-                    {user?.role !== 'teacher' && (
+                    {user?.role !== 'teacher' && user?.role !== 'schedule_secretary' && (
                         <div className={cn("flex items-center gap-2 transition-all duration-300", isSearchOpen ? "flex-1" : "")}>
                             {isSearchOpen ? (
                                 <div className="relative flex-1 animate-in slide-in-from-right-4 duration-300">
@@ -328,6 +329,22 @@ export default function TeacherList() {
                                         <h3 className="font-bold text-gray-800 text-lg group-hover/card:text-teal-600 transition-colors truncate whitespace-nowrap">
                                             {teacher.fullName}
                                         </h3>
+                                        {/* شارة الوظيفة */}
+                                        <span className={cn(
+                                            "text-[10px] font-black px-2 py-0.5 rounded-full w-fit mt-0.5",
+                                            (teacher as any).role === 'schedule_secretary'
+                                                ? "bg-purple-100 text-purple-600"
+                                                : (teacher as any).role === 'supervisor'
+                                                    ? "bg-blue-100 text-blue-600"
+                                                    : "bg-teal-50 text-teal-600"
+                                        )}>
+                                            {(teacher as any).role === 'schedule_secretary' ? (
+                                                <span className="flex items-center gap-1">
+                                                    <CalendarClock size={10} />
+                                                    سكرتارية مواعيد
+                                                </span>
+                                            ) : (teacher as any).role === 'supervisor' ? 'مشرف' : 'مدرس'}
+                                        </span>
                                     </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
@@ -394,7 +411,7 @@ export default function TeacherList() {
                                 const status = allTeachersAttendanceMap[teacher.id]?.[todayDay];
                                 const isAbsent = status === 'absent';
 
-                                if (user?.role !== 'teacher') {
+                                if (user?.role !== 'teacher' && user?.role !== 'schedule_secretary') {
                                     return (
                                         <>
                                             <button

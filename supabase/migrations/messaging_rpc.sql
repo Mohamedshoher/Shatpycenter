@@ -108,15 +108,23 @@ BEGIN
         SELECT COALESCE(json_agg(json_build_object('id', 'teacher:' || id, 'name', full_name, 'phone', COALESCE(phone, ''), 'kind', 'teacher')), '[]') 
         INTO v_teachers FROM teachers WHERE id::TEXT != v_id AND status = 'active';
         
-        SELECT COALESCE(json_agg(json_build_object('id', 'parent:' || parent_phone, 'name', 'ولي أمر ' || COALESCE(MAX(student_name), parent_phone), 'phone', parent_phone, 'kind', 'parent')), '[]')
-        INTO v_parents FROM teacher_parent_access WHERE teacher_id = v_id::UUID GROUP BY parent_phone;
+        -- سكرتارية المواعيد ترى جميع أولياء الأمور مثل المدير
+        IF EXISTS (SELECT 1 FROM teachers WHERE id::TEXT = v_id AND role = 'schedule_secretary') THEN
+            SELECT COALESCE(json_agg(json_build_object('id', 'parent:' || parent_phone, 'name', full_name, 'phone', parent_phone, 'kind', 'parent')), '[]')
+            INTO v_parents FROM (SELECT DISTINCT parent_phone, MAX(full_name) as full_name FROM students WHERE parent_phone IS NOT NULL AND status = 'active' GROUP BY parent_phone) s;
+        ELSE
+            SELECT COALESCE(json_agg(json_build_object('id', 'parent:' || parent_phone, 'name', 'ولي أمر ' || COALESCE(MAX(student_name), parent_phone), 'phone', parent_phone, 'kind', 'parent')), '[]')
+            INTO v_parents FROM teacher_parent_access WHERE teacher_id = v_id::UUID GROUP BY parent_phone;
+        END IF;
 
     ELSIF v_kind = 'parent' THEN
         SELECT COALESCE(json_agg(json_build_object('id', 'teacher:' || t.id, 'name', t.full_name, 'phone', COALESCE(t.phone, ''), 'kind', 'teacher')), '[]')
         INTO v_teachers
-        FROM (SELECT DISTINCT teacher_id FROM teacher_parent_access WHERE parent_phone = v_id) a
-        JOIN teachers t ON t.id = a.teacher_id
-        WHERE t.status = 'active';
+        FROM teachers t
+        WHERE t.status = 'active' AND (
+            t.id IN (SELECT DISTINCT teacher_id FROM teacher_parent_access WHERE parent_phone = v_id)
+            OR t.role = 'schedule_secretary'
+        );
     END IF;
 
     RETURN json_build_object('teachers', v_teachers, 'parents', v_parents);

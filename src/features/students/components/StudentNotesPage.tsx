@@ -236,8 +236,8 @@ export default function StudentNotesPage() {
                     )}
                     <button
                         onClick={() => handleEdit(note)}
-                        disabled={editingNoteId === note.id}
-                        className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all disabled:opacity-50"
+                        disabled={editingNoteId === note.id || user?.role === 'schedule_secretary'}
+                        className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
                         title="تعديل بيانات الطالب"
                     >
                         {editingNoteId === note.id ? (
@@ -246,13 +246,15 @@ export default function StudentNotesPage() {
                             <Pencil size={18} />
                         )}
                     </button>
-                    <button
-                        onClick={() => handleArchive(note)}
-                        className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-amber-600 hover:bg-white rounded-xl transition-all"
-                        title="أرشفة الطالب"
-                    >
-                        <Archive size={18} />
-                    </button>
+                    {user?.role !== 'schedule_secretary' && (
+                        <button
+                            onClick={() => handleArchive(note)}
+                            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-amber-600 hover:bg-white rounded-xl transition-all"
+                            title="أرشفة الطالب"
+                        >
+                            <Archive size={18} />
+                        </button>
+                    )}
                     <button
                         onClick={() => handleToggleRead(note)}
                         className={cn(

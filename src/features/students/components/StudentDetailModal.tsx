@@ -8,6 +8,7 @@ import BookOpen from 'lucide-react/dist/esm/icons/book-open'
 import FileText from 'lucide-react/dist/esm/icons/file-text'
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import { cn } from '../../../lib/utils';
+import { useAuthStore } from '../../../store/useAuthStore';
 import { useStudentRecords } from '../hooks/useStudentRecords';
 import { StudentDetailModalProps } from '../hooks/types';
 import dynamic from 'next/dynamic';
@@ -33,6 +34,7 @@ export default function StudentDetailModal({
 }: StudentDetailModalProps) {
     // تحديد التبويب النشط (الافتراضي هو الحضور)
     const [activeTab, setActiveTab] = useState(initialTab);
+    const { user } = useAuthStore();
 
     const student = initialStudent;
 
@@ -65,13 +67,18 @@ export default function StudentDetailModal({
 
 
     // تعريف التبويبات (الأزرار العلوية)
-    const tabs = [
+    const allTabs = [
         { id: 'attendance', label: 'سجل الحضور', icon: Calendar },
         { id: 'schedule', label: 'مواعيد الحضور', icon: Clock },
         { id: 'fees', label: 'سجل المصروفات', icon: CreditCard },
         { id: 'exams', label: 'سجل الاختبارات', icon: BookOpen },
         { id: 'notes', label: 'سجل الملحوظات', icon: FileText },
     ];
+
+    // سكرتارية المواعيد ترى الحضور والمواعيد والاختبارات والملحوظات (بدون المصروفات)
+    const isScheduleSecretary = user?.role === 'schedule_secretary';
+    const tabs = isScheduleSecretary ? allTabs.filter(t => t.id !== 'fees') : allTabs;
+    const effectiveTab = tabs.some(t => t.id === activeTab) ? activeTab : tabs[0]?.id;
 
     return (
         <>
@@ -90,7 +97,7 @@ export default function StudentDetailModal({
                 <div className="flex border-b border-gray-50 px-4">
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
-                        const isActive = activeTab === tab.id;
+                        const isActive = effectiveTab === tab.id;
                         return (
                             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                                 className={cn("flex-1 flex flex-col items-center gap-1 py-4 text-[10px] font-bold transition-all relative",
@@ -105,11 +112,11 @@ export default function StudentDetailModal({
 
                 {/* 3. محتوى التبويبات (يتم استدعاء المكون بناءً على التبويب النشط) */}
                 <div className="flex-1 overflow-y-auto p-5 md:p-6 text-right">
-                    {activeTab === 'attendance' && <AttendanceTab student={student} records={studentRecords} />}
-                    {activeTab === 'schedule' && <ScheduleTab student={student} />}
-                    {activeTab === 'fees' && <FeesTab student={student} records={studentRecords} />}
-                    {activeTab === 'exams' && <ExamsTab student={student} records={studentRecords} />}
-                    {activeTab === 'notes' && <NotesTab student={student} records={studentRecords} />}
+                    {effectiveTab === 'attendance' && <AttendanceTab student={student} records={studentRecords} />}
+                    {effectiveTab === 'schedule' && <ScheduleTab student={student} />}
+                    {effectiveTab === 'fees' && <FeesTab student={student} records={studentRecords} />}
+                    {effectiveTab === 'exams' && <ExamsTab student={student} records={studentRecords} />}
+                    {effectiveTab === 'notes' && <NotesTab student={student} records={studentRecords} />}
                 </div>
             </SlideIn>
         </>

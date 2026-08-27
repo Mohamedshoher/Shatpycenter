@@ -12,10 +12,11 @@ interface StudentReportCardProps {
     userRole?: string;
     onArchive: (id: string) => void;
     onOpenDetails: (student: any) => void;
+    onOpenNotes?: (student: any) => void;
     onEdit?: (student: any) => void;
 }
 
-export default function StudentReportCard({ student, index, userRole, onArchive, onOpenDetails, onEdit }: StudentReportCardProps) {
+export default function StudentReportCard({ student, index, userRole, onArchive, onOpenDetails, onOpenNotes, onEdit }: StudentReportCardProps) {
     return (
         <div
             className="bg-white rounded-[24px] p-3.5 shadow-sm border border-gray-100 flex flex-col gap-1.5 relative group hover:shadow-md transition-all cursor-pointer animate-[fadeIn_0.3s_ease-out]"
@@ -55,11 +56,14 @@ export default function StudentReportCard({ student, index, userRole, onArchive,
                                 <Edit3 size={14} />
                             </button>
                         )}
-                        {userRole !== 'teacher' && (
+                        {userRole !== 'teacher' && userRole !== 'schedule_secretary' && (
                             <button onClick={(e) => { e.stopPropagation(); onArchive(student.id); }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl" title="أرشفة الطالب">
                                 <Archive size={14} />
                             </button>
                         )}
+                        <button onClick={(e) => { e.stopPropagation(); if (onOpenNotes) onOpenNotes(student); else onOpenDetails(student); }} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl" title="الملحوظات">
+                            <FileText size={14} />
+                        </button>
                         <button onClick={(e) => {
                             e.stopPropagation();
                             const phone = student.parentPhone || student.studentPhone || '';

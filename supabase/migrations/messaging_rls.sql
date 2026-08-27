@@ -67,9 +67,12 @@ BEGIN
       RETURN false;
     END IF;
 
+    -- سكرتارية المواعيد يُسمح لها بالتواصل مع جميع أولياء الأمور
     RETURN EXISTS (
       SELECT 1 FROM teacher_parent_access
       WHERE teacher_id = teacher_id_val AND parent_phone = parent_phone_val
+    ) OR EXISTS (
+      SELECT 1 FROM teachers WHERE id = teacher_id_val AND role = 'schedule_secretary'
     );
   END IF;
 

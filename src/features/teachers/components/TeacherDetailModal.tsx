@@ -109,7 +109,7 @@ export default function TeacherDetailModal({
     const { user } = useAuthStore();
 
     // --- تحديد صلاحيات المستخدم الحالي ---
-    const isTeacher = user?.role === 'teacher';
+    const isTeacher = user?.role === 'teacher' || user?.role === 'schedule_secretary';
     const isDirectorOnly = user?.role === 'director';
     const isDirector = user?.role === 'director' || user?.role === 'supervisor';
 

@@ -525,7 +525,7 @@ function NewChatModal({
 }) {
     const isParent = user.role === 'parent';
     const isDirector = user.role === 'director';
-    const isTeacher = user.role === 'teacher' || user.role === 'supervisor';
+    const isTeacher = user.role === 'teacher' || user.role === 'supervisor' || user.role === 'schedule_secretary';
 
     const q = search.trim().toLowerCase();
     const phoneQ = q.replace(/[^0-9]/g, '');
@@ -554,7 +554,7 @@ function NewChatModal({
                     <div>
                         <h2 className="text-base font-black text-gray-900">محادثة جديدة</h2>
                         <p className="text-[10px] font-bold text-gray-400 mt-0.5">
-                            {isParent ? 'مدرسو أبنائك والإدارة' : isTeacher ? 'زملاؤك وأولياء أمور طلابك' : 'جميع المدرسين وأولياء الأمور'}
+                            {isParent ? 'مدرسو أبنائك والإدارة' : user.role === 'schedule_secretary' ? 'المدير والمعلمون وجميع أولياء الأمور' : isTeacher ? 'زملاؤك وأولياء أمور طلابك' : 'جميع المدرسين وأولياء الأمور'}
                         </p>
                     </div>
                     <button onClick={onClose} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors active:scale-95">

@@ -41,6 +41,7 @@ export default function DashboardOverview() {
     useEffect(() => {
         if (user?.role === 'teacher') router.push('/students');
         else if (user?.role === 'parent') router.push('/parent');
+        else if (user?.role === 'schedule_secretary') router.push('/schedules');
     }, [user, router]);
 
     const canLoadData = user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'teacher';

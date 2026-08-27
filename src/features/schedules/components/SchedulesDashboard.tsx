@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import { getStudents } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -12,19 +13,25 @@ import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock'
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
 import Filter from 'lucide-react/dist/esm/icons/filter'
+import Search from 'lucide-react/dist/esm/icons/search'
 import UserMinus from 'lucide-react/dist/esm/icons/user-minus';
-import { cn } from '@/lib/utils';
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
+import { cn, tieredSearchFilter } from '@/lib/utils';
 import { FadeIn } from '@/components/ui/transition';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';
+
+const AddStudentModal = dynamic(() => import('@/features/students/components/AddStudentModal'), { ssr: false });
 
 export default function SchedulesDashboard() {
     const { user } = useAuthStore();
     const [selectedDay, setSelectedDay] = useState<string>('الأحد');
     const [searchGroup, setSearchGroup] = useState<string>('');
+    const [searchStudent, setSearchStudent] = useState<string>('');
     const [expandedSlotId, setExpandedSlotId] = useState<string | null>(null);
     const [expandedUnscheduledGroupId, setExpandedUnscheduledGroupId] = useState<string | null>(null);
     const [expandedGroupSlotsIds, setExpandedGroupSlotsIds] = useState<string[]>([]);
     const [selectedStudentForModal, setSelectedStudentForModal] = useState<any | null>(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     const toggleGroupSlots = (groupId: string) => {
         setExpandedGroupSlotsIds(prev => 
@@ -135,6 +142,16 @@ export default function SchedulesDashboard() {
 
     }, [allStudents, allGroups, selectedDay, user, searchGroup]);
 
+    // بحث عن طالب معين بالاسم لفتح تفاصيله مباشرة
+    const studentSearchResults = useMemo(() => {
+        if (!searchStudent.trim() || !allStudents) return [];
+        const activeStudents = allStudents.filter(s => s.status === 'active');
+        return tieredSearchFilter(activeStudents, searchStudent, (s: any) => s.fullName || '').slice(0, 10);
+    }, [allStudents, searchStudent]);
+
+    const getGroupName = (groupId: string | null | undefined) =>
+        allGroups?.find(g => g.id === groupId)?.name || 'بدون مجموعة';
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-full min-h-[400px]">
@@ -158,15 +175,27 @@ export default function SchedulesDashboard() {
                 </div>
                 
                 {user?.role !== 'teacher' && (
-                    <div className="relative">
-                        <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="بحث عن مجموعة أو معلم..."
-                            value={searchGroup}
-                            onChange={(e) => setSearchGroup(e.target.value)}
-                            className="pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
-                        />
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                        <div className="relative">
+                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="بحث عن طالب بالاسم..."
+                                value={searchStudent}
+                                onChange={(e) => setSearchStudent(e.target.value)}
+                                className="pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold w-full sm:w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
+                            />
+                        </div>
+                        <div className="relative">
+                            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="بحث عن مجموعة أو معلم..."
+                                value={searchGroup}
+                                onChange={(e) => setSearchGroup(e.target.value)}
+                                className="pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
+                            />
+                        </div>
                     </div>
                 )}
             </div>
@@ -193,6 +222,37 @@ export default function SchedulesDashboard() {
                     ))}
                 </div>
             </div>
+
+            {/* Student Search Results */}
+            {user?.role !== 'teacher' && searchStudent.trim() !== '' && (
+                <div className="bg-white rounded-[24px] border border-blue-100 shadow-sm p-4 md:p-5">
+                    <p className="text-xs font-black text-gray-500 mb-3">نتائج البحث عن الطلاب (انقر على الطالب لفتح تفاصيله):</p>
+                    {studentSearchResults.length === 0 ? (
+                        <p className="text-sm font-bold text-gray-400 text-center py-4">لا يوجد طالب مطابق لهذا الاسم</p>
+                    ) : (
+                        <div className="flex flex-wrap gap-2">
+                            {studentSearchResults.map((st: any) => {
+                                const hasAppointment = st.appointment?.split(',').some((p: string) => p.trim().startsWith(`${selectedDay}:`));
+                                return (
+                                    <button
+                                        key={st.id}
+                                        onClick={() => setSelectedStudentForModal(st)}
+                                        className="flex flex-col items-start gap-0.5 text-right bg-gray-50 hover:bg-blue-50 px-3 py-2 rounded-xl border border-gray-200 hover:border-blue-300 transition-all group"
+                                    >
+                                        <span className="text-xs font-black text-gray-800 group-hover:text-blue-700">{st.fullName}</span>
+                                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
+                                            <span>{getGroupName(st.groupId)}</span>
+                                            <span className={cn("px-1.5 py-0.5 rounded-full", hasAppointment ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")}>
+                                                {hasAppointment ? `له موعد يوم ${selectedDay}` : `بدون موعد يوم ${selectedDay}`}
+                                            </span>
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Content Grid */}
             <div className="space-y-4">
@@ -324,12 +384,19 @@ export default function SchedulesDashboard() {
                                             {/* Expanded Students Details */}
                                             <FadeIn show={isExpanded}>
                                                 <div className="pt-3 border-t border-gray-200/50 space-y-2">
-                                                    <p className="text-[11px] font-black text-gray-500 mb-2">الطلاب المسجلين:</p>
+                                                    <p className="text-[11px] font-black text-gray-500 mb-2">الطلاب المسجلين (انقر على الطالب لفتح تفاصيله):</p>
                                                     {slot.students.map((st: any) => (
-                                                        <div key={st.id} className="text-xs font-bold text-gray-800 bg-white/50 px-3 py-2 rounded-lg border border-gray-100 flex items-center gap-2">
+                                                        <button
+                                                            key={st.id}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedStudentForModal(st);
+                                                            }}
+                                                            className="w-full text-right text-xs font-bold text-gray-800 bg-white/50 px-3 py-2 rounded-lg border border-gray-100 flex items-center gap-2 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all cursor-pointer"
+                                                        >
                                                             <div className={cn("w-2 h-2 rounded-full", slot.statusColor)} />
                                                             {st.fullName}
-                                                        </div>
+                                                        </button>
                                                     ))}
                                                     {slot.students.length === 0 && (
                                                         <p className="text-xs text-gray-400">لا يوجد طلاب</p>
@@ -357,6 +424,23 @@ export default function SchedulesDashboard() {
                     onClose={() => setSelectedStudentForModal(null)}
                     initialTab="schedule"
                 />
+            )}
+
+            {/* Add Student Modal */}
+            <AddStudentModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+            />
+
+            {/* Floating Add Student Button (السكرتارية) */}
+            {user?.role === 'schedule_secretary' && (
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="fixed bottom-20 left-6 z-[100] w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/40 active:scale-90 transition-transform hover:bg-blue-700"
+                    title="إضافة طالب جديد"
+                >
+                    <UserPlus size={26} />
+                </button>
             )}
         </div>
     );

@@ -32,6 +32,9 @@ export const loginWithRole = async (identifier: string, password: string): Promi
     } else if (identifier.startsWith('supervisor-')) {
         role = 'supervisor';
         teacherId = identifier.replace('supervisor-', '');
+    } else if (identifier.startsWith('secretary-')) {
+        role = 'schedule_secretary';
+        teacherId = identifier.replace('secretary-', '');
     } else if (identifier.startsWith('parent-')) {
         role = 'parent';
         phone = identifier.replace('parent-', '');
@@ -47,7 +50,7 @@ export const loginWithRole = async (identifier: string, password: string): Promi
     }
 
     // تعيين اسم افتراضي للعرض
-    let displayName = role === 'director' ? 'المدير العام' : role === 'supervisor' ? 'المشرف التربوي' : role === 'parent' ? (phone || 'ولي أمر') : 'معلم المجموعة';
+    let displayName = role === 'director' ? 'المدير العام' : role === 'supervisor' ? 'المشرف التربوي' : role === 'parent' ? (phone || 'ولي أمر') : role === 'schedule_secretary' ? 'سكرتارية المواعيد' : 'معلم المجموعة';
 
     // --- 3. التحقق من دخول ولي الأمر (عبر قاعدة البيانات) ---
     if (role === 'parent' && phone) {
@@ -78,11 +81,11 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         displayName = dbPhone;
     }
 
-    // --- 4. التحقق من دخول المعلم أو المشرف (عبر قاعدة البيانات) ---
-    if (role === 'teacher' || role === 'supervisor') {
-        const searchId = teacherId || identifier.replace(`${role}-`, '');
+    // --- 4. التحقق من دخول المعلم أو المشرف أو سكرتارية المواعيد (عبر قاعدة البيانات) ---
+    if (role === 'teacher' || role === 'supervisor' || role === 'schedule_secretary') {
+        const searchId = teacherId || identifier.replace(`${role}-`, '').replace('secretary-', '');
 
-        // جلب بيانات المعلم/المشرف من جدول المعلمين
+        // جلب بيانات المعلم/المشرف/السكرتيرة من جدول المعلمين
         const { data: teacher, error } = await supabase
             .from('teachers')
             .select('id, full_name, password, role, responsible_sections')
@@ -90,7 +93,8 @@ export const loginWithRole = async (identifier: string, password: string): Promi
             .single();
 
         if (error || !teacher) {
-            throw new Error(`${role === 'teacher' ? 'المعلم' : 'المشرف'} غير موجود في قاعدة البيانات`);
+            const roleLabel = role === 'teacher' ? 'المعلم' : role === 'supervisor' ? 'المشرف' : 'السكرتيرة';
+            throw new Error(`${roleLabel} غير موجود في قاعدة البيانات`);
         }
 
         // التحقق من تطابق كلمة المرور المخزنة

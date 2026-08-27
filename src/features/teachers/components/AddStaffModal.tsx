@@ -23,6 +23,7 @@ import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days'
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
 
 // ==========================================
 // 3. استيراد أدوات إدارة البيانات (React Query & Services)
@@ -52,7 +53,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
         fullName: initialTeacher?.fullName || '',
         phone: initialTeacher?.phone || '',
         email: (initialTeacher as any)?.email || '',
-        role: (initialTeacher as any)?.role || 'teacher' as 'teacher' | 'supervisor',
+        role: (initialTeacher as any)?.role || 'teacher' as 'teacher' | 'supervisor' | 'schedule_secretary',
         accountingType: (initialTeacher as any)?.accountingType || 'fixed' as 'fixed' | 'partnership',
         salary: (initialTeacher as any)?.salary || 0,
         partnershipPercentage: (initialTeacher as any)?.partnershipPercentage || 30,
@@ -76,7 +77,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                 fullName: initialTeacher.fullName,
                 phone: initialTeacher.phone,
                 email: (initialTeacher as any).email || '',
-                role: (initialTeacher as any).role || 'teacher',
+                role: (initialTeacher as any).role || 'teacher' as 'teacher' | 'supervisor' | 'schedule_secretary',
                 accountingType: (initialTeacher as any).accountingType || 'fixed',
                 salary: (initialTeacher as any).salary || 0,
                 partnershipPercentage: (initialTeacher as any).partnershipPercentage || 30,
@@ -139,7 +140,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     fullName: '',
                     phone: '',
                     email: '',
-                    role: 'teacher',
+                    role: 'teacher' as 'teacher' | 'supervisor' | 'schedule_secretary',
                     accountingType: 'fixed',
                     salary: 0,
                     partnershipPercentage: 30,
@@ -182,7 +183,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 )}
 
-                {/* 2. اختيار الدور: مدرس أم مشرف (Role Toggle) */}
+                {/* 2. اختيار الدور: مدرس أم مشرف أم سكرتارية مواعيد (Role Toggle) */}
                 <div className="bg-gray-50/50 p-1 rounded-[20px] flex gap-1 border border-gray-100">
                     <button
                         type="button"
@@ -210,7 +211,28 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                         <UserCircle size={18} />
                         مشرف
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, role: 'schedule_secretary' })}
+                        className={cn(
+                            "flex-1 h-12 rounded-[18px] flex items-center justify-center gap-2 text-xs font-bold transition-all",
+                            formData.role === 'schedule_secretary'
+                                ? "bg-white text-purple-600 shadow-sm border border-purple-200"
+                                : "text-gray-400 hover:text-gray-600"
+                        )}
+                    >
+                        <CalendarClock size={16} />
+                        سكرتارية
+                    </button>
                 </div>
+
+                {/* تنبيه عند اختيار سكرتارية المواعيد */}
+                {formData.role === 'schedule_secretary' && (
+                    <div className="bg-purple-50 border border-purple-100 rounded-[18px] p-3 flex items-center gap-2 text-xs text-purple-700 font-bold animate-in fade-in slide-in-from-top-2">
+                        <CalendarClock size={16} className="text-purple-500 shrink-0" />
+                        <span>سكرتارية المواعيد — صلاحية إدارة وتبديل مواعيد الطلاب والتواصل مع أولياء الأمور</span>
+                    </div>
+                )}
 
                 {/* 3. البيانات الأساسية: الاسم ورقم الهاتف (Name & Phone) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -243,7 +265,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 </div>
 
-                {/* 4. نوع المحاسبة المالية: راتب ثابت أم شراكة (Accounting Type Section) */}
+                {/* 4. نوع المحاسبة المالية */}
                 <div className="bg-teal-50/30 p-4 rounded-[28px] border border-teal-50 space-y-4">
                     <h4 className="text-xs font-black text-teal-700 text-center uppercase tracking-wider">نوع المحاسبة:</h4>
                     <div className="grid grid-cols-2 gap-3">
@@ -276,7 +298,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 </div>
 
-                {/* 5. مواعيد العمل: ساعات اليوم وأيام الأسبوع */}
+                {/* 5. مواعيد العمل */}
                 <div className="bg-indigo-50/40 p-4 rounded-[28px] border border-indigo-50 space-y-4">
                     <h4 className="text-xs font-black text-indigo-700 text-center uppercase tracking-wider">مواعيد العمل:</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -317,45 +339,45 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     </div>
                 </div>
 
-                {/* 6. الحقول الديناميكية (الراتب/النسبة) وحقل كلمة المرور (Dynamic Fields Grid) */}
+                {/* 6. الحقول الديناميكية (الراتب/النسبة) وحقل كلمة المرور */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
-                    {/* عرض حقل الراتب إذا كان النوع "ثابت"، وعرض حقل النسبة إذا كان "شراكة" */}
+                    {/* عرض حقل الراتب أو النسبة */}
                     {formData.accountingType === 'fixed' ? (
-                        <div className="space-y-1.5 text-right">
-                            <label className="text-[10px] font-black text-gray-400 uppercase mr-1">الراتب الأساسي</label>
-                            <div className="relative group">
-                                <input
-                                    type="number"
-                                    placeholder="0.00"
-                                    value={formData.salary || ''}
-                                    onChange={(e) => setFormData({ ...formData, salary: Number(e.target.value) })}
-                                    className="w-full h-12 bg-gray-50/30 border border-gray-100 rounded-[18px] px-10 text-right text-sm font-black text-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500/10 focus:bg-white transition-all"
-                                    required
-                                />
-                                <Coins className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-teal-500" size={18} />
+                            <div className="space-y-1.5 text-right">
+                                <label className="text-[10px] font-black text-gray-400 uppercase mr-1">الراتب الأساسي</label>
+                                <div className="relative group">
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={formData.salary || ''}
+                                        onChange={(e) => setFormData({ ...formData, salary: Number(e.target.value) })}
+                                        className="w-full h-12 bg-gray-50/30 border border-gray-100 rounded-[18px] px-10 text-right text-sm font-black text-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500/10 focus:bg-white transition-all"
+                                        required
+                                    />
+                                    <Coins className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-teal-500" size={18} />
+                                </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-1.5 text-right">
-                            <label className="text-[10px] font-black text-gray-400 uppercase mr-1">نسبة الشراكة (%)</label>
-                            <div className="relative group">
-                                <input
-                                    type="number"
-                                    placeholder="مثال: 30"
-                                    value={formData.partnershipPercentage || ''}
-                                    onChange={(e) => setFormData({ ...formData, partnershipPercentage: Number(e.target.value) })}
-                                    className="w-full h-12 bg-gray-50/30 border border-gray-100 rounded-[18px] px-10 text-right text-sm font-black text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500/10 focus:bg-white transition-all"
-                                    required
-                                />
-                                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 font-bold">%</div>
+                        ) : (
+                            <div className="space-y-1.5 text-right">
+                                <label className="text-[10px] font-black text-gray-400 uppercase mr-1">نسبة الشراكة (%)</label>
+                                <div className="relative group">
+                                    <input
+                                        type="number"
+                                        placeholder="مثال: 30"
+                                        value={formData.partnershipPercentage || ''}
+                                        onChange={(e) => setFormData({ ...formData, partnershipPercentage: Number(e.target.value) })}
+                                        className="w-full h-12 bg-gray-50/30 border border-gray-100 rounded-[18px] px-10 text-right text-sm font-black text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500/10 focus:bg-white transition-all"
+                                        required
+                                    />
+                                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 font-bold">%</div>
+                                </div>
+                                <p className="text-[9px] text-gray-400 text-right mr-1 leading-relaxed">أدخل النسبة المئوية من المحصل (من 1 إلى 100)</p>
                             </div>
-                            <p className="text-[9px] text-gray-400 text-right mr-1 leading-relaxed">أدخل النسبة المئوية من المحصل (من 1 إلى 100)</p>
-                        </div>
-                    )}
+                        )}
 
-                    {/* حقل إدخال كلمة المرور للموظف للولوج للنظام */}
-                    <div className="space-y-1.5 text-right">
+                    {/* حقل إدخال كلمة المرور */}
+                    <div className={cn("space-y-1.5 text-right", formData.role === 'schedule_secretary' && "md:col-span-2")}>
                         <label className="text-[10px] font-black text-gray-400 uppercase mr-1">كلمة المرور</label>
                         <div className="relative group">
                             <input
@@ -368,6 +390,9 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                             />
                             <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-teal-500 transition-colors" size={18} />
                         </div>
+                        {formData.role === 'schedule_secretary' && (
+                            <p className="text-[9px] text-purple-500 font-bold text-right mr-1">📋 تسجيل الدخول: secretary-ID بكلمة المرور المدخلة</p>
+                        )}
                     </div>
                 </div>
 
