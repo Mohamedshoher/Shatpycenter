@@ -127,13 +127,6 @@ export default function DashboardOverview() {
             color: 'from-orange-500 to-rose-600',
             onClick: () => setIsLeaveModalOpen(true)
         }] : []),
-        ...(isDirectorOrSupervisor ? [{
-            title: 'ملحوظات الطلاب',
-            value: unreadNotesCount.toString(),
-            icon: MessageSquare,
-            color: 'from-blue-500 to-blue-600',
-            onClick: () => setIsNotesModalOpen(true)
-        }] : []),
     ];
 
     return (

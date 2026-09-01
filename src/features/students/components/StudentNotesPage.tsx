@@ -298,9 +298,9 @@ export default function StudentNotesPage() {
                     </div>
                 )}
 
-                {/* Bottom Row: Group & Teacher badges + Reply button */}
+                {/* Bottom Row: Group & Teacher badges + CreatedBy + Reply button */}
                 <div className="flex flex-wrap flex-row-reverse items-center justify-between gap-3 pt-2">
-                    <div className="flex flex-row-reverse gap-2">
+                    <div className="flex flex-row-reverse flex-wrap gap-2">
                         <div className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl text-[10px] font-black border border-indigo-100/50">
                             <Users size={12} />
                             {note.groupName}
@@ -309,6 +309,12 @@ export default function StudentNotesPage() {
                             <User size={12} />
                             {note.teacherName}
                         </div>
+                        {note.createdBy && (
+                            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl text-[10px] font-black border border-blue-100/50">
+                                <User size={12} className="text-blue-500" />
+                                <span>كاتب الملحوظة: {note.createdBy}</span>
+                            </div>
+                        )}
                     </div>
 
                     <button
