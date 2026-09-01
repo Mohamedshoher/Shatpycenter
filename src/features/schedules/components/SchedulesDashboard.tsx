@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
-import { getStudents } from '@/features/students/services/studentService';
+import { getStudents, clearGroupAppointments } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
 import { useAuthStore } from '@/store/useAuthStore';
 import Clock from 'lucide-react/dist/esm/icons/clock'
@@ -16,6 +16,10 @@ import Filter from 'lucide-react/dist/esm/icons/filter'
 import Search from 'lucide-react/dist/esm/icons/search'
 import UserMinus from 'lucide-react/dist/esm/icons/user-minus';
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
+import CalendarX from 'lucide-react/dist/esm/icons/calendar-x'
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
+import X from 'lucide-react/dist/esm/icons/x'
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { FadeIn } from '@/components/ui/transition';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';
@@ -24,6 +28,7 @@ const AddStudentModal = dynamic(() => import('@/features/students/components/Add
 
 export default function SchedulesDashboard() {
     const { user } = useAuthStore();
+    const queryClient = useQueryClient();
     const [selectedDay, setSelectedDay] = useState<string>('الأحد');
     const [searchGroup, setSearchGroup] = useState<string>('');
     const [searchStudent, setSearchStudent] = useState<string>('');
@@ -32,6 +37,24 @@ export default function SchedulesDashboard() {
     const [expandedGroupSlotsIds, setExpandedGroupSlotsIds] = useState<string[]>([]);
     const [selectedStudentForModal, setSelectedStudentForModal] = useState<any | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [groupToCancel, setGroupToCancel] = useState<{ id: string, name: string, totalStudents: number, dayStudents: number } | null>(null);
+    const [isCancellingGroup, setIsCancellingGroup] = useState(false);
+
+    const canCancelGroup = user?.role === 'director' || user?.role === 'teacher' || user?.role === 'supervisor';
+
+    const handleConfirmCancelGroup = async (dayOnly?: string) => {
+        if (!groupToCancel) return;
+        setIsCancellingGroup(true);
+        try {
+            await clearGroupAppointments(groupToCancel.id, dayOnly);
+            await queryClient.invalidateQueries({ queryKey: ['students'] });
+            setGroupToCancel(null);
+        } catch (error) {
+            alert('حدث خطأ أثناء إلغاء مواعيد المجموعة');
+        } finally {
+            setIsCancellingGroup(false);
+        }
+    };
 
     const toggleGroupSlots = (groupId: string) => {
         setExpandedGroupSlotsIds(prev => 
@@ -311,6 +334,21 @@ export default function SchedulesDashboard() {
                                         <span className="text-[10px] md:text-xs font-bold text-gray-600">إجمالي طلاب اليوم:</span>
                                         <span className="font-black text-blue-600 text-sm md:text-base">{group.totalStudentsToday}</span>
                                     </button>
+                                    {canCancelGroup && (
+                                        <button
+                                            onClick={() => setGroupToCancel({
+                                                id: group.id,
+                                                name: group.name,
+                                                totalStudents: (allStudents || []).filter(s => s.groupId === group.id && s.status === 'active' && s.appointment).length,
+                                                dayStudents: group.totalStudentsToday
+                                            })}
+                                            className="p-2 md:px-3.5 md:py-2 rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300 shadow-sm flex items-center justify-center gap-1.5 transition-all font-black text-[10px] md:text-xs active:scale-95 shrink-0"
+                                            title="إلغاء مواعيد المجموعة"
+                                        >
+                                            <CalendarX size={16} className="text-red-600" />
+                                            <span className="hidden sm:inline">إلغاء المواعيد</span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -441,6 +479,83 @@ export default function SchedulesDashboard() {
                 >
                     <UserPlus size={26} />
                 </button>
+            )}
+
+            {/* نافذة تأكيد إلغاء مواعيد المجموعة */}
+            {groupToCancel && (
+                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+                        <div className="bg-gradient-to-br from-red-600 to-rose-700 p-6 text-white flex justify-between items-center relative overflow-hidden">
+                            <CalendarX className="absolute -right-4 -top-4 w-28 h-28 opacity-10 rotate-12" />
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <AlertTriangle className="text-red-200" size={20} />
+                                    <h3 className="font-black text-lg">إلغاء مواعيد المجموعة</h3>
+                                </div>
+                                <p className="text-red-100 text-xs font-bold">
+                                    مجموعة: {groupToCancel.name}
+                                </p>
+                            </div>
+                            <button
+                                disabled={isCancellingGroup}
+                                onClick={() => setGroupToCancel(null)}
+                                className="relative z-10 w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors disabled:opacity-50"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                            <div className="bg-red-50/60 border border-red-100 p-4 rounded-2xl space-y-2">
+                                <p className="text-xs font-black text-gray-700">
+                                    اختر نوع الإلغاء المطلوب لطلاب مجموعة <span className="text-red-600">"{groupToCancel.name}"</span>:
+                                </p>
+                                <div className="text-[11px] font-bold text-gray-500 space-y-1 pr-2">
+                                    <div>• طلاب مسجلين يوم {selectedDay}: <span className="font-black text-gray-800">{groupToCancel.dayStudents} طالب</span></div>
+                                    <div>• إجمالي الطلاب المسجلين بمواعيد: <span className="font-black text-gray-800">{groupToCancel.totalStudents} طالب</span></div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2.5">
+                                {/* خيار 1: إلغاء مواعيد اليوم المحدد فقط */}
+                                <button
+                                    onClick={() => handleConfirmCancelGroup(selectedDay)}
+                                    disabled={isCancellingGroup || groupToCancel.dayStudents === 0}
+                                    className="w-full p-3.5 rounded-2xl border-2 border-orange-200 bg-orange-50 hover:bg-orange-100/80 text-orange-800 text-right transition-all flex items-center justify-between group disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                                >
+                                    <div>
+                                        <div className="font-black text-xs md:text-sm">إلغاء مواعيد يوم ({selectedDay}) فقط</div>
+                                        <div className="text-[10px] text-orange-600 font-bold mt-0.5">مسح موعد هذا اليوم فقط لجميع طلاب المجموعة ({groupToCancel.dayStudents} طالب)</div>
+                                    </div>
+                                    {isCancellingGroup ? <Loader2 size={18} className="animate-spin text-orange-600" /> : <CalendarX size={18} className="text-orange-500 group-hover:scale-110 transition-transform" />}
+                                </button>
+
+                                {/* خيار 2: إلغاء كافة المواعيد لجميع الأيام */}
+                                <button
+                                    onClick={() => handleConfirmCancelGroup()}
+                                    disabled={isCancellingGroup || groupToCancel.totalStudents === 0}
+                                    className="w-full p-3.5 rounded-2xl border-2 border-red-200 bg-red-50 hover:bg-red-100 text-red-800 text-right transition-all flex items-center justify-between group disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                                >
+                                    <div>
+                                        <div className="font-black text-xs md:text-sm">إلغاء كافة المواعيد (جميع الأيام)</div>
+                                        <div className="text-[10px] text-red-600 font-bold mt-0.5">تصفير جدول جميع الطلاب في هذه المجموعة بالكامل ({groupToCancel.totalStudents} طالب)</div>
+                                    </div>
+                                    {isCancellingGroup ? <Loader2 size={18} className="animate-spin text-red-600" /> : <Trash2 size={18} className="text-red-500 group-hover:scale-110 transition-transform" />}
+                                </button>
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    disabled={isCancellingGroup}
+                                    onClick={() => setGroupToCancel(null)}
+                                    className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-black rounded-xl text-xs transition-colors cursor-pointer"
+                                >
+                                    إلغاء وتراجع
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

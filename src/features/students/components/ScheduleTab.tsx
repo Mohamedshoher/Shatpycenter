@@ -4,6 +4,9 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import Edit2 from 'lucide-react/dist/esm/icons/edit-2'
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import ArrowRightLeft from 'lucide-react/dist/esm/icons/arrow-right-left'
+import Check from 'lucide-react/dist/esm/icons/check'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import CalendarPlus from 'lucide-react/dist/esm/icons/calendar-plus'
 import X from 'lucide-react/dist/esm/icons/x';
 import { Button } from '../../../components/ui/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,10 +16,15 @@ import { cn } from '../../../lib/utils';
 
 export default function ScheduleTab({ student }: any) {
     const queryClient = useQueryClient();
-    const [selectedSchedules, setSelectedSchedules] = useState<Record<string, string>>({});
-    const [showSaveSuccess, setShowSaveSuccess] = useState(false);
-    const [localAppointment, setLocalAppointment] = useState<string>(student?.appointment || '');
     const weekDaysNames = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+    const [localAppointment, setLocalAppointment] = useState<string>(student?.appointment || '');
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [commonTime, setCommonTime] = useState<string>('16:00'); // الوقت الموحد الافتراضي 4:00 عصراً
+    const [customDayTimes, setCustomDayTimes] = useState<Record<string, string>>({});
+    const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
+    const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
     const [swapState, setSwapState] = useState<{ day: string, time: string } | null>(null);
     const [selectedSwapStudentId, setSelectedSwapStudentId] = useState<string>('');
@@ -30,49 +38,55 @@ export default function ScheduleTab({ student }: any) {
     const myGroup = allGroups?.find(g => g.id === student.groupId);
     const maxPerHour = myGroup?.maxStudentsPerHour || 5;
 
-    // وظيفة تحويل الوقت إلى تنسيق عربي (مثلاً: 4:30 عصراً)
-    const formatTimeToArabic = (timeStr: string) => {
-        if (!timeStr) return '';
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const period = hours >= 12 ? 'عصراً' : 'صباحاً';
-        const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
-        return `الساعة ${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
-    };
+    // استخراج الأيام المسجلة حالياً
+    const currentDaysMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        if (localAppointment) {
+            localAppointment.split(',').forEach((p: string) => {
+                const parts = p.split(':');
+                if (parts.length >= 2) {
+                    const d = parts[0].trim();
+                    const t = parts.slice(1).join(':').trim();
+                    if (d) map[d] = t;
+                }
+            });
+        }
+        return map;
+    }, [localAppointment]);
 
     // عملية تحديث الطالب في قاعدة البيانات
     const updateMutation = useMutation({
         mutationFn: (appointment: string) => updateStudent(student.id, { appointment }),
         onMutate: (appointment) => {
             setLocalAppointment(appointment);
-            setSelectedSchedules({});
+            setSelectedDays([]);
+            setCustomDayTimes({});
             return null;
         },
         onSuccess: (_data, appointment) => {
             queryClient.invalidateQueries({ queryKey: ['students'] });
             setLocalAppointment(appointment);
             setShowSaveSuccess(true);
-            setTimeout(() => setShowSaveSuccess(false), 2000);
+            setTimeout(() => {
+                setShowSaveSuccess(false);
+                setIsEditorOpen(false);
+            }, 1500);
         }
     });
 
-    // استخراج كافة المواعيد الفريدة المستخدمة في هذه المجموعة حالياً (لمنع التكرار في الخيارات)
+    // استخراج كافة المواعيد الفريدة المستخدمة في هذه المجموعة حالياً
     const suggestedTimes = useMemo(() => {
-        if (!allStudents || !student.groupId) return [];
+        if (!allStudents || !student.groupId) return ['الساعة 4:00 عصراً', 'الساعة 4:30 عصراً', 'الساعة 5:00 عصراً', 'الساعة 5:30 عصراً', 'الساعة 6:00 عصراً'];
         const timesSet = new Set<string>();
         
         const normalizeToFullFormat = (t: string) => {
             if (!t) return '';
-            // تنظيف النص الأساسي
             let clean = t.replace(/الساعة|ساعة/g, '').trim();
-            
-            // استخراج الأرقام (ساعة ودقائق)
             const timeMatch = clean.match(/(\d+)(?::(\d+))?/);
             if (!timeMatch) return '';
             
             let hours = parseInt(timeMatch[1]);
             let minutes = timeMatch[2] || "00";
-            
-            // استخراج الفترة أو استنتاجها (من ١ لـ ١١ تعتبر عصراً في هذا المركز)
             const periodMatch = t.match(/عصراً|صباحاً/);
             const period = periodMatch ? periodMatch[0] : (hours < 12 && hours >= 1 ? 'عصراً' : 'صباحاً');
             
@@ -91,7 +105,10 @@ export default function ScheduleTab({ student }: any) {
             }
         });
         
-        // ترتيب المواعيد زمنياً بشكل صحيح
+        if (timesSet.size === 0) {
+            return ['الساعة 4:00 عصراً', 'الساعة 4:30 عصراً', 'الساعة 5:00 عصراً', 'الساعة 5:30 عصراً', 'الساعة 6:00 عصراً'];
+        }
+
         return Array.from(timesSet).sort((a, b) => {
             const getVal = (s: string) => {
                 const m = s.match(/(\d+):(\d+)\s+(عصراً|صباحاً)/);
@@ -108,9 +125,7 @@ export default function ScheduleTab({ student }: any) {
     // وظيفة تحويل الوقت من تنسيق 24 ساعة إلى التنسيق الموحد للمركز
     const formatToStandardArabic = (timeStr: string) => {
         if (!timeStr) return '';
-        // إذا كان الوقت بالفعل بالتنسيق العربي، نعيده كما هو (للمواعيد المختارة من الاقتراحات)
         if (timeStr.includes('الساعة') || timeStr.includes('عصراً') || timeStr.includes('صباحاً')) {
-            // نضمن وجود "الساعة" في البداية
             return timeStr.startsWith('الساعة') ? timeStr : `الساعة ${timeStr}`;
         }
 
@@ -120,6 +135,23 @@ export default function ScheduleTab({ student }: any) {
         const period = hours >= 12 ? 'عصراً' : 'صباحاً';
         const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
         return `الساعة ${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+    };
+
+    // تحويل الوقت من العربي إلى 24 ساعة
+    const parseArabicToTime24 = (t: string) => {
+        let hours = 16, minutes = "00";
+        const clean = t.replace(/الساعة|ساعة/g, '').trim();
+        const timeMatch = clean.match(/(\d+)(?::(\d+))?/);
+        const periodMatch = t.match(/عصراً|صباحاً/);
+        const period = periodMatch ? periodMatch[0] : (parseInt(timeMatch?.[1] || '0') < 12 && parseInt(timeMatch?.[1] || '0') >= 1 ? 'عصراً' : 'صباحاً');
+
+        if (timeMatch) {
+            hours = parseInt(timeMatch[1]);
+            minutes = timeMatch[2] || "00";
+            if (period === 'عصراً' && hours < 12) hours += 12;
+            if (period === 'صباحاً' && hours === 12) hours = 0;
+        }
+        return `${hours.toString().padStart(2, '0')}:${minutes.padStart(2, '0')}`;
     };
 
     // وظيفة حذف موعد محدد
@@ -144,22 +176,113 @@ export default function ScheduleTab({ student }: any) {
         updateMutation.mutate(appointmentString);
     };
 
-    const updateAppointmentDay = (appointmentStr: string, targetDay: string, newTime: string) => {
-        const finalSchedules: Record<string, string> = {};
-        if (appointmentStr) {
-            appointmentStr.split(',').forEach((p: string) => {
-                const parts = p.split(':');
-                if (parts.length < 2) return;
-                const d = parts[0].trim();
-                const t = parts.slice(1).join(':').trim();
-                if (d) finalSchedules[d] = t;
-            });
+    // وظيفة مسح جميع المواعيد
+    const handleClearAllSchedules = () => {
+        if (!localAppointment) return;
+        if (!confirm('هل أنت متأكد من مسح جميع مواعيد هذا الطالب؟')) return;
+        updateMutation.mutate('');
+    };
+
+    // وظيفة بدء تعديل موعد موجود
+    const handleEditSchedule = (day: string, timeStr: string) => {
+        const time24 = parseArabicToTime24(timeStr);
+        setSelectedDays([day]);
+        setCommonTime(time24);
+        setCustomDayTimes({ [day]: time24 });
+        setIsEditorOpen(true);
+        
+        const container = document.getElementById('schedule-editor-box');
+        if (container) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // تبديل اختيار يوم
+    const toggleDay = (day: string) => {
+        setSelectedDays(prev => 
+            prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+        );
+    };
+
+    // تحديد أيام شائعة
+    const handleSelectWeekdays = () => {
+        setSelectedDays(['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء']);
+    };
+
+    const handleSelectAllDays = () => {
+        setSelectedDays(['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']);
+    };
+
+    // حفظ المواعيد
+    const handleSave = () => {
+        if (selectedDays.length === 0) {
+            return alert('الرجاء اختيار يوم واحد على الأقل لحفظ الموعد');
         }
-        finalSchedules[targetDay] = newTime;
-        return Object.keys(finalSchedules)
+
+        // التحقق من السعة
+        if (allStudents && student.groupId) {
+            for (const day of selectedDays) {
+                const dayTime = isCustomMode ? (customDayTimes[day] || commonTime) : commonTime;
+                const formattedTime = formatToStandardArabic(dayTime);
+
+                const count = allStudents.filter(s =>
+                    s.id !== student.id &&
+                    s.groupId === student.groupId &&
+                    s.status === 'active' &&
+                    s.appointment?.split(',').some((p: string) => {
+                        const parts = p.split(':');
+                        if (parts.length < 2) return false;
+                        const d = parts[0].trim();
+                        const t = parts.slice(1).join(':').trim();
+                        return d === day && t === formattedTime;
+                    })
+                ).length;
+
+                if (count >= maxPerHour) {
+                    alert(`عدد الطلاب في موعد ${day} - ${formattedTime} مكتمل (${maxPerHour} طلاب). الرجاء اختيار وقت آخر.`);
+                    return;
+                }
+            }
+        }
+
+        const finalSchedules: Record<string, string> = { ...currentDaysMap };
+        selectedDays.forEach(day => {
+            const dayTime = isCustomMode ? (customDayTimes[day] || commonTime) : commonTime;
+            finalSchedules[day] = formatToStandardArabic(dayTime);
+        });
+
+        const appointmentString = Object.keys(finalSchedules)
             .sort((a, b) => weekDaysNames.indexOf(a) - weekDaysNames.indexOf(b))
             .map(day => `${day}: ${finalSchedules[day]}`).join(', ');
+
+        updateMutation.mutate(appointmentString);
     };
+
+    // منطق التبديل مع طالب آخر
+    const allGroupSlots = useMemo(() => {
+        if (!swapState || !allStudents || !student.groupId) return [];
+        const slotsMap = new Map<string, { day: string, time: string, students: any[] }>();
+        
+        allStudents.forEach(s => {
+            if (s.id !== student.id && s.groupId === student.groupId && s.status === 'active' && s.appointment) {
+                s.appointment.split(',').forEach((p: string) => {
+                    const parts = p.split(':');
+                    if (parts.length >= 2) {
+                        const d = parts[0].trim();
+                        const t = parts.slice(1).join(':').trim();
+                        if (d !== swapState.day) return;
+                        if (t === swapState.time) return;
+                        
+                        const key = t;
+                        if (!slotsMap.has(key)) {
+                            slotsMap.set(key, { day: d, time: t, students: [] });
+                        }
+                        slotsMap.get(key)!.students.push(s);
+                    }
+                });
+            }
+        });
+        
+        return Array.from(slotsMap.values()).sort((a, b) => a.time.localeCompare(b.time));
+    }, [swapState, allStudents, student.id, student.groupId]);
 
     const handleSwapConfirm = async () => {
         if (!swapState || !selectedSwapStudentId || !allStudents || !selectedSlotKey) return;
@@ -169,7 +292,6 @@ export default function ScheduleTab({ student }: any) {
 
         const targetDay = selectedSlotData.day;
         const targetTime = selectedSlotData.time;
-
         const targetStudent = allStudents.find(s => s.id === selectedSwapStudentId);
         if (!targetStudent) return;
 
@@ -182,7 +304,7 @@ export default function ScheduleTab({ student }: any) {
                         const d = parts[0].trim();
                         const t = parts.slice(1).join(':').trim();
                         if (d === oldDay && t === oldTime) {
-                            // استبعاد الموعد القديم
+                            // استبعاد
                         } else {
                             finalSchedules[d] = t;
                         }
@@ -218,251 +340,225 @@ export default function ScheduleTab({ student }: any) {
         }
     };
 
-    const allGroupSlots = useMemo(() => {
-        if (!swapState || !allStudents || !student.groupId) return [];
-        const slotsMap = new Map<string, { day: string, time: string, students: any[] }>();
-        
-        allStudents.forEach(s => {
-            if (s.id !== student.id && s.groupId === student.groupId && s.status === 'active' && s.appointment) {
-                s.appointment.split(',').forEach((p: string) => {
-                    const parts = p.split(':');
-                    if (parts.length >= 2) {
-                        const d = parts[0].trim();
-                        const t = parts.slice(1).join(':').trim();
-                        
-                        // استبعاد المواعيد في أيام أخرى، وكذلك استبعاد نفس الموعد الذي نحاول استبداله
-                        if (d !== swapState.day) return;
-                        if (t === swapState.time) return;
-                        
-                        const key = t; // نكتفي بالوط فقط لأن اليوم معروف
-                        if (!slotsMap.has(key)) {
-                            slotsMap.set(key, { day: d, time: t, students: [] });
-                        }
-                        slotsMap.get(key)!.students.push(s);
-                    }
-                });
-            }
-        });
-        
-        return Array.from(slotsMap.values()).sort((a, b) => a.time.localeCompare(b.time));
-    }, [swapState, allStudents, student.id, student.groupId]);
-
-    // وظيفة بدء تعديل موعد موجود
-    const handleEditSchedule = (day: string, timeStr: string) => {
-        // تحويل الوقت من العربي (مثلاً: الساعة 4:00 عصراً) إلى تنسيق 24 ساعة (16:00) ليعمل مع input[type=time]
-        let time24 = '16:00';
-        const match = timeStr.match(/(\d+):(\d+)\s+(عصراً|صباحاً)/);
-        if (match) {
-            let hours = parseInt(match[1]);
-            const minutes = match[2];
-            const period = match[3];
-            if (period === 'عصراً' && hours < 12) hours += 12;
-            if (period === 'صباحاً' && hours === 12) hours = 0;
-            time24 = `${hours.toString().padStart(2, '0')}:${minutes}`;
-        }
-        
-        setSelectedSchedules(prev => ({ ...prev, [day]: time24 }));
-        // التمرير للأعلى لرؤية منطقة التعديل
-        const container = document.getElementById('schedule-controls');
-        if (container) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-
-    const handleSave = () => {
-        const inputDays = Object.keys(selectedSchedules);
-        if (inputDays.length === 0) return alert('اختر يوماً واحداً على الأقل أو قم بتعديل المواعيد الحالية');
-
-        // التحقق من السعة القصوى لكل يوم/وقت مختار
-        if (allStudents && student.groupId) {
-            for (const day of inputDays) {
-                const newTime = formatToStandardArabic(selectedSchedules[day]);
-                // عد الطلاب المجدولين لنفس اليوم/الوقت في نفس المجموعة (باستثناء الطالب الحالي)
-                const count = allStudents.filter(s =>
-                    s.id !== student.id &&
-                    s.groupId === student.groupId &&
-                    s.status === 'active' &&
-                    s.appointment?.split(',').some((p: string) => {
-                        const parts = p.split(':');
-                        if (parts.length < 2) return false;
-                        const d = parts[0].trim();
-                        const t = parts.slice(1).join(':').trim();
-                        return d === day && t === newTime;
-                    })
-                ).length;
-
-                if (count >= maxPerHour) {
-                    alert(`عدد الطلاب في موعد ${day} - ${newTime} وصل إلى الحد الأقصى (${maxPerHour} طلاب). اختر وقتاً آخر.`);
-                    return;
-                }
-            }
-        }
-
-        const finalSchedules: Record<string, string> = {};
-        // دمج المواعيد القديمة مع الجديدة (الجديد يطغى على القديم لنفس اليوم)
-        if (localAppointment) {
-            localAppointment.split(',').forEach((p: string) => {
-                const parts = p.split(':');
-                if (parts.length < 2) return;
-                const d = parts[0].trim();
-                const t = parts.slice(1).join(':').trim();
-                if (d) finalSchedules[d] = t;
-            });
-        }
-        inputDays.forEach(day => { finalSchedules[day] = formatToStandardArabic(selectedSchedules[day]); });
-
-        const appointmentString = Object.keys(finalSchedules)
-            .sort((a, b) => weekDaysNames.indexOf(a) - weekDaysNames.indexOf(b))
-            .map(day => `${day}: ${finalSchedules[day]}`).join(', ');
-
-        updateMutation.mutate(appointmentString);
-    };
-
     return (
-        <div className="space-y-6">
-            {/* منطقة التحكم في المواعيد */}
-            <div id="schedule-controls" className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-[32px] text-white shadow-xl relative overflow-hidden">
-                {/* زخرفة خلفية */}
-                <Clock className="absolute -right-10 -top-10 w-40 h-40 opacity-10 rotate-12" />
-                
-                <div className="flex items-center justify-between gap-3 mb-6 relative z-10">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                            <Clock size={22} />
+        <div className="space-y-4">
+            {/* بطاقة تحديد وتحديث المواعيد (تظهر فقط عند النقر على زر الإضافة/التعديل) */}
+            {isEditorOpen && (
+                <div id="schedule-editor-box" className="bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 p-4 md:p-5 rounded-[28px] text-white shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 border border-blue-400/30">
+                    {/* الرأس وأزرار الإغلاق والسعة */}
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
+                                <Clock size={18} />
+                            </div>
+                            <div>
+                                <h4 className="font-black text-sm md:text-base leading-tight">تحديد وتحديث المواعيد</h4>
+                                <span className="text-[10px] text-blue-100 font-bold">الحد الأقصى: {maxPerHour} طلاب/ساعة</span>
+                            </div>
                         </div>
-                        <h4 className="font-black text-lg">تحديث جدول الحضور</h4>
-                    </div>
-                    <div className="flex flex-col items-end">
-                        <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full text-[10px] font-black">
-                            <span>الحد الأقصى:</span>
-                            <span>{maxPerHour} طلاب / ساعة</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="space-y-4 relative z-10">
-                    <p className="text-xs font-bold text-blue-100 mr-1">اختر الأيام المراد إضافتها أو تعديلها:</p>
-                    <div className="flex flex-wrap gap-2">
-                        {weekDaysNames.map(day => (
-                            <button key={day} 
-                                onClick={() => setSelectedSchedules(prev => {
-                                    const next = {...prev};
-                                    if (next[day]) delete next[day]; else next[day] = '16:00';
-                                    return next;
-                                })}
-                                className={cn("px-5 py-2.5 rounded-2xl text-xs font-black border-2 transition-all duration-300 transform active:scale-95", 
-                                selectedSchedules[day] ? "bg-white text-blue-600 border-white shadow-lg" : "bg-blue-700/30 text-blue-100 border-blue-500/30 hover:border-blue-400")}>
-                                {day}
-                            </button>
-                        ))}
+                        <button
+                            type="button"
+                            onClick={() => setIsEditorOpen(false)}
+                            className="w-7 h-7 bg-white/15 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                            title="إغلاق"
+                        >
+                            <X size={15} />
+                        </button>
                     </div>
 
-                    {Object.keys(selectedSchedules).length > 0 && (
-                        <div className="space-y-3 mt-6 animate-in slide-in-from-top-4 duration-300">
-                            {Object.keys(selectedSchedules).map(day => {
-                                const newTimeFormatted = formatToStandardArabic(selectedSchedules[day]);
-                                const usedCount = (allStudents || []).filter(s =>
-                                    s.id !== student.id &&
-                                    s.groupId === student.groupId &&
-                                    s.status === 'active' &&
-                                    s.appointment?.split(',').some((p: string) => {
-                                        const parts = p.split(':');
-                                        if (parts.length < 2) return false;
-                                        const d = parts[0].trim();
-                                        const t = parts.slice(1).join(':').trim();
-                                        return d === day && t === newTimeFormatted;
-                                    })
-                                ).length;
-                                const remaining = maxPerHour - usedCount;
-                                const isFull = remaining <= 0;
+                    {/* 1. اختيار الأيام */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-blue-100 flex-wrap gap-1">
+                            <span>1. اختر الأيام المراد جدولتها:</span>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={handleSelectWeekdays}
+                                    className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                                >
+                                    السبت-الأربعاء
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSelectAllDays}
+                                    className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                                >
+                                    السبت-الخميس
+                                </button>
+                                {selectedDays.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedDays([])}
+                                        className="text-[10px] text-red-200 hover:text-white transition-colors cursor-pointer"
+                                    >
+                                        إلغاء التحديد
+                                    </button>
+                                )}
+                            </div>
+                        </div>
 
+                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                            {weekDaysNames.map(day => {
+                                const isSelected = selectedDays.includes(day);
+                                const hasExisting = Boolean(currentDaysMap[day]);
                                 return (
-                                    <div key={day} className="bg-white/10 backdrop-blur-md p-4 rounded-[24px] border border-white/10 space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-black text-xs">{day[0]}</div>
-                                                <div className="flex flex-col">
-                                                    <span className="font-black text-sm">{day}</span>
-                                                    <span className={cn("text-[9px] font-black uppercase tracking-wider mt-0.5", isFull ? "text-red-300" : "text-green-300")}>
-                                                        {isFull ? `كامل العدد (${maxPerHour})` : `متاح: ${remaining} أماكن`}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <input type="time" value={selectedSchedules[day]} 
-                                                onChange={(e) => setSelectedSchedules({...selectedSchedules, [day]: e.target.value})}
-                                                className="bg-white text-blue-900 border-none rounded-xl px-4 py-2 font-black text-sm focus:ring-2 focus:ring-white/50 transition-all w-32" />
-                                        </div>
-
-                                        {/* خيارات المواعيد المستخدمة مسبقاً (لمنع التكرار وتسهيل الاختيار) */}
-                                        {suggestedTimes.length > 0 && (
-                                            <div className="pt-2 border-t border-white/5">
-                                                <p className="text-[9px] font-black text-blue-200 mb-2 uppercase tracking-tight">مواعيد مستخدمة في المجموعة:</p>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                        {suggestedTimes.map(t => {
-                                                            const isSelected = newTimeFormatted === (t.startsWith('الساعة') ? t : `الساعة ${t}`);
-                                                            return (
-                                                                <button 
-                                                                    key={t}
-                                                                    onClick={() => {
-                                                                        // محاولة استخراج الوقت للـ input[type=time]
-                                                                        // يدعم: "4", "4:00", "الساعة 4", "الساعة 4:00 عصراً"
-                                                                        let hours = 16, minutes = "00";
-                                                                        const clean = t.replace(/الساعة|ساعة/g, '').trim();
-                                                                        const timeMatch = clean.match(/(\d+)(?::(\d+))?/);
-                                                                        const periodMatch = t.match(/عصراً|صباحاً/);
-                                                                        const period = periodMatch ? periodMatch[0] : (parseInt(timeMatch?.[1] || '0') < 12 && parseInt(timeMatch?.[1] || '0') >= 1 ? 'عصراً' : 'صباحاً');
-
-                                                                        if (timeMatch) {
-                                                                            hours = parseInt(timeMatch[1]);
-                                                                            minutes = timeMatch[2] || "00";
-                                                                            if (period === 'عصراً' && hours < 12) hours += 12;
-                                                                            if (period === 'صباحاً' && hours === 12) hours = 0;
-                                                                        }
-                                                                        
-                                                                        setSelectedSchedules(prev => ({ 
-                                                                            ...prev, 
-                                                                            [day]: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}` 
-                                                                        }));
-                                                                    }}
-                                                                    className={cn(
-                                                                        "px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all duration-300",
-                                                                        isSelected 
-                                                                            ? "bg-white text-blue-600 border-white shadow-lg scale-105" 
-                                                                            : "bg-white/5 border-white/10 hover:bg-white/10 text-white/80"
-                                                                    )}
-                                                                >
-                                                                    {t}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                </div>
-                                            </div>
+                                    <button
+                                        key={day}
+                                        type="button"
+                                        onClick={() => toggleDay(day)}
+                                        className={cn(
+                                            "py-2 px-1 rounded-xl text-xs font-black transition-all flex flex-col items-center justify-center gap-0.5 relative active:scale-95 border cursor-pointer",
+                                            isSelected
+                                                ? "bg-white text-blue-700 border-white shadow-md font-black"
+                                                : hasExisting
+                                                    ? "bg-blue-800/40 text-blue-100 border-blue-400/40 hover:bg-blue-800/60"
+                                                    : "bg-blue-700/25 text-blue-200 border-blue-500/20 hover:bg-blue-700/50"
                                         )}
-                                    </div>
+                                    >
+                                        <span className="flex items-center gap-1">
+                                            {isSelected && <Check size={12} className="stroke-[3px]" />}
+                                            {day}
+                                        </span>
+                                        {hasExisting && !isSelected && (
+                                            <span className="text-[9px] text-blue-200 font-bold opacity-80">مسجل</span>
+                                        )}
+                                    </button>
                                 );
                             })}
-                            
-                            <Button onClick={handleSave} disabled={updateMutation.isPending} className="w-full h-14 bg-white text-blue-600 hover:bg-blue-50 rounded-2xl font-black text-sm shadow-xl mt-2 transition-all">
+                        </div>
+                    </div>
+
+                    {/* 2. تحديد الوقت الموحد والأوقات السريعة */}
+                    {selectedDays.length > 0 && (
+                        <div className="space-y-3 pt-3 border-t border-white/15 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-blue-100">
+                                <span>2. اختر الوقت ({selectedDays.length} {selectedDays.length === 1 ? 'يوم' : 'أيام'} مختارة):</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCustomMode(!isCustomMode)}
+                                    className="text-[10px] text-blue-200 hover:text-white underline underline-offset-2 cursor-pointer"
+                                >
+                                    {isCustomMode ? 'الوقت الموحد' : 'تخصيص وقت لكل يوم'}
+                                </button>
+                            </div>
+
+                            {!isCustomMode ? (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="time"
+                                            value={commonTime}
+                                            onChange={(e) => setCommonTime(e.target.value)}
+                                            className="bg-white text-blue-900 border-none rounded-xl px-3.5 py-2 font-black text-sm focus:ring-2 focus:ring-white/50 w-32 shadow-sm"
+                                        />
+                                        <span className="text-xs font-bold text-blue-100">
+                                            = {formatToStandardArabic(commonTime)}
+                                        </span>
+                                    </div>
+
+                                    {/* مواعيد سريعة بنقرة واحدة */}
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                        {suggestedTimes.slice(0, 6).map(t => {
+                                            const t24 = parseArabicToTime24(t);
+                                            const isCurrent = commonTime === t24;
+                                            return (
+                                                <button
+                                                    key={t}
+                                                    type="button"
+                                                    onClick={() => setCommonTime(t24)}
+                                                    className={cn(
+                                                        "px-2.5 py-1 rounded-lg text-[11px] font-black border transition-all cursor-pointer",
+                                                        isCurrent
+                                                            ? "bg-white text-blue-700 border-white shadow-md scale-105"
+                                                            : "bg-white/10 hover:bg-white/20 text-white border-white/10"
+                                                    )}
+                                                >
+                                                    {t}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ) : (
+                                /* تخصيص وقت لكل يوم على حدة */
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+                                    {selectedDays.map(day => (
+                                        <div key={day} className="bg-white/10 p-2.5 rounded-xl flex items-center justify-between">
+                                            <span className="text-xs font-black">{day}</span>
+                                            <input
+                                                type="time"
+                                                value={customDayTimes[day] || commonTime}
+                                                onChange={(e) => setCustomDayTimes({ ...customDayTimes, [day]: e.target.value })}
+                                                className="bg-white text-blue-900 border-none rounded-lg px-2 py-1 font-black text-xs w-28"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* زر الحفظ الموحد */}
+                            <Button
+                                onClick={handleSave}
+                                disabled={updateMutation.isPending}
+                                className="w-full h-11 bg-white hover:bg-blue-50 text-blue-700 rounded-xl font-black text-xs md:text-sm shadow-md transition-all active:scale-[0.99] mt-2 cursor-pointer"
+                            >
                                 {updateMutation.isPending ? (
-                                    <span className="flex items-center gap-2"><Loader2 className="animate-spin" size={18} /> جاري حفظ التعديلات...</span>
-                                ) : showSaveSuccess ? 'تم حفظ المواعيد بنجاح ✓' : 'تأكيد وحفظ الجدول الجديد'}
+                                    <span className="flex items-center gap-2"><Loader2 className="animate-spin" size={16} /> جاري حفظ المواعيد...</span>
+                                ) : showSaveSuccess ? 'تم حفظ المواعيد بنجاح ✓' : `حفظ وتثبيت مواعيد (${selectedDays.length} أيام)`}
                             </Button>
                         </div>
                     )}
                 </div>
-            </div>
+            )}
 
             {/* عرض المواعيد الحالية المسجلة */}
-            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                    <h5 className="font-black text-gray-800 flex items-center gap-2">
-                        <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+            <div className="bg-white p-4 md:p-5 rounded-[28px] border border-gray-100 shadow-sm space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                    <h5 className="font-black text-gray-800 text-sm flex items-center gap-2">
+                        <div className="w-1.5 h-5 bg-blue-600 rounded-full" />
                         المواعيد المسجلة حالياً
                     </h5>
-                    <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-                        {localAppointment ? localAppointment.split(',').length : 0} أيام
-                    </span>
+
+                    <div className="flex items-center gap-2">
+                        {/* زر فتح/إغلاق محرر المواعيد */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsEditorOpen(!isEditorOpen);
+                                if (!isEditorOpen && selectedDays.length === 0) {
+                                    setSelectedDays(['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء']);
+                                }
+                            }}
+                            className={cn(
+                                "flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-xl transition-all border cursor-pointer active:scale-95",
+                                isEditorOpen
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                    : "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                            )}
+                            title="تعديل أو إضافة موعد جديد"
+                        >
+                            {isEditorOpen ? <X size={14} /> : <CalendarPlus size={14} />}
+                            <span>{isEditorOpen ? 'إغلاق المحرر' : 'تعديل / إضافة مواعيد'}</span>
+                        </button>
+
+                        {Boolean(localAppointment) && (
+                            <button
+                                onClick={handleClearAllSchedules}
+                                disabled={updateMutation.isPending}
+                                className="flex items-center gap-1.5 text-xs font-black text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-xl transition-all border border-red-100 disabled:opacity-50 cursor-pointer"
+                                title="مسح جميع مواعيد الطالب"
+                            >
+                                <Trash2 size={13} />
+                                <span>مسح الكل</span>
+                            </button>
+                        )}
+                        <span className="text-[10px] font-black text-gray-500 bg-gray-100 px-2.5 py-1 rounded-xl">
+                            {localAppointment ? localAppointment.split(',').length : 0} أيام
+                        </span>
+                    </div>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {localAppointment ? localAppointment.split(',').map((p: string, i: number) => {
                         const parts = p.split(':');
                         const day = parts[0]?.trim();
@@ -471,47 +567,56 @@ export default function ScheduleTab({ student }: any) {
                         if (!day || !time) return null;
                         
                         return (
-                            <div key={i} className="group bg-gray-50/50 hover:bg-white p-4 rounded-2xl border border-gray-100 flex justify-between items-center transition-all hover:shadow-md hover:border-blue-100">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black">
+                            <div key={i} className="bg-gray-50/70 hover:bg-white p-3 rounded-2xl border border-gray-100 hover:border-blue-200 flex justify-between items-center transition-all hover:shadow-sm">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-xs">
                                         {day[0]}
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-gray-400 mb-0.5">{day}</p>
-                                        <p className="text-sm font-black text-slate-700">{time}</p>
+                                        <p className="text-[10px] font-black text-gray-400 leading-tight">{day}</p>
+                                        <p className="text-xs font-black text-slate-800">{time}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                <div className="flex items-center gap-1">
                                     <button 
                                         onClick={() => { setSwapState({ day, time }); setSelectedSlotKey(''); setSelectedSwapStudentId(''); }}
-                                        className="w-8 h-8 flex items-center justify-center text-purple-500 hover:bg-purple-50 rounded-lg transition-colors"
+                                        className="w-7 h-7 flex items-center justify-center text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-100 cursor-pointer"
                                         title="استبدال الموعد مع طالب آخر"
                                     >
-                                        <ArrowRightLeft size={16} />
+                                        <ArrowRightLeft size={14} />
                                     </button>
                                     <button 
                                         onClick={() => handleEditSchedule(day, time)}
-                                        className="w-8 h-8 flex items-center justify-center text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                        title="تعديل الوقت"
+                                        className="w-7 h-7 flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 cursor-pointer"
+                                        title="تعديل وقت هذا اليوم"
                                     >
-                                        <Edit2 size={16} />
+                                        <Edit2 size={14} />
                                     </button>
                                     <button 
                                         onClick={() => handleDeleteSchedule(day)}
-                                        className="w-8 h-8 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="حذف"
+                                        className="w-7 h-7 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-100 cursor-pointer"
+                                        title="حذف الموعد"
                                     >
-                                        <Trash2 size={16} />
+                                        <Trash2 size={14} />
                                     </button>
                                 </div>
                             </div>
                         );
                     }) : (
-                        <div className="col-span-full py-12 text-center space-y-3">
-                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
-                                <Clock size={30} className="text-gray-200" />
-                            </div>
-                            <p className="text-gray-400 text-sm font-bold italic">لا توجد مواعيد مسجلة لهذا الطالب حالياً</p>
+                        <div className="col-span-full py-8 text-center space-y-3 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                            <Clock size={28} className="text-gray-300 mx-auto" />
+                            <p className="text-gray-400 text-xs font-bold">لا توجد مواعيد مسجلة لهذا الطالب حالياً</p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsEditorOpen(true);
+                                    setSelectedDays(['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء']);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-colors cursor-pointer shadow-sm"
+                            >
+                                <Plus size={14} />
+                                <span>إضافة جدول مواعيد الآن</span>
+                            </button>
                         </div>
                     )}
                 </div>
@@ -519,42 +624,41 @@ export default function ScheduleTab({ student }: any) {
 
             {/* نافذة التبديل */}
             {swapState && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="bg-gradient-to-br from-purple-600 to-purple-700 p-6 text-white flex justify-between items-center relative overflow-hidden">
+                        <div className="bg-gradient-to-br from-purple-600 to-purple-700 p-5 text-white flex justify-between items-center relative overflow-hidden">
                             <ArrowRightLeft className="absolute -right-4 -top-4 w-24 h-24 opacity-10 rotate-12" />
                             <div>
-                                <h3 className="font-black text-xl mb-1 relative z-10">استبدال الموعد</h3>
+                                <h3 className="font-black text-lg mb-0.5 relative z-10">استبدال الموعد</h3>
                                 <p className="text-purple-100 text-xs font-bold relative z-10">
                                     تبديل موعد يوم {swapState.day} ({swapState.time})
                                 </p>
                             </div>
-                            <button onClick={() => setSwapState(null)} className="relative z-10 w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors">
-                                <X size={18} />
+                            <button onClick={() => setSwapState(null)} className="relative z-10 w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors cursor-pointer">
+                                <X size={16} />
                             </button>
                         </div>
                         
-                        <div className="p-6">
+                        <div className="p-5">
                             {allGroupSlots.length === 0 ? (
-                                <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                    <p className="font-bold">لا يوجد مواعيد أخرى في هذه المجموعة يوم {swapState.day} للتبديل.</p>
+                                <div className="text-center py-6 text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                    <p className="font-bold text-xs">لا يوجد مواعيد أخرى في هذه المجموعة يوم {swapState.day} للتبديل.</p>
                                 </div>
                             ) : (
-                                <div className="space-y-6">
-                                    {/* الخطوة الأولى: اختيار الموعد */}
+                                <div className="space-y-4">
                                     <div>
-                                        <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                            <span className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-black">1</span>
-                                            اختر الموعد الذي تود نقل الطالب إليه:
+                                        <p className="text-xs font-bold text-gray-700 mb-2.5 flex items-center gap-1.5">
+                                            <span className="w-5 h-5 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-[10px] font-black">1</span>
+                                            اختر الموعد البديل:
                                         </p>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-1.5">
                                             {allGroupSlots.map(slot => {
                                                 const key = slot.time;
                                                 return (
                                                     <button
                                                         key={key}
                                                         onClick={() => { setSelectedSlotKey(key); setSelectedSwapStudentId(''); }}
-                                                        className={cn("px-4 py-2 rounded-xl text-xs font-black border-2 transition-all duration-300", 
+                                                        className={cn("px-3 py-1.5 rounded-xl text-xs font-black border-2 transition-all cursor-pointer", 
                                                             selectedSlotKey === key 
                                                                 ? "bg-purple-600 text-white border-purple-600 shadow-md" 
                                                                 : "bg-purple-50 text-purple-700 border-purple-200 hover:border-purple-400"
@@ -567,29 +671,28 @@ export default function ScheduleTab({ student }: any) {
                                         </div>
                                     </div>
 
-                                    {/* الخطوة الثانية: اختيار الطالب */}
                                     {selectedSlotKey && (
                                         <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                                <span className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-black">2</span>
-                                                اختر الطالب المراد التبديل معه:
+                                            <p className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                                <span className="w-5 h-5 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-[10px] font-black">2</span>
+                                                اختر الطالب للتبديل معه:
                                             </p>
-                                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                                                 {allGroupSlots.find(slot => slot.time === selectedSlotKey)?.students.map(candidate => (
                                                     <div 
                                                         key={candidate.id}
                                                         onClick={() => setSelectedSwapStudentId(candidate.id)}
-                                                        className={cn("p-3 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between",
+                                                        className={cn("p-2.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs font-black",
                                                             selectedSwapStudentId === candidate.id 
-                                                                ? 'border-purple-500 bg-purple-50' 
-                                                                : 'border-gray-100 bg-gray-50 hover:border-purple-200'
+                                                                ? 'border-purple-500 bg-purple-50 text-purple-900' 
+                                                                : 'border-gray-100 bg-gray-50 hover:border-purple-200 text-gray-800'
                                                         )}
                                                     >
-                                                        <span className="font-black text-sm text-gray-800">{candidate.fullName}</span>
-                                                        <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                                                            selectedSwapStudentId === candidate.id ? 'border-purple-500' : 'border-gray-300'
+                                                        <span>{candidate.fullName}</span>
+                                                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center",
+                                                            selectedSwapStudentId === candidate.id ? 'border-purple-500 bg-purple-500' : 'border-gray-300'
                                                         )}>
-                                                            {selectedSwapStudentId === candidate.id && <div className="w-2.5 h-2.5 bg-purple-500 rounded-full" />}
+                                                            {selectedSwapStudentId === candidate.id && <Check size={10} className="text-white stroke-[3px]" />}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -599,18 +702,18 @@ export default function ScheduleTab({ student }: any) {
                                 </div>
                             )}
                             
-                            <div className="mt-6 flex gap-3">
+                            <div className="mt-5 flex gap-2">
                                 <Button 
                                     onClick={handleSwapConfirm}
                                     disabled={!selectedSwapStudentId || isSwapping}
-                                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-xl py-6"
+                                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-xl py-5 text-xs"
                                 >
-                                    {isSwapping ? <Loader2 className="w-5 h-5 animate-spin" /> : 'تأكيد التبديل'}
+                                    {isSwapping ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تأكيد التبديل'}
                                 </Button>
                                 <Button 
                                     onClick={() => setSwapState(null)}
                                     variant="outline"
-                                    className="flex-1 font-black rounded-xl py-6"
+                                    className="flex-1 font-black rounded-xl py-5 text-xs"
                                 >
                                     إلغاء
                                 </Button>

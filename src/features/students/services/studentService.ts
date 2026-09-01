@@ -143,3 +143,45 @@ export const deleteStudent = async (id: string): Promise<void> => {
     }
 };
 
+export const clearGroupAppointments = async (groupId: string, dayOnly?: string): Promise<void> => {
+    try {
+        if (!dayOnly) {
+            // مسح كافة المواعيد لجميع طلاب المجموعة
+            const { error } = await supabase
+                .from('students')
+                .update({ appointment: null })
+                .eq('group_id', groupId);
+            if (error) throw error;
+        } else {
+            // مسح موعد يوم محدد فقط لطلاب المجموعة
+            const { data: students, error: fetchErr } = await supabase
+                .from('students')
+                .select('id, appointment')
+                .eq('group_id', groupId);
+            if (fetchErr) throw fetchErr;
+
+            const updates = (students || [])
+                .filter(s => s.appointment && s.appointment.includes(dayOnly))
+                .map(s => {
+                    const newApp = (s.appointment || '')
+                        .split(',')
+                        .map((p: string) => p.trim())
+                        .filter((p: string) => !p.startsWith(`${dayOnly}:`))
+                        .join(', ')
+                        .trim();
+                    return supabase
+                        .from('students')
+                        .update({ appointment: newApp || null })
+                        .eq('id', s.id);
+                });
+
+            if (updates.length > 0) {
+                await Promise.all(updates);
+            }
+        }
+    } catch (error) {
+        console.error("Error clearing group appointments:", error);
+        throw error;
+    }
+};
+

@@ -105,6 +105,9 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         // تحديث المتغيرات بالبيانات الحقيقية المسترجعة
         teacherId = teacher.id;
         displayName = teacher.full_name;
+        if (teacher.role) {
+            role = teacher.role as UserRole;
+        }
         responsibleSections = teacher.responsible_sections || [];
     }
 
