@@ -429,10 +429,10 @@ export default function ScheduleTab({ student }: any) {
                     </div>
 
                     {/* 2. تحديد الوقت الموحد والأوقات السريعة */}
-                    {selectedDays.length > 0 && (
-                        <div className="space-y-3 pt-3 border-t border-white/15 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="flex items-center justify-between text-[11px] font-bold text-blue-100">
-                                <span>2. اختر الوقت ({selectedDays.length} {selectedDays.length === 1 ? 'يوم' : 'أيام'} مختارة):</span>
+                    <div className="space-y-3 pt-3 border-t border-white/15">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-blue-100">
+                            <span>2. اختر الوقت {selectedDays.length > 0 ? `(${selectedDays.length} ${selectedDays.length === 1 ? 'يوم' : 'أيام'} مختارة)` : '(حدد الأيام أولاً)'}:</span>
+                            {selectedDays.length > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => setIsCustomMode(!isCustomMode)}
@@ -440,47 +440,49 @@ export default function ScheduleTab({ student }: any) {
                                 >
                                     {isCustomMode ? 'الوقت الموحد' : 'تخصيص وقت لكل يوم'}
                                 </button>
-                            </div>
+                            )}
+                        </div>
 
-                            {!isCustomMode ? (
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="time"
-                                            value={commonTime}
-                                            onChange={(e) => setCommonTime(e.target.value)}
-                                            className="bg-white text-blue-900 border-none rounded-xl px-3.5 py-2 font-black text-sm focus:ring-2 focus:ring-white/50 w-32 shadow-sm"
-                                        />
-                                        <span className="text-xs font-bold text-blue-100">
-                                            = {formatToStandardArabic(commonTime)}
-                                        </span>
-                                    </div>
-
-                                    {/* مواعيد سريعة بنقرة واحدة */}
-                                    <div className="flex flex-wrap gap-1.5 pt-1">
-                                        {suggestedTimes.slice(0, 6).map(t => {
-                                            const t24 = parseArabicToTime24(t);
-                                            const isCurrent = commonTime === t24;
-                                            return (
-                                                <button
-                                                    key={t}
-                                                    type="button"
-                                                    onClick={() => setCommonTime(t24)}
-                                                    className={cn(
-                                                        "px-2.5 py-1 rounded-lg text-[11px] font-black border transition-all cursor-pointer",
-                                                        isCurrent
-                                                            ? "bg-white text-blue-700 border-white shadow-md scale-105"
-                                                            : "bg-white/10 hover:bg-white/20 text-white border-white/10"
-                                                    )}
-                                                >
-                                                    {t}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                        {!isCustomMode ? (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="time"
+                                        value={commonTime}
+                                        onChange={(e) => setCommonTime(e.target.value)}
+                                        className="bg-white text-blue-900 border-none rounded-xl px-3.5 py-2 font-black text-sm focus:ring-2 focus:ring-white/50 w-32 shadow-sm"
+                                    />
+                                    <span className="text-xs font-bold text-blue-100">
+                                        = {formatToStandardArabic(commonTime)}
+                                    </span>
                                 </div>
-                            ) : (
-                                /* تخصيص وقت لكل يوم على حدة */
+
+                                {/* مواعيد سريعة بنقرة واحدة */}
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                    {suggestedTimes.slice(0, 6).map(t => {
+                                        const t24 = parseArabicToTime24(t);
+                                        const isCurrent = commonTime === t24;
+                                        return (
+                                            <button
+                                                key={t}
+                                                type="button"
+                                                onClick={() => setCommonTime(t24)}
+                                                className={cn(
+                                                    "px-2.5 py-1 rounded-lg text-[11px] font-black border transition-all cursor-pointer",
+                                                    isCurrent
+                                                        ? "bg-white text-blue-700 border-white shadow-md scale-105"
+                                                        : "bg-white/10 hover:bg-white/20 text-white border-white/10"
+                                                )}
+                                            >
+                                                {t}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            /* تخصيص وقت لكل يوم على حدة */
+                            selectedDays.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
                                     {selectedDays.map(day => (
                                         <div key={day} className="bg-white/10 p-2.5 rounded-xl flex items-center justify-between">
@@ -494,20 +496,49 @@ export default function ScheduleTab({ student }: any) {
                                         </div>
                                     ))}
                                 </div>
-                            )}
+                            ) : (
+                                <div className="text-xs text-blue-200 py-2">
+                                    اختر الأيام من الخطوة الأولى لتخصيص وقت لكل يوم
+                                </div>
+                            )
+                        )}
 
-                            {/* زر الحفظ الموحد */}
-                            <Button
-                                onClick={handleSave}
-                                disabled={updateMutation.isPending}
-                                className="w-full h-11 bg-white hover:bg-blue-50 text-blue-700 rounded-xl font-black text-xs md:text-sm shadow-md transition-all active:scale-[0.99] mt-2 cursor-pointer"
-                            >
-                                {updateMutation.isPending ? (
-                                    <span className="flex items-center gap-2"><Loader2 className="animate-spin" size={16} /> جاري حفظ المواعيد...</span>
-                                ) : showSaveSuccess ? 'تم حفظ المواعيد بنجاح ✓' : `حفظ وتثبيت مواعيد (${selectedDays.length} أيام)`}
-                            </Button>
-                        </div>
-                    )}
+                        {/* زر الحفظ الموحد - واضح وظاهر دائماً بأعلى درجات التباين */}
+                        <button
+                            type="button"
+                            onClick={handleSave}
+                            disabled={updateMutation.isPending || selectedDays.length === 0}
+                            className={cn(
+                                "w-full py-3.5 px-4 rounded-2xl font-black text-sm md:text-base transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer border active:scale-[0.99] mt-3",
+                                selectedDays.length === 0
+                                    ? "bg-white/15 text-white/70 border-white/20 cursor-not-allowed"
+                                    : showSaveSuccess
+                                        ? "bg-emerald-600 text-white border-emerald-400 shadow-emerald-900/30"
+                                        : "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-300 shadow-emerald-950/25"
+                            )}
+                        >
+                            {updateMutation.isPending ? (
+                                <span className="flex items-center gap-2">
+                                    <Loader2 className="animate-spin" size={18} />
+                                    <span>جاري حفظ المواعيد...</span>
+                                </span>
+                            ) : showSaveSuccess ? (
+                                <span className="flex items-center gap-2">
+                                    <Check size={18} className="stroke-[3px]" />
+                                    <span>تم حفظ المواعيد بنجاح ✓</span>
+                                </span>
+                            ) : selectedDays.length === 0 ? (
+                                <span className="flex items-center gap-2 text-xs md:text-sm">
+                                    <span>الرجاء اختيار الأيام أولاً لحفظ المواعيد</span>
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-2">
+                                    <Check size={18} className="stroke-[3px]" />
+                                    <span>حفظ وتثبيت مواعيد ({selectedDays.length} {selectedDays.length === 1 ? 'يوم' : 'أيام'})</span>
+                                </span>
+                            )}
+                        </button>
+                    </div>
                 </div>
             )}
 
