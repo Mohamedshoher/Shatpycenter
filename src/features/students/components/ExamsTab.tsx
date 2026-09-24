@@ -45,12 +45,20 @@ function calcEndDate(startDate: string, sessions: number): string {
     if (!startDate || sessions <= 0) return '';
     const date = new Date(startDate);
     let count = 0;
+    
+    if (date.getDay() !== 4 && date.getDay() !== 5) {
+        count = 1;
+    }
+    
     while (count < sessions) {
         date.setDate(date.getDate() + 1);
         const day = date.getDay();
         if (day !== 4 && day !== 5) count++;
     }
-    return date.toISOString().split('T')[0];
+    
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
 }
 
 function daysLeft(endDate: string) {
