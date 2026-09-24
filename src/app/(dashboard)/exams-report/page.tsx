@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from 'react';
 import Trophy from 'lucide-react/dist/esm/icons/trophy'
@@ -215,7 +215,7 @@ export default function ExamsReportPage() {
             .map((g: any) => {
                 const student = students.find((s: any) => s.id === g.studentId);
                 const group = student ? groups.find((gr: any) => gr.id === student.groupId) : null;
-                const teacherName = g.completedBy || (group ? teachers?.find((t: any) => t.id === group.teacherId)?.name : "غير محدد");
+                const teacherName = g.completedBy || (group ? teachers?.find((t: any) => t.id === group.teacherId)?.fullName : "غير محدد");
 
                 return {
                     ...g,
