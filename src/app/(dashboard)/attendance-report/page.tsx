@@ -76,7 +76,7 @@ export default function AttendanceReportPage() {
 
             const [y, m, d] = selectedDateStr.split('-').map(Number);
             const dObj = new Date(y, m - 1, d);
-            dObj.setDate(dObj.getDate() - 14); // تقليل الفترة لـ 14 يوم فقط بناءً على طلب المستخدم لتسريع التحميل القصوى
+            dObj.setDate(dObj.getDate() - 30); // زيادة الفترة لـ 30 يوم لضمان حساب الغياب المتصل بشكل دقيق
             const sinceDate = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
 
             const fetchAllAtt = async () => {
@@ -155,9 +155,9 @@ export default function AttendanceReportPage() {
                     if (!dailyStatusMap.has(h.date)) dailyStatusMap.set(h.date, h.status);
                 });
 
-                // 1. حساب الغياب المتصل تنازلياً من اليوم المختار (في حدود الأسبوع فقط)
+                // 1. حساب الغياب المتصل تنازلياً من اليوم المختار (بدون التقييد بالأسبوع)
                 const recordedDates = Array.from(dailyStatusMap.keys())
-                    .filter(d => d >= wStartStr && d <= selectedDateStr)
+                    .filter(d => d <= selectedDateStr)
                     .sort((a, b) => b.localeCompare(a));
 
                 let continuousAbsences = 0;
@@ -247,9 +247,10 @@ export default function AttendanceReportPage() {
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
                     <div className="flex bg-gray-100 p-1 rounded-xl items-center gap-2">
                         <button onClick={() => {
-                            const d = new Date(selectedDateStr);
-                            d.setDate(d.getDate() - 1);
-                            setSelectedDateStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                            const [y, m, d] = selectedDateStr.split('-').map(Number);
+                            const dateObj = new Date(y, m - 1, d);
+                            dateObj.setDate(dateObj.getDate() - 1);
+                            setSelectedDateStr(`${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`);
                         }} className="px-3 py-1.5 rounded-lg text-xs font-black bg-white shadow-sm text-gray-600 hover:bg-gray-200 transition-colors">
                             السابق
                         </button>
@@ -264,7 +265,7 @@ export default function AttendanceReportPage() {
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                             />
                             <span className="group-hover:text-blue-500 transition-colors">
-                                {new Date(selectedDateStr).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+                                {new Date(Number(selectedDateStr.split('-')[0]), Number(selectedDateStr.split('-')[1]) - 1, Number(selectedDateStr.split('-')[2])).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
                             </span>
                         </div>
 
