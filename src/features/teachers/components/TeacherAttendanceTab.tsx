@@ -1,0 +1,427 @@
+"use client";// غياب المدرسين وحضورهم 
+
+import { FadeIn, SlideIn } from '@/components/ui/transition';
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import X from 'lucide-react/dist/esm/icons/x'
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { TeacherAttendanceStatus } from '../services/attendanceService';
+
+interface TeacherAttendanceTabProps {
+    updateMonth: (val: number | string) => void;
+    selectedMonthRaw: string;
+    selectedMonth: string;
+    attendanceData: Record<string, TeacherAttendanceStatus>;
+    isTeacher: boolean;
+    setActiveDayMenu: (day: number | null) => void;
+    setTempStatus: (status: 'present' | 'absent' | 'discipline' | 'reward') => void;
+    activeDayMenu: number | null;
+    handleAddDiscipline: () => void;
+    tempStatus: string;
+    tempAmount: 'day' | 'half' | 'quarter' | 'double';
+    setTempAmount: (amt: 'day' | 'half' | 'quarter' | 'double') => void;
+    tempReason: string;
+    setTempReason: (val: string) => void;
+    dayDetails: Record<number, { reason: string, type: string }>;
+    setDayDetails: (details: any) => void;
+    updateAttendanceAsync: (params: { date: string, status: TeacherAttendanceStatus, notes?: string }) => Promise<void>;
+    dailyRate: number;
+    deductions?: any[];
+}
+
+export const TeacherAttendanceTab = ({
+    updateMonth, selectedMonthRaw, selectedMonth, attendanceData,
+    isTeacher, setActiveDayMenu, setTempStatus, activeDayMenu,
+    handleAddDiscipline, tempStatus, tempAmount, setTempAmount,
+    tempReason, setTempReason, dayDetails, setDayDetails,
+    updateAttendanceAsync, dailyRate, deductions = []
+}: TeacherAttendanceTabProps) => {
+
+    const weekDays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+    // حسابات إحصائية سريعة
+    const totalAbsenceDays = Object.values(attendanceData || {}).reduce((acc: number, status: TeacherAttendanceStatus) => {
+        if (status === 'absent') return acc + 1;
+        if (status === 'double_absent') return acc + 2;
+        if (status === 'half') return acc + 0.5;
+        if (status === 'quarter') return acc + 0.25;
+        return acc;
+    }, 0);
+
+    const totalRewardDays = Object.values(attendanceData || {}).reduce((acc: number, status: TeacherAttendanceStatus) => {
+        if (status === 'full_reward') return acc + 1;
+        if (status === 'half_reward') return acc + 0.5;
+        if (status === 'quarter_reward') return acc + 0.25;
+        return acc;
+    }, 0);
+
+    return (
+        <div className="space-y-6">
+            {/* شريط اختيار الشهر وتعيمد الغياب */}
+            <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
+                {!isTeacher && (
+                    <button
+                        onClick={async () => {
+                            if (!confirm('هل أنت متأكد من تعميد الغياب لبقية أيام الشهر؟')) return;
+                            const [yearStr, monthStr] = selectedMonthRaw.split('-');
+                            const year = parseInt(yearStr);
+                            const month = parseInt(monthStr);
+                            const daysInMonth = new Date(year, month, 0).getDate();
+                            const today = new Date().getDate();
+                            const firstDay = new Date(year, month - 1, 1);
+                            const startOffset = (firstDay.getDay() + 1) % 7;
+
+                            for (let day = today + 1; day <= daysInMonth; day++) {
+                                const weekDayIdx = (day - 1 + startOffset) % 7;
+                                if (weekDayIdx === 5 || weekDayIdx === 6) continue;
+                                const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
+                                try {
+                                    await updateAttendanceAsync({ date: dateStr, status: 'absent' });
+                                } catch (e) {}
+                            }
+                            alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-200 transition-all shrink-0 h-10 md:h-auto"
+                    >
+                        <Calendar size={14} />
+                        <span className="hidden md:inline">تعميد غياب</span>
+                    </button>
+                )}
+                {/* زر السابق */}
+                <button
+                    onClick={() => updateMonth(-1)}
+                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
+                >
+                    <ChevronRight size={16} />
+                    <span className="hidden md:inline">الشهر السابق</span>
+                </button>
+
+                {/* الشهر */}
+                <div className="flex-1 flex justify-center w-full min-w-0 mx-1">
+                    <div className="bg-gray-50 px-3 md:px-6 py-2 rounded-xl border border-gray-100 text-xs md:text-sm font-bold flex items-center justify-center gap-2 text-gray-700 relative w-full md:w-auto max-w-[200px]">
+                        <span className="truncate" dir="ltr">{selectedMonthRaw}</span>
+                        <Calendar size={16} className="text-gray-400 shrink-0" />
+                        <input
+                            type="month"
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                            value={selectedMonthRaw}
+                            onChange={(e) => updateMonth(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                {/* زر الحالي */}
+                <button
+                    onClick={() => {
+                        const today = new Date();
+                        const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                        updateMonth(monthStr);
+                    }}
+                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all shrink-0 h-10 md:h-auto"
+                >
+                    <span className="hidden md:inline">الشهر الحالي</span>
+                    <ChevronLeft size={16} />
+                </button>
+            </div>
+
+            {/* كروت ملخص الحضور (الغياب والمكافآت) */}
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+                <div className="bg-white p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
+                    <div className="text-right">
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 mb-0.5 md:mb-1">الغياب</p>
+                        <p className="text-lg md:text-2xl font-black text-red-600 font-sans">{Number(totalAbsenceDays)} يوم</p>
+                    </div>
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-red-50 rounded-xl md:rounded-2xl flex items-center justify-center text-red-500">
+                        <Calendar size={18} className="md:w-6 md:h-6" />
+                    </div>
+                </div>
+                <div className="bg-white p-4 md:p-6 rounded-[24px] md:rounded-[32px] border border-gray-100 shadow-sm flex flex-row-reverse items-center justify-between">
+                    <div className="text-right">
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 mb-0.5 md:mb-1">المكافآت</p>
+                        <p className="text-lg md:text-2xl font-black text-green-600 font-sans">{Number(totalRewardDays)} يوم</p>
+                    </div>
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-green-50 rounded-xl md:rounded-2xl flex items-center justify-center text-green-500">
+                        <Calendar size={18} className="md:w-6 md:h-6" />
+                    </div>
+                </div>
+            </div>
+
+            {/* التقويم الشهري التفاعلي للحضور */}
+                <div className="bg-white p-3 md:p-8 rounded-[28px] md:rounded-[40px] border border-gray-100 shadow-sm space-y-4 md:space-y-6">
+                <h4 className="font-black text-gray-900 text-sm md:text-xl text-center">سجل حضور شهر: {selectedMonth}</h4>
+
+                <div className="grid grid-cols-7 gap-0.5 md:gap-2">
+                    {/* رؤوس أيام الأسبوع */}
+                    {weekDays.map(day => (
+                        <div key={day} className="text-center text-[7px] md:text-[10px] font-bold text-gray-400 pb-1 md:pb-2">{day}</div>
+                    ))}
+
+                    {/* موازنة بداية التقويم (Offset) بناءً على أول يوم في الشهر */}
+                    {(() => {
+                        const [year, month] = selectedMonthRaw.split('-');
+                        const firstDay = new Date(parseInt(year), parseInt(month) - 1, 1);
+                        // تحويل يوم الأسبوع ليتناسب مع يبدأ التقويم بالسبت (Sat: 6 -> 0, Sun: 0 -> 1, ...)
+                        const offset = (firstDay.getDay() + 1) % 7;
+                        return Array.from({ length: offset }).map((_, i) => (
+                            <div key={`empty-${i}`} className="aspect-square w-full" />
+                        ));
+                    })()}
+
+                    {/* رسم خلايا الأيام */}
+                    {(() => {
+                        const [yearStr, monthStr] = selectedMonthRaw.split('-');
+                        const year = parseInt(yearStr);
+                        const month = parseInt(monthStr);
+                        const daysInMonth = new Date(year, month, 0).getDate();
+
+                        const now = new Date();
+                        const isCurrentMonth = now.getFullYear() === year && (now.getMonth() + 1) === month;
+                        const todayDay = now.getDate();
+
+                        const firstDay = new Date(year, month - 1, 1);
+                        const startOffset = (firstDay.getDay() + 1) % 7;
+
+                        return Array.from({ length: daysInMonth }).map((_, i) => {
+                            const day = i + 1;
+                            const rawStatus = (attendanceData as any)[String(day)];
+
+                            const isFutureMonth = year > now.getFullYear() || (year === now.getFullYear() && month > (now.getMonth() + 1));
+                            const isFutureDay = isCurrentMonth && day > todayDay;
+                            const isToday = isCurrentMonth && day === todayDay;
+
+                            const status = isFutureMonth ? rawStatus : (isFutureDay ? rawStatus : (rawStatus || 'present'));
+
+                            const weekDayIndex = (i + startOffset) % 7;
+                            const isWeekend = weekDayIndex === 5 || weekDayIndex === 6; // الخميس والجمعة إجازة رسمية
+
+                            return (
+                                <div key={i} className="relative">
+                                    <button
+                                        onClick={() => {
+                                            if (isFutureMonth || isWeekend || isTeacher) return;
+                                            setActiveDayMenu(day);
+                                            const s = rawStatus || status;
+                                            setTempStatus(s?.includes('reward') ? 'reward' : (s === 'present' ? 'present' : (s === 'absent' ? 'absent' : 'discipline')));
+                                        }}
+                                        className={cn(
+                                            "aspect-square w-full rounded-lg md:rounded-2xl border flex flex-col items-center justify-center text-[10px] md:text-sm font-bold transition-all relative shadow-sm",
+                                            isToday ? "border-blue-500 ring-2 ring-blue-500/10 shadow-lg shadow-blue-500/10" : "border-gray-100 md:border-gray-50",
+                                            isWeekend || isTeacher ? "bg-red-50/10 border-red-50 text-red-400 cursor-default" :
+                                                status === 'present' ? "bg-green-50 border-green-100 text-green-600" :
+                                                    (status === 'quarter' || status === 'half') ? "bg-orange-50 border-orange-100 text-orange-600" :
+                                                        status === 'double_absent' ? "bg-red-100 border-red-200 text-red-700" :
+                                                            (status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') ? "bg-green-50 border-green-200 text-green-600" :
+                                                            status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
+                                                                "bg-gray-50/50 text-gray-400 border-gray-100 hover:border-blue-200"
+                                        )}
+                                    >
+                                        <span className="mb-0.5 leading-none">{day}</span>
+                                        {isWeekend && <span className="text-[5px] md:text-[7px] mt-0.5 font-black uppercase text-red-500/40">إجازة</span>}
+                                        {(status === 'present' || status?.includes('reward')) && !isWeekend && (
+                                            <CheckCircle2 size={10} className="md:w-[14px] md:h-[14px] text-green-600/80" />
+                                        )}
+                                        {status && (status === 'quarter' || status === 'half' || status === 'double_absent' || status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') && !isWeekend && (
+                                            <div className={cn(
+                                                "w-1 h-1 rounded-full mt-1",
+                                                status?.includes('reward') ? "bg-green-400" : "bg-orange-400"
+                                            )} />
+                                        )}
+                                    </button>
+                                    {isToday && <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-10" />}
+
+                                    <FadeIn show={activeDayMenu === day && !isTeacher} className="fixed inset-0 z-[200]">
+                                        <div onClick={() => setActiveDayMenu(null)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+                                    </FadeIn>
+                                    <SlideIn show={activeDayMenu === day && !isTeacher}
+                                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-[400px] bg-white rounded-[32px] shadow-2xl border border-gray-100 p-5 md:p-6 z-[201] space-y-4"
+                                    >
+                                        <div className="flex flex-row-reverse items-center justify-between border-b border-gray-50 pb-3">
+                                            <h5 className="font-black text-gray-800 text-sm md:text-base">تعديل سجل يوم {day}</h5>
+                                            <button onClick={() => setActiveDayMenu(null)} className="text-gray-400 hover:bg-gray-50 p-1 rounded-full transition-all"><X size={18} className="md:w-5 md:h-5" /></button>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[
+                                                { id: 'present', label: 'حاضر', color: 'bg-green-500' },
+                                                { id: 'absent', label: 'غائب', color: 'bg-red-500' },
+                                                { id: 'discipline', label: 'خصم', color: 'bg-orange-500' },
+                                                { id: 'reward', label: 'مكافأة', color: 'bg-teal-500' }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.id}
+                                                    onClick={() => setTempStatus(opt.id as any)}
+                                                    className={cn(
+                                                        "h-10 rounded-xl text-[10px] font-bold border transition-all",
+                                                        tempStatus === opt.id ? `${opt.color} text-white border-transparent shadow-lg shadow-${opt.id}-500/20` : "bg-gray-50 text-gray-500 border-gray-100"
+                                                    )}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {(tempStatus === 'discipline' || tempStatus === 'reward') && (
+                                            <div className="space-y-3 pt-2">
+                                                <div className="flex flex-row-reverse items-center gap-2">
+                                                    {(tempStatus === 'discipline' ? ['day', 'double', 'half', 'quarter'] : ['day', 'half', 'quarter']).map(amt => (
+                                                        <button
+                                                            key={amt}
+                                                            onClick={() => setTempAmount(amt as any)}
+                                                            className={cn(
+                                                                "flex-1 h-8 rounded-lg text-[9px] font-bold border transition-all",
+                                                                tempAmount === amt ? "bg-gray-900 text-white border-transparent" : "bg-white text-gray-400 border-gray-100"
+                                                            )}
+                                                        >
+                                                            {amt === 'day' ? 'يوم' : amt === 'double' ? 'يومين' : amt === 'half' ? 'نصف' : 'ربع'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="text-right space-y-1">
+                                                    <label className="text-[9px] font-bold text-gray-400 mr-1">السبب / التفاصيل</label>
+                                                    <input
+                                                        type="text"
+                                                        value={tempReason}
+                                                        onChange={(e) => setTempReason(e.target.value)}
+                                                        placeholder="ادخل السبب هنا..."
+                                                        className="w-full h-10 bg-gray-50 border border-gray-100 rounded-xl px-3 text-right text-xs focus:ring-2 focus:ring-teal-500/10 outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <Button onClick={handleAddDiscipline} className="w-full h-10 bg-gray-900 text-white rounded-xl text-xs font-bold shadow-lg shadow-gray-900/20">
+                                            حفظ التعديلات
+                                        </Button>
+                                    </SlideIn>
+                                </div>
+                            );
+                        });
+                    })()}
+                </div>
+            </div>
+
+            {/* جدول سجل الانضباط والمكافآت التفصيلي */}
+            <div className="space-y-4">
+                <h4 className="font-black text-gray-800 text-center text-lg">سجل الانضباط والمكافآت (الشهر المختار)</h4>
+                <div className="bg-transparent border-none shadow-none overflow-visible">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {(() => {
+                            const [year, month] = selectedMonthRaw.split('-');
+                            const firstDay = new Date(parseInt(year), parseInt(month) - 1, 1);
+                            const startOffset = (firstDay.getDay() + 1) % 7;
+
+                            const mergedRecords: any[] = [];
+
+                            // 1. إضافة سجلات تقويم الحضور
+                            Object.entries(attendanceData).forEach(([day, status]: [string, TeacherAttendanceStatus]) => {
+                                const d = Number(day);
+                                const weekDayIdx = (d - 1 + startOffset) % 7;
+                                const isWeekend = weekDayIdx === 5 || weekDayIdx === 6;
+                                if (status === 'present' || isWeekend) return;
+
+                                const amount = status === 'absent' ? dailyRate :
+                                    status === 'double_absent' ? (dailyRate * 2) :
+                                        status === 'half' ? (dailyRate * 0.5) :
+                                        status === 'quarter' ? (dailyRate * 0.25) :
+                                            status === 'half_reward' ? (dailyRate * 0.5) :
+                                            status === 'full_reward' ? dailyRate :
+                                            status === 'quarter_reward' ? (dailyRate * 0.25) : 0;
+
+                                const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
+                                const relatedDeduction = deductions.find(dd => dd.date === dateStr || (dd.appliedDate && new Date(dd.appliedDate).toISOString().startsWith(dateStr)));
+                                let actionText = 'غياب';
+                                if (status === 'full_reward') actionText = 'مكافأة (يوم كامل)';
+                                else if (status === 'half_reward') actionText = 'مكافأة (نصف يوم)';
+                                else if (status === 'quarter_reward') actionText = 'مكافأة (ربع يوم)';
+                                else if (status === 'absent') actionText = 'غياب اليوم كاملاً';
+                                else if (status === 'double_absent') actionText = 'خصم يومين (غياب يومين)';
+                                else if (status === 'half') actionText = 'غياب نصف يوم';
+                                else if (status === 'quarter') actionText = 'غياب ربع يوم';
+                                
+                                const defaultReason = `تسجيل ${actionText} يوم ${weekDays[(d - 1 + startOffset) % 7]}`;
+                                const displayReason = relatedDeduction?.reason || dayDetails[Number(day)]?.reason || defaultReason;
+
+                                mergedRecords.push({
+                                    id: `att-${day}`,
+                                    day: d,
+                                    dateStr,
+                                    isReward: status?.includes('reward'),
+                                    amount,
+                                    displayReason,
+                                    canDelete: true,
+                                });
+                            });
+
+                            // 2. إضافة الخصومات اليدوية (من جدول deductions وتجنب الأتمتة المضافة بالتقويم مسبقاً)
+                            deductions.forEach((d: any) => {
+                                if (d.appliedBy === 'system-automation') return;
+
+                                const dDate = new Date(d.appliedDate);
+                                const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
+                                if (dMonthRaw !== selectedMonthRaw) return;
+
+                                const day = dDate.getDate();
+                                mergedRecords.push({
+                                    id: `ded-${d.id}`,
+                                    day,
+                                    dateStr: `${dMonthRaw}-${String(day).padStart(2, '0')}`,
+                                    isReward: d.reason.startsWith('مكافأة:'),
+                                    amount: Math.abs(d.amount),
+                                    displayReason: d.reason,
+                                    canDelete: false,
+                                });
+                            });
+
+                            mergedRecords.sort((a, b) => b.day - a.day);
+
+                            if (mergedRecords.length === 0) {
+                                return <div className="col-span-full py-8 text-center text-gray-400 text-sm font-bold bg-white rounded-3xl border border-gray-100 md:col-span-2">لا توجد سجلات انضباط أو خصومات لهذا الشهر</div>
+                            }
+
+                            return mergedRecords.map((rec: any) => {
+                                return (
+                                    <div key={rec.id} className="bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-md transition-all relative group flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className={cn(
+                                                    "px-2 py-1 rounded-lg text-[10px] font-bold shrink-0",
+                                                    rec.isReward ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
+                                                )}>
+                                                    {rec.isReward ? 'مكافأة' : 'خصم'}
+                                                </span>
+                                                <span className="text-xs font-black text-gray-400 font-sans">{rec.day} {selectedMonth.split(' ')[0]}</span>
+                                            </div>
+
+                                            <div className="flex items-center justify-between mb-3 text-right">
+                                                <h5 className="font-bold text-gray-900 text-sm">
+                                                    {rec.displayReason}
+                                                </h5>
+                                                <span className="font-black font-sans text-gray-800 text-sm mr-2 shrink-0">{rec.amount.toFixed(2)} ج.م</span>
+                                            </div>
+                                        </div>
+
+                                        {!isTeacher && rec.canDelete && (
+                                            <button
+                                                onClick={async () => {
+                                                    await updateAttendanceAsync({ date: rec.dateStr, status: 'present' });
+                                                }}
+                                                className="w-full py-2 mt-auto bg-red-50 text-red-500 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <Trash2 size={14} />
+                                                حذف السجل من التقويم
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            });
+                        })()}
+                    </div>
+                </div>
+            </div>
+        </div >
+    );
+};

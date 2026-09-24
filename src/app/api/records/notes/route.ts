@@ -1,0 +1,78 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabase } from '@/lib/supabase-server';
+
+export async function GET(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const studentId = searchParams.get('studentId');
+        const teacherId = searchParams.get('teacherId');
+        const isReadParam = searchParams.get('isRead');
+        const limit = parseInt(searchParams.get('limit') || '500');
+
+        const supabase = createServerSupabase();
+        let query = supabase
+            .from('student_notes')
+            .select('*, students!inner(full_name, parent_phone, group_id, groups!inner(name, teacher_id, teachers!inner(full_name)))');
+
+        if (studentId) query = query.eq('student_id', studentId);
+        if (teacherId) query = query.eq('students.groups.teacher_id', teacherId);
+        if (isReadParam === 'true') query = query.eq('is_read', true);
+        if (isReadParam === 'false') query = query.eq('is_read', false);
+        query = query.eq('students.status', 'active').order('created_at', { ascending: false }).limit(limit);
+
+        const { data, error } = await query;
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(data || []);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const supabase = createServerSupabase();
+        const { data, error } = await supabase.from('student_notes').insert([body]).select().single();
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(data);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function PUT(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const { id, isRead, reply, repliedBy } = body;
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+        const supabase = createServerSupabase();
+        const updateData: any = {};
+        if (typeof isRead === 'boolean') updateData.is_read = isRead;
+        if (typeof reply === 'string') {
+            updateData.reply = reply;
+            updateData.replied_by = repliedBy || null;
+            updateData.replied_at = new Date().toISOString();
+        }
+        const { error } = await supabase.from('student_notes').update(updateData).eq('id', id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+        const supabase = createServerSupabase();
+        const { error } = await supabase.from('student_notes').delete().eq('id', id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

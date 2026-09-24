@@ -1,0 +1,843 @@
+"use client";
+import Link from 'next/link';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useStudents } from '../hooks/useStudents';
+import { useGroups } from '@/features/groups/hooks/useGroups';
+import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/store/useAuthStore';
+
+import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
+import Search from 'lucide-react/dist/esm/icons/search'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Phone from 'lucide-react/dist/esm/icons/phone'
+import FileText from 'lucide-react/dist/esm/icons/file-text'
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3'
+import Archive from 'lucide-react/dist/esm/icons/archive'
+import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
+import Menu from 'lucide-react/dist/esm/icons/menu'
+import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal'
+import X from 'lucide-react/dist/esm/icons/x'
+import User from 'lucide-react/dist/esm/icons/user'
+import BookOpen from 'lucide-react/dist/esm/icons/book-open'
+import Calendar from 'lucide-react/dist/esm/icons/calendar'
+import CalendarCheck from 'lucide-react/dist/esm/icons/calendar-check'
+import Clock from 'lucide-react/dist/esm/icons/clock';
+
+
+import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
+import { Student } from '@/types';
+import dynamic from 'next/dynamic';
+import NotificationBell from '@/components/NotificationBell';
+import { getStudentAzhariInfo } from '../constants/azharCurriculum';
+
+const AddStudentModal = dynamic(() => import('./AddStudentModal'), { ssr: false });
+const StudentDetailModal = dynamic(() => import('./StudentDetailModal'), { ssr: false });
+const EditStudentModal = dynamic(() => import('./EditStudentModal'), { ssr: false });
+
+interface StudentListProps {
+    groupId?: string;
+    customTitle?: string;
+}
+
+export default function StudentList({ groupId, customTitle }: StudentListProps) {
+    const { data: groups } = useGroups();
+    const { user } = useAuthStore();
+    const { toggleSidebar } = useUIStore();
+    const queryClient = useQueryClient();
+
+    const myGroupsIds = useMemo(() => {
+        if (!groups) return [];
+        return groups.filter(g => {
+            if (user?.role === 'teacher') return g.teacherId === user.teacherId;
+            if (user?.role === 'supervisor') {
+                const sections = user.responsibleSections || [];
+                return sections.some(section => g.name.includes(section));
+            }
+            return true;
+        }).map(g => g.id);
+    }, [groups, user]);
+
+    const { data: students, isLoading } = useStudents(myGroupsIds, 'active');
+
+    const myGroups = useMemo(() => {
+        if (!groups) return [];
+        return groups.filter(g => {
+            if (user?.role === 'teacher') return g.teacherId === user.teacherId;
+            if (user?.role === 'supervisor') {
+                const sections = user.responsibleSections || [];
+                return sections.some(section => g.name.includes(section));
+            }
+            return true;
+        });
+    }, [groups, user]);
+
+    const groupsMap = useMemo(() => {
+        return (groups || []).reduce((acc, g) => {
+            acc[g.id] = g.name;
+            return acc;
+        }, {} as Record<string, string>);
+    }, [groups]);
+
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+    const [selectedTab, setSelectedTab] = useState('attendance');
+    const [filter, setFilter] = useState('الكل');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [scheduleFilterTime, setScheduleFilterTime] = useState('الكل');
+
+    const [selectedDate, setSelectedDate] = useState(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+
+    const [isTodayOnly, setIsTodayOnly] = useState(false);
+
+    const isToday = useMemo(() => {
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        return selectedDate === todayStr;
+    }, [selectedDate]);
+
+    const weekDaysNames = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+    const currentDayName = useMemo(() => {
+        // (getDay() + 1) % 7 يرفع الرقم 1 (ليصبح السبت 0 بدلاً من 6 والأحد 1 بدلاً من 0)
+        const dateObj = new Date(selectedDate.replace(/-/g, '/') + ' 12:00:00');
+        return weekDaysNames[(dateObj.getDay() + 1) % 7];
+    }, [selectedDate]);
+
+    const hasClassOnDay = useCallback((appointment: string | undefined | null, dayName: string) => {
+        if (!appointment) return false;
+        return appointment.split(',').some(p => {
+            const trimmed = p.trim();
+            if (!trimmed) return false;
+            const parts = trimmed.split(':');
+            const d = parts[0]?.trim();
+            return d === dayName || trimmed.startsWith(dayName);
+        });
+    }, []);
+
+    useEffect(() => {
+        setScheduleFilterTime('الكل');
+    }, [selectedDate, groupId]);
+
+    // Debounce البحث: انتظار 300ms بعد آخر حرف قبل التصفية
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    const normalizeTime = (t: string) => {
+        if (!t) return '';
+        // تنظيف النص الأساسي
+        let clean = t.replace(/الساعة|ساعة/g, '').trim();
+        
+        // استخراج الأرقام (ساعة ودقائق)
+        const timeMatch = clean.match(/(\d+)(?::(\d+))?/);
+        if (!timeMatch) return t;
+        
+        let hours = parseInt(timeMatch[1]);
+        let minutes = timeMatch[2] || "00";
+        
+        // استخراج الفترة أو استنتاجها (من ١ لـ ١١ تعتبر عصراً في هذا المركز)
+        const periodMatch = t.match(/عصراً|صباحاً/);
+        const period = periodMatch ? periodMatch[0] : (hours < 12 && hours >= 1 ? 'عصراً' : 'صباحاً');
+        
+        return `الساعة ${hours}:${minutes.padStart(2, '0')} ${period}`;
+    };
+
+    const availableTimes = useMemo(() => {
+        if (!students) return [];
+        const timesMap = new Map<string, string>(); // Map for normalized -> original
+        students.forEach(student => {
+             if (student.status !== 'active') return;
+             if (groupId && student.groupId !== groupId) return;
+             if (user?.role === 'teacher' && (!student.groupId || !myGroupsIds.includes(student.groupId))) return;
+             if (user?.role === 'supervisor' && (!student.groupId || !myGroupsIds.includes(student.groupId))) return;
+
+             if (student.appointment) {
+                 student.appointment.split(',').forEach((p: string) => {
+                     const parts = p.split(':');
+                     if (parts.length >= 2) {
+                         const d = parts[0].trim();
+                         const t = parts.slice(1).join(':').trim();
+                         if (d === currentDayName && t) {
+                             const norm = normalizeTime(t);
+                             if (!timesMap.has(norm)) {
+                                 timesMap.set(norm, t);
+                             }
+                         }
+                     }
+                 });
+             }
+        });
+        // نقوم بترتيب المواعيد بناءً على الوقت الموحد
+        return Array.from(timesMap.values()).sort((a, b) => normalizeTime(a).localeCompare(normalizeTime(b), undefined, { numeric: true }));
+    }, [students, currentDayName, groupId, user, myGroupsIds]);
+
+
+    const { data: attendanceData = { today: {} } as any, isFetching: isAttendanceFetching } = useQuery({
+        queryKey: ['attendance-context', selectedDate],
+        queryFn: async () => {
+            if (!students || students.length === 0) return { today: {} };
+
+            const res = await fetch(`/api/attendance?date=${selectedDate}`);
+            if (!res.ok) return { today: {} };
+            const data = await res.json();
+
+            const selectedDayMap: Record<string, 'present' | 'absent'> = {};
+            (data || []).forEach((row: any) => {
+                selectedDayMap[row.student_id] = row.status;
+            });
+
+            return { today: selectedDayMap };
+        },
+        enabled: !!(students && students.length > 0),
+        staleTime: 1000 * 30,
+    });
+
+    const attendanceState = useMemo(() => attendanceData.today, [attendanceData.today]);
+
+    const isManagement = useMemo(() => {
+        return user?.role === 'director' || user?.role === 'supervisor';
+    }, [user]);
+
+    const dateConstraints = useMemo(() => {
+        const today = new Date();
+        const maxDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        let minDate = undefined;
+        if (!isManagement) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            minDate = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+        }
+        return { minDate, maxDate };
+    }, [isManagement]);
+
+    const getGroupName = useCallback((groupId: string | null) => {
+        if (!groupId) return '';
+        return groupsMap[groupId] || '';
+    }, [groupsMap]);
+
+    // حساب عدد الطلاب الذين لديهم حصة في اليوم المحدد
+    const todayStudentsCount = useMemo(() => {
+        if (!students) return 0;
+        return students.filter(student => {
+            if (student.status !== 'active') return false;
+            if (groupId && student.groupId !== groupId) return false;
+            if (user?.role === 'teacher' || user?.role === 'supervisor') {
+                if (!student.groupId || !myGroupsIds.includes(student.groupId)) return false;
+            }
+            return hasClassOnDay(student.appointment, currentDayName);
+        }).length;
+    }, [students, groupId, user, myGroupsIds, currentDayName, hasClassOnDay]);
+
+    // Inside StudentList component...
+    const filteredStudents = useMemo(() => {
+        if (!students) return [];
+
+        const baseFiltered = students.filter(student => {
+            if (user?.role === 'teacher' || user?.role === 'supervisor') {
+                if (!student.groupId || !myGroupsIds.includes(student.groupId)) return false;
+            }
+
+            let matchesFilter = true;
+            if (groupId) {
+                matchesFilter = student.groupId === groupId;
+            } else if (filter === 'الكل') {
+                matchesFilter = true;
+            } else if (filter === 'طلاب الأزهر') {
+                const azInfo = getStudentAzhariInfo(student);
+                matchesFilter = azInfo.isAzhari;
+            } else if (filter === 'الأيتام') {
+                matchesFilter = !!student.isOrphan;
+            } else if (filter === 'أرقام ناقصة') {
+                const phone = student.parentPhone.replace(/[^0-9]/g, '');
+                matchesFilter = phone.length < 11;
+            }
+
+            // فلتر طلاب حصص اليوم فقط
+            if (isTodayOnly) {
+                if (!hasClassOnDay(student.appointment, currentDayName)) {
+                    return false;
+                }
+            }
+
+            if (scheduleFilterTime !== 'الكل') {
+                let hasTime = false;
+                if (student.appointment) {
+                    const normFilter = normalizeTime(scheduleFilterTime);
+                    student.appointment.split(',').forEach((p: string) => {
+                        const parts = p.split(':');
+                        if (parts.length >= 2) {
+                            const d = parts[0].trim();
+                            const t = parts.slice(1).join(':').trim();
+                            if (d === currentDayName && normalizeTime(t) === normFilter) {
+                                hasTime = true;
+                            }
+                        }
+                    });
+                }
+                if (!hasTime) matchesFilter = false;
+            }
+
+            const isActive = student.status === 'active';
+            return matchesFilter && isActive;
+        });
+
+        // تطبيق البحث المتدرج باستخدام الدالة الموحدة
+        const finalResults = tieredSearchFilter(baseFiltered, debouncedSearchTerm, (s) => s.fullName);
+
+        return finalResults.sort((a, b) => {
+            if (debouncedSearchTerm) return 0;
+            const groupA = getGroupName(a.groupId);
+            const groupB = getGroupName(b.groupId);
+            if (groupA !== groupB) return groupA.localeCompare(groupB, 'ar');
+            return a.fullName.localeCompare(b.fullName, 'ar');
+        });
+    }, [students, user, myGroupsIds, debouncedSearchTerm, filter, isTodayOnly, hasClassOnDay, scheduleFilterTime, currentDayName, groupId, getGroupName]);
+
+    const handleOpenModal = (student: Student, tab: string = 'attendance') => {
+        setSelectedTab(tab);
+        setSelectedStudent(student);
+    };
+
+    const handleWhatsApp = (student: Student) => {
+        window.open(getWhatsAppUrl(student.parentPhone), '_blank');
+    };
+
+    const handleWelcomeWhatsApp = (student: Student) => {
+        const phone = student.parentPhone || student.studentPhone || '';
+        const password = phone.length >= 6 ? phone.slice(-6) : phone;
+        const message = `السلام عليكم ورحمة الله وبركاته، 🌸
+أهلاً بكم في مركز الشاطبي لتحفيظ القرآن الكريم! 📖
+
+يسعدنا انضمام الطالب/ة: *${student.fullName}* إلينا. 🎉
+
+💰 *تفاصيل المصروفات:*
+قيمة الاشتراك الشهري هي *${student.monthlyAmount || 80} ج.م* للمجموعة الواحدة.
+⚠️ *تنبيه مهم:* تُستحق المصروفات مقدماً مع أول يوم من كل شهر.
+
+🚫 *الغياب والاعتذار:*
+في حال الرغبة في التغيب، لابد من إرسال اعتذار مسبق عبر رسالة على الواتساب أو من خلال موقعنا الإلكتروني.
+
+🌐 *بوابة ولي الأمر:*
+لمتابعة مستوى الطالب، تقارير الحفظ، وسجل الحضور والغياب، يرجى الدخول إلى حسابكم عبر الرابط التالي:
+🔗 https://shatpycenter-um2b.vercel.app/attendance-report
+
+📱 *طريقة الدخول:*
+- *اسم المستخدم:* رقم الهاتف المسجل لدينا (${phone}).
+- *كلمة المرور:* آخر 6 أرقام من رقم الهاتف (${password}).
+
+متابعتكم المستمرة عبر الموقع تساهم بشكل كبير في تشجيع الطالب ورفع مستواه. 🌟
+نسأل الله التوفيق لأبنائنا جميعاً. 🤲`;
+
+        window.open(getWhatsAppUrl(phone, message), '_blank');
+    };
+
+    const handleCall = (student: Student) => {
+        window.location.href = `tel:${student.parentPhone}`;
+    };
+
+    const { archiveStudent } = useStudents();
+    const handleArchive = (student: Student) => {
+        if (confirm(`هل أنت متأكد من أرشفة الطالب ${student.fullName}؟`)) {
+            archiveStudent(student.id);
+        }
+    };
+
+    const handleAttendance = useCallback(async (student: Student, status: 'present' | 'absent') => {
+        const dateParts = selectedDate.split('-').map(Number);
+        const day = dateParts[2];
+        const monthKey = `${dateParts[0]}-${String(dateParts[1]).padStart(2, '0')}`;
+        const dateStrKey = selectedDate;
+
+        // 1. التحديث الفوري للكاش (Optimistic Update)
+        queryClient.setQueryData(
+            ['attendance-context', dateStrKey],
+            (old: any) => {
+                const newToday = { ...(old?.today || {}), [student.id]: status };
+                // تحديث الـ monthMap أيضاً لضمان دقة الفلاتر فوراً
+                const newRecords = [...(old?.monthMap?.[student.id] || [])];
+                const dayIndex = newRecords.findIndex(r => r.day === day && r.month === monthKey);
+                if (dayIndex > -1) {
+                    newRecords[dayIndex] = { ...newRecords[dayIndex], status };
+                } else {
+                    newRecords.push({ studentId: student.id, day, month: monthKey, status });
+                }
+                return {
+                    today: newToday,
+                    monthMap: { ...(old?.monthMap || {}), [student.id]: newRecords }
+                };
+            }
+        );
+
+        // 2. تحديث الكاش العالمي للحضور (تفاصيل الطالب)
+        queryClient.setQueryData(['attendance', student.id], (old: any) => {
+            const records = Array.isArray(old) ? old : [];
+            const filtered = records.filter((r: any) => !(r.day === day && r.month === monthKey));
+            return [...filtered, { studentId: student.id, day, month: monthKey, status }];
+        });
+
+        // 3. إرسال حدث للمزامنة الإضافية
+        window.dispatchEvent(new CustomEvent('updateAttendance', {
+            detail: { studentId: student.id, day, status, month: monthKey }
+        }));
+
+        // 4. الحفظ في الخلفية
+        try {
+            const { addAttendanceRecord } = await import('../services/recordsService');
+            await addAttendanceRecord({
+                studentId: student.id,
+                day,
+                month: monthKey,
+                status
+            });
+            // نحدث كاش الطالب الفردي فقط للتأكيد
+            queryClient.invalidateQueries({ queryKey: ['attendance', student.id] });
+        } catch (error) {
+            console.error('Error saving attendance:', error);
+        }
+    }, [queryClient, selectedDate]);
+
+    const handleEdit = (student: Student) => {
+        setStudentToEdit(student);
+        setIsEditModalOpen(true);
+    };
+
+
+
+    if (isLoading) {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-48 w-full bg-white/50 animate-pulse rounded-[40px] border border-gray-100" />
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className="pb-24 transition-all duration-500">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-[70] bg-gray-50/95 backdrop-blur-xl px-4 py-4 border-b border-gray-100 shadow-sm">
+                <div className="relative flex items-center justify-between gap-4 max-w-7xl mx-auto">
+                    <div className="relative z-50 flex items-center gap-2">
+                        <button
+                            onClick={toggleSidebar}
+                            className="md:hidden w-11 h-11 bg-white rounded-[18px] border border-gray-100 flex items-center justify-center text-gray-600 active:scale-95 transition-transform shrink-0"
+                        >
+                            <Menu size={22} />
+                        </button>
+
+                        <NotificationBell />
+
+                        {/* أيقونة طلاب اليوم بجوار أيقونة التنبيه */}
+                        <button
+                            onClick={() => setIsTodayOnly(prev => !prev)}
+                            title={isTodayOnly ? "إلغاء التصفية (عرض جميع الطلاب)" : `عرض طلاب حصص اليوم (${currentDayName}) فقط`}
+                            className={cn(
+                                "w-11 h-11 sm:w-auto sm:px-3.5 rounded-[18px] border flex items-center justify-center gap-2 transition-all active:scale-95 relative shadow-sm shrink-0",
+                                isTodayOnly
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-blue-500/25 ring-2 ring-blue-500/20"
+                                    : "bg-white text-gray-600 border-gray-100 hover:text-blue-600 hover:border-blue-200"
+                            )}
+                        >
+                            <CalendarCheck size={19} className={isTodayOnly ? "text-white" : "text-blue-600"} />
+                            <span className="hidden sm:inline text-xs font-bold whitespace-nowrap">
+                                اليوم
+                            </span>
+                            {todayStudentsCount > 0 && (
+                                <span className={cn(
+                                    "absolute -top-1 -right-1 sm:static min-w-[18px] h-[18px] rounded-full text-[10px] font-black flex items-center justify-center px-1 transition-all shadow-sm sm:shadow-none",
+                                    isTodayOnly
+                                        ? "bg-white text-blue-600 font-black"
+                                        : "bg-blue-600 text-white sm:bg-blue-50 sm:text-blue-600"
+                                )}>
+                                    {todayStudentsCount}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+
+                    {!isSearchOpen && (
+                        <div className={cn(
+                            "flex flex-col items-center absolute left-1/2 -translate-x-1/2",
+                            "pointer-events-auto"
+                        )}>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-base sm:text-xl font-bold text-gray-900 whitespace-nowrap flex items-center gap-2">
+                                    {customTitle || (isTodayOnly ? `طلاب ${currentDayName}` : (filter === 'طلاب الأزهر' ? 'طلاب الأزهر' : (filter === 'الأيتام' ? 'الطلاب الأيتام' : (filter === 'أرقام ناقصة' ? 'أرقام ناقصة' : 'الطلاب'))))}
+                                    <span className={cn(
+                                        "px-2 py-0.5 rounded-lg text-sm transition-colors",
+                                        isTodayOnly ? "bg-blue-600 text-white font-black" : (isToday ? "text-blue-500 font-black" : "bg-blue-600 text-white")
+                                    )}>
+                                        ({filteredStudents?.length || 0})
+                                    </span>
+                                </h1>
+
+                                <div className="relative group w-8 h-8 flex items-center justify-center bg-white rounded-xl border border-gray-100 shadow-sm hover:border-blue-200 transition-all cursor-pointer">
+                                    <Calendar size={16} className={cn(isToday ? "text-gray-400" : "text-blue-600")} />
+                                    <input
+                                        type="date"
+                                        className="absolute inset-0 opacity-0 cursor-pointer z-50 w-full h-full"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        max={dateConstraints.maxDate}
+                                        min={dateConstraints.minDate}
+                                    />
+                                </div>
+                            </div>
+                            {!isToday && (
+                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1 animate-pulse">
+                                    تاريخ: {new Date(selectedDate).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })}
+                                </span>
+                            )}
+                        </div>
+                    )}
+
+                    <div className={cn(
+                        "flex items-center gap-2 transition-all duration-300",
+                        isSearchOpen ? "flex-1" : ""
+                    )}>
+                        {isSearchOpen ? (
+                            <div className="relative flex-1 animate-in slide-in-from-right-4 duration-300">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="ابحث باسم الطالب..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full h-11 sm:h-12 bg-gray-50 border border-blue-100 rounded-[18px] sm:rounded-[20px] px-10 text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                                />
+                                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
+                                <button
+                                    onClick={() => { setIsSearchOpen(false); setSearchTerm(''); }}
+                                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setIsSearchOpen(true)}
+                                    className="w-11 h-11 sm:w-12 sm:h-12 bg-gray-50 rounded-[18px] sm:rounded-[20px] border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-95"
+                                >
+                                    <Search size={22} />
+                                </button>
+                                {!groupId && (
+                                    <div className="relative">
+                                        {isFilterOpen && (
+                                            <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
+                                        )}
+                                        <button
+                                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                            className={cn(
+                                                "w-11 h-11 sm:w-12 sm:h-12 rounded-[18px] sm:rounded-[20px] border flex items-center justify-center transition-all active:scale-95 relative z-50",
+                                                isFilterOpen || filter !== 'الكل' ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
+                                            )}
+                                        >
+                                            <SlidersHorizontal size={22} />
+                                        </button>
+
+                                        {isFilterOpen && (
+                                            <div className="absolute top-[115%] left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 min-w-[160px] animate-in fade-in zoom-in-95 duration-200">
+                                                <button
+                                                    onClick={() => { setFilter('الكل'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'الكل' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    الكل
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('طلاب الأزهر'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between",
+                                                        filter === 'طلاب الأزهر' ? "bg-red-50 text-red-600 font-black" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    <span>طلاب الأزهر</span>
+                                                    <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('الأيتام'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'الأيتام' ? "bg-orange-50 text-orange-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    الأيتام
+                                                </button>
+                                                <button
+                                                    onClick={() => { setFilter('أرقام ناقصة'); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1",
+                                                        filter === 'أرقام ناقصة' ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    أرقام ناقصة
+                                                </button>
+
+                                                {/* --- مدمج: فلتر الوقت --- */}
+                                                {availableTimes.length > 0 && (
+                                                    <div className="mt-2 pt-2 border-t border-gray-50 space-y-1">
+                                                        <div className="px-3 py-1 flex items-center justify-between">
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase">مواعيد {currentDayName}</span>
+                                                            <Clock size={10} className="text-gray-400" />
+                                                        </div>
+                                                        <button
+                                                            onClick={() => { setScheduleFilterTime('الكل'); setIsFilterOpen(false); }}
+                                                            className={cn(
+                                                                "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors",
+                                                                scheduleFilterTime === 'الكل' ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                            )}
+                                                        >
+                                                            كل الأوقات
+                                                        </button>
+                                                        {availableTimes.map(time => (
+                                                            <button
+                                                                key={time}
+                                                                onClick={() => {
+                                                                    setScheduleFilterTime(time);
+                                                                    setIsFilterOpen(false);
+                                                                }}
+                                                                className={cn(
+                                                                    "w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-colors",
+                                                                    scheduleFilterTime === time ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                                                                )}
+                                                            >
+                                                                {time.includes('الساعة') ? time : `ساعة ${time}`}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-3 sm:px-6 mt-4">
+                {filteredStudents?.map((student, index) => (
+                    <div
+                        key={student.id}
+                        onClick={() => handleOpenModal(student, 'attendance')}
+                        className="bg-white rounded-2xl p-3.5 sm:p-4 shadow-sm border border-gray-100 relative group cursor-pointer hover:shadow-md transition-all"
+                    >
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+                                        <User size={20} />
+                                    </div>
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-white border border-gray-100 rounded-full flex items-center justify-center text-[10px] font-black text-blue-600 shadow-sm">
+                                        {index + 1}
+                                    </span>
+                                </div>
+                                <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
+                                    <h3 className="font-bold text-gray-900 leading-tight truncate whitespace-nowrap text-lg">
+                                        {student.fullName}
+                                    </h3>
+                                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                        <span className="text-[10px] sm:text-xs text-gray-400 font-medium">
+                                            {getGroupName(student.groupId)}
+                                        </span>
+                                        {(() => {
+                                            const azhariInfo = getStudentAzhariInfo(student);
+                                            if (!azhariInfo.isAzhari) return null;
+                                            return (
+                                                <span 
+                                                    className="text-[11px] sm:text-xs font-black text-red-600 bg-red-50 border border-red-200/80 px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-2xs"
+                                                    title={azhariInfo.azhariGrade ? `طالب أزهري - الصف ${azhariInfo.azhariGrade}` : 'طالب أزهري'}
+                                                >
+                                                    <span>أزهري</span>
+                                                    {azhariInfo.azhariGrade && (
+                                                        <span className="text-[9px] font-bold text-red-500 opacity-90 hidden sm:inline">
+                                                            ({azhariInfo.azhariGrade})
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 sm:gap-2 pt-2 overflow-x-auto no-scrollbar relative w-full">
+                            <div className="flex gap-1 shrink-0 transition-opacity duration-300 opacity-100">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
+                                    className={cn(
+                                        "px-6 sm:px-10 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-75 border active:scale-95",
+                                        attendanceState[student.id] === 'present'
+                                            ? "bg-green-600 text-white border-green-600 shadow-lg"
+                                            : "bg-white text-green-600 border-gray-100 hover:bg-green-50"
+                                    )}
+                                >
+                                    حاضر
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'absent'); }}
+                                    className={cn(
+                                        "px-6 sm:px-10 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-75 border active:scale-95",
+                                        attendanceState[student.id] === 'absent'
+                                            ? "bg-red-500 text-white border-red-500 shadow-lg"
+                                            : "bg-white text-red-500 border-gray-100 hover:bg-red-50"
+                                    )}
+                                >
+                                    غياب
+                                </button>
+                            </div>
+
+
+
+                            <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
+
+                            <div className="flex items-center gap-1 sm:gap-1.5 bg-gray-100/50 p-1 rounded-xl border border-gray-50 shrink-0">
+                                {user?.role !== 'director' && user?.role !== 'schedule_secretary' && (
+                                    <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'fees'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 transition-colors" title="المالية"><CreditCard size={18} /></button>
+                                )}
+                                {(isManagement || user?.role === 'teacher' || user?.role === 'schedule_secretary') ? (
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            window.open(getWhatsAppUrl(student.parentPhone), '_blank');
+                                        }} 
+                                        className="w-8 h-8 flex items-center justify-center text-green-600 hover:bg-white rounded-lg transition-all" 
+                                        title="واتساب"
+                                    >
+                                        <MessageCircle size={18} />
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            handleOpenModal(student, 'exams'); 
+                                        }} 
+                                        className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-white rounded-lg transition-all" 
+                                        title="الاختبارات"
+                                    >
+                                        <BookOpen size={18} />
+                                    </button>
+                                )}
+                                {user?.role === 'teacher' && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'exams'); }} 
+                                        className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-white rounded-lg transition-all" 
+                                        title="الاختبارات"
+                                    >
+                                        <BookOpen size={18} />
+                                    </button>
+                                )}
+                                {user?.role === 'teacher' && (
+                                    <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'notes'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="الملاحظات"><FileText size={18} /></button>
+                                )}
+
+                                {(user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'schedule_secretary') && (
+                                    <>
+                                        <button onClick={(e) => { e.stopPropagation(); handleCall(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors" title="اتصال"><Phone size={18} /></button>
+                                        {user?.role !== 'schedule_secretary' && (
+                                            <button onClick={(e) => { e.stopPropagation(); handleArchive(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-amber-500 transition-colors" title="أرشفة"><Archive size={18} /></button>
+                                        )}
+                                        {user?.role !== 'schedule_secretary' ? (
+                                            <button onClick={(e) => { e.stopPropagation(); setStudentToEdit(student); setIsEditModalOpen(true); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-colors" title="تعديل"><Edit3 size={18} /></button>
+                                        ) : (
+                                            <button onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                const newPhone = window.prompt('أدخل رقم الهاتف الجديد لولي أمر الطالب:', student.parentPhone);
+                                                if (newPhone !== null && newPhone.trim() !== '' && newPhone !== student.parentPhone) {
+                                                    const { updateStudent } = require('../services/studentService');
+                                                    updateStudent(student.id, { parentPhone: newPhone.trim() }).then(() => {
+                                                        queryClient.invalidateQueries({ queryKey: ['students'] });
+                                                    }).catch((err: any) => {
+                                                        alert('حدث خطأ أثناء التحديث');
+                                                    });
+                                                }
+                                            }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="تعديل الهاتف"><Edit3 size={18} /></button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {filteredStudents.length === 0 && (
+                <div className="text-center py-16 px-4">
+                    <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+                        <CalendarCheck size={32} />
+                    </div>
+                    <h3 className="text-base font-bold text-gray-800 mb-1">
+                        {isTodayOnly ? `لا يوجد طلاب لديهم حصص يوم ${currentDayName}` : 'لا توجد نتائج مطابقة'}
+                    </h3>
+                    <p className="text-xs text-gray-400">
+                        {isTodayOnly ? 'يمكنك إلغاء تصفية "اليوم" لعرض جميع الطلاب' : 'جرب تغيير شروط البحث أو الفلاتر'}
+                    </p>
+                    {isTodayOnly && (
+                        <button
+                            onClick={() => setIsTodayOnly(false)}
+                            className="mt-4 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                        >
+                            عرض جميع الطلاب
+                        </button>
+                    )}
+                </div>
+            )}
+
+            <AddStudentModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                defaultGroupId={groupId}
+            />
+
+            <EditStudentModal
+                student={studentToEdit}
+                isOpen={isEditModalOpen}
+                onClose={() => {
+                    setIsEditModalOpen(false);
+                    setStudentToEdit(null);
+                }}
+            />
+
+            <StudentDetailModal
+                student={selectedStudent}
+                isOpen={!!selectedStudent}
+                onClose={() => setSelectedStudent(null)}
+                initialTab={selectedTab}
+                currentAttendance={selectedStudent ? attendanceState[selectedStudent.id] : undefined}
+                onEdit={(s: any) => {
+                    setSelectedStudent(null);
+                    setStudentToEdit(s);
+                    setIsEditModalOpen(true);
+                }}
+            />
+            {/* Floating Add Student Button */}
+            {user?.role !== 'schedule_secretary' && (
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="fixed bottom-20 left-6 z-[100] w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/40 active:scale-90 transition-transform hover:bg-blue-700"
+                    title="إضافة طالب جديد"
+                >
+                    <UserPlus size={26} />
+                </button>
+            )}
+        </div >
+    );
+}

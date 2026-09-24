@@ -1,0 +1,169 @@
+import { Group } from "@/types";
+import { supabase } from "@/lib/supabase";
+
+// الحصول على جميع المجموعات
+export const getGroups = async (): Promise<Group[]> => {
+    try {
+        const res = await fetch('/api/groups');
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error("API error fetching groups:", errorText);
+            return [];
+        }
+        return await res.json();
+    } catch (error) {
+        console.error("Unexpected error fetching groups:", error);
+        return [];
+    }
+};
+
+// الحصول على مجموعة بواسطة المعرف
+export const getGroupById = async (groupId: string): Promise<Group | null> => {
+    try {
+        let { data, error } = await supabase
+            .from('groups')
+            .select('id, name, teacher_id, schedule, max_students_per_hour, hours')
+            .eq('id', groupId)
+            .single();
+
+        // إذا كان عمود "hours" غير موجود بعد في قاعدة البيانات، نعيد الاستعلام بدونه
+        if (error) {
+            ({ data, error } = await supabase
+                .from('groups')
+                .select('id, name, teacher_id, schedule, max_students_per_hour')
+                .eq('id', groupId)
+                .single());
+        }
+
+        if (error || !data) {
+            return null;
+        }
+
+        return {
+            id: data.id,
+            name: data.name,
+            teacherId: data.teacher_id,
+            schedule: data.schedule || '',
+            maxStudentsPerHour: data.max_students_per_hour || 5,
+            hours: Number(data.hours) || 4,
+            students: [],
+        } as unknown as Group;
+    } catch (error) {
+        console.error("Error fetching group by ID: ", error);
+        return null;
+    }
+};
+
+// إضافة مجموعة جديدة
+export const addGroup = async (group: Omit<Group, 'id'>): Promise<string> => {
+    try {
+        const { data, error } = await supabase
+            .from('groups')
+            .insert([{
+                name: group.name,
+                teacher_id: group.teacherId, // Map to snake_case
+                schedule: group.schedule,
+                max_students_per_hour: group.maxStudentsPerHour || 5,
+                hours: group.hours || 4,
+            }])
+            .select('id')
+            .single();
+
+        // إذا كان عمود "hours" غير موجود بعد في قاعدة البيانات، نعيد الإضافة بدونه
+        if (error) {
+            const { data: retryData, error: retryError } = await supabase
+                .from('groups')
+                .insert([{
+                    name: group.name,
+                    teacher_id: group.teacherId,
+                    schedule: group.schedule,
+                    max_students_per_hour: group.maxStudentsPerHour || 5,
+                }])
+                .select('id')
+                .single();
+
+            if (retryError) throw retryError;
+            return retryData.id;
+        }
+
+        return data.id;
+    } catch (error) {
+        console.error("Error adding group:", error);
+        throw error;
+    }
+};
+
+// تحديث بيانات مجموعة
+export const updateGroup = async (id: string, data: Partial<Group>): Promise<void> => {
+    try {
+        const updates: any = {};
+        if (data.name) updates.name = data.name;
+        if (data.teacherId !== undefined) updates.teacher_id = data.teacherId;
+        if (data.schedule) updates.schedule = data.schedule;
+        if (data.maxStudentsPerHour !== undefined) updates.max_students_per_hour = data.maxStudentsPerHour;
+        if (data.hours !== undefined) updates.hours = data.hours;
+
+        const { error } = await supabase
+            .from('groups')
+            .update(updates)
+            .eq('id', id);
+
+        // إذا كان عمود "hours" غير موجود بعد في قاعدة البيانات، نعيد التحديث بدونه
+        if (error && updates.hours !== undefined) {
+            delete updates.hours;
+            const { error: retryError } = await supabase
+                .from('groups')
+                .update(updates)
+                .eq('id', id);
+
+            if (retryError) throw retryError;
+        } else if (error) {
+            throw error;
+        }
+    } catch (error) {
+        console.error("Error updating group:", error);
+        throw error;
+    }
+};
+
+// حذف مجموعة
+export const deleteGroup = async (id: string): Promise<void> => {
+    try {
+        // فك ارتباط أي طلاب (المؤرشفين أو غيرهم) بالمجموعة قبل حذفها لتجنب قيود المفتاح الخارجي
+        const { error: unlinkError } = await supabase
+            .from('students')
+            .update({ group_id: null })
+            .eq('group_id', id);
+
+        if (unlinkError) {
+            console.warn("Warning unlinking students from group:", unlinkError);
+        }
+
+        const { error } = await supabase
+            .from('groups')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error("Error deleting group:", error);
+        throw error;
+    }
+};
+
+// الحصول على المجموعات الخاصة بمعلم معين
+export const getGroupsByTeacherId = async (teacherId: string): Promise<Group[]> => {
+    try {
+        const res = await fetch(`/api/groups?teacherId=${encodeURIComponent(teacherId)}`);
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error("API error fetching teacher groups:", errorText);
+            return [];
+        }
+        return await res.json();
+    } catch (error) {
+        console.error("Error fetching groups by teacher ID: ", error);
+        return [];
+    }
+};
+
