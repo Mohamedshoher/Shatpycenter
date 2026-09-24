@@ -207,6 +207,27 @@ export default function ExamsReportPage() {
             .map((s: any, i: number) => ({ ...s, rank: i + 1 }));
     }, [students, groups, allExams, selectedGroupId, selectedExamType, examsLimit, user, assignedGroupIds]);
 
+    // د- الأهداف المنجزة
+    const completedGoalsData = useMemo(() => {
+        if (!allGoals || !students || !groups) return [];
+        return allGoals
+            .filter((g: any) => g.isCompleted)
+            .map((g: any) => {
+                const student = students.find((s: any) => s.id === g.studentId);
+                const group = student ? groups.find((gr: any) => gr.id === student.groupId) : null;
+                const teacherName = g.completedBy || (group ? teachers?.find((t: any) => t.id === group.teacherId)?.name : "غير محدد");
+
+                return {
+                    ...g,
+                    student,
+                    groupName: group?.name || "غير محدد",
+                    teacherName
+                };
+            })
+            .filter((g: any) => g.student)
+            .sort((a: any, b: any) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+    }, [allGoals, students, groups, teachers]);
+
     // ج- تجميع بيانات الأداء لكل مجموعة (إحصائيات الرسوم البيانية)
     const performanceData = useMemo(() => {
         let baseGroups = (groups || []);
@@ -499,6 +520,67 @@ export default function ExamsReportPage() {
                     )}
 
 
+
+                    {/* --- التبويب 3: الأهداف المنتهية --- */}
+                    {activeTab === 'goals' && (
+                        <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
+                            <div className="flex items-center justify-between px-1 mb-2">
+                                <span className="text-[10px] md:text-xs font-bold text-gray-400">الأهداف المنجزة</span>
+                                <span className="bg-emerald-100 text-emerald-700 text-[10px] md:text-xs font-black px-2 md:px-3 py-0.5 md:py-1 rounded-full font-sans">{completedGoalsData.length} هدف</span>
+                            </div>
+                            
+                            {completedGoalsData.length === 0 ? (
+                                <div className="text-center py-20 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-100">
+                                    <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Target size={32} />
+                                    </div>
+                                    <h3 className="text-lg font-black text-gray-800">لا توجد أهداف منجزة</h3>
+                                    <p className="text-sm text-gray-400 font-bold mt-1">لم يتم إنجاز أي أهداف للطلاب المحددين</p>
+                                </div>
+                            ) : (
+                                completedGoalsData.map((goal: any) => (
+                                    <div key={goal.id} className="bg-white rounded-[16px] md:rounded-[20px] p-3 md:p-4 border border-gray-100 shadow-sm">
+                                        <div className="flex items-center justify-between border-b border-gray-50 pb-3 mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 shrink-0">
+                                                    <CheckCircle size={16} />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-gray-900 text-sm md:text-base">{goal.title}</h3>
+                                                    <span className="text-[10px] md:text-xs text-gray-400 font-bold">{goal.examType}</span>
+                                                </div>
+                                            </div>
+                                            {goal.completedAt && (
+                                                <span className="text-[10px] md:text-xs font-black text-gray-400 bg-gray-50 px-2 py-1 rounded-md">
+                                                    {new Date(goal.completedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                            <div 
+                                                onClick={() => setSelectedStudentForDetails(goal.student)}
+                                                className="flex items-center gap-2 cursor-pointer group hover:bg-blue-50 p-1.5 pr-2 rounded-xl transition-colors border border-transparent hover:border-blue-100"
+                                            >
+                                                <div className="w-7 h-7 bg-blue-50 group-hover:bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 shrink-0 transition-colors">
+                                                    <User size={14} />
+                                                </div>
+                                                <div className="text-right">
+                                                    <h4 className="text-xs md:text-sm font-bold text-gray-800 group-hover:text-blue-700 transition-colors">{goal.student.fullName}</h4>
+                                                    <span className="text-[9px] md:text-[10px] font-bold text-gray-400">{goal.groupName}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+                                                <span className="text-[10px] md:text-xs text-gray-400 font-bold">إشراف:</span>
+                                                <span className="text-xs md:text-sm font-black text-gray-700">{goal.teacherName}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
 
                     {/* --- التبويب 4: مقارنة أداء المجموعات --- */}
                     {activeTab === 'performance' && (

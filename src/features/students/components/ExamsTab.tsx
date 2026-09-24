@@ -289,8 +289,9 @@ export default function ExamsTab({ student, records }: any) {
                                 "p-4",
                                 goal.isCompleted ? "bg-green-600" : cfg.headerBg
                             )}>
-                                {/* السطر الأول */}
-                                <div className="flex items-center justify-between gap-2">
+                                {/* السطر الأول والثاني */}
+                                <div className="flex flex-col gap-3">
+                                    {/* العنوان */}
                                     <div className="flex items-center gap-2 min-w-0">
                                         <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
                                             {goal.isCompleted

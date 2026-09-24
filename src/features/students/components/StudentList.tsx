@@ -440,32 +440,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
 
                         <NotificationBell />
 
-                        {/* أيقونة طلاب اليوم بجوار أيقونة التنبيه */}
-                        <button
-                            onClick={() => setIsTodayOnly(prev => !prev)}
-                            title={isTodayOnly ? "إلغاء التصفية (عرض جميع الطلاب)" : `عرض طلاب حصص اليوم (${currentDayName}) فقط`}
-                            className={cn(
-                                "w-11 h-11 sm:w-auto sm:px-3.5 rounded-[18px] border flex items-center justify-center gap-2 transition-all active:scale-95 relative shadow-sm shrink-0",
-                                isTodayOnly
-                                    ? "bg-blue-600 text-white border-blue-600 shadow-blue-500/25 ring-2 ring-blue-500/20"
-                                    : "bg-white text-gray-600 border-gray-100 hover:text-blue-600 hover:border-blue-200"
-                            )}
-                        >
-                            <CalendarCheck size={19} className={isTodayOnly ? "text-white" : "text-blue-600"} />
-                            <span className="hidden sm:inline text-xs font-bold whitespace-nowrap">
-                                اليوم
-                            </span>
-                            {todayStudentsCount > 0 && (
-                                <span className={cn(
-                                    "absolute -top-1 -right-1 sm:static min-w-[18px] h-[18px] rounded-full text-[10px] font-black flex items-center justify-center px-1 transition-all shadow-sm sm:shadow-none",
-                                    isTodayOnly
-                                        ? "bg-white text-blue-600 font-black"
-                                        : "bg-blue-600 text-white sm:bg-blue-50 sm:text-blue-600"
-                                )}>
-                                    {todayStudentsCount}
-                                </span>
-                            )}
-                        </button>
+
                     </div>
 
                     {!isSearchOpen && (
@@ -587,6 +562,26 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                     )}
                                                 >
                                                     أرقام ناقصة
+                                                </button>
+                                                <button
+                                                    onClick={() => { setIsTodayOnly(prev => !prev); setIsFilterOpen(false); }}
+                                                    className={cn(
+                                                        "w-full text-right px-3 py-2.5 rounded-xl text-xs font-bold transition-colors mb-1 flex items-center justify-between",
+                                                        isTodayOnly ? "bg-blue-600 text-white font-black" : "text-gray-600 hover:bg-gray-50"
+                                                    )}
+                                                >
+                                                    <span className="flex items-center gap-2">
+                                                        <CalendarCheck size={14} className={isTodayOnly ? "text-white" : "text-blue-600"} />
+                                                        طلاب اليوم
+                                                    </span>
+                                                    {todayStudentsCount > 0 && (
+                                                        <span className={cn(
+                                                            "min-w-[18px] h-[18px] rounded-full text-[10px] font-black flex items-center justify-center px-1",
+                                                            isTodayOnly ? "bg-white text-blue-600" : "bg-blue-100 text-blue-600"
+                                                        )}>
+                                                            {todayStudentsCount}
+                                                        </span>
+                                                    )}
                                                 </button>
 
                                                 {/* --- مدمج: فلتر الوقت --- */}
