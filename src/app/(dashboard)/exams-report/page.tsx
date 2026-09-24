@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from 'react';
 import Trophy from 'lucide-react/dist/esm/icons/trophy'
@@ -23,11 +23,15 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 import dynamic from 'next/dynamic';
 import { useAllExams } from '@/features/students/hooks/useAllExams';
+import { useAllGoals } from '@/features/students/hooks/useAllGoals';
+import Target from 'lucide-react/dist/esm/icons/target';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
 
 const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
 
 // --- تعريف الأنواع والقواميس المساعدة ---
-type TabType = 'notTested' | 'mostTested' | 'performance';
+type TabType = 'notTested' | 'mostTested' | 'performance' | 'goals';
 
 const EXAM_TYPE_MAP: Record<string, string> = {
     'new': 'جديد',
@@ -76,6 +80,7 @@ export default function ExamsReportPage() {
     // تحويل التاريخ إلى مفتاح (مثل 2023-10) لجلب بيانات الاختبارات من السيرفر
     const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
     const { data: allExams = [] } = useAllExams(monthKey, selectedHalf, relevantStudentIds);
+    const { data: allGoals = [] } = useAllGoals(relevantStudentIds);
 
     // تسميات الشهور باللغة العربية
     const currentMonthLabel = selectedDate.toLocaleDateString('ar-EG', { month: 'long' });
@@ -335,6 +340,16 @@ export default function ExamsReportPage() {
                         <AlertCircle size={12} />
                         لم يختبروا
                         <span className={cn("text-[8px] md:text-[10px] font-black px-1 md:px-1.5 py-0.5 rounded-full font-sans", activeTab === 'notTested' ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-500")}>{notTestedStudents.length}</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('goals')}
+                        className={cn(
+                            "flex-1 py-1.5 md:py-2.5 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-0.5 md:gap-1.5",
+                            activeTab === 'goals' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                        )}
+                    >
+                        <Target size={12} />
+                        الأهداف
                     </button>
                 </div>
             </header>

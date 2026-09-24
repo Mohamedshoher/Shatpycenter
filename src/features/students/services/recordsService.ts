@@ -741,3 +741,22 @@ export const deleteExamGoal = async (id: string): Promise<void> => {
     const { error } = await supabase.from('exam_goals').delete().eq('id', id);
     if (error) throw error;
 };
+export const getAllGoals = async (studentIds?: string[], isCompleted?: boolean): Promise<ExamGoal[]> => {
+    try {
+        const params = new URLSearchParams();
+        if (studentIds && studentIds.length > 0) params.set('studentIds', studentIds.join(','));
+        if (isCompleted !== undefined) params.set('isCompleted', String(isCompleted));
+
+        const qs = params.toString();
+        const res = await fetch(`/api/exam-goals${qs ? '?' + qs : ''}`);
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error("API error fetching goals:", errorText);
+            return [];
+        }
+        return await res.json();
+    } catch (error) {
+        console.error('Error fetching all goals:', error);
+        return [];
+    }
+};
