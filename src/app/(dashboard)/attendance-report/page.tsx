@@ -72,42 +72,17 @@ export default function AttendanceReportPage() {
     const { data: reportData, isLoading } = useQuery({
         queryKey: ['attendance-report-v7', selectedDateStr, groupIdsForQuery],
         queryFn: async () => {
-            const { supabase } = await import('@/lib/supabase');
-
             const [y, m, d] = selectedDateStr.split('-').map(Number);
             const dObj = new Date(y, m - 1, d);
             dObj.setDate(dObj.getDate() - 30); // زيادة الفترة لـ 30 يوم لضمان حساب الغياب المتصل بشكل دقيق
             const sinceDate = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
 
-            const fetchAllAtt = async () => {
-                let allData: any[] = [];
-                let from = 0;
-                const step = 1000;
-                
-                while (true) {
-                    let query = supabase.from('attendance')
-                        .select('student_id, date, status')
-                        .gte('date', sinceDate);
-
-                    // فلترة البيانات على السيرفر بدلاً من جلب الكل
-                    if (!isControlRole && relevantStudentIds.length > 0) {
-                        query = query.in('student_id', relevantStudentIds);
-                    }
-
-                    const { data, error } = await query
-                        .order('date', { ascending: false })
-                        .range(from, from + step - 1);
-
-                    if (error || !data || data.length === 0) break;
-                    allData = [...allData, ...data];
-
-                    if (data.length < step) break;
-                    from += step;
-                }
-                return allData;
-            };
-
-            const attData = await fetchAllAtt();
+            const params = new URLSearchParams({ sinceDate });
+            if (!isControlRole && relevantStudentIds.length > 0) {
+                params.set('studentIds', relevantStudentIds.join(','));
+            }
+            const res = await fetch(`/api/attendance?${params.toString()}`);
+            const attData: any[] = res.ok ? await res.json() : [];
 
             const map: Record<string, any[]> = {};
             (attData || []).forEach(row => {

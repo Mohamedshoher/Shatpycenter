@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabase';
 import { teacherDeductionService } from '@/features/teachers/services/deductionService';
 import { updateTeacherAttendance } from '@/features/teachers/services/attendanceService';
 
@@ -66,16 +65,21 @@ const formatLocalDate = (date: Date): string => {
 // ==========================================
 
 export const addLog = async (log: Omit<AutomationLog, 'id'>): Promise<AutomationLog> => {
-    const { data, error } = await supabase.from('automation_logs').insert([{
-        rule_id: log.ruleId,
-        rule_name: log.ruleName,
-        triggered_at: log.timestamp.toISOString(),
-        status: log.status,
-        details: log.messageSent,
-        affected_entity_id: log.recipientId,
-        affected_entity_name: log.recipientName
-    }]).select().single();
-    if (error) throw error;
+    const res = await fetch('/api/automation/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            rule_id: log.ruleId,
+            rule_name: log.ruleName,
+            triggered_at: log.timestamp.toISOString(),
+            status: log.status,
+            details: log.messageSent,
+            affected_entity_id: log.recipientId,
+            affected_entity_name: log.recipientName
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'تعذر إضافة سجل الأتمتة');
     return {
         id: data.id, ruleId: data.rule_id, ruleName: data.rule_name, triggeredBy: 'system',
         recipientId: data.affected_entity_id, recipientName: data.affected_entity_name,
@@ -154,29 +158,43 @@ export const getRules = async (): Promise<AutomationRule[]> => {
 };
 
 export const createRule = async (rule: any) => {
-    const { data, error } = await supabase.from('automation_rules').insert([{
-        name: rule.name, type: rule.trigger, is_active: rule.enabled,
-        conditions: rule.condition, actions: rule.action, recipients: rule.recipients, schedule: rule.schedule
-    }]).select().single();
-    if (error) throw error;
+    const res = await fetch('/api/automation/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: rule.name, type: rule.trigger, is_active: rule.enabled,
+            conditions: rule.condition, actions: rule.action, recipients: rule.recipients, schedule: rule.schedule
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'تعذر إنشاء القاعدة');
     return { ...rule, id: data.id, createdAt: new Date(data.created_at) };
 };
 
 export const updateRule = async (id: string, updates: any) => {
-    const dbUpdates: any = {};
+    const dbUpdates: any = { id };
     if (updates.name) dbUpdates.name = updates.name;
     if (updates.enabled !== undefined) dbUpdates.is_active = updates.enabled;
     if (updates.condition) dbUpdates.conditions = updates.condition;
     if (updates.action) dbUpdates.actions = updates.action;
-    await supabase.from('automation_rules').update(dbUpdates).eq('id', id);
+    await fetch('/api/automation/rules', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dbUpdates),
+    });
     return updates;
 };
 
-export const deleteRule = async (id: string) => { await supabase.from('automation_rules').delete().eq('id', id); };
+export const deleteRule = async (id: string) => {
+    await fetch(`/api/automation/rules?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+};
 
 export const toggleRule = async (id: string) => {
-    const { data: current } = await supabase.from('automation_rules').select('is_active').eq('id', id).single();
-    await supabase.from('automation_rules').update({ is_active: !current?.is_active }).eq('id', id);
+    await fetch('/api/automation/rules', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, toggle: true }),
+    });
 };
 
 // ==========================================
@@ -239,32 +257,20 @@ export const checkMissingDailyReports = async (customDate?: string): Promise<Aut
         const rule = rules.find(r => r.trigger === 'missing_daily_report' && r.enabled);
         if (!rule) return [];
 
-        const { data: teachers } = await supabase.from('teachers').select('id, full_name').eq('status', 'active');
+        const checksRes = await fetch(`/api/automation/checks-data?type=daily-reports&date=${encodeURIComponent(dateStr)}`);
+        if (!checksRes.ok) {
+            console.error('checks-data error:', await checksRes.text());
+            return [];
+        }
+        const result: any = await checksRes.json();
+        const { teachers, groups, students: allStudents, deductions, attendance, teacherAttendance } = result;
         if (!teachers?.length) return [];
 
-        const teacherIds = teachers.map(t => t.id);
+        const alreadyDeducted = new Set((deductions || []).filter((d: any) => d.reason?.includes('التقرير')).map((d: any) => d.teacher_id));
+        const submittedStudents = new Set((attendance || []).map((a: any) => a.student_id));
+        const absentTeachers = new Set((teacherAttendance || []).filter((a: any) => a.status === 'absent').map((a: any) => a.teacher_id));
 
-        const [ dedResult, groupsResult, attResult, teaResult ] = await Promise.all([
-            supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).eq('date', dateStr).eq('applied_by', 'system-automation'),
-            supabase.from('groups').select('id, teacher_id').in('teacher_id', teacherIds),
-            supabase.from('attendance').select('student_id').eq('date', dateStr),
-            supabase.from('teacher_attendance').select('teacher_id, status').in('teacher_id', teacherIds).eq('date', dateStr)
-        ]);
-
-        if (dedResult.error) console.error('dedResult error:', dedResult.error);
-        if (groupsResult.error) console.error('groupsResult error:', groupsResult.error);
-        if (attResult.error) console.error('attResult error:', attResult.error);
-        if (teaResult.error) console.error('teaResult error:', teaResult.error);
-
-        const alreadyDeducted = new Set(dedResult.data?.filter(d => d.reason?.includes('التقرير')).map(d => d.teacher_id));
-        const submittedStudents = new Set(attResult.data?.map(a => a.student_id));
-        const absentTeachers = new Set(teaResult.data?.filter(a => a.status === 'absent').map(a => a.teacher_id));
-
-        const groupIds = groupsResult.data?.map(g => g.id) || [];
-        const { data: allStudents } = groupIds.length > 0
-            ? await supabase.from('students').select('id, group_id').in('group_id', groupIds)
-            : { data: [] };
-        const groupTeacherMap = new Map(groupsResult.data?.map(g => [g.id, g.teacher_id]) || []);
+        const groupTeacherMap = new Map<string, string>((groups || []).map((g: any) => [g.id, g.teacher_id]));
         const teacherStudentsMap = new Map<string, string[]>();
         for (const s of allStudents || []) {
             const tId = groupTeacherMap.get(s.group_id);
@@ -330,26 +336,19 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
     const rule = rules.find(r => r.trigger === 'repeated_exams' && r.enabled);
     if (!rule) return [];
 
-    const { data: teachers } = await supabase.from('teachers').select('id, full_name').eq('status', 'active');
+    const checksRes = await fetch(`/api/automation/checks-data?type=weekly-exams&startDate=${encodeURIComponent(startDateStr)}&endDate=${encodeURIComponent(endDateStr)}`);
+    if (!checksRes.ok) {
+        console.error('checks-data error:', await checksRes.text());
+        return [];
+    }
+    const result: any = await checksRes.json();
+    const { teachers, groups, students: allStudents, exams, deductions } = result;
     if (!teachers?.length) return [];
 
-    const teacherIds = teachers.map(t => t.id);
+    const examStudents = new Set((exams || []).map((e: any) => e.student_id));
+    const alreadyDeducted = new Set((deductions || []).filter((d: any) => d.reason?.includes('اختبار')).map((d: any) => d.teacher_id));
 
-    const [ groupsResult, examsResult, dedResult ] = await Promise.all([
-        supabase.from('groups').select('id, teacher_id').in('teacher_id', teacherIds),
-        supabase.from('exams').select('student_id').gte('date', startDateStr).lte('date', endDateStr),
-        supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).gte('date', startDateStr).lte('date', endDateStr)
-    ]);
-
-    const examStudents = new Set(examsResult.data?.map(e => e.student_id));
-    const alreadyDeducted = new Set(dedResult.data?.filter(d => d.reason?.includes('اختبار')).map(d => d.teacher_id));
-
-    // جلب الطلاب لكل مجموعة
-    const groupIds = groupsResult.data?.map(g => g.id) || [];
-    const { data: allStudents } = groupIds.length > 0
-        ? await supabase.from('students').select('id, group_id').in('group_id', groupIds)
-        : { data: [] };
-    const groupTeacherMap = new Map(groupsResult.data?.map(g => [g.id, g.teacher_id]) || []);
+    const groupTeacherMap = new Map<string, string>((groups || []).map((g: any) => [g.id, g.teacher_id]));
     const teacherStudentsMap = new Map<string, string[]>();
     for (const s of allStudents || []) {
         const tId = groupTeacherMap.get(s.group_id);
@@ -388,16 +387,22 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
 };
 
 export const undoAutomationDeduction = async (logId: string, teacherId: string, timestamp: Date) => {
-    const { data: log } = await supabase.from('automation_logs').select('details').eq('id', logId).single();
+    const logRes = await fetch(`/api/automation/logs?id=${encodeURIComponent(logId)}`);
+    if (!logRes.ok) return;
+    const log = await logRes.json();
     if (!log) return;
-    const match = log.details.match(/\[تاريخ الخصم: (\d{4}-\d{2}-\d{2})\]/);
+
+    const match = log.details?.match(/\[تاريخ الخصم: (\d{4}-\d{2}-\d{2})\]/);
     const dateStr = match ? match[1] : normalizeDate(timestamp);
-    const { data: ds } = await supabase.from('deductions').select('id').eq('teacher_id', teacherId).eq('date', dateStr).eq('applied_by', 'system-automation');
-    if (ds) for (const d of ds) await teacherDeductionService.removeDeduction(d.id);
-    await supabase.from('automation_logs').delete().eq('id', logId);
-    
+
+    const dedRes = await fetch(`/api/deductions?teacherId=${encodeURIComponent(teacherId)}&date=${encodeURIComponent(dateStr)}&appliedBy=system-automation`);
+    const ds = dedRes.ok ? await dedRes.json() : [];
+    for (const d of ds || []) await teacherDeductionService.removeDeduction(d.id);
+
+    await fetch(`/api/automation/logs?id=${encodeURIComponent(logId)}`, { method: 'DELETE' });
+
     // إزالة الغياب من الحضور أيضاً (يتم حذف السجل فيُعتبر حاضراً)
-    await supabase.from('teacher_attendance').delete().eq('teacher_id', teacherId).eq('date', dateStr);
+    await fetch(`/api/attendance/teacher?teacherId=${encodeURIComponent(teacherId)}&date=${encodeURIComponent(dateStr)}`, { method: 'DELETE' });
 };
 
 export const triggerAutomation = async (ruleId: string, recipientId: string, recipientName: string, data: any) => {

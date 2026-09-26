@@ -40,3 +40,84 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function POST(request: NextRequest) {
+    const session = await requireSession(request, ['director']);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const body = await request.json();
+        const supabase = createServerSupabase();
+        const { data, error } = await supabase
+            .from('teachers')
+            .insert([{
+                full_name: body.fullName,
+                phone: body.phone,
+                role: body.role || 'teacher',
+                accounting_type: body.accountingType || 'fixed',
+                salary: body.salary || 0,
+                partnership_percentage: body.partnershipPercentage || 0,
+                daily_hours: body.dailyHours || 4,
+                weekly_working_days: body.weeklyWorkingDays || 5,
+                password: body.password,
+                responsible_sections: body.responsibleSections || [],
+                status: body.status || 'active'
+            }])
+            .select('id')
+            .single();
+
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ id: data.id });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function PUT(request: NextRequest) {
+    const session = await requireSession(request, ['director']);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const { id, ...body } = await request.json();
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+        const updates: any = {};
+        if (body.fullName !== undefined) updates.full_name = body.fullName;
+        if (body.phone !== undefined) updates.phone = body.phone;
+        if (body.role !== undefined) updates.role = body.role;
+        if (body.accountingType !== undefined) updates.accounting_type = body.accountingType;
+        if (body.salary !== undefined) updates.salary = body.salary;
+        if (body.partnershipPercentage !== undefined) updates.partnership_percentage = body.partnershipPercentage;
+        if (body.dailyHours !== undefined) updates.daily_hours = body.dailyHours;
+        if (body.weeklyWorkingDays !== undefined) updates.weekly_working_days = body.weeklyWorkingDays;
+        // كلمة المرور تُحدَّث فقط إن أُرسلت فعلياً (لا نفرغها بقيمة فارغة)
+        if (body.password) updates.password = body.password;
+        if (body.responsibleSections !== undefined) updates.responsible_sections = body.responsibleSections;
+        if (body.status !== undefined) updates.status = body.status;
+
+        const supabase = createServerSupabase();
+        const { error } = await supabase.from('teachers').update(updates).eq('id', id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    const session = await requireSession(request, ['director']);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+        const supabase = createServerSupabase();
+        const { error } = await supabase.from('teachers').delete().eq('id', id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

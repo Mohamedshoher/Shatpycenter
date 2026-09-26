@@ -55,3 +55,22 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function DELETE(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const teacherId = searchParams.get('teacherId');
+        const date = searchParams.get('date');
+        if (!teacherId || !date) return NextResponse.json({ error: 'teacherId and date required' }, { status: 400 });
+
+        const supabase = createServerSupabase();
+        const { error } = await supabase.from('teacher_attendance').delete().eq('teacher_id', teacherId).eq('date', date);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

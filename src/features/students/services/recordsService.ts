@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+// كل الكتابات في هذا الملف تمر عبر API routes على الخادم (وليس Supabase
+// مباشرة من المتصفح)، تمهيداً لإغلاق RLS على الجداول العادية.
 
 // واجهات البيانات
 export interface AttendanceRecord {
@@ -134,19 +135,14 @@ export const getAllAttendance = async (): Promise<AttendanceRecord[]> => {
 };
 
 export const addAttendanceRecord = async (record: { studentId: string, status: 'present' | 'absent', day: number, month: string }): Promise<AttendanceRecord> => {
-    const { data, error } = await supabase
-        .from('attendance')
-        .upsert([{
-            student_id: record.studentId,
-            status: record.status,
-            date: `${record.month}-${String(record.day).padStart(2, '0')}`,
-            month_key: record.month
-        }], { onConflict: 'student_id,date' })
-        .select('id, created_at')
-        .single();
-
-    if (error) throw error;
-    return { ...record, id: data.id, recordedBy: '', timestamp: new Date(data.created_at).getTime() } as AttendanceRecord;
+    const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(record),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || 'تعذر تسجيل الحضور');
+    return { ...record, id: body.record.id, recordedBy: '', timestamp: new Date(body.record.created_at).getTime() } as AttendanceRecord;
 };
 
 // ===== سجلات الاختبارات =====
@@ -183,35 +179,34 @@ export const getAllExams = async (monthKey?: string, periodHalf?: 1 | 2, student
 };
 
 export const addExamRecord = async (record: Omit<ExamRecord, 'id'>): Promise<ExamRecord> => {
-    try {
-        const { data, error } = await supabase
-            .from('exams')
-            .insert([{
-                student_id: record.studentId,
-                surah: record.surah,
-                exam_type: record.type,
-                grade: record.grade,
-                date: record.date,
-                goal_id: record.goalId ?? null
-            }])
-            .select('id, created_at')
-            .single();
-
-        if (error) throw error;
-        return { ...record, id: data.id, timestamp: new Date(data.created_at).getTime() };
-    } catch (error) { throw error; }
+    const res = await fetch('/api/exams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(record),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'تعذر إضافة الاختبار');
+    return { ...record, id: data.id, timestamp: new Date(data.created_at).getTime() };
 };
 
 export const updateExamRecord = async (id: string, data: Partial<ExamRecord>): Promise<void> => {
-    const updates: any = {};
-    if (data.surah) updates.surah = data.surah;
-    if (data.grade) updates.grade = data.grade;
-    if (data.type) updates.exam_type = data.type; // تحديث نوع الاختبار
-    await supabase.from('exams').update(updates).eq('id', id);
+    const res = await fetch('/api/exams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...data }),
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر تحديث الاختبار');
+    }
 };
 
 export const deleteExamRecord = async (id: string): Promise<void> => {
-    await supabase.from('exams').delete().eq('id', id);
+    const res = await fetch(`/api/exams?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر حذف الاختبار');
+    }
 };
 
 // ===== سجلات الرسوم =====
@@ -259,33 +254,48 @@ export const getFeesByMonth = async (monthKey: string): Promise<FeeRecord[]> => 
 
 export const getAllFees = async (): Promise<FeeRecord[]> => { return []; };
 
+const parseArabicAmount = (amount: string): number =>
+    parseFloat(amount.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/[^0-9.]/g, ''));
+
 export const addFeeRecord = async (record: Omit<FeeRecord, 'id'>): Promise<FeeRecord> => {
-    const { data, error } = await supabase
-        .from('fees')
-        .insert([{
+    const res = await fetch('/api/records/fees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
             student_id: record.studentId,
             month: record.month,
-            amount: parseFloat(record.amount.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/[^0-9.]/g, '')),
+            amount: parseArabicAmount(record.amount),
             receipt_number: record.receipt,
             date: record.date,
             created_by: record.createdBy
-        }])
-        .select('id, created_at')
-        .single();
-
-    if (error) throw error;
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'تعذر إضافة الرسوم');
     return { ...record, id: data.id, timestamp: new Date(data.created_at).getTime() };
 };
 
 export const updateFeeRecord = async (id: string, data: Partial<FeeRecord>): Promise<void> => {
-    const updates: any = {};
-    if (data.amount) updates.amount = parseFloat(data.amount.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/[^0-9.]/g, ''));
+    const updates: any = { id };
+    if (data.amount) updates.amount = parseArabicAmount(data.amount);
     if (data.receipt) updates.receipt_number = data.receipt;
-    await supabase.from('fees').update(updates).eq('id', id);
+    const res = await fetch('/api/records/fees', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر تحديث الرسوم');
+    }
 };
 
 export const deleteFeeRecord = async (id: string): Promise<void> => {
-    await supabase.from('fees').delete().eq('id', id);
+    const res = await fetch(`/api/records/fees?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر حذف الرسوم');
+    }
 };
 
 // ===== سجلات الإعفاءات =====
@@ -332,8 +342,11 @@ export const addExemptionRecord = async (record: { studentId: string; studentNam
 };
 
 export const deleteExemptionRecord = async (id: string): Promise<void> => {
-    const { error } = await supabase.from('free_exemptions').delete().eq('id', id);
-    if (error) throw error;
+    const res = await fetch(`/api/records/exemptions?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر حذف الإعفاء');
+    }
 };
 
 // ===== سجلات الخطة اليومية =====
@@ -362,9 +375,10 @@ export const getStudentPlans = async (studentId: string): Promise<PlanRecord[]> 
 export const getAllPlans = async (): Promise<PlanRecord[]> => { return []; };
 
 export const addPlanRecord = async (record: Omit<PlanRecord, 'id'>): Promise<PlanRecord> => {
-    const { data, error } = await supabase
-        .from('plans')
-        .insert([{
+    const res = await fetch('/api/records/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
             student_id: record.studentId,
             date: record.date,
             new_hifz: record.newHifz,
@@ -372,22 +386,33 @@ export const addPlanRecord = async (record: Omit<PlanRecord, 'id'>): Promise<Pla
             distant_review: record.distantReview,
             session_time: record.sessionTime,
             status: record.status
-        }])
-        .select('id, created_at')
-        .single();
-
-    if (error) throw error;
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'تعذر إضافة الخطة');
     return { ...record, id: data.id, timestamp: new Date(data.created_at).getTime() };
 };
 
 export const updatePlanRecord = async (id: string, data: Partial<PlanRecord>): Promise<void> => {
-    const updates: any = {};
+    const updates: any = { id };
     if (data.status) updates.status = data.status;
-    await supabase.from('plans').update(updates).eq('id', id);
+    const res = await fetch('/api/records/plans', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر تحديث الخطة');
+    }
 };
 
 export const deletePlanRecord = async (id: string): Promise<void> => {
-    await supabase.from('plans').delete().eq('id', id);
+    const res = await fetch(`/api/records/plans?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر حذف الخطة');
+    }
 };
 
 // ===== طلبات الإجازة (لم يتم إنشاء جدول لها في السكيما المقترحة بعد، سأتركها فارغة أو أستخدم جدولاً افتراضياً) =====
@@ -416,24 +441,22 @@ export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
 export const getStudentLeaveRequests = async (studentId: string): Promise<LeaveRequest[]> => { return []; };
 export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status' | 'createdAt'>): Promise<LeaveRequest> => {
     try {
-        const { data, error } = await supabase
-            .from('leave_requests')
-            .insert([{
+        const res = await fetch('/api/records/leaves', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 student_id: request.studentId,
                 student_name: request.studentName,
                 start_date: request.startDate,
                 end_date: request.endDate,
                 reason: request.reason,
                 status: 'pending'
-            }])
-            .select('id, student_id, student_name, start_date, end_date, reason, status, created_at')
-            .single();
+            }),
+        });
 
-        if (error) {
-            console.error("Supabase Error Details:", error.message || error);
-
-            // إذا كان الجدول غير موجود (42P01) أو أي خطأ آخر في بنية قاعدة البيانات
-            // سنقوم بمحاكاة النجاح حتى يتمكن ولي الأمر من إكمال العملية
+        if (!res.ok) {
+            console.error("API Error Details:", await res.text());
+            // نتظاهر بالنجاح في الواجهة لتجنب تعطيل ولي الأمر عند خطأ عابر
             return {
                 id: 'temp-' + Date.now(),
                 ...request,
@@ -442,6 +465,7 @@ export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status
             } as LeaveRequest;
         }
 
+        const data = await res.json();
         return {
             id: data.id,
             studentId: data.student_id,
@@ -454,7 +478,6 @@ export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status
         };
     } catch (error) {
         console.error("Fatal Error in addLeaveRequest:", error);
-        // التظاهر بالنجاح في الواجهة لتجنب تعطيل المستخدم
         return {
             id: 'mock-' + Date.now(),
             ...request,
@@ -678,25 +701,9 @@ export interface ExamGoal {
 
 export const getStudentExamGoals = async (studentId: string): Promise<ExamGoal[]> => {
     try {
-        const { data, error } = await supabase
-            .from('exam_goals')
-            .select('*')
-            .eq('student_id', studentId)
-            .order('created_at', { ascending: true });
-        if (error) throw error;
-        return (data || []).map((row: any) => ({
-            id: row.id,
-            studentId: row.student_id,
-            examType: row.exam_type,
-            title: row.title,
-            startDate: row.start_date,
-            endDate: row.end_date,
-            sessionsCount: row.sessions_count ?? undefined,
-            notes: row.notes || '',
-            isCompleted: row.is_completed ?? false,
-            completedBy: row.completed_by ?? undefined,
-            completedAt: row.completed_at ?? undefined,
-        }));
+        const res = await fetch(`/api/exam-goals?studentIds=${encodeURIComponent(studentId)}`);
+        if (!res.ok) return [];
+        return await res.json();
     } catch (error) {
         console.error('Error fetching exam goals:', error);
         return [];
@@ -704,42 +711,34 @@ export const getStudentExamGoals = async (studentId: string): Promise<ExamGoal[]
 };
 
 export const addExamGoal = async (goal: Omit<ExamGoal, 'id'>): Promise<ExamGoal> => {
-    const { data, error } = await supabase
-        .from('exam_goals')
-        .insert([{
-            student_id: goal.studentId,
-            exam_type: goal.examType,
-            title: goal.title,
-            start_date: goal.startDate,
-            end_date: goal.endDate,
-            sessions_count: goal.sessionsCount ?? null,
-            notes: goal.notes || '',
-        }])
-        .select('id')
-        .single();
-    if (error) throw error;
+    const res = await fetch('/api/exam-goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(goal),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'تعذر إضافة الهدف');
     return { ...goal, id: data.id, isCompleted: false };
 };
 
 export const updateExamGoal = async (id: string, updates: Partial<Omit<ExamGoal, 'id' | 'studentId'>>): Promise<void> => {
-    const payload: any = {};
-    if (updates.title !== undefined) payload.title = updates.title;
-    if (updates.examType !== undefined) payload.exam_type = updates.examType;
-    if (updates.startDate !== undefined) payload.start_date = updates.startDate;
-    if (updates.endDate !== undefined) payload.end_date = updates.endDate;
-    if (updates.sessionsCount !== undefined) payload.sessions_count = updates.sessionsCount ?? null;
-    if (updates.notes !== undefined) payload.notes = updates.notes;
-    if (updates.isCompleted !== undefined) payload.is_completed = updates.isCompleted;
-    if (updates.completedBy !== undefined) payload.completed_by = updates.completedBy;
-    if (updates.completedAt !== undefined) payload.completed_at = updates.completedAt;
-    payload.updated_at = new Date().toISOString();
-    const { error } = await supabase.from('exam_goals').update(payload).eq('id', id);
-    if (error) throw error;
+    const res = await fetch('/api/exam-goals', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates }),
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر تحديث الهدف');
+    }
 };
 
 export const deleteExamGoal = async (id: string): Promise<void> => {
-    const { error } = await supabase.from('exam_goals').delete().eq('id', id);
-    if (error) throw error;
+    const res = await fetch(`/api/exam-goals?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر حذف الهدف');
+    }
 };
 export const getAllGoals = async (studentIds?: string[], isCompleted?: boolean): Promise<ExamGoal[]> => {
     try {

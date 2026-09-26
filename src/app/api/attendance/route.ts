@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
+import { fetchAllRows } from '@/lib/fetch-all-rows';
 
 export async function GET(request: NextRequest) {
     const session = await requireSession(request);
@@ -11,8 +12,28 @@ export async function GET(request: NextRequest) {
         const monthKey = searchParams.get('monthKey');
         const studentId = searchParams.get('studentId');
         const date = searchParams.get('date');
+        const sinceDate = searchParams.get('sinceDate');
+        const studentIds = searchParams.get('studentIds');
 
         const supabase = createServerSupabase();
+
+        if (sinceDate) {
+            try {
+                const data = await fetchAllRows((from, to) => {
+                    let query = supabase
+                        .from('attendance')
+                        .select('student_id, date, status')
+                        .gte('date', sinceDate);
+                    if (studentIds) {
+                        query = query.in('student_id', studentIds.split(','));
+                    }
+                    return query.order('date', { ascending: false }).range(from, to);
+                });
+                return NextResponse.json(data);
+            } catch (error: any) {
+                return NextResponse.json({ error: error.message }, { status: 500 });
+            }
+        }
 
         if (date) {
             const { data, error } = await supabase
@@ -31,28 +52,35 @@ export async function GET(request: NextRequest) {
             const lastDay = new Date(year, month, 0).getDate();
             const endDate = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
 
-            const { data, error } = await supabase
-                .from('attendance')
-                .select('id, student_id, date, status, created_at')
-                .or(`month_key.eq.${monthKey},and(date.gte.${startDate},date.lte.${endDate})`)
-                .order('created_at', { ascending: true })
-                .limit(30000);
-
-            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-            return NextResponse.json(data || []);
+            try {
+                const data = await fetchAllRows((from, to) =>
+                    supabase
+                        .from('attendance')
+                        .select('id, student_id, date, status, created_at')
+                        .or(`month_key.eq.${monthKey},and(date.gte.${startDate},date.lte.${endDate})`)
+                        .order('created_at', { ascending: true })
+                        .range(from, to)
+                );
+                return NextResponse.json(data);
+            } catch (error: any) {
+                return NextResponse.json({ error: error.message }, { status: 500 });
+            }
         }
 
         if (studentId) {
-            const { data, error } = await supabase
-                .from('attendance')
-                .select('id, student_id, date, month_key, status, created_at')
-                .eq('student_id', studentId)
-                .order('created_at', { ascending: false });
-
-            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-            return NextResponse.json(data || []);
+            try {
+                const data = await fetchAllRows((from, to) =>
+                    supabase
+                        .from('attendance')
+                        .select('id, student_id, date, month_key, status, created_at')
+                        .eq('student_id', studentId)
+                        .order('created_at', { ascending: false })
+                        .range(from, to)
+                );
+                return NextResponse.json(data);
+            } catch (error: any) {
+                return NextResponse.json({ error: error.message }, { status: 500 });
+            }
         }
 
         return NextResponse.json([]);

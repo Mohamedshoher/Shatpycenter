@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
+import { fetchAllRows } from '@/lib/fetch-all-rows';
 
 export async function GET(request: NextRequest) {
     const session = await requireSession(request);
@@ -12,23 +13,23 @@ export async function GET(request: NextRequest) {
         const isCompleted = searchParams.get('isCompleted'); // 'true', 'false', or null
 
         const supabase = createServerSupabase();
-        let query = supabase.from('exam_goals').select('*');
 
-        if (studentIds) {
-            const ids = studentIds.split(',');
-            query = query.in('student_id', ids);
-        }
-
-        if (isCompleted === 'true') {
-            query = query.eq('is_completed', true);
-        } else if (isCompleted === 'false') {
-            query = query.eq('is_completed', false);
-        }
-
-        query = query.limit(10000);
-
-        const { data, error } = await query;
-        if (error) {
+        let data: any[];
+        try {
+            data = await fetchAllRows((from, to) => {
+                let query = supabase.from('exam_goals').select('*').order('created_at', { ascending: true }).range(from, to);
+                if (studentIds) {
+                    const ids = studentIds.split(',');
+                    query = query.in('student_id', ids);
+                }
+                if (isCompleted === 'true') {
+                    query = query.eq('is_completed', true);
+                } else if (isCompleted === 'false') {
+                    query = query.eq('is_completed', false);
+                }
+                return query;
+            });
+        } catch (error: any) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
@@ -47,6 +48,81 @@ export async function GET(request: NextRequest) {
         }));
 
         return NextResponse.json(goals);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function POST(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const goal = await request.json();
+        const supabase = createServerSupabase();
+        const { data, error } = await supabase
+            .from('exam_goals')
+            .insert([{
+                student_id: goal.studentId,
+                exam_type: goal.examType,
+                title: goal.title,
+                start_date: goal.startDate,
+                end_date: goal.endDate,
+                sessions_count: goal.sessionsCount ?? null,
+                notes: goal.notes || '',
+            }])
+            .select('id')
+            .single();
+
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ id: data.id });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function PUT(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const { id, ...updates } = await request.json();
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+        const payload: any = {};
+        if (updates.title !== undefined) payload.title = updates.title;
+        if (updates.examType !== undefined) payload.exam_type = updates.examType;
+        if (updates.startDate !== undefined) payload.start_date = updates.startDate;
+        if (updates.endDate !== undefined) payload.end_date = updates.endDate;
+        if (updates.sessionsCount !== undefined) payload.sessions_count = updates.sessionsCount ?? null;
+        if (updates.notes !== undefined) payload.notes = updates.notes;
+        if (updates.isCompleted !== undefined) payload.is_completed = updates.isCompleted;
+        if (updates.completedBy !== undefined) payload.completed_by = updates.completedBy;
+        if (updates.completedAt !== undefined) payload.completed_at = updates.completedAt;
+        payload.updated_at = new Date().toISOString();
+
+        const supabase = createServerSupabase();
+        const { error } = await supabase.from('exam_goals').update(payload).eq('id', id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+        const supabase = createServerSupabase();
+        const { error } = await supabase.from('exam_goals').delete().eq('id', id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ success: true });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
