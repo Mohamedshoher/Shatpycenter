@@ -81,12 +81,12 @@ export default function ScheduleTab({ student }: any) {
         
         const normalizeToFullFormat = (t: string) => {
             if (!t) return '';
-            let clean = t.replace(/الساعة|ساعة/g, '').trim();
+            const clean = t.replace(/الساعة|ساعة/g, '').trim();
             const timeMatch = clean.match(/(\d+)(?::(\d+))?/);
             if (!timeMatch) return '';
             
-            let hours = parseInt(timeMatch[1]);
-            let minutes = timeMatch[2] || "00";
+            const hours = parseInt(timeMatch[1]);
+            const minutes = timeMatch[2] || "00";
             const periodMatch = t.match(/عصراً|صباحاً/);
             const period = periodMatch ? periodMatch[0] : (hours < 12 && hours >= 1 ? 'عصراً' : 'صباحاً');
             

@@ -128,14 +128,43 @@ src/
 
 ---
 
-## 🚀 التشغيل والتطوير
+## 🗄️ تفاصيل وترتيب ملفات الهجرة (Database Migrations Order)
 
-1. **تثبيت التبعيات:** `npm install`
-2. **إعداد البيئة:** إنشاء ملف `.env.local` يحتوي على مفاتيح Supabase.
-3. **التشغيل:** `npm run dev` (Turbopack)
-4. **تحليل الحزمة:** `npm run analyze` (باستخدام `@next/bundle-analyzer`)
-5. **فهارس Supabase:** تشغيل `supabase/migrations/indexes.sql` يدوياً عبر SQL Editor
-6. **النشر:** التطبيق مهيأ للنشر المباشر على **Vercel**.
+يتم تطبيق الهجرات بالترتيب المرقّم التالي من مجلد `supabase/migrations/`:
+
+1. `001_supabase_schema.sql` - الهيكلية الأساسية والجداول المرجعية.
+2. `002_add_group_hours.sql` - إضافة عمود hours لساعات المجموعات.
+3. `003_add_teacher_work_hours.sql` - إضافة ساعات عمل المعلمين والأيام الأسبوعية.
+4. `004_add_is_read_to_notes.sql` - تتبع قراءة ملاحظات الطلاب.
+5. `005_add_reply_to_notes.sql` - إضافة خاصية الرد على الملاحظات.
+6. `006_notifications.sql` - نظام الإشعارات.
+7. `007_exam_goals.sql` - أهداف الاختبارات.
+8. `008_exam_goals_completion.sql` - إكمال أهداف الاختبارات.
+9. `009_exams_goal_id.sql` - ربط الاختبار بالأهداف.
+10. `010_fees_collected_by.sql` - إضافة عمود collected_by_id لربط التحصيل بالمعلم.
+11. `011_attendance_unique_constraint.sql` - تنظيف التكرارات وإضافة قيد فريد (student_id, date).
+12. `012_migrate_orphan_azhari_notes.sql` - نقل وسام يتيم وأزهري إلى أعمدة بولينية.
+13. `013_messaging_rls.sql` - سياسات RLS لنظام المحادثات.
+14. `014_messaging_rpc.sql` - إجراءات RPC المحفوظة للمراسلات.
+15. `015_messaging_secretary_access.sql` - صلاحيات سكرتارية المواعيد للمحادثات.
+16. `016_indexes.sql` - فهارس الأداء وتفادي الفحص الكامل.
+
+---
+
+## 🚀 التشغيل والتطوير والاختبارات
+
+1. **تثبيت التبعيات:** `npm ci --legacy-peer-deps`
+2. **إعداد البيئة:** إنشاء ملف `.env.local` يحتوي على:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   ```
+3. **التشغيل المحلي:** `npm run dev` (يستخدم `--webpack` لتوافقية next-pwa)
+4. **فحص جودة الكود:** `npx eslint src`
+5. **تشغيل اختبارات الوحدة:** `npm test` (تشغيل Vitest)
+6. **بناء المشروع:** `npm run build`
+7. **تحليل الحزمة:** `npm run analyze`
 
 ---
 
@@ -150,21 +179,19 @@ src/
 
 ## 📦 التقنيات المستخدمة (Tech Stack)
 
-- **Framework:** Next.js 16.1.2 (App Router + Turbopack)
+- **Framework:** Next.js 16.1.2 (App Router)
 - **Language:** TypeScript 5
 - **Database:** Supabase (PostgreSQL)
 - **Styling:** Tailwind CSS 4
-- **State Management:** Zustand
-- **Data Fetching:** @tanstack/react-query
-- **PWA:** @ducanh2912/next-pwa (runtime caching مخصص)
-- **UI Transitions:** CSS (FadeIn, SlideIn) - بدون مكتبة خارجية
+- **State Management:** Zustand & React Query
+- **Testing:** Vitest
+- **PWA:** @ducanh2912/next-pwa (runtime caching مخصص ومستثنى منه /api/)
 - **Icons:** Lucide React
-- **Utilities:** clsx (بدلاً من tailwind-merge)
 
 ---
 
 <div align="center">
 
-**آخر تحديث: 27 مايو 2026**
+**آخر تحديث: سبتمبر 2026**
 
 </div>

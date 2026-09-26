@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getStudents, updateStudent } from '../services/studentService';
+import { getStudents, updateStudent, deleteStudent } from '../services/studentService';
 import { Student } from '@/types';
 
 export const useStudents = (groupIds?: string[], status?: string) => {
@@ -39,8 +39,7 @@ export const useStudents = (groupIds?: string[], status?: string) => {
 
     const deleteStudentMutation = useMutation({
         mutationFn: (id: string) => {
-            const { deleteStudent: deleteStudentService } = require('../services/studentService');
-            return deleteStudentService(id);
+            return deleteStudent(id);
         },
         onMutate: async (id) => {
             await queryClient.cancelQueries({ queryKey: ['students'] });

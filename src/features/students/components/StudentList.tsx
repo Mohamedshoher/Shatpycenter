@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStudents } from '../hooks/useStudents';
+import { updateStudent } from '../services/studentService';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -137,14 +138,14 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const normalizeTime = (t: string) => {
         if (!t) return '';
         // تنظيف النص الأساسي
-        let clean = t.replace(/الساعة|ساعة/g, '').trim();
+        const clean = t.replace(/الساعة|ساعة/g, '').trim();
         
         // استخراج الأرقام (ساعة ودقائق)
         const timeMatch = clean.match(/(\d+)(?::(\d+))?/);
         if (!timeMatch) return t;
         
-        let hours = parseInt(timeMatch[1]);
-        let minutes = timeMatch[2] || "00";
+        const hours = parseInt(timeMatch[1]);
+        const minutes = timeMatch[2] || "00";
         
         // استخراج الفترة أو استنتاجها (من ١ لـ ١١ تعتبر عصراً في هذا المركز)
         const periodMatch = t.match(/عصراً|صباحاً/);
@@ -757,7 +758,6 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                 e.stopPropagation(); 
                                                 const newPhone = window.prompt('أدخل رقم الهاتف الجديد لولي أمر الطالب:', student.parentPhone);
                                                 if (newPhone !== null && newPhone.trim() !== '' && newPhone !== student.parentPhone) {
-                                                    const { updateStudent } = require('../services/studentService');
                                                     updateStudent(student.id, { parentPhone: newPhone.trim() }).then(() => {
                                                         queryClient.invalidateQueries({ queryKey: ['students'] });
                                                     }).catch((err: any) => {

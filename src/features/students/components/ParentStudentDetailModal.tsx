@@ -264,7 +264,7 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
             const start = new Date(dateParts[0], dateParts[1] - 1, 1);
             const now = new Date();
             const list = [];
-            let curr = new Date(now.getFullYear(), now.getMonth(), 1);
+            const curr = new Date(now.getFullYear(), now.getMonth(), 1);
             while (curr >= start) {
                 list.push({
                     label: curr.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' }),

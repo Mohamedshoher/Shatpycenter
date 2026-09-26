@@ -5,16 +5,9 @@ import { Teacher } from '@/types';
 export async function GET(request: NextRequest) {
     try {
         const supabase = createServerSupabase();
-        let { data, error } = await supabase
+        const { data, error } = await supabase
             .from('teachers')
             .select('id, full_name, phone, role, accounting_type, salary, partnership_percentage, daily_hours, weekly_working_days, password, responsible_sections, status, created_at');
-
-        // إذا كانت أعمدة ساعات العمل غير موجودة بعد في قاعدة البيانات، نعيد الاستعلام بدونها
-        if (error) {
-            ({ data, error } = await supabase
-                .from('teachers')
-                .select('id, full_name, phone, role, accounting_type, salary, partnership_percentage, password, responsible_sections, status, created_at'));
-        }
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });

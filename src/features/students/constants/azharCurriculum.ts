@@ -39,7 +39,7 @@ export const parseAzhariFromNotes = (notes?: string | null): { isAzhari: boolean
 };
 
 export const formatNotesWithAzhari = (existingNotes: string | undefined | null, isAzhari: boolean, azhariGrade?: string): string => {
-    let cleanNotes = (existingNotes || '').replace(/\[أزهري(?::\s*[^\]]+)?\]\s*/g, '').trim();
+    const cleanNotes = (existingNotes || '').replace(/\[أزهري(?::\s*[^\]]+)?\]\s*/g, '').trim();
     if (isAzhari) {
         const azhariTag = azhariGrade ? `[أزهري: ${azhariGrade}]` : `[أزهري]`;
         return cleanNotes ? `${azhariTag} ${cleanNotes}` : azhariTag;

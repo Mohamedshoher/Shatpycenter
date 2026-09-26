@@ -128,6 +128,14 @@ export const loginWithRole = async (identifier: string, password: string): Promi
  * دالة تسجيل الخروج
  */
 export const logout = async () => {
+    if (typeof window !== 'undefined' && 'caches' in window) {
+        try {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+        } catch (e) {
+            console.error('Failed to clear caches on logout', e);
+        }
+    }
     await delay(300);
 };
 

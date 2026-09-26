@@ -69,16 +69,13 @@ export async function POST(request: NextRequest) {
 
         const supabase = createServerSupabase();
         const dateStr = `${month}-${String(day).padStart(2, '0')}`;
-        const { error: deleteError } = await supabase
-            .from('attendance')
-            .delete()
-            .eq('student_id', studentId)
-            .eq('date', dateStr);
-        if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 });
 
         const { data, error } = await supabase
             .from('attendance')
-            .insert([{ student_id: studentId, date: dateStr, month_key: month, status }])
+            .upsert(
+                { student_id: studentId, date: dateStr, month_key: month, status },
+                { onConflict: 'student_id,date' }
+            )
             .select()
             .single();
 

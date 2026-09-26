@@ -1,4 +1,4 @@
-﻿import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 // واجهات البيانات
 export interface AttendanceRecord {
@@ -136,12 +136,12 @@ export const getAllAttendance = async (): Promise<AttendanceRecord[]> => {
 export const addAttendanceRecord = async (record: { studentId: string, status: 'present' | 'absent', day: number, month: string }): Promise<AttendanceRecord> => {
     const { data, error } = await supabase
         .from('attendance')
-        .insert([{
+        .upsert([{
             student_id: record.studentId,
             status: record.status,
             date: `${record.month}-${String(record.day).padStart(2, '0')}`,
             month_key: record.month
-        }])
+        }], { onConflict: 'student_id,date' })
         .select('id, created_at')
         .single();
 

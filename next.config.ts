@@ -36,24 +36,24 @@ const pwaConfig = withPWA({
                 },
             },
             {
-                // استعلامات Supabase - مخزنة للاستخدام فوراً حتى مع بطء النت
+                // استعلامات Supabase - استخدام NetworkFirst مع مدة تخزين قصيرة لتجنب إظهار بيانات قديمة
                 urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
                 handler: "NetworkFirst",
                 options: {
                     cacheName: "supabase-api-cache",
                     expiration: {
-                        maxEntries: 300,
-                        maxAgeSeconds: 60 * 60 * 24 * 7,
+                        maxEntries: 100,
+                        maxAgeSeconds: 60 * 5, // 5 دقائق فقط
                     },
-                    networkTimeoutSeconds: 5,
+                    networkTimeoutSeconds: 3,
                     cacheableResponse: {
                         statuses: [0, 200],
                     },
                 },
             },
             {
-                // صفحات التنقل - تظهر المحفوظة فوراً ثم تُحدّث
-                urlPattern: /\/[a-z0-9\-_\/]*/i,
+                // صفحات التنقل - استثناء المسارات التابعة لـ /api/ حتى لا يتم تخزين استجابات API في الكاش
+                urlPattern: /^\/(?!api\/)[a-z0-9\-_\/]*/i,
                 handler: "NetworkFirst",
                 options: {
                     cacheName: "navigation-cache",
@@ -72,6 +72,7 @@ const withBundleAnalyzerConfig = withBundleAnalyzer({
     enabled: process.env.ANALYZE === 'true',
 });
 
+// يتم استخدام --webpack في الأوامر لأن حزمة @ducanh2912/next-pwa لا تدعم Turbopack حالياً
 const nextConfig: NextConfig = {
     turbopack: {},
 };

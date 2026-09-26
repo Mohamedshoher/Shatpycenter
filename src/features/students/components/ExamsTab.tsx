@@ -255,7 +255,7 @@ export default function ExamsTab({ student, records }: any) {
                     )}
                 >
                     <Plus size={15} />
-                    إضافة هدف جديد في "{activeTab}"
+                    إضافة هدف جديد في «{activeTab}»
                 </button>
             )}
 

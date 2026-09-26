@@ -23,6 +23,8 @@
 # next.js service worker (auto-generated)
 public/workbox-*.js
 public/swe-worker-*.js
+public/sw.js
+public/sw.js.map
 
 # misc
 .DS_Store

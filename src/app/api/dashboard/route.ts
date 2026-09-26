@@ -28,20 +28,13 @@ export async function GET(request: NextRequest) {
                 max_students_per_hour: number | null;
                 hours?: number | null;
             };
-            let groupRows: GroupRow[] | null = null;
-            const firstGroupsResult = await supabase
+            const { data: groupRows, error: groupsError } = await supabase
                 .from('groups')
                 .select('id, name, teacher_id, schedule, max_students_per_hour, hours')
                 .order('name', { ascending: true });
-            groupRows = firstGroupsResult.data;
 
-            // إذا كان عمود "hours" غير موجود بعد في قاعدة البيانات، نعيد الاستعلام بدونه
-            if (firstGroupsResult.error) {
-                const fb = await supabase
-                    .from('groups')
-                    .select('id, name, teacher_id, schedule, max_students_per_hour')
-                    .order('name', { ascending: true });
-                groupRows = fb.data;
+            if (groupsError) {
+                return NextResponse.json({ error: groupsError.message }, { status: 500 });
             }
             const data = groupRows;
 

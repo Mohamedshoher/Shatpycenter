@@ -118,7 +118,7 @@ export default function ArchiveList() {
             const start = new Date(startDateStr);
             const end = student.archivedDate ? new Date(student.archivedDate) : new Date();
 
-            let current = new Date(start.getFullYear(), start.getMonth(), 1);
+            const current = new Date(start.getFullYear(), start.getMonth(), 1);
             const target = new Date(end.getFullYear(), end.getMonth(), 1);
 
             const feeMonths = feeSetByStudentId.get(student.id) || new Set<string>();

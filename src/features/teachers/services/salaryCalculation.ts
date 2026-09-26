@@ -49,6 +49,28 @@ export interface TeacherSalaryStats {
     totalAbsentDays: number;
 }
 
+/**
+ * دالة مساعدة لتحويل المبلغ إلى رقم بأمان حتى لو جاء كنص أو رقم
+ */
+export const parseAmount = (val: any): number => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    return Number(String(val).replace(/[^0-9.]/g, '')) || 0;
+};
+
+/**
+ * استخراج مفتاح الشهر YYYY-MM من السلسلة دون التأثر بالمنطقة الزمنية
+ */
+export const getMonthKeyFromDate = (dateVal: any): string => {
+    if (!dateVal) return '';
+    if (typeof dateVal === 'string' && dateVal.length >= 7) {
+        return dateVal.slice(0, 7);
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
 export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSalaryStats => {
     const {
         teacher,
@@ -65,6 +87,9 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
 
     const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
 
+    // Map لتحسين سرعة البحث عن الطالب في O(1) بدلاً من O(n)
+    const studentMap = new Map<string, any>(students.map(s => [s.id, s]));
+
     // دالة للتحقق إذا كان المنشئ معلماً آخر
     const isOtherTeacher = (createdBy: string) => {
         if (!createdBy || createdBy === 'غير معروف') return false;
@@ -78,9 +103,13 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     };
 
     // 1. المصروفات المتوقعة
+    // تشمل الطلاب غير المؤرشفين أو الذين تم أرشفهم بعد الشهر المحدد
     const expectedExpenses = students
         .filter(s => {
-            const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
+            const isArchivedAfterSelectedMonth = s.status === 'archived' &&
+                s.archivedDate && s.archivedDate.length >= 7 &&
+                s.archivedDate.substring(0, 7) > selectedMonthRaw;
+            const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && (s.status !== 'archived' || isArchivedAfterSelectedMonth);
             if (!isMember) return false;
             return s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonthRaw;
         })
@@ -89,35 +118,40 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     // 2. ما حصله المعلم
     const totalCollected = allFees
         .filter(f => {
-            const student = students.find(s => s.id === f.studentId);
+            const student = studentMap.get(f.studentId);
             const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
-            const isCollectedByTeacher = f.createdBy === teacher.fullName ||
+            const isCollectedByTeacher = (f.collectedById && f.collectedById === teacher.id) ||
+                (f.collected_by_id && f.collected_by_id === teacher.id) ||
+                f.createdBy === teacher.fullName ||
                 f.createdBy === teacher.phone ||
                 (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
             return isCollectedByTeacher || (isTeacherStudent && (!f.createdBy || f.createdBy === 'غير معروف'));
         })
-        .reduce((sum, f) => sum + (Number(f.amount.replace(/[^0-9.]/g, '')) || 0), 0);
+        .reduce((sum, f) => sum + parseAmount(f.amount), 0);
 
     // 3. ما حصله المدير مباشرة
     const totalCollectedByManager = allFees
         .filter(f => {
-            const student = students.find(s => s.id === f.studentId);
+            const student = studentMap.get(f.studentId);
             const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
-            const isCollectedByThisTeacher = f.createdBy === teacher.fullName || (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
+            const isCollectedByThisTeacher = (f.collectedById && f.collectedById === teacher.id) ||
+                (f.collected_by_id && f.collected_by_id === teacher.id) ||
+                f.createdBy === teacher.fullName ||
+                (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
             return isTeacherStudent && !isCollectedByThisTeacher && !isOtherTeacher(f.createdBy) && f.createdBy && f.createdBy !== 'غير معروف';
         })
-        .reduce((sum, f) => sum + (Number(f.amount.replace(/[^0-9.]/g, '')) || 0), 0);
+        .reduce((sum, f) => sum + parseAmount(f.amount), 0);
 
     // 4. المبالغ المسلّمة للمدير
-    const totalHandedOver = handovers.reduce((sum, h) => sum + Number(h.amount), 0);
+    const totalHandedOver = handovers.reduce((sum, h) => sum + parseAmount(h.amount), 0);
 
     // 5. إجمالي تحصيل المجموعة + إجمالي ما استلمه المدير (أساس حساب الشراكة)
     const totalCollectedForGroup = allFees
         .filter(f => {
-            const student = students.find(s => s.id === f.studentId);
+            const student = studentMap.get(f.studentId);
             return student && student.groupId && teacherGroupIds.includes(student.groupId);
         })
-        .reduce((sum, f) => sum + (Number(f.amount.replace(/[^0-9.]/g, '')) || 0), 0);
+        .reduce((sum, f) => sum + parseAmount(f.amount), 0);
 
     const directorReceivedTotal = totalCollectedByManager + totalHandedOver;
 
@@ -138,7 +172,7 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     // القيمة اليومية: للمرتب الثابت من راتبه، وللنسبة من المتوقع جمعه للمجموعة
     const dailyRate = isPartnership
         ? ((expectedExpenses * (Number(teacher.partnershipPercentage) || 0)) / 100) / standardWorkingDays
-        : (Number(teacher.salary) || 1000) / standardWorkingDays;
+        : (Number(teacher.salary) || 0) / standardWorkingDays;
 
     // أجر الساعة الواحدة
     const hourlyRate = dailyHours > 0 ? dailyRate / dailyHours : 0;
@@ -175,22 +209,20 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     // مكافآت يدوية لهذا المعلم
     const manualRewardsTotal = deductions
         .filter(d => {
-            const dDate = new Date(d.appliedDate);
-            const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
-            return d.teacherId === teacher.id && dMonthRaw === selectedMonthRaw && d.reason.startsWith('مكافأة:');
+            const dMonthRaw = getMonthKeyFromDate(d.appliedDate);
+            return d.teacherId === teacher.id && dMonthRaw === selectedMonthRaw && d.reason && d.reason.startsWith('مكافأة:');
         })
-        .reduce((acc: number, curr) => acc + Math.abs(curr.amount), 0);
+        .reduce((acc: number, curr) => acc + Math.abs(parseAmount(curr.amount)), 0);
 
     // خصومات يدوية لهذا المعلم
     const manualDeductionsTotal = deductions
         .filter(d => {
-            const dDate = new Date(d.appliedDate);
-            const dMonthRaw = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`;
-            return d.teacherId === teacher.id && dMonthRaw === selectedMonthRaw && !d.reason.startsWith('مكافأة:') && d.appliedBy !== 'system-automation';
+            const dMonthRaw = getMonthKeyFromDate(d.appliedDate);
+            return d.teacherId === teacher.id && dMonthRaw === selectedMonthRaw && (!d.reason || !d.reason.startsWith('مكافأة:')) && d.appliedBy !== 'system-automation';
         })
-        .reduce((acc: number, curr) => acc + curr.amount, 0);
+        .reduce((acc: number, curr) => acc + parseAmount(curr.amount), 0);
 
-    const totalPaid = paymentsHistory.reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const totalPaid = paymentsHistory.reduce((acc, curr) => acc + parseAmount(curr.amount), 0);
     // الخصومات اليدوية تطبق دائماً
     // خصومات الغياب تطبق فقط لنظام النسبة (لأن المرتب الثابت محسوب على أيام الحضور)
     const totalDeductionsToApply = isPartnership ? autoDeductions : 0;
@@ -228,3 +260,4 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
         totalAbsentDays,
     };
 };
+

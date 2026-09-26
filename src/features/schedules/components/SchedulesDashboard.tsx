@@ -508,7 +508,7 @@ export default function SchedulesDashboard() {
                         <div className="p-6 space-y-5">
                             <div className="bg-red-50/60 border border-red-100 p-4 rounded-2xl space-y-2">
                                 <p className="text-xs font-black text-gray-700">
-                                    اختر نوع الإلغاء المطلوب لطلاب مجموعة <span className="text-red-600">"{groupToCancel.name}"</span>:
+                                    اختر نوع الإلغاء المطلوب لطلاب مجموعة <span className="text-red-600">«{groupToCancel.name}»</span>:
                                 </p>
                                 <div className="text-[11px] font-bold text-gray-500 space-y-1 pr-2">
                                     <div>• طلاب مسجلين يوم {selectedDay}: <span className="font-black text-gray-800">{groupToCancel.dayStudents} طالب</span></div>

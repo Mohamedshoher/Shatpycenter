@@ -34,17 +34,13 @@ export async function GET(request: NextRequest) {
 
         const students: Student[] = (data || []).map((row: any) => {
             const notesStr = row.notes || '';
-            const azhariMatch = notesStr.match(/\[أزهري:\s*([^\]]+)\]/);
-            const isAzhari = Boolean(row.is_azhari || azhariMatch || notesStr.includes('[أزهري]'));
-            const azhariGrade = row.azhari_grade || (azhariMatch ? azhariMatch[1].trim() : '');
+            const isAzhari = Boolean(row.is_azhari);
+            const azhariGrade = row.azhari_grade || '';
             const isOrphan = Boolean(
                 row.is_orphan === true ||
                 row.is_orphan === 'true' ||
                 row.is_orphan === 1 ||
-                row.isOrphan === true ||
-                notesStr.includes('[يتيم]') ||
-                notesStr.includes('يتيم') ||
-                notesStr.includes('الأيتام')
+                row.isOrphan === true
             );
 
             return {
