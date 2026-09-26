@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { requireSession } from '@/lib/auth-server';
 
 export async function GET(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const { searchParams } = new URL(request.url);
         const studentIds = searchParams.get('studentIds');

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { requireSession } from '@/lib/auth-server';
 import { FinancialTransaction } from '@/types';
 
 const mapTransaction = (row: any): FinancialTransaction => ({
@@ -15,6 +16,9 @@ const mapTransaction = (row: any): FinancialTransaction => ({
 });
 
 export async function GET(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const { searchParams } = new URL(request.url);
         const year = searchParams.get('year');

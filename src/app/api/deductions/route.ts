@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { requireSession } from '@/lib/auth-server';
 
 export async function GET(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const { searchParams } = new URL(request.url);
         const teacherId = searchParams.get('teacherId');
@@ -33,17 +37,21 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const session = await requireSession(request, ['director']);
+    if (session instanceof NextResponse) return session;
+
     try {
-        const { teacherId, amount, reason, appliedBy, customDate } = await request.json();
+        const { teacherId, amount, reason, customDate } = await request.json();
         if (!teacherId || !amount || !reason) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const dateStr = customDate || new Date().toISOString().split('T')[0];
         const supabase = createServerSupabase();
+        // نأخذ اسم من طبّق الخصم/المكافأة من الجلسة الموثوقة، لا من جسم الطلب
         const { data, error } = await supabase
             .from('deductions')
-            .insert([{ teacher_id: teacherId, date: dateStr, amount, reason, applied_by: appliedBy || 'system' }])
+            .insert([{ teacher_id: teacherId, date: dateStr, amount, reason, applied_by: session.displayName || 'system' }])
             .select('*, teachers(full_name)')
             .single();
 
@@ -55,6 +63,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+    const session = await requireSession(request, ['director']);
+    if (session instanceof NextResponse) return session;
+
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
@@ -70,6 +81,9 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+    const session = await requireSession(request, ['director']);
+    if (session instanceof NextResponse) return session;
+
     try {
         const { id, status, notes } = await request.json();
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { requireSession } from '@/lib/auth-server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const supabase = createServerSupabase();
         const { data, error } = await supabase.from('automation_rules').select('*').order('created_at', { ascending: false });
@@ -13,6 +17,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+    const session = await requireSession(request, ['director']);
+    if (session instanceof NextResponse) return session;
+
     try {
         const body = await request.json();
         const supabase = createServerSupabase();

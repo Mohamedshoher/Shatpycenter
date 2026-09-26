@@ -59,7 +59,9 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
         partnershipPercentage: (initialTeacher as any)?.partnershipPercentage || 30,
         dailyHours: Number(initialTeacher?.dailyHours) || 4,
         weeklyWorkingDays: Number(initialTeacher?.weeklyWorkingDays) || 5,
-        password: (initialTeacher as any)?.password || '',
+        // ملاحظة أمنية: الـ API لم يعد يُرجع كلمة المرور الحالية إطلاقاً،
+        // لذا يبقى الحقل فارغاً دائماً عند فتح نافذة التعديل (وليس معبّأً مسبقاً).
+        password: '',
         status: (initialTeacher?.status as any) || 'active' as 'active' | 'inactive',
         responsibleSections: (initialTeacher as any)?.responsibleSections || ['قرآن'] as string[],
     });
@@ -83,7 +85,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                 partnershipPercentage: (initialTeacher as any).partnershipPercentage || 30,
                 dailyHours: Number(initialTeacher?.dailyHours) || 4,
                 weeklyWorkingDays: Number(initialTeacher?.weeklyWorkingDays) || 5,
-                password: (initialTeacher as any).password || '',
+                password: '',
                 status: (initialTeacher.status as any) || 'active',
                 responsibleSections: (initialTeacher as any).responsibleSections || ['قرآن'],
             });
@@ -164,8 +166,13 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
         e.preventDefault();
         // إنشاء بريد إلكتروني وهمي لغرض تسجيل الدخول بناءً على رقم الهاتف
         const email = formData.phone + "@shadbi.com";
-        // إرسال البيانات مع الحفاظ على المجموعات المعينة مسبقاً في حالة التعديل
-        mutation.mutate({ ...formData, email, assignedGroups: initialTeacher?.assignedGroups || [] });
+        // في وضع التعديل: إن تُرك حقل كلمة المرور فارغاً فهذا يعني "لا تغيير"،
+        // فلا نرسله حتى لا نمسح كلمة المرور الحالية بقيمة فارغة
+        const payload: any = { ...formData, email, assignedGroups: initialTeacher?.assignedGroups || [] };
+        if (initialTeacher && !formData.password) {
+            delete payload.password;
+        }
+        mutation.mutate(payload);
     };
 
     // ==========================================
@@ -378,15 +385,17 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
 
                     {/* حقل إدخال كلمة المرور */}
                     <div className={cn("space-y-1.5 text-right", formData.role === 'schedule_secretary' && "md:col-span-2")}>
-                        <label className="text-[10px] font-black text-gray-400 uppercase mr-1">كلمة المرور</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase mr-1">
+                            {initialTeacher ? 'كلمة مرور جديدة (اختياري)' : 'كلمة المرور'}
+                        </label>
                         <div className="relative group">
                             <input
-                                placeholder="كلمة المرور"
+                                placeholder={initialTeacher ? 'اتركه فارغاً للإبقاء على كلمة المرور الحالية' : 'كلمة المرور'}
                                 type="text"
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 className="w-full h-12 bg-gray-50/30 border border-gray-100 rounded-[18px] px-10 text-right text-sm font-bold focus:outline-none focus:ring-2 focus:ring-teal-500/10 focus:bg-white transition-all"
-                                required
+                                required={!initialTeacher}
                             />
                             <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-teal-500 transition-colors" size={18} />
                         </div>
