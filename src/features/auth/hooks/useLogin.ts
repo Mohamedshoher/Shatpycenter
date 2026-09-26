@@ -53,23 +53,10 @@ export const useLogin = () => {
                 router.push('/'); // توجيه الإدارة/المعلمين للصفحة الرئيسية
             }
             
-        } catch (err: any) {
+        } catch (err) {
             // --- معالجة الأخطاء (Error Handling) ---
             console.error(err);
-            let message = err.message || 'حدث خطأ في تسجيل الدخول.';
-
-            // تحويل أكواد خطأ Firebase إلى رسائل مفهومة للمستخدم باللغة العربية
-            if (
-                err.code === 'auth/user-not-found' || 
-                err.code === 'auth/wrong-password' || 
-                err.code === 'auth/invalid-credential' || 
-                err.code === 'auth/invalid-email'
-            ) {
-                message = 'بيانات الدخول غير صحيحة.';
-            } else if (err.code === 'auth/configuration-not-found') {
-                message = 'يجب تفعيل Email/Password في إعدادات Firebase.';
-            }
-
+            const message = err instanceof Error ? err.message : 'حدث خطأ في تسجيل الدخول.';
             setError(message); // تخزين الرسالة لعرضها في الواجهة
             
         } finally {

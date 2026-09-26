@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { requireSession } from '@/lib/auth-server';
 
 export async function GET(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const { searchParams } = new URL(request.url);
         const monthKey = searchParams.get('monthKey');
@@ -29,6 +33,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const { teacherId, date, status, notes } = await request.json();
         if (!teacherId || !date || !status) {

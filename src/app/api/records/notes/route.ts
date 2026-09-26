@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { requireSession } from '@/lib/auth-server';
 
 export async function GET(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const { searchParams } = new URL(request.url);
         const studentId = searchParams.get('studentId');
@@ -29,6 +33,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const body = await request.json();
         const supabase = createServerSupabase();
@@ -41,6 +48,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const body = await request.json();
         const { id, isRead, reply, repliedBy } = body;
@@ -63,6 +73,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');

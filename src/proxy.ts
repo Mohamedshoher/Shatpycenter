@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getSession } from '@/lib/auth-server';
 
-// This proxy will run on all routes
-export function proxy(request: NextRequest) {
+// ==========================================================
+// حارس الصفحات: يتحقق من جلسة موقّعة حقيقية (Cookie httpOnly)
+// بدل الاعتماد على ما يخزّنه المتصفح في localStorage.
+// (الـ API routes تُطبّق حراستها الخاصة عبر requireSession)
+// ==========================================================
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
+    const isLoginPage = pathname === '/login';
 
-    // For now, we allow all routes since client-side auth is used
+    const session = await getSession(request);
 
-    // For now, we'll allow all routes since we're using client-side auth
-    // In production, you might want to use Firebase Admin SDK for server-side verification
+    if (!session && !isLoginPage) {
+        const loginUrl = new URL('/login', request.url);
+        return NextResponse.redirect(loginUrl);
+    }
+
+    if (session && isLoginPage) {
+        const homeUrl = new URL(session.role === 'parent' ? '/parent' : '/', request.url);
+        return NextResponse.redirect(homeUrl);
+    }
 
     return NextResponse.next();
 }
@@ -18,11 +31,12 @@ export const config = {
     matcher: [
         /*
          * Match all request paths except for the ones starting with:
-         * - api (API routes)
+         * - api (API routes: تُطبّق التحقق بنفسها عبر requireSession)
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
+         * - manifest.json / icons (PWA)
          */
-        '/((?!api|_next/static|_next/image|favicon.ico).*)',
+        '/((?!api|_next/static|_next/image|favicon.ico|manifest.json|icon-).*)',
     ],
 };

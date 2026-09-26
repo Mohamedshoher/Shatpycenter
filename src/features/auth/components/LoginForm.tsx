@@ -18,7 +18,7 @@ import EyeOff from 'lucide-react/dist/esm/icons/eye-off';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check';
-import { useTeachers } from '@/features/teachers/hooks/useTeachers';
+import { useTeacherDirectory } from '@/features/teachers/hooks/useTeacherDirectory';
 import { cn } from '@/lib/utils';
 
 type MainTab = 'parent' | 'teacher';
@@ -26,7 +26,7 @@ type RoleTab = 'director' | 'supervisor' | 'teacher';
 
 export default function LoginForm() {
     const { login, loading, error } = useLogin();
-    const { data: teachers } = useTeachers();
+    const { data: teachers } = useTeacherDirectory();
 
     const [mainTab, setMainTab] = useState<MainTab>('parent');
     const [roleTab, setRoleTab] = useState<RoleTab>('director');
@@ -40,7 +40,6 @@ export default function LoginForm() {
         const savedRoleTab = localStorage.getItem('shatibi_last_role_tab') as any;
         const savedTeacherId = localStorage.getItem('shatibi_last_teacher_id');
         const savedPhone = localStorage.getItem('shatibi_parent_phone');
-        const savedPass = localStorage.getItem('shatibi_last_pass');
 
         if (savedMainTab) setMainTab(savedMainTab);
         if (savedRoleTab) {
@@ -48,7 +47,9 @@ export default function LoginForm() {
         }
         if (savedTeacherId) setSelectedTeacherId(savedTeacherId);
         if (savedPhone) setPhone(savedPhone);
-        if (savedPass) setPassword(savedPass);
+        // ملاحظة أمنية: لم نعد نحفظ كلمة المرور في localStorage إطلاقاً.
+        // ننظّف أي قيمة قديمة تركها إصدار سابق من التطبيق.
+        try { localStorage.removeItem('shatibi_last_pass'); } catch { /* لا شيء */ }
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +58,6 @@ export default function LoginForm() {
         let loginIdentifier: string = roleTab;
 
         localStorage.setItem('shatibi_last_main_tab', mainTab);
-        localStorage.setItem('shatibi_last_pass', password);
 
         if (mainTab === 'parent') {
             loginIdentifier = `parent-${phone}`;

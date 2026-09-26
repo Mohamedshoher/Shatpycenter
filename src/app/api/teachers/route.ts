@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { requireSession } from '@/lib/auth-server';
 import { Teacher } from '@/types';
 
 export async function GET(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
         const supabase = createServerSupabase();
         const { data, error } = await supabase
             .from('teachers')
-            .select('id, full_name, phone, role, accounting_type, salary, partnership_percentage, daily_hours, weekly_working_days, password, responsible_sections, status, created_at');
+            .select('id, full_name, phone, role, accounting_type, salary, partnership_percentage, daily_hours, weekly_working_days, responsible_sections, status, created_at');
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
+        // ملاحظة أمنية: لا يُعاد عمود password إطلاقاً في استجابة الـ API.
         const teachers: Teacher[] = (data || []).map((row: any) => ({
             id: row.id,
             fullName: row.full_name,
@@ -24,7 +29,6 @@ export async function GET(request: NextRequest) {
             partnershipPercentage: row.partnership_percentage || 0,
             dailyHours: Number(row.daily_hours) || 4,
             weeklyWorkingDays: Number(row.weekly_working_days) || 5,
-            password: row.password || '',
             responsibleSections: row.responsible_sections || [],
             status: row.status,
             joinDate: row.created_at,
