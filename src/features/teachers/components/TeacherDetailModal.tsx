@@ -7,7 +7,6 @@ import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation, keepPreviousData } from '@tanstack/react-query';
 
 // ==========================================
@@ -189,15 +188,12 @@ export default function TeacherDetailModal({
     const { data: exemptions = [] } = useQuery({
         queryKey: ['free_exemptions', selectedMonthRaw],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('free_exemptions')
-                .select('*')
-                .eq('month', selectedMonthRaw);
-            if (error) {
-                console.warn('جدول free_exemptions غير موجود أو خطأ:', error.message);
+            const res = await fetch(`/api/records/exemptions?month=${encodeURIComponent(selectedMonthRaw)}`);
+            if (!res.ok) {
+                console.warn('تعذر جلب الإعفاءات:', await res.text());
                 return [];
             }
-            return data || [];
+            return (await res.json()) || [];
         },
         enabled: isOpen,
         placeholderData: keepPreviousData
@@ -348,19 +344,20 @@ export default function TeacherDetailModal({
         if (!teacher) return;
 
         try {
-            const { error } = await supabase.from('free_exemptions').insert([{
-                student_id: studentId,
-                student_name: studentName,
-                teacher_id: teacher.id,
-                month: selectedMonthRaw,
-                amount: amount,
-                exempted_by: user?.displayName || 'المدير',
-                created_at: new Date().toISOString()
-            }]);
+            const res = await fetch('/api/records/exemptions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    student_name: studentName,
+                    teacher_id: teacher.id,
+                    month: selectedMonthRaw,
+                    amount: amount,
+                    exempted_by: user?.displayName || 'المدير',
+                }),
+            });
 
-            if (error) {
-                return;
-            }
+            if (!res.ok) return;
 
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
         } catch (err) {
@@ -371,10 +368,8 @@ export default function TeacherDetailModal({
     // 2. إلغاء العفو
     const handleRemoveExemption = async (studentId: string, studentName: string) => {
         try {
-            const { error } = await supabase.from('free_exemptions').delete().eq('student_id', studentId).eq('month', selectedMonthRaw);
-            if (error) {
-                return;
-            }
+            const res = await fetch(`/api/records/exemptions?studentId=${encodeURIComponent(studentId)}&month=${encodeURIComponent(selectedMonthRaw)}`, { method: 'DELETE' });
+            if (!res.ok) return;
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
         } catch (err) {
             // Silently ignore
@@ -435,18 +430,22 @@ export default function TeacherDetailModal({
             const now = new Date();
             const transactionDate = selectedMonthRaw === currentMonthRaw ? now.toISOString().split('T')[0] : `${selectedMonthRaw}-01`;
 
-            const { data, error } = await supabase.from('financial_transactions').insert([{
-                amount: Number(amount),
-                type: 'expense',
-                category: 'salary',
-                date: transactionDate,
-                description: `راتب ${teacher.fullName} - ${type}`,
-                related_user_id: String(teacher.id),
-                performed_by: user?.uid || 'unknown'
-            }]).select();
+            const res = await fetch('/api/finance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: Number(amount),
+                    type: 'expense',
+                    category: 'salary',
+                    date: transactionDate,
+                    description: `راتب ${teacher.fullName} - ${type}`,
+                    relatedUserId: String(teacher.id),
+                    performedBy: user?.uid || 'unknown'
+                }),
+            });
+            const body = await res.json().catch(() => ({}));
 
-            if (error) return alert('❌ فشل حفظ الراتب:\n' + (error.message || 'خطأ غير معروف'));
-            if (!data || data.length === 0) return alert('❌ لم يتم إرجاع البيانات من Supabase');
+            if (!res.ok) return alert('❌ فشل حفظ الراتب:\n' + (body.error || 'خطأ غير معروف'));
 
             alert('✅ تم صرف الراتب بنجاح');
             setTimeout(() => {

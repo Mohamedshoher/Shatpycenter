@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 
 describe('auth-server session tokens', () => {
     const ORIGINAL_SECRET = process.env.AUTH_SECRET;

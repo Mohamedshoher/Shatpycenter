@@ -178,8 +178,6 @@ export default function ArchiveList() {
 
         setIsExempting(student.id);
         try {
-            const { supabase } = await import('@/lib/supabase');
-
             // الحصول على teacher_id من مجموعة الطالب (العمود مطلوب في جدول free_exemptions)
             const studentGroup = groups?.find(g => g.id === student.groupId);
             const teacherId = studentGroup?.teacherId || '';
@@ -191,12 +189,18 @@ export default function ArchiveList() {
                 month: m.key,
                 amount: student.monthlyAmount || 100,
                 exempted_by: user?.displayName || 'المدير',
-                created_at: new Date().toISOString()
             }));
 
             if (exemptionsToInsert.length > 0) {
-                const { error } = await supabase.from('free_exemptions').insert(exemptionsToInsert);
-                if (error) throw error;
+                const res = await fetch('/api/records/exemptions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: exemptionsToInsert }),
+                });
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error || 'تعذر تنفيذ العفو');
+                }
                 await refetchArchiveData();
                 alert('تم العفو عن المتأخرات بنجاح');
             }

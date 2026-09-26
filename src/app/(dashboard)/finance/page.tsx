@@ -18,7 +18,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getTransactionsByMonth, addTransaction } from '@/features/finance/services/financeService';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { useAuthStore } from '@/store/useAuthStore';
-import { supabase } from '@/lib/supabase';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import type { TransactionData } from '@/features/finance/components/AddTransactionModal';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
@@ -116,7 +115,8 @@ export default function FinancePage() {
     const { data: exemptions = [] } = useQuery({
         queryKey: ['exemptions', selectedMonth],
         queryFn: async () => {
-            const { data } = await supabase.from('free_exemptions').select('id, student_id, student_name, exempted_by, amount').eq('month', selectedMonth);
+            const res = await fetch(`/api/records/exemptions?month=${encodeURIComponent(selectedMonth)}`);
+            const data: any[] = res.ok ? await res.json() : [];
             return data || [];
         },
         enabled: isClient && !!selectedMonth

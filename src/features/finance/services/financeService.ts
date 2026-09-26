@@ -1,18 +1,4 @@
-import { supabase } from "@/lib/supabase";
 import { FinancialTransaction } from "@/types";
-
-// Helper to map DB row to Type
-const mapTransaction = (row: any): FinancialTransaction => ({
-    id: row.id,
-    amount: Number(row.amount),
-    type: row.type,
-    category: row.category,
-    date: row.date,
-    description: row.description,
-    relatedUserId: row.related_user_id,
-    performedBy: row.performed_by,
-    timestamp: new Date(row.created_at).getTime()
-});
 
 // الحصول على جميع المعاملات المالية
 export const getTransactions = async (): Promise<FinancialTransaction[]> => {
@@ -67,34 +53,16 @@ export const addTransaction = async (
     transaction: Omit<FinancialTransaction, 'id' | 'timestamp'>
 ): Promise<string | null> => {
     try {
-        const transactionData = {
-            amount: Number(transaction.amount),
-            type: transaction.type,
-            category: transaction.category,
-            date: transaction.date,
-            description: transaction.description,
-            related_user_id: transaction.relatedUserId ? String(transaction.relatedUserId).trim() : null,
-            performed_by: transaction.performedBy
-        };
-
-        console.log('Adding transaction:', transactionData);
-
-        const { data, error } = await supabase
-            .from('financial_transactions')
-            .insert([transactionData])
-            .select('id')
-            .single();
-
-        if (error) {
-            console.error("Supabase error adding transaction:", {
-                message: error.message,
-                details: error.details,
-                code: error.code
-            });
-            throw error;
+        const res = await fetch('/api/finance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(transaction),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            console.error("API error adding transaction:", data.error);
+            return null;
         }
-
-        console.log('Transaction added successfully:', data);
         return data.id;
     } catch (error) {
         console.error("خطأ في إضافة المعاملة:", error);
@@ -105,13 +73,8 @@ export const addTransaction = async (
 // حذف معاملة مالية
 export const deleteTransaction = async (transactionId: string): Promise<boolean> => {
     try {
-        const { error } = await supabase
-            .from('financial_transactions')
-            .delete()
-            .eq('id', transactionId);
-
-        if (error) throw error;
-        return true;
+        const res = await fetch(`/api/finance?id=${encodeURIComponent(transactionId)}`, { method: 'DELETE' });
+        return res.ok;
     } catch (error) {
         console.error("خطأ في حذف المعاملة:", error);
         return false;
@@ -185,14 +148,10 @@ export const getTeacherHandovers = async (teacherId: string, monthKey: string): 
 // حذف معاملة مالية بالمعايير
 export const deleteTransactionByCriteria = async (criteria: { description_like?: string, related_user_id?: string }): Promise<void> => {
     try {
-        let query = supabase.from('financial_transactions').delete();
-        if (criteria.description_like) {
-            query = query.ilike('description', `%${criteria.description_like}%`);
-        }
-        if (criteria.related_user_id) {
-            query = query.eq('related_user_id', criteria.related_user_id);
-        }
-        await query;
+        const params = new URLSearchParams();
+        if (criteria.description_like) params.set('descriptionLike', criteria.description_like);
+        if (criteria.related_user_id) params.set('relatedUserId', criteria.related_user_id);
+        await fetch(`/api/finance?${params.toString()}`, { method: 'DELETE' });
     } catch (error) {
         console.error("Error deleting transaction by criteria:", error);
     }

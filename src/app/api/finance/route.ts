@@ -68,3 +68,64 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function POST(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const body = await request.json();
+        const supabase = createServerSupabase();
+        const { data, error } = await supabase
+            .from('financial_transactions')
+            .insert([{
+                amount: Number(body.amount),
+                type: body.type,
+                category: body.category,
+                date: body.date,
+                description: body.description,
+                related_user_id: body.relatedUserId ? String(body.relatedUserId).trim() : null,
+                performed_by: body.performedBy
+            }])
+            .select('id')
+            .single();
+
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ id: data.id });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        const descriptionLike = searchParams.get('descriptionLike');
+        const relatedUserId = searchParams.get('relatedUserId');
+
+        const supabase = createServerSupabase();
+
+        if (id) {
+            const { error } = await supabase.from('financial_transactions').delete().eq('id', id);
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ success: true });
+        }
+
+        if (descriptionLike || relatedUserId) {
+            let query = supabase.from('financial_transactions').delete();
+            if (descriptionLike) query = query.ilike('description', `%${descriptionLike}%`);
+            if (relatedUserId) query = query.eq('related_user_id', relatedUserId);
+            const { error } = await query;
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ success: true });
+        }
+
+        return NextResponse.json({ error: 'id or a filter is required' }, { status: 400 });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

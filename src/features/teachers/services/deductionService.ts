@@ -1,5 +1,3 @@
-import { supabase } from '@/lib/supabase';
-
 // ==========================================================
 // 1. تعريف واجهات البيانات (Interfaces)
 // ==========================================================
@@ -78,23 +76,15 @@ export const teacherDeductionService = {
     customDate?: string // تاريخ اختياري (مثلاً لتسجيل خصم بتاريخ أمس)
   ): Promise<TeacherDeduction> => {
     try {
-      const dateStr = customDate || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`; 
+      const dateStr = customDate || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
-      const { data, error } = await supabase
-        .from('deductions')
-        .insert([{
-          teacher_id: teacherId,
-          date: dateStr,
-          amount: amount,
-          reason: reason,
-          applied_by: appliedBy,
-          status: 'applied',
-          is_automatic: appliedBy === 'system' || appliedBy === 'system-automation'
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
+      const res = await fetch('/api/deductions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teacherId, amount, reason, appliedBy, customDate: dateStr }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'تعذر تطبيق الخصم');
 
       return {
         id: data.id,
@@ -120,15 +110,15 @@ export const teacherDeductionService = {
     notes?: string
   ): Promise<void> => {
     try {
-      const updates: any = { status };
-      if (notes) updates.notes = notes;
-
-      const { error } = await supabase
-        .from('deductions')
-        .update(updates)
-        .eq('id', deductionId);
-
-      if (error) throw error;
+      const res = await fetch('/api/deductions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deductionId, status, notes }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر تحديث حالة الخصم');
+      }
     } catch (error) {
       console.error("Error updating deduction status:", error);
       throw error;
@@ -138,12 +128,11 @@ export const teacherDeductionService = {
   // حذف خصم (إلغاء الخصم)
   removeDeduction: async (deductionId: string): Promise<void> => {
     try {
-      const { error } = await supabase
-        .from('deductions')
-        .delete()
-        .eq('id', deductionId);
-
-      if (error) throw error;
+      const res = await fetch(`/api/deductions?id=${encodeURIComponent(deductionId)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'تعذر حذف الخصم');
+      }
     } catch (error) {
       console.error("Error deleting deduction:", error);
       throw error;

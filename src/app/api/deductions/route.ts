@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
         const teacherId = searchParams.get('teacherId');
         const year = searchParams.get('year');
         const month = searchParams.get('month');
+        const date = searchParams.get('date');
+        const appliedBy = searchParams.get('appliedBy');
 
         const supabase = createServerSupabase();
         let query = supabase
@@ -18,6 +20,8 @@ export async function GET(request: NextRequest) {
             .select('*, teachers(full_name)');
 
         if (teacherId) query = query.eq('teacher_id', teacherId);
+        if (date) query = query.eq('date', date);
+        if (appliedBy) query = query.eq('applied_by', appliedBy);
         if (year && month) {
             const startDate = `${year}-${String(parseInt(month)).padStart(2, '0')}-01`;
             const nextM = parseInt(month) === 12 ? 1 : parseInt(month) + 1;
@@ -37,21 +41,33 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const session = await requireSession(request, ['director']);
+    // خصم/مكافأة يدوية: للمدير فقط. خصم تلقائي من نظام الأتمتة (appliedBy
+    // = 'system-automation'): مسموح لأي مستخدم مسجّل (نفس صلاحية تشغيل
+    // صفحة الأتمتة حالياً)، مع تجاهل أي اسم آخر يرسله العميل لمنع التزوير.
+    const body = await request.json();
+    const isAutomated = body.appliedBy === 'system-automation';
+    const session = await requireSession(request, isAutomated ? undefined : ['director']);
     if (session instanceof NextResponse) return session;
 
     try {
-        const { teacherId, amount, reason, customDate } = await request.json();
+        const { teacherId, amount, reason, customDate } = body;
         if (!teacherId || !amount || !reason) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const dateStr = customDate || new Date().toISOString().split('T')[0];
+        const appliedBy = isAutomated ? 'system-automation' : (session.displayName || 'system');
         const supabase = createServerSupabase();
-        // نأخذ اسم من طبّق الخصم/المكافأة من الجلسة الموثوقة، لا من جسم الطلب
         const { data, error } = await supabase
             .from('deductions')
-            .insert([{ teacher_id: teacherId, date: dateStr, amount, reason, applied_by: session.displayName || 'system' }])
+            .insert([{
+                teacher_id: teacherId,
+                date: dateStr,
+                amount,
+                reason,
+                applied_by: appliedBy,
+                is_automatic: isAutomated,
+            }])
             .select('*, teachers(full_name)')
             .single();
 
@@ -63,7 +79,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-    const session = await requireSession(request, ['director']);
+    // حذف خصم يدوي: للمدير فقط. حذف خصم تلقائي أنشأه نظام الأتمتة (لعكسه
+    // عند تصحيح غياب مثلاً): مسموح لأي مستخدم مسجّل، بعد التحقق من السجل
+    // نفسه (وليس من كلام العميل) أنه فعلاً خصم تلقائي.
+    const session = await requireSession(request);
     if (session instanceof NextResponse) return session;
 
     try {
@@ -72,6 +91,11 @@ export async function DELETE(request: NextRequest) {
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
         const supabase = createServerSupabase();
+        const { data: existing } = await supabase.from('deductions').select('is_automatic').eq('id', id).maybeSingle();
+        if (!existing?.is_automatic && session.role !== 'director') {
+            return NextResponse.json({ error: 'لا تملك صلاحية حذف هذا الخصم' }, { status: 403 });
+        }
+
         const { error } = await supabase.from('deductions').delete().eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });

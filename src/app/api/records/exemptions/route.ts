@@ -9,11 +9,13 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const studentId = searchParams.get('studentId');
+        const month = searchParams.get('month');
 
         const supabase = createServerSupabase();
         let query = supabase.from('free_exemptions').select('*');
 
         if (studentId) query = query.eq('student_id', studentId);
+        if (month) query = query.eq('month', month);
 
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -30,6 +32,22 @@ export async function POST(request: NextRequest) {
     try {
         const supabase = createServerSupabase();
         const body = await request.json();
+
+        // دعم إدراج دفعة من الإعفاءات مرة واحدة (مثلاً: عفو عن كل شهور طالب متأخر)
+        if (Array.isArray(body.items)) {
+            const rows = body.items.map((item: any) => ({
+                student_id: item.student_id,
+                student_name: item.student_name,
+                teacher_id: item.teacher_id,
+                month: item.month,
+                amount: item.amount,
+                exempted_by: item.exempted_by || 'المدير',
+                created_at: new Date().toISOString()
+            }));
+            const { data, error } = await supabase.from('free_exemptions').insert(rows).select();
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json(data);
+        }
 
         // الحصول على معرف المعلم من مجموعة الطالب
         let teacherId = body.teacher_id;
@@ -83,12 +101,24 @@ export async function DELETE(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
-        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+        const studentId = searchParams.get('studentId');
+        const month = searchParams.get('month');
 
         const supabase = createServerSupabase();
-        const { error } = await supabase.from('free_exemptions').delete().eq('id', id);
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-        return NextResponse.json({ success: true });
+
+        if (id) {
+            const { error } = await supabase.from('free_exemptions').delete().eq('id', id);
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ success: true });
+        }
+
+        if (studentId && month) {
+            const { error } = await supabase.from('free_exemptions').delete().eq('student_id', studentId).eq('month', month);
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ success: true });
+        }
+
+        return NextResponse.json({ error: 'id or (studentId and month) required' }, { status: 400 });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

@@ -1,5 +1,3 @@
-import { supabase } from "@/lib/supabase";
-
 export interface AttendanceRecord {
     id: string;
     studentId: string;
@@ -35,25 +33,15 @@ export const calculateContinuousAbsence = (attendance: any[]): number => {
 };
 
 // جلب سجلات الحضور لشهر محدد بكفاءة عالية لجميع الطلاب
+// (عبر /api/attendance على الخادم، الذي يحسب نهاية الشهر بدقة ويرتّب الصفحات تلقائياً)
 export const getAllAttendance = async (monthKey: string): Promise<Record<string, AttendanceRecord[]>> => {
     try {
-        const [year, month] = monthKey.split('-').map(Number);
-        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-        // لضمان شمولية الشهر، نأخذ حتى يوم 31 (Postgres سيتعامل معها بشكل صحيح)
-        const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
-
-        const { data, error } = await supabase
-            .from('attendance')
-            .select('id, student_id, date, status, created_at')
-            .gte('date', startDate)
-            .lte('date', endDate)
-            .order('created_at', { ascending: true }) // ترتيب تصاعدي ليحل الجديد محل القديم في الـ Map
-            .limit(100000);
-
-        if (error) {
-            console.error("Supabase error fetching month attendance:", error);
+        const res = await fetch(`/api/attendance?monthKey=${encodeURIComponent(monthKey)}`);
+        if (!res.ok) {
+            console.error("API error fetching month attendance:", await res.text());
             return {};
         }
+        const data = await res.json();
 
         const map: Record<string, AttendanceRecord[]> = {};
         (data || []).forEach((row: any) => {

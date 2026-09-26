@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
+import { fetchAllRows } from '@/lib/fetch-all-rows';
 
 export async function GET(request: NextRequest) {
     const session = await requireSession(request);
@@ -13,31 +14,37 @@ export async function GET(request: NextRequest) {
         const studentIds = searchParams.get('studentIds');
 
         const supabase = createServerSupabase();
-        let query = supabase.from('exams').select('id, student_id, surah, exam_type, grade, date, created_at, goal_id');
 
-        if (monthKey) {
-            if (periodHalf === '1') {
-                query = query.gte('date', `${monthKey}-01`).lte('date', `${monthKey}-15`);
-            } else if (periodHalf === '2') {
-                const [y, m] = monthKey.split('-').map(Number);
-                const lastDay = new Date(y, m, 0).getDate();
-                query = query.gte('date', `${monthKey}-16`).lte('date', `${monthKey}-${lastDay}`);
-            } else {
-                const [y, m] = monthKey.split('-').map(Number);
-                const lastDay = new Date(y, m, 0).getDate();
-                query = query.gte('date', `${monthKey}-01`).lte('date', `${monthKey}-${lastDay}`);
-            }
-        }
+        let data: any[];
+        try {
+            data = await fetchAllRows((from, to) => {
+                let query = supabase
+                    .from('exams')
+                    .select('id, student_id, surah, exam_type, grade, date, created_at, goal_id')
+                    .range(from, to);
 
-        if (studentIds) {
-            const ids = studentIds.split(',');
-            query = query.in('student_id', ids);
-        }
+                if (monthKey) {
+                    if (periodHalf === '1') {
+                        query = query.gte('date', `${monthKey}-01`).lte('date', `${monthKey}-15`);
+                    } else if (periodHalf === '2') {
+                        const [y, m] = monthKey.split('-').map(Number);
+                        const lastDay = new Date(y, m, 0).getDate();
+                        query = query.gte('date', `${monthKey}-16`).lte('date', `${monthKey}-${lastDay}`);
+                    } else {
+                        const [y, m] = monthKey.split('-').map(Number);
+                        const lastDay = new Date(y, m, 0).getDate();
+                        query = query.gte('date', `${monthKey}-01`).lte('date', `${monthKey}-${lastDay}`);
+                    }
+                }
 
-        query = query.limit(10000);
+                if (studentIds) {
+                    const ids = studentIds.split(',');
+                    query = query.in('student_id', ids);
+                }
 
-        const { data, error } = await query;
-        if (error) {
+                return query;
+            });
+        } catch (error: any) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
@@ -54,6 +61,73 @@ export async function GET(request: NextRequest) {
         }));
 
         return NextResponse.json(exams);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function POST(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const record = await request.json();
+        const supabase = createServerSupabase();
+        const { data, error } = await supabase
+            .from('exams')
+            .insert([{
+                student_id: record.studentId,
+                surah: record.surah,
+                exam_type: record.type,
+                grade: record.grade,
+                date: record.date,
+                goal_id: record.goalId ?? null
+            }])
+            .select('id, created_at')
+            .single();
+
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(data);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function PUT(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const { id, ...data } = await request.json();
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+        const updates: any = {};
+        if (data.surah) updates.surah = data.surah;
+        if (data.grade) updates.grade = data.grade;
+        if (data.type) updates.exam_type = data.type;
+
+        const supabase = createServerSupabase();
+        const { error } = await supabase.from('exams').update(updates).eq('id', id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    const session = await requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+        const supabase = createServerSupabase();
+        const { error } = await supabase.from('exams').delete().eq('id', id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ success: true });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
