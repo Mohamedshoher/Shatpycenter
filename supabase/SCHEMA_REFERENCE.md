@@ -2,37 +2,39 @@
 
 > **هذا الملف مصدره الاتصال المباشر بقاعدة البيانات الحية** (`phlzhndalzvksqudylrt`)، وليس تجميعًا يدويًا لملفات الـ migrations. حدّثه من نفس المصدر (`list_tables` + `pg_policies` + `pg_proc` عبر Supabase MCP) بعد أي migration جديدة، ولا تعدّله يدويًا فقط من الذاكرة.
 >
-> **آخر تحديث:** 2026-09-26 (بعد تطبيق migrations 010، 011، 017، 018)
+> **آخر تحديث:** 2026-09-27 (بعد تطبيق migrations 010، 011، 017، 018، 019 — RLS مغلقة فعليًا الآن)
 
 ---
 
-## 1. الجداول (21 جدولاً، كلها RLS مفعّلة)
+## 1. الجداول (21 جدولاً، كلها RLS مفعّلة و**مغلقة فعليًا أمام anon**)
 
-| الجدول | صفوف | سياسة anon | ملاحظة |
-|---|---:|---|---|
-| `teachers` | 49 | مفتوحة (`Public access`, ALL) | يحتوي `password` بنص صريح — **لا تُرجعه أي API** (انظر `/api/teachers`) |
-| `groups` | 20 | مفتوحة | — |
-| `students` | 983 | مفتوحة | `is_orphan`/`is_azhari` أعمدة حقيقية (بعد migration 012)، لا تعتمد على نص `notes` |
-| `attendance` | 71,148 | مفتوحة | قيد فريد `(student_id, date)` **فعّال الآن** (migration 011)؛ استخدم `upsert` عند الكتابة |
-| `exams` | 10,131 | مفتوحة | مرتبط بـ `exam_goals` عبر `goal_id` |
-| `exam_goals` | 80 | مفتوحة | — |
-| `fees` | 3,753 | مفتوحة | `collected_by_id` **عمود حقيقي الآن** (migration 010)، يربط بـ `teachers.id` |
-| `plans` | 0 | مفتوحة | جدول فارغ حاليًا، غير مستخدم فعليًا |
-| `financial_transactions` | 4,609 | مفتوحة | — |
-| `deductions` | 262 | مفتوحة | — |
-| `automation_rules` | 2 | مفتوحة | — |
-| `automation_logs` | 293 | مفتوحة | — |
-| `student_notes` | 470 | مفتوحة | — |
-| `teacher_attendance` | 573 | مفتوحة | — |
-| `leave_requests` | 6 | مفتوحة | — |
-| **`free_exemptions`** | 542 | مفتوحة (**أُصلحت اليوم**، كانت RLS معطّلة بالكامل) | فيها الآن سياستان: `Public access` (anon) و`Full access for authenticated users` (قديمة، غير مؤثرة لأن التطبيق لا يستخدم Supabase Auth) |
-| `user_presence` | 1 | مفتوحة | — |
-| `notifications` | 5 | مفتوحة | — |
-| `conversations` | 96 | **مقيّدة فعليًا** (`auth.uid() = ANY(participants)`) | التطبيق لا يستخدم Supabase Auth، فـ`auth.uid()` دائمًا NULL لطلبات anon → **anon محجوب فعليًا** من هذا الجدول مباشرة؛ كل الوصول الحقيقي يمر عبر دوال RPC (انظر تحت) |
-| `messages` | 641 | **مقيّدة فعليًا** (نفس منطق `conversations`) | — |
-| `messaging_sessions` | 125 | **بدون أي سياسة** = محجوب تمامًا لـ anon/authenticated | آمن؛ الوصول الوحيد عبر دوال RPC بصلاحية `SECURITY DEFINER` |
+منذ migration 019، لا يوجد أي سياسة تسمح لـ anon أو authenticated بالوصول لهذه الجداول. الوصول الوحيد المتبقي هو عبر الخادم (API routes) الذي يستخدم `SUPABASE_SERVICE_ROLE_KEY` (يتجاوز RLS دائمًا).
 
-**خلاصة:** كل الجداول "مفتوحة" فعليًا لـ anon حاليًا (باستثناء نظام المراسلة الذي يعتمد تصميمًا مختلفًا بالكامل). هذا هو العمل التالي المخطط له (نقل الكتابات المباشرة من المتصفح إلى API routes ثم قفل RLS الحقيقي).
+| الجدول | صفوف | الوصول |
+|---|---:|---|
+| `teachers` | 49 | 🔒 خادم فقط. يحتوي `password` بنص صريح — **لا تُرجعه أي API** (انظر `/api/teachers`) |
+| `groups` | 20 | 🔒 خادم فقط |
+| `students` | 983 | 🔒 خادم فقط. `is_orphan`/`is_azhari` أعمدة حقيقية (migration 012) |
+| `attendance` | 71,148 | 🔒 خادم فقط. قيد فريد `(student_id, date)` فعّال (migration 011) |
+| `exams` | 10,131 | 🔒 خادم فقط |
+| `exam_goals` | 80 | 🔒 خادم فقط |
+| `fees` | 3,753 | 🔒 خادم فقط. `collected_by_id` عمود حقيقي (migration 010) |
+| `plans` | 0 | 🔒 خادم فقط |
+| `financial_transactions` | 4,609 | 🔒 خادم فقط |
+| `deductions` | 262 | 🔒 خادم فقط |
+| `automation_rules` | 2 | 🔒 خادم فقط |
+| `automation_logs` | 293 | 🔒 خادم فقط |
+| `student_notes` | 470 | 🔒 خادم فقط |
+| `teacher_attendance` | 573 | 🔒 خادم فقط |
+| `leave_requests` | 6 | 🔒 خادم فقط |
+| `free_exemptions` | 542 | 🔒 خادم فقط (كانت RLS معطّلة بالكامل، أُصلحت في 017 ثم أُغلقت في 019) |
+| `user_presence` | 1 | 🔒 خادم فقط |
+| `notifications` | 5 | 🔒 خادم فقط |
+| `conversations` | 96 | 🔒 مقيّدة أصلًا (`auth.uid()`)، والوصول الفعلي عبر دوال RPC |
+| `messages` | 641 | 🔒 نفس منطق `conversations` |
+| `messaging_sessions` | 125 | 🔒 بدون أي سياسة أصلًا، محجوب تمامًا |
+
+**خلاصة:** لا يوجد أي جدول عادي مكشوف لمفتاح anon العام بعد الآن. أي طلب مباشر من المتصفح (حتى لو معه المفتاح العام) سيُرفض من قاعدة البيانات نفسها. هذا استكمل ما بدأ في المرحلة 0.3 من `.docs/fix-plan.md`.
 
 ---
 
@@ -69,12 +71,17 @@
 | 012 | نقل وسوم يتيم/أزهري | ✅ مطابق |
 | 013–016 | RLS المراسلة + RPC + صلاحيات السكرتارية + الفهارس | ✅ مطابق |
 | **017** | `017_fix_free_exemptions_rls.sql` (جديد) | ✅ طُبِّق اليوم |
-| **018** | `018_harden_functions_search_path.sql` (جديد) | ✅ طُبِّق اليوم |
+| **018** | `018_harden_functions_search_path.sql` | ✅ طُبِّق |
+| **019** | `019_lock_down_rls_public_access.sql` (جديد) | ✅ **طُبِّق اليوم** — حذف كل سياسات `Public access` من 18 جدولاً |
 
 > ملاحظة: سجل الـ migrations الرسمي داخل Supabase (`supabase_migrations.schema_migrations`) لا يزال فارغًا لأن كل التعديلات نُفِّذت مباشرة (SQL Editor / MCP) وليس عبر `supabase db push`. الملفات في `supabase/migrations/` تبقى المرجع الوثائقي المعتمد.
 
 ---
 
-## 4. الخطوة التالية (غير منفذة بعد، تحتاج قرارًا منفصلاً)
+## 4. الوضع الحالي (اكتملت خطة القفل)
 
-نقل كل استدعاء مباشر لـ `supabase.from(...)` من كود المتصفح (`src/features/*/services/*.ts`) إلى API routes على الخادم، ثم قفل سياسات `Public access` المفتوحة على الجداول العادية (غير المراسلة) بسياسات حقيقية. موثّق بالتفصيل في `.docs/fix-plan.md` (المرحلة 0.3) و`.docs/supabase-organization-plan.md`.
+- ✅ كل الكتابة/القراءة المباشرة من المتصفح انتقلت إلى API routes على الخادم (راجع PR الهجرة).
+- ✅ الخادم يستخدم `SUPABASE_SERVICE_ROLE_KEY` بدل مفتاح anon.
+- ✅ سياسات `Public access` المفتوحة أُزيلت بالكامل (migration 019).
+
+**المتبقي (خارج نطاق اليوم، تحسين مستقبلي اختياري):** كتابة سياسات RLS حقيقية دقيقة (مثلاً: معلم يرى طلابه فقط، ولي أمر يرى أبناءه فقط) كطبقة حماية إضافية على مستوى قاعدة البيانات نفسها، بدل الاعتماد فقط على منطق الصلاحيات داخل الـ API routes. هذا غير عاجل لأن كل الوصول الآن يمر عبر الخادم المُتحقَّق منه أصلًا.
