@@ -1,8 +1,7 @@
 # إعدادات مشروع Supabase - مركز الشاطبي
-# تُستخدم لنشر الـ Edge Functions عبر: supabase functions deploy
 project_id = "phlzhndalzvksqudylrt"
 
-# دالة المراسلة الداخلية تتحقق من الهوية داخلياً بتوكن خاص بها (HMAC)
-# لذا لا نفعّل التحقق من JWT الخاص بـ Supabase على مستوى المنفذ
-[functions.messaging]
-verify_jwt = false
+# ملاحظة: نظام المراسلة الداخلية الفعلي يعتمد على دوال RPC
+# (انظر supabase/migrations/014_messaging_rpc.sql)، وليس Edge Function.
+# كان هناك Edge Function (functions/messaging) في المستودع لم يُنشر إطلاقاً
+# على هذا المشروع، وتم حذفه لتفادي اللبس.
