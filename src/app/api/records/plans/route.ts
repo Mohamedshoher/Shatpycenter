@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
         const studentId = searchParams.get('studentId');
 
         const supabase = createServerSupabase();
-        let query = supabase.from('plans').select('*');
+        let query = supabase.from('plans').select('id, student_id, date, new_hifz, prev_review, distant_review, status, created_at');
         if (studentId) query = query.eq('student_id', studentId);
 
         const { data, error } = await query.order('date', { ascending: false });

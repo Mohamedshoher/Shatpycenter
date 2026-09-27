@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
         if (canLoadData && groupIds.length > 0) {
             const { data } = await supabase
                 .from('students')
-                .select('*')
+                .select('id, full_name, group_id, parent_phone, status, monthly_amount, appointment, notes, enrollment_date, archived_date, created_at')
                 .in('group_id', groupIds);
             if (data) {
                 students = data.map((row: any) => ({
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
         if (isDirectorOrSupervisor) {
             const { data } = await supabase
                 .from('leave_requests')
-                .select('*')
+                .select('id, student_id, student_name, start_date, end_date, reason, status, created_at')
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false });
             if (data) {
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
         if (isDirectorOrSupervisor) {
             const { data } = await supabase
                 .from('student_notes')
-                .select('*, students!inner(full_name, parent_phone, group_id, groups!inner(name, id, teachers!inner(full_name)))')
+                .select('id, content, created_at, created_by, student_id, is_read, reply, replied_by, replied_at, students!inner(full_name, parent_phone, group_id, groups!inner(name, id, teachers!inner(full_name)))')
                 .order('created_at', { ascending: false })
                 .limit(20);
             if (data) {

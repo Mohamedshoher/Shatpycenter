@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
         const month = searchParams.get('month');
 
         const supabase = createServerSupabase();
-        let query = supabase.from('fees').select('*');
+        let query = supabase.from('fees').select('id, student_id, month, amount, receipt_number, date, created_by, collected_by_id, created_at');
 
         if (studentId) query = query.eq('student_id', studentId);
         if (month) query = query.eq('month', month);
