@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json([]);
         }
 
-        const notifications = (data || []).map((row: any) => ({
+        const notifications = (data || []).map((row) => ({
             id: row.id,
             teacherId: row.teacher_id,
             type: row.type,
@@ -42,8 +43,8 @@ export async function GET(request: NextRequest) {
         }));
 
         return NextResponse.json(notifications);
-    } catch (error: any) {
-        console.warn("Notifications API catch notice:", error?.message);
+    } catch (error) {
+        console.warn("Notifications API catch notice:", getErrorMessage(error));
         return NextResponse.json([]);
     }
 }
@@ -89,8 +90,8 @@ export async function POST(request: NextRequest) {
             isRead: data.is_read || false,
             createdAt: data.created_at,
         });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -122,8 +123,8 @@ export async function PATCH(request: NextRequest) {
         }
 
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -159,7 +160,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

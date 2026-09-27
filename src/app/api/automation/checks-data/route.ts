@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
             .eq('status', 'active');
         if (teachersError) return NextResponse.json({ error: teachersError.message }, { status: 500 });
 
-        const teacherIds = (teachers || []).map((t: any) => t.id);
+        const teacherIds = (teachers || []).map((t) => t.id);
         if (teacherIds.length === 0) {
             return NextResponse.json({ teachers: [], groups: [], deductions: [], attendance: [], teacherAttendance: [], exams: [], students: [] });
         }
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
             .in('teacher_id', teacherIds);
         if (groupsError) return NextResponse.json({ error: groupsError.message }, { status: 500 });
 
-        const groupIds = (groups || []).map((g: any) => g.id);
+        const groupIds = (groups || []).map((g) => g.id);
         const { data: students, error: studentsError } = groupIds.length > 0
             ? await supabase.from('students').select('id, group_id').in('group_id', groupIds)
             : { data: [], error: null };
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
         }
 
         return NextResponse.json({ error: 'invalid type' }, { status: 400 });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

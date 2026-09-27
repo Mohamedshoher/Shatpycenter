@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 
@@ -22,16 +23,17 @@ export async function GET(request: NextRequest) {
         const canLoadData = role === 'director' || role === 'supervisor' || role === 'teacher';
 
         // 1. Groups
-        let groups: any[] = [];
+        type GroupOutput = {
+            id: string;
+            name: string;
+            teacherId: string | null;
+            schedule: string;
+            maxStudentsPerHour: number;
+            hours: number;
+            students: never[];
+        };
+        let groups: GroupOutput[] = [];
         if (canLoadData) {
-            type GroupRow = {
-                id: string;
-                name: string;
-                teacher_id: string | null;
-                schedule: string | null;
-                max_students_per_hour: number | null;
-                hours?: number | null;
-            };
             const { data: groupRows, error: groupsError } = await supabase
                 .from('groups')
                 .select('id, name, teacher_id, schedule, max_students_per_hour, hours')
@@ -45,14 +47,14 @@ export async function GET(request: NextRequest) {
             if (data) {
                 let filtered = data;
                 if (role === 'teacher' && teacherId) {
-                    filtered = data.filter((g: any) => g.teacher_id === teacherId);
+                    filtered = data.filter((g) => g.teacher_id === teacherId);
                 } else if (role === 'supervisor' && sectionsParam) {
                     const sections = sectionsParam.split(',');
-                    filtered = data.filter((g: any) =>
+                    filtered = data.filter((g) =>
                         sections.some(s => g.name.includes(s))
                     );
                 }
-                groups = filtered.map((row: any) => ({
+                groups = filtered.map((row) => ({
                     id: row.id,
                     name: row.name,
                     teacherId: row.teacher_id,
@@ -66,26 +68,37 @@ export async function GET(request: NextRequest) {
 
         const groupIds = groupIdsParam
             ? groupIdsParam.split(',')
-            : groups.map((g: any) => g.id);
+            : groups.map((g) => g.id);
 
         // 2. Students
-        let students: any[] = [];
+        type StudentOutput = {
+            id: string;
+            fullName: string;
+            groupId: string | null;
+            parentPhone: string;
+            status: string | null;
+            isArchived: boolean;
+            monthlyAmount: number;
+            appointment: string;
+            notes: string;
+            enrollmentDate: string;
+            archivedDate: string | undefined;
+        };
+        let students: StudentOutput[] = [];
         if (canLoadData && groupIds.length > 0) {
             const { data } = await supabase
                 .from('students')
                 .select('id, full_name, group_id, parent_phone, status, monthly_amount, appointment, notes, enrollment_date, archived_date, created_at')
                 .in('group_id', groupIds);
             if (data) {
-                students = data.map((row: any) => ({
+                students = data.map((row) => ({
                     id: row.id,
                     fullName: row.full_name,
                     groupId: row.group_id,
-                    parentPhone: row.parent_phone || row.phone || '',
+                    parentPhone: row.parent_phone || '',
                     status: row.status,
                     isArchived: row.status === 'archived',
                     monthlyAmount: Number(row.monthly_amount) || 0,
-                    birthDate: row.birth_date || undefined,
-                    address: row.address || '',
                     appointment: row.appointment || '',
                     notes: row.notes || '',
                     enrollmentDate: row.enrollment_date || (row.created_at ? row.created_at.split('T')[0] : todayStr),
@@ -103,8 +116,8 @@ export async function GET(request: NextRequest) {
                 .eq('date', todayStr)
                 .eq('status', 'present');
             if (data) {
-                todayAttendanceCount = data.filter((a: any) =>
-                    students.some((s: any) => s.id === a.student_id)
+                todayAttendanceCount = data.filter((a) =>
+                    students.some((s) => s.id === a.student_id)
                 ).length;
             }
         }
@@ -126,12 +139,22 @@ export async function GET(request: NextRequest) {
                 .gte('date', startDate)
                 .lt('date', endDate);
             if (data) {
-                monthlyIncome = data.reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+                monthlyIncome = data.reduce((sum, t) => sum + Number(t.amount), 0);
             }
         }
 
         // 5. Pending leave requests
-        let pendingLeaves: any[] = [];
+        type LeaveOutput = {
+            id: string;
+            studentId: string | null;
+            studentName: string | null;
+            startDate: string;
+            endDate: string;
+            reason: string | null;
+            status: string | null;
+            createdAt: string;
+        };
+        let pendingLeaves: LeaveOutput[] = [];
         if (isDirectorOrSupervisor) {
             const { data } = await supabase
                 .from('leave_requests')
@@ -139,14 +162,13 @@ export async function GET(request: NextRequest) {
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false });
             if (data) {
+                let filteredLeaves = data;
                 if (role === 'supervisor') {
-                    pendingLeaves = data.filter((r: any) =>
-                        students.some((s: any) => s.fullName === r.student_name)
+                    filteredLeaves = data.filter((r) =>
+                        students.some((s) => s.fullName === r.student_name)
                     );
-                } else {
-                    pendingLeaves = data;
                 }
-                pendingLeaves = pendingLeaves.map((row: any) => ({
+                pendingLeaves = filteredLeaves.map((row) => ({
                     id: row.id,
                     studentId: row.student_id,
                     studentName: row.student_name,
@@ -160,8 +182,24 @@ export async function GET(request: NextRequest) {
         }
 
         // 6. Student notes (unread + limited)
+        type NoteOutput = {
+            id: string;
+            content: string | null;
+            createdAt: string;
+            createdBy: string | null;
+            studentId: string | null;
+            studentName: string;
+            parentPhone: string;
+            groupName: string;
+            groupId: string | null;
+            teacherName: string;
+            isRead: boolean;
+            reply: string | null;
+            repliedBy: string | null;
+            repliedAt: string | null;
+        };
         let unreadNotesCount = 0;
-        let recentNotes: any[] = [];
+        let recentNotes: NoteOutput[] = [];
         if (isDirectorOrSupervisor) {
             const { data } = await supabase
                 .from('student_notes')
@@ -171,18 +209,18 @@ export async function GET(request: NextRequest) {
             if (data) {
                 let filtered = data;
                 if (role === 'supervisor') {
-                    filtered = data.filter((n: any) =>
-                        students.some((s: any) => s.id === n.student_id)
+                    filtered = data.filter((n) =>
+                        students.some((s) => s.id === n.student_id)
                     );
                 }
-                unreadNotesCount = filtered.filter((n: any) => !n.is_read).length;
-                recentNotes = filtered.map((n: any) => ({
+                unreadNotesCount = filtered.filter((n) => !n.is_read).length;
+                recentNotes = filtered.map((n) => ({
                     id: n.id,
                     content: n.content,
                     createdAt: n.created_at,
                     createdBy: n.created_by,
                     studentId: n.student_id,
-                    studentName: n.students?.full_name || n.student_name || 'غير معروف',
+                    studentName: n.students?.full_name || 'غير معروف',
                     parentPhone: n.students?.parent_phone || '',
                     groupName: n.students?.groups?.name || 'بدون مجموعة',
                     groupId: n.students?.groups?.id || null,
@@ -204,7 +242,7 @@ export async function GET(request: NextRequest) {
             unreadNotesCount,
             recentNotes,
         });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

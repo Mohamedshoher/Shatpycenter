@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 import { Teacher } from '@/types';
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
         }
 
         // ملاحظة أمنية: لا يُعاد عمود password إطلاقاً في استجابة الـ API.
-        const teachers: Teacher[] = (data || []).map((row: any) => ({
+        const teachers: Teacher[] = (data || []).map((row) => ({
             id: row.id,
             fullName: row.full_name,
             phone: row.phone,
@@ -36,8 +37,8 @@ export async function GET(request: NextRequest) {
         })) as Teacher[];
 
         return NextResponse.json(teachers);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -68,8 +69,8 @@ export async function POST(request: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ id: data.id });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -81,7 +82,7 @@ export async function PUT(request: NextRequest) {
         const { id, ...body } = await request.json();
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-        const updates: any = {};
+        const updates: Record<string, unknown> = {};
         if (body.fullName !== undefined) updates.full_name = body.fullName;
         if (body.phone !== undefined) updates.phone = body.phone;
         if (body.role !== undefined) updates.role = body.role;
@@ -99,8 +100,8 @@ export async function PUT(request: NextRequest) {
         const { error } = await supabase.from('teachers').update(updates).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -117,7 +118,7 @@ export async function DELETE(request: NextRequest) {
         const { error } = await supabase.from('teachers').delete().eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

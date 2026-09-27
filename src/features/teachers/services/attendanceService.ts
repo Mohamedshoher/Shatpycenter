@@ -1,3 +1,5 @@
+import { getErrorMessage } from '@/lib/error-message';
+
 // ==========================================================
 // 1. التعريفات والأنواع (Types)
 // ==========================================================
@@ -25,7 +27,7 @@ export const getTeacherAttendance = async (teacherId: string, monthKey: string):
         const data = await res.json();
 
         const attendanceMap: Record<string, TeacherAttendanceStatus> = {};
-        (data || []).forEach((row: any) => {
+        (data || []).forEach((row: { date: string; status: string }) => {
             const dateParts = row.date.split('-');
             const day = parseInt(dateParts[2], 10);
             attendanceMap[day] = row.status as TeacherAttendanceStatus;
@@ -49,7 +51,7 @@ export const getAllTeachersAttendance = async (monthKey: string): Promise<Record
         const data = await res.json();
 
         const fullMap: Record<string, Record<string, TeacherAttendanceStatus>> = {};
-        (data || []).forEach((row: any) => {
+        (data || []).forEach((row: { teacher_id: string; date: string; status: string }) => {
             if (!fullMap[row.teacher_id]) fullMap[row.teacher_id] = {};
             const dateParts = row.date.split('-');
             const day = parseInt(dateParts[2], 10);
@@ -81,8 +83,8 @@ export const updateTeacherAttendance = async (teacherId: string, date: string, s
             const body = await res.json().catch(() => ({}));
             throw new Error(body.error || 'تعذر تحديث حضور المعلم');
         }
-    } catch (error: any) {
-        console.error("Error updating teacher attendance:", error?.message || error);
+    } catch (error) {
+        console.error("Error updating teacher attendance:", getErrorMessage(error));
         throw error;
     }
 };

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 import { Group } from '@/types';
@@ -31,7 +32,15 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        const groups: Group[] = (data || []).map((row: any) => ({
+        type GroupRow = {
+            id: string;
+            name: string;
+            teacher_id: string | null;
+            schedule: string | null;
+            max_students_per_hour: number | null;
+            hours?: number | null;
+        };
+        const groups: Group[] = ((data || []) as unknown as GroupRow[]).map((row) => ({
             id: row.id,
             name: row.name,
             teacherId: row.teacher_id,
@@ -42,8 +51,8 @@ export async function GET(request: NextRequest) {
         })) as unknown as Group[];
 
         return NextResponse.json(groups);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -68,8 +77,8 @@ export async function POST(request: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ id: data.id });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -81,7 +90,7 @@ export async function PUT(request: NextRequest) {
         const { id, ...body } = await request.json();
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-        const updates: any = {};
+        const updates: Record<string, unknown> = {};
         if (body.name) updates.name = body.name;
         if (body.teacherId !== undefined) updates.teacher_id = body.teacherId;
         if (body.schedule) updates.schedule = body.schedule;
@@ -92,8 +101,8 @@ export async function PUT(request: NextRequest) {
         const { error } = await supabase.from('groups').update(updates).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -114,7 +123,7 @@ export async function DELETE(request: NextRequest) {
         const { error } = await supabase.from('groups').delete().eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

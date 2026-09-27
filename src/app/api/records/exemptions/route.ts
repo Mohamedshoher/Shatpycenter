@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 
@@ -20,8 +21,8 @@ export async function GET(request: NextRequest) {
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json(data || []);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         // دعم إدراج دفعة من الإعفاءات مرة واحدة (مثلاً: عفو عن كل شهور طالب متأخر)
         if (Array.isArray(body.items)) {
-            const rows = body.items.map((item: any) => ({
+            const rows = body.items.map((item: { student_id: string; student_name: string; teacher_id: string; month: string; amount: number; exempted_by?: string }) => ({
                 student_id: item.student_id,
                 student_name: item.student_name,
                 teacher_id: item.teacher_id,
@@ -89,8 +90,8 @@ export async function POST(request: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -119,7 +120,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         return NextResponse.json({ error: 'id or (studentId and month) required' }, { status: 400 });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

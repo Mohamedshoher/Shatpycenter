@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 import { fetchAllRows } from '@/lib/fetch-all-rows';
@@ -15,9 +16,19 @@ export async function GET(request: NextRequest) {
 
         const supabase = createServerSupabase();
 
-        let data: any[];
+        type ExamRow = {
+            id: string;
+            student_id: string | null;
+            surah: string | null;
+            exam_type: string | null;
+            grade: string | null;
+            date: string | null;
+            created_at: string;
+            goal_id: string | null;
+        };
+        let data: ExamRow[];
         try {
-            data = await fetchAllRows((from, to) => {
+            data = await fetchAllRows<ExamRow>((from, to) => {
                 let query = supabase
                     .from('exams')
                     .select('id, student_id, surah, exam_type, grade, date, created_at, goal_id')
@@ -44,11 +55,11 @@ export async function GET(request: NextRequest) {
 
                 return query;
             });
-        } catch (error: any) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
+        } catch (error) {
+            return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
         }
 
-        const exams = (data || []).map((row: any) => ({
+        const exams = (data || []).map((row) => ({
             id: row.id,
             studentId: row.student_id,
             surah: row.surah,
@@ -61,8 +72,8 @@ export async function GET(request: NextRequest) {
         }));
 
         return NextResponse.json(exams);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -88,8 +99,8 @@ export async function POST(request: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -101,7 +112,7 @@ export async function PUT(request: NextRequest) {
         const { id, ...data } = await request.json();
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-        const updates: any = {};
+        const updates: Record<string, unknown> = {};
         if (data.surah) updates.surah = data.surah;
         if (data.grade) updates.grade = data.grade;
         if (data.type) updates.exam_type = data.type;
@@ -110,8 +121,8 @@ export async function PUT(request: NextRequest) {
         const { error } = await supabase.from('exams').update(updates).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -128,7 +139,7 @@ export async function DELETE(request: NextRequest) {
         const { error } = await supabase.from('exams').delete().eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

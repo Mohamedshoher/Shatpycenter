@@ -16,7 +16,9 @@ export const fetchConversations = async (actor: string): Promise<Conversation[]>
     
     const { data, error } = await supabase.rpc('msg_list_conversations', { p_token: token });
     if (error) throw new Error(error.message);
-    return data || [];
+    // الدالة على قاعدة البيانات تُعيد JSON عام بحكم توقيعها في Postgres،
+    // لكن شكلها الفعلي المتفق عليه دائماً مطابق لواجهة Conversation[]
+    return (data as unknown as Conversation[]) || [];
 };
 
 /** جلب رسائل محادثة محددة */
@@ -26,7 +28,7 @@ export const fetchMessages = async (actor: string, conversationId: string): Prom
 
     const { data, error } = await supabase.rpc('msg_get_messages', { p_token: token, p_conversation_id: conversationId });
     if (error) throw new Error(error.message);
-    return data || [];
+    return (data as unknown as Message[]) || [];
 };
 
 /** إنشاء محادثة جديدة (أو إرجاع الموجودة بين نفس الطرفين) */
@@ -39,7 +41,7 @@ export const createConversation = async (
 
     const { data, error } = await supabase.rpc('msg_create_conversation', { p_token: token, p_other: other });
     if (error || !data) throw new Error(error?.message || 'تعذر إنشاء المحادثة');
-    return data;
+    return data as unknown as Conversation;
 };
 
 /** إرسال رسالة */
@@ -53,7 +55,7 @@ export const sendMessage = async (
 
     const { data, error } = await supabase.rpc('msg_send_message', { p_token: token, p_conversation_id: conversationId, p_content: content });
     if (error || !data) throw new Error(error?.message || 'تعذر إرسال الرسالة');
-    return data;
+    return data as unknown as Message;
 };
 
 /** تعليم المحادثة كمقروءة */
@@ -84,5 +86,6 @@ export const fetchContacts = async (actor: string): Promise<MessagingContacts> =
 
     const { data, error } = await supabase.rpc('msg_get_contacts', { p_token: token });
     if (error) throw new Error(error.message);
-    return { teachers: data?.teachers || [], parents: data?.parents || [] };
+    const contacts = data as unknown as MessagingContacts | null;
+    return { teachers: contacts?.teachers || [], parents: contacts?.parents || [] };
 };

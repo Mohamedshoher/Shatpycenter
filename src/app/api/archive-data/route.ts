@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 
@@ -22,7 +23,8 @@ export async function GET(request: NextRequest) {
         const supabase = createServerSupabase();
 
         // 1. Fees
-        let allFees: any[] = [];
+        type FeeRow = { id: string; student_id: string | null; month: string | null; amount: number | null; date: string | null; created_by: string | null };
+        let allFees: FeeRow[] = [];
         const chunkSize = 100;
         for (let i = 0; i < studentIds.length; i += chunkSize) {
             const chunk = studentIds.slice(i, i + chunkSize);
@@ -42,7 +44,8 @@ export async function GET(request: NextRequest) {
         }
 
         // 2. Attendance
-        let allAttendance: any[] = [];
+        type AttendanceRow = { student_id: string | null; month_key: string | null; status: string | null; date: string | null };
+        let allAttendance: AttendanceRow[] = [];
         for (let i = 0; i < studentIds.length; i += chunkSize) {
             const chunk = studentIds.slice(i, i + chunkSize);
             let from = 0;
@@ -61,7 +64,8 @@ export async function GET(request: NextRequest) {
         }
 
         // 3. Exemptions
-        let allExemptions: any[] = [];
+        type ExemptionRow = { id: string; student_id: string | null; student_name: string | null; month: string | null; amount: number | null; exempted_by: string | null; created_at: string | null };
+        let allExemptions: ExemptionRow[] = [];
         for (let i = 0; i < studentIds.length; i += chunkSize) {
             const chunk = studentIds.slice(i, i + chunkSize);
             const { data, error } = await supabase
@@ -76,7 +80,7 @@ export async function GET(request: NextRequest) {
             attendance: allAttendance,
             exemptions: allExemptions,
         });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
