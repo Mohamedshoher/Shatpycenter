@@ -7,6 +7,7 @@ import { updateStudent } from '../services/studentService';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import type { AttendanceRecord } from '../services/recordsService';
 
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
 import Search from 'lucide-react/dist/esm/icons/search'
@@ -31,6 +32,11 @@ import { Student } from '@/types';
 import dynamic from 'next/dynamic';
 import NotificationBell from '@/components/NotificationBell';
 import { getStudentAzhariInfo } from '../constants/azharCurriculum';
+
+interface AttendanceContext {
+    today: Record<string, 'present' | 'absent'>;
+    monthMap?: Record<string, AttendanceRecord[]>;
+}
 
 const AddStudentModal = dynamic(() => import('./AddStudentModal'), { ssr: false });
 const StudentDetailModal = dynamic(() => import('./StudentDetailModal'), { ssr: false });
@@ -186,7 +192,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     }, [students, currentDayName, groupId, user, myGroupsIds]);
 
 
-    const { data: attendanceData = { today: {} } as any, isFetching: isAttendanceFetching } = useQuery({
+    const { data: attendanceData = { today: {} } as AttendanceContext, isFetching: isAttendanceFetching } = useQuery({
         queryKey: ['attendance-context', selectedDate],
         queryFn: async () => {
             if (!students || students.length === 0) return { today: {} };
@@ -196,7 +202,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             const data = await res.json();
 
             const selectedDayMap: Record<string, 'present' | 'absent'> = {};
-            (data || []).forEach((row: any) => {
+            (data || []).forEach((row: { student_id: string; status: 'present' | 'absent' }) => {
                 selectedDayMap[row.student_id] = row.status;
             });
 
@@ -366,7 +372,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         // 1. التحديث الفوري للكاش (Optimistic Update)
         queryClient.setQueryData(
             ['attendance-context', dateStrKey],
-            (old: any) => {
+            (old: AttendanceContext | undefined) => {
                 const newToday = { ...(old?.today || {}), [student.id]: status };
                 // تحديث الـ monthMap أيضاً لضمان دقة الفلاتر فوراً
                 const newRecords = [...(old?.monthMap?.[student.id] || [])];
@@ -374,7 +380,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 if (dayIndex > -1) {
                     newRecords[dayIndex] = { ...newRecords[dayIndex], status };
                 } else {
-                    newRecords.push({ studentId: student.id, day, month: monthKey, status });
+                    newRecords.push({ id: `temp-${Date.now()}`, studentId: student.id, day, month: monthKey, status });
                 }
                 return {
                     today: newToday,
@@ -384,9 +390,9 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         );
 
         // 2. تحديث الكاش العالمي للحضور (تفاصيل الطالب)
-        queryClient.setQueryData(['attendance', student.id], (old: any) => {
+        queryClient.setQueryData(['attendance', student.id], (old: AttendanceRecord[] | undefined) => {
             const records = Array.isArray(old) ? old : [];
-            const filtered = records.filter((r: any) => !(r.day === day && r.month === monthKey));
+            const filtered = records.filter((r) => !(r.day === day && r.month === monthKey));
             return [...filtered, { studentId: student.id, day, month: monthKey, status }];
         });
 
@@ -762,7 +768,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                 if (newPhone !== null && newPhone.trim() !== '' && newPhone !== student.parentPhone) {
                                                     updateStudent(student.id, { parentPhone: newPhone.trim() }).then(() => {
                                                         queryClient.invalidateQueries({ queryKey: ['students'] });
-                                                    }).catch((err: any) => {
+                                                    }).catch(() => {
                                                         alert('حدث خطأ أثناء التحديث');
                                                     });
                                                 }
@@ -819,7 +825,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 onClose={() => setSelectedStudent(null)}
                 initialTab={selectedTab}
                 currentAttendance={selectedStudent ? attendanceState[selectedStudent.id] : undefined}
-                onEdit={(s: any) => {
+                onEdit={(s) => {
                     setSelectedStudent(null);
                     setStudentToEdit(s);
                     setIsEditModalOpen(true);

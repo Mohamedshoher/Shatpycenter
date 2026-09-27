@@ -37,7 +37,7 @@ export default function LoginForm() {
 
     useEffect(() => {
         const savedMainTab = localStorage.getItem('shatibi_last_main_tab') as MainTab | null;
-        const savedRoleTab = localStorage.getItem('shatibi_last_role_tab') as any;
+        const savedRoleTab = localStorage.getItem('shatibi_last_role_tab') as RoleTab | 'schedule_secretary' | null;
         const savedTeacherId = localStorage.getItem('shatibi_last_teacher_id');
         const savedPhone = localStorage.getItem('shatibi_parent_phone');
 
@@ -67,7 +67,7 @@ export default function LoginForm() {
             if (roleTab === 'teacher' || roleTab === 'supervisor') {
                 if (!selectedTeacherId) return;
                 const selectedStaff = teachers?.find(t => t.id === selectedTeacherId);
-                const prefix = (selectedStaff as any)?.role === 'schedule_secretary' ? 'secretary' : roleTab;
+                const prefix = selectedStaff?.role === 'schedule_secretary' ? 'secretary' : roleTab;
                 loginIdentifier = `${prefix}-${selectedTeacherId}`;
                 localStorage.setItem('shatibi_last_teacher_id', selectedTeacherId);
             }
@@ -288,15 +288,15 @@ export default function LoginForm() {
                                 >
                                     <option value="">-- اضغط للاختيار من القائمة --</option>
                                     {roleTab === 'supervisor' ? (
-                                        teachers?.filter(t => t.status === 'active' && ((t as any).role === 'supervisor' || (t as any).role === 'schedule_secretary'))
+                                        teachers?.filter(t => t.status === 'active' && (t.role === 'supervisor' || t.role === 'schedule_secretary'))
                                             .sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'))
                                             .map(t => (
                                                 <option key={t.id} value={t.id}>
-                                                    {t.fullName} ({(t as any).role === 'schedule_secretary' ? 'سكرتارية' : 'مشرف'})
+                                                    {t.fullName} ({t.role === 'schedule_secretary' ? 'سكرتارية' : 'مشرف'})
                                                 </option>
                                             ))
                                     ) : (
-                                        teachers?.filter(t => t.status === 'active' && ((t as any).role === 'teacher' || !(t as any).role))
+                                        teachers?.filter(t => t.status === 'active' && (t.role === 'teacher' || !t.role))
                                             .sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'))
                                             .map(t => (
                                                 <option key={t.id} value={t.id}>{t.fullName}</option>
