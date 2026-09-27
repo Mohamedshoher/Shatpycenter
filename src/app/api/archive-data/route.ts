@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         let allExemptions: ExemptionRow[] = [];
         for (let i = 0; i < studentIds.length; i += chunkSize) {
             const chunk = studentIds.slice(i, i + chunkSize);
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('free_exemptions')
                 .select('id, student_id, student_name, month, amount, exempted_by, created_at')
                 .in('student_id', chunk);

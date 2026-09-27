@@ -4,8 +4,6 @@ import { useState, useMemo } from 'react';
 import Trophy from 'lucide-react/dist/esm/icons/trophy'
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
-import Bell from 'lucide-react/dist/esm/icons/bell'
-import Share2 from 'lucide-react/dist/esm/icons/share-2'
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
 import User from 'lucide-react/dist/esm/icons/user'
@@ -13,7 +11,6 @@ import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
-import { FadeIn } from '@/components/ui/transition';
 
 // --- استيراد الـ Hooks والـ Stores الخاصة بالتطبيق ---
 import { useStudents } from '@/features/students/hooks/useStudents';
@@ -27,7 +24,6 @@ import { useAllGoals } from '@/features/students/hooks/useAllGoals';
 import { Student } from '@/types';
 import Target from 'lucide-react/dist/esm/icons/target';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
 
 const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
 
@@ -67,7 +63,7 @@ export default function ExamsReportPage() {
     const [activeTab, setActiveTab] = useState<TabType>('performance'); // التبويب النشط
     const [selectedGroupId, setSelectedGroupId] = useState('all'); // المجموعة المختارة للفلترة
     const [selectedExamType, setSelectedExamType] = useState('new'); // نوع الاختبار (جديد، قريب، بعيد)
-    const [examsLimit, setExamsLimit] = useState('1'); // الحد الأدنى للاختبارات (لتبويب الأكثر اختباراً)
+    const [examsLimit] = useState('1'); // الحد الأدنى للاختبارات (لتبويب الأكثر اختباراً)
     const [performanceFilter, setPerformanceFilter] = useState<'all' | 'new' | 'near' | 'far'>('all'); // فلتر تبويب الأداء
     const [performanceTypeFilter, setPerformanceTypeFilter] = useState<'all' | 'quran' | 'talqeen' | 'noor'>('all'); // فلتر نوع المجموعة
 
@@ -99,11 +95,6 @@ export default function ExamsReportPage() {
         d.setMonth(d.getMonth() + 1);
         setSelectedDate(d);
     };
-
-    const isCurrentMonth = useMemo(() => {
-        const now = new Date();
-        return now.getMonth() === selectedDate.getMonth() && now.getFullYear() === selectedDate.getFullYear();
-    }, [selectedDate]);
 
     // --- 5. منطق حساب البيانات (Business Logic) باستخدام useMemo لتحسين الأداء ---
 
@@ -648,8 +639,7 @@ export default function ExamsReportPage() {
                                                         {(['new', 'near', 'far'] as const).map(type => {
                                                             const label = { new: 'جديد', near: 'ماضي قريب', far: 'بعيد' }[type];
                                                             const testedVal = data.tested[type];
-                                                            const notTestedVal = data.notTested[type];
-                                                            const barColor = type === 'new' ? 'from-green-400 to-emerald-500'
+                                                                                            const barColor = type === 'new' ? 'from-green-400 to-emerald-500'
                                                                 : type === 'near' ? 'from-amber-400 to-orange-500'
                                                                 : 'from-purple-400 to-violet-500';
                                                             const textColor = type === 'new' ? 'text-emerald-600'

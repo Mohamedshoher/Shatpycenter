@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useStudents } from "@/features/students/hooks/useStudents";
 import { useGroups } from "@/features/groups/hooks/useGroups";
 import { useTeachers } from "@/features/teachers/hooks/useTeachers";
@@ -19,7 +19,6 @@ import {
     Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FadeIn, SlideIn } from '@/components/ui/transition';
 
 type TabType = "exams" | "fees" | "attendance" | "plan";
 

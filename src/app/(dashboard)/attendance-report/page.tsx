@@ -1,14 +1,12 @@
 "use client";
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import Users from 'lucide-react/dist/esm/icons/users';
 
 // المكونات الفرعية
 import AttendanceStats from './AttendanceStats';
 import AttendanceFilters from './AttendanceFilters';
 import StudentReportCard from './StudentReportCard';
 import dynamic from 'next/dynamic';
-import { cn } from '@/lib/utils';
 
 // الخدمات والمخازن
 import { useStudents } from '@/features/students/hooks/useStudents';
@@ -36,7 +34,7 @@ export default function AttendanceReportPage() {
     });
 
     const [groupId, setGroupId] = useState('all');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery] = useState('');
     const [contLimit, setContLimit] = useState('');
     const [totalLimit, setTotalLimit] = useState('');
     const [showAbsentChart, setShowAbsentChart] = useState(false);
