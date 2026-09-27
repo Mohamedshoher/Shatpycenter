@@ -308,7 +308,7 @@ export const checkMissingDailyReports = async (customDate?: string): Promise<Aut
             logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص التقارير اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '⚠️ تحذير', messageSent: `لم يتم العثور على معلمين للفحص ليوم ${dateStr}`, timestamp: startTime, status: 'failed' }));
         }
         return logs;
-    } catch (error: any) {
+    } catch (error) {
         console.error('checkMissingDailyReports error:', error);
         return [];
     }

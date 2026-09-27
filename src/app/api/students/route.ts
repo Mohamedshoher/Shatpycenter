@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 import { Student } from '@/types';
@@ -36,27 +37,25 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        const students: Student[] = (data || []).map((row: any) => {
+        const students: Student[] = (data || []).map((row) => {
             const notesStr = row.notes || '';
             const isAzhari = Boolean(row.is_azhari);
             const azhariGrade = row.azhari_grade || '';
             const isOrphan = Boolean(
                 row.is_orphan === true ||
-                row.is_orphan === 'true' ||
-                row.is_orphan === 1 ||
-                row.isOrphan === true
+                (row.is_orphan as unknown) === 'true' ||
+                (row.is_orphan as unknown) === 1
             );
 
             return {
                 id: row.id,
                 fullName: row.full_name,
                 groupId: row.group_id,
-                parentPhone: row.parent_phone || row.phone || '',
+                parentPhone: row.parent_phone || '',
                 status: row.status,
                 isArchived: row.status === 'archived',
                 monthlyAmount: Number(row.monthly_amount) || 0,
-                birthDate: row.birth_date || undefined,
-                address: row.address || '',
+                address: '',
                 appointment: row.appointment || '',
                 notes: notesStr,
                 isAzhari,
@@ -64,7 +63,7 @@ export async function GET(request: NextRequest) {
                 isOrphan,
                 enrollmentDate: row.enrollment_date || (row.created_at ? row.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
                 archivedDate: row.archived_date || undefined,
-                whatsapp: row.parent_phone || row.phone || '',
+                whatsapp: row.parent_phone || '',
                 email: '',
                 password: '',
                 role: 'student',
@@ -74,8 +73,8 @@ export async function GET(request: NextRequest) {
         }) as unknown as Student[];
 
         return NextResponse.json(students);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -87,7 +86,7 @@ export async function POST(request: NextRequest) {
         const student = await request.json();
         const supabase = createServerSupabase();
 
-        const insertObj: any = {
+        const insertObj: Record<string, unknown> = {
             full_name: student.fullName,
             group_id: student.groupId || null,
             parent_phone: student.parentPhone,
@@ -101,7 +100,7 @@ export async function POST(request: NextRequest) {
         if (student.azhariGrade !== undefined) insertObj.azhari_grade = student.azhariGrade || null;
         if (student.isOrphan !== undefined) insertObj.is_orphan = !!student.isOrphan;
 
-        const { data, error } = await supabase.from('students').insert([insertObj]).select('id').single();
+        const { data, error } = await supabase.from('students').insert([insertObj as never]).select('id').single();
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
         if (student.isAzhari && student.azhariNoteContent && data?.id) {
@@ -118,8 +117,8 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({ id: data.id });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -131,7 +130,7 @@ export async function PUT(request: NextRequest) {
         const { id, ...data } = await request.json();
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-        const updates: any = {};
+        const updates: Record<string, unknown> = {};
         if (data.fullName) updates.full_name = data.fullName;
         if (data.groupId !== undefined) updates.group_id = data.groupId;
         if (data.parentPhone) updates.parent_phone = data.parentPhone;
@@ -150,8 +149,8 @@ export async function PUT(request: NextRequest) {
         const { error } = await supabase.from('students').update(updates).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -173,7 +172,7 @@ export async function DELETE(request: NextRequest) {
             { name: 'student_notes', col: 'student_id' },
             { name: 'leave_requests', col: 'student_id' },
             { name: 'user_presence', col: 'user_id' },
-        ];
+        ] as const;
         for (const table of tablesToClear) {
             const { error: clearError } = await supabase.from(table.name).delete().eq(table.col, id);
             if (clearError) console.warn(`تعذر تنظيف الجدول ${table.name}:`, clearError.message);
@@ -183,8 +182,8 @@ export async function DELETE(request: NextRequest) {
         const { error } = await supabase.from('students').delete().eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -211,8 +210,8 @@ export async function PATCH(request: NextRequest) {
         if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
 
         const updates = (students || [])
-            .filter((s: any) => s.appointment && s.appointment.includes(dayOnly))
-            .map((s: any) => {
+            .filter((s) => s.appointment && s.appointment.includes(dayOnly))
+            .map((s) => {
                 const newApp = (s.appointment || '')
                     .split(',')
                     .map((p: string) => p.trim())
@@ -224,7 +223,7 @@ export async function PATCH(request: NextRequest) {
 
         if (updates.length > 0) await Promise.all(updates);
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

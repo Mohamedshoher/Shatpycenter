@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 import { FinancialTransaction } from '@/types';
+import type { Database } from '@/types/supabase';
 
-const mapTransaction = (row: any): FinancialTransaction => ({
+type TransactionRow = Pick<
+    Database['public']['Tables']['financial_transactions']['Row'],
+    'id' | 'amount' | 'type' | 'category' | 'date' | 'description' | 'related_user_id' | 'performed_by' | 'created_at'
+>;
+
+const mapTransaction = (row: TransactionRow): FinancialTransaction => ({
     id: row.id,
     amount: Number(row.amount),
-    type: row.type,
-    category: row.category,
+    type: row.type as FinancialTransaction['type'],
+    category: (row.category || 'other') as FinancialTransaction['category'],
     date: row.date,
-    description: row.description,
-    relatedUserId: row.related_user_id,
-    performedBy: row.performed_by,
+    description: row.description || '',
+    relatedUserId: row.related_user_id || undefined,
+    performedBy: row.performed_by || '',
     timestamp: new Date(row.created_at).getTime()
 });
 
@@ -64,8 +71,8 @@ export async function GET(request: NextRequest) {
 
         const transactions: FinancialTransaction[] = (data || []).map(mapTransaction);
         return NextResponse.json(transactions);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -92,8 +99,8 @@ export async function POST(request: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ id: data.id });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -125,7 +132,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         return NextResponse.json({ error: 'id or a filter is required' }, { status: 400 });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

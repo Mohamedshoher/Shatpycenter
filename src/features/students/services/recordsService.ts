@@ -1,3 +1,5 @@
+import { getErrorMessage } from '@/lib/error-message';
+
 // كل الكتابات في هذا الملف تمر عبر API routes على الخادم (وليس Supabase
 // مباشرة من المتصفح)، تمهيداً لإغلاق RLS على الجداول العادية.
 
@@ -541,7 +543,7 @@ export const getStudentNotes = async (studentId: string) => {
             repliedBy: n.replied_by,
             repliedAt: n.replied_at
         }));
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error fetching student notes:", error);
         return [];
     }
@@ -588,7 +590,7 @@ export const getLatestNotes = async () => {
             }
         });
         return latestNotesMap;
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error fetching latest notes:", error);
         return {};
     }
@@ -615,7 +617,7 @@ export const getAllStudentNotesWithDetails = async (limit: number = 20) => {
             repliedBy: n.replied_by,
             repliedAt: n.replied_at
         }));
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error fetching all student notes:", error);
         return [];
     }
@@ -646,7 +648,7 @@ export const getNotesPage = async (params?: { teacherId?: string; isRead?: boole
             repliedBy: n.replied_by,
             repliedAt: n.replied_at
         }));
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error fetching notes page:", error);
         return [];
     }
@@ -677,8 +679,8 @@ export const markNoteAsRead = async (id: string, isRead: boolean = true) => {
             body: JSON.stringify({ id, isRead })
         });
         if (!res.ok) throw new Error('Failed to mark note as read');
-    } catch (error: any) {
-        console.error("Error marking note as read:", error?.message || error);
+    } catch (error) {
+        console.error("Error marking note as read:", getErrorMessage(error));
         throw error;
     }
 };

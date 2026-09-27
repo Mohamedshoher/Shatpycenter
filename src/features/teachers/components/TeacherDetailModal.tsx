@@ -55,6 +55,7 @@ import { useTeacherDashboard } from '@/features/teachers/hooks/useTeacherDashboa
 import { TeacherDeficitModal } from './TeacherDeficitModal';
 import { TeacherGroupsTab } from './TeacherGroupsTab';
 import { TeacherAgreementTab } from './TeacherAgreementTab';
+import { getErrorMessage } from '@/lib/error-message';
 
 // ==========================================
 // 4. التحميل البطيء للمكونات الثقيلة
@@ -591,9 +592,9 @@ export default function TeacherDetailModal({
 
             setActiveDayMenu(null);
             setTempReason('');
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error in handleAddDiscipline:", error);
-            alert(`حدث خطأ أثناء حفظ التعديلات:\n${error?.message || "خطأ غير معروف"}`);
+            alert(`حدث خطأ أثناء حفظ التعديلات:\n${getErrorMessage(error)}`);
         }
     };
 

@@ -26,11 +26,11 @@ export async function GET() {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        const directory = (data || []).map((row: { id: string; full_name: string; role: string | null; status: string }) => ({
+        const directory = (data || []).map((row) => ({
             id: row.id,
             fullName: row.full_name,
             role: row.role || 'teacher',
-            status: row.status,
+            status: row.status || 'active',
         }));
 
         return NextResponse.json(directory);

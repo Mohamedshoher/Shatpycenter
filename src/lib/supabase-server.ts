@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,7 +19,7 @@ export function createServerSupabase() {
             'اضبط المتغير في بيئة النشر ثم أعد النشر، وإلا فستفشل بعض العمليات بعد إغلاق RLS.'
         );
     }
-    return createClient(supabaseUrl || '', serviceRoleKey || anonKey || '', {
+    return createClient<Database>(supabaseUrl || '', serviceRoleKey || anonKey || '', {
         auth: { persistSession: false },
         global: {
             headers: { 'x-client-info': 'shatbi-lms-server' },

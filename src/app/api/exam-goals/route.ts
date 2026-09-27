@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 import { fetchAllRows } from '@/lib/fetch-all-rows';
@@ -14,9 +15,22 @@ export async function GET(request: NextRequest) {
 
         const supabase = createServerSupabase();
 
-        let data: any[];
+        type GoalRow = {
+            id: string;
+            student_id: string | null;
+            exam_type: string | null;
+            title: string | null;
+            start_date: string | null;
+            end_date: string | null;
+            sessions_count: number | null;
+            notes: string | null;
+            is_completed: boolean | null;
+            completed_by: string | null;
+            completed_at: string | null;
+        };
+        let data: GoalRow[];
         try {
-            data = await fetchAllRows((from, to) => {
+            data = await fetchAllRows<GoalRow>((from, to) => {
                 let query = supabase.from('exam_goals').select('id, student_id, exam_type, title, start_date, end_date, sessions_count, notes, is_completed, completed_by, completed_at').order('created_at', { ascending: true }).range(from, to);
                 if (studentIds) {
                     const ids = studentIds.split(',');
@@ -29,11 +43,11 @@ export async function GET(request: NextRequest) {
                 }
                 return query;
             });
-        } catch (error: any) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
+        } catch (error) {
+            return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
         }
 
-        const goals = (data || []).map((row: any) => ({
+        const goals = (data || []).map((row) => ({
             id: row.id,
             studentId: row.student_id,
             examType: row.exam_type,
@@ -48,8 +62,8 @@ export async function GET(request: NextRequest) {
         }));
 
         return NextResponse.json(goals);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -76,8 +90,8 @@ export async function POST(request: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ id: data.id });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -89,7 +103,7 @@ export async function PUT(request: NextRequest) {
         const { id, ...updates } = await request.json();
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-        const payload: any = {};
+        const payload: Record<string, unknown> = {};
         if (updates.title !== undefined) payload.title = updates.title;
         if (updates.examType !== undefined) payload.exam_type = updates.examType;
         if (updates.startDate !== undefined) payload.start_date = updates.startDate;
@@ -105,8 +119,8 @@ export async function PUT(request: NextRequest) {
         const { error } = await supabase.from('exam_goals').update(payload).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -123,7 +137,7 @@ export async function DELETE(request: NextRequest) {
         const { error } = await supabase.from('exam_goals').delete().eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

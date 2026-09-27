@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 
@@ -35,8 +36,8 @@ export async function GET(request: NextRequest) {
         const { data, error } = await query;
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json(data || []);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -73,8 +74,8 @@ export async function POST(request: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -99,8 +100,8 @@ export async function DELETE(request: NextRequest) {
         const { error } = await supabase.from('deductions').delete().eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -113,14 +114,14 @@ export async function PUT(request: NextRequest) {
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
         const supabase = createServerSupabase();
-        const updates: any = {};
+        const updates: Record<string, unknown> = {};
         if (status) updates.status = status;
         if (notes !== undefined) updates.notes = notes;
 
         const { error } = await supabase.from('deductions').update(updates).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
