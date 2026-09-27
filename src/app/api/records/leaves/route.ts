@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
         const supabase = createServerSupabase();
         const { data, error } = await supabase
             .from('leave_requests')
-            .select('*')
+            .select('id, student_id, student_name, start_date, end_date, reason, status, created_at')
             .order('created_at', { ascending: false });
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });

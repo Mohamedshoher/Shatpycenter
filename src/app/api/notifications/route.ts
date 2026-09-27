@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
         const supabase = createServerSupabase();
         let query = supabase
             .from('notifications')
-            .select('*')
+            .select('id, teacher_id, type, title, message, reason, amount, related_date, is_read, created_at')
             .order('created_at', { ascending: false })
             .limit(limit);
 

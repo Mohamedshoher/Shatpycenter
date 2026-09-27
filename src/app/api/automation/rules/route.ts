@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
     try {
         const supabase = createServerSupabase();
-        const { data, error } = await supabase.from('automation_rules').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabase.from('automation_rules').select('id, name, type, recipients, is_active, conditions, actions, schedule, created_at').order('created_at', { ascending: false });
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json(data || []);
     } catch (error: any) {

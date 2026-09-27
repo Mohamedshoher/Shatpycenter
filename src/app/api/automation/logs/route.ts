@@ -15,12 +15,12 @@ export async function GET(request: NextRequest) {
         const supabase = createServerSupabase();
 
         if (id) {
-            const { data, error } = await supabase.from('automation_logs').select('*').eq('id', id).single();
+            const { data, error } = await supabase.from('automation_logs').select('id, rule_id, rule_name, status, details, affected_entity_id, affected_entity_name, triggered_at').eq('id', id).single();
             if (error) return NextResponse.json({ error: error.message }, { status: 500 });
             return NextResponse.json(data);
         }
 
-        let query = supabase.from('automation_logs').select('*').order('triggered_at', { ascending: false }).limit(limit);
+        let query = supabase.from('automation_logs').select('id, rule_id, rule_name, status, details, affected_entity_id, affected_entity_name, triggered_at').order('triggered_at', { ascending: false }).limit(limit);
 
         if (date) {
             const dayStart = `${date}T00:00:00`;

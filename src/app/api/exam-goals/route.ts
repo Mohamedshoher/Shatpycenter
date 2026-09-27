@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
         let data: any[];
         try {
             data = await fetchAllRows((from, to) => {
-                let query = supabase.from('exam_goals').select('*').order('created_at', { ascending: true }).range(from, to);
+                let query = supabase.from('exam_goals').select('id, student_id, exam_type, title, start_date, end_date, sessions_count, notes, is_completed, completed_by, completed_at').order('created_at', { ascending: true }).range(from, to);
                 if (studentIds) {
                     const ids = studentIds.split(',');
                     query = query.in('student_id', ids);
