@@ -9,8 +9,10 @@ import { Button } from '../../../components/ui/button';
 import { cn, getWhatsAppUrl } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { AZHAR_CURRICULUM, getStudentAzhariInfo } from '../constants/azharCurriculum';
+import { Student } from '@/types';
+import type { StudentRecordsHook } from '../hooks/types';
 
-export default function NotesTab({ student, records }: any) {
+export default function NotesTab({ student, records }: { student: Student; records: StudentRecordsHook }) {
     const { user } = useAuthStore();
     const { notes, addNote, deleteNote, replyNote } = records;
     const [noteText, setNoteText] = useState('');
@@ -28,7 +30,6 @@ export default function NotesTab({ student, records }: any) {
             content: noteText.trim(),
             type: 'positive',
             createdBy: user?.displayName || (user?.role === 'director' ? 'المدير العام' : 'المعلم'),
-            date: new Date().toLocaleDateString('ar-EG')
         });
         setNoteText('');
     };
@@ -133,7 +134,7 @@ export default function NotesTab({ student, records }: any) {
             {/* قائمة الملحوظات المسجلة */}
             <div className="space-y-3">
                 {notes && notes.length > 0 ? (
-                    notes.map((note: any) => (
+                    notes.map((note) => (
                         <div key={note.id} className="p-4 md:p-5 rounded-2xl border bg-white border-gray-100 shadow-sm relative text-right space-y-3 hover:border-blue-100 transition-all">
                             {/* ترويسة الملحوظة: اسم الكاتب والتاريخ */}
                             <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-gray-50">
@@ -150,7 +151,7 @@ export default function NotesTab({ student, records }: any) {
 
                             {/* نص الملحوظة */}
                             <p className="text-sm font-bold text-gray-800 leading-relaxed break-words pr-1">
-                                {note.text || note.content}
+                                {note.text}
                             </p>
 
                             {/* قسم الرد إذا وُجد */}
@@ -176,7 +177,7 @@ export default function NotesTab({ student, records }: any) {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => {
-                                            const content = note.text || note.content;
+                                            const content = note.text;
                                             const text = `السلام عليكم ورحمة الله وبركاته\n\nنود إحاطتكم علماً بملحوظة بخصوص الطالب/ة *${student.fullName}*:\n\n"${content}"\n\nمع تحيات إدارة مركز الشاطبي 🌹`;
                                             window.open(getWhatsAppUrl(student.parentPhone || '', text), '_blank');
                                         }}

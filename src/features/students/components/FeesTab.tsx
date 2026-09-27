@@ -6,8 +6,10 @@ import Undo2 from 'lucide-react/dist/esm/icons/undo-2';
 import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
+import { Student } from '@/types';
+import type { StudentRecordsHook } from '../hooks/types';
 
-export default function FeesTab({ student, records }: any) {
+export default function FeesTab({ student, records }: { student: Student; records: StudentRecordsHook }) {
     const { user } = useAuthStore();
     const isDirector = user?.role === 'director';
     const isSupervisor = user?.role === 'supervisor';
@@ -76,8 +78,8 @@ export default function FeesTab({ student, records }: any) {
             {/* عرض حالة الشهور */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {monthsList.map((m) => {
-                    const studentFee = fees.find((f: any) => f.month === m.label || f.month === m.key);
-                    const exemption = exemptions.find((e: any) => e.month === m.label || e.month === m.key);
+                    const studentFee = fees.find((f) => f.month === m.label || f.month === m.key);
+                    const exemption = exemptions.find((e) => e.month === m.label || e.month === m.key);
 
                     return (
                         <div key={m.key} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">

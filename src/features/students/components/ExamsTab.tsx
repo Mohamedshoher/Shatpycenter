@@ -13,7 +13,9 @@ import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import { Button } from '../../../components/ui/button';
 import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
-import type { ExamGoal } from '../services/recordsService';
+import type { ExamGoal, ExamRecord } from '../services/recordsService';
+import { Student } from '@/types';
+import type { StudentRecordsHook } from '../hooks/types';
 
 type ExamType = 'جديد' | 'ماضي قريب' | 'ماضي بعيد';
 const EXAM_TYPES: ExamType[] = ['جديد', 'ماضي قريب', 'ماضي بعيد'];
@@ -77,7 +79,7 @@ const gradeColor = (grade: string) => {
     return 'bg-blue-100 text-blue-700 border-blue-200';
 };
 
-export default function ExamsTab({ student, records }: any) {
+export default function ExamsTab({ student, records }: { student: Student; records: StudentRecordsHook }) {
     const { user } = useAuthStore();
     const { exams, addExam, deleteExam, updateExam, goals, addGoal, updateGoal, deleteGoal } = records;
     const canEdit = user?.role === 'director' || user?.role === 'teacher' || user?.role === 'supervisor';
@@ -136,7 +138,7 @@ export default function ExamsTab({ student, records }: any) {
         setExamModal(null);
     };
 
-    const handleStartEdit  = (exam: any) => { setEditingExamId(exam.id); setEditType(exam.type); };
+    const handleStartEdit  = (exam: ExamRecord) => { setEditingExamId(exam.id); setEditType(exam.type); };
     const handleSaveEdit   = (id: string) => { updateExam.mutate({ id, data: { type: editType } }); setEditingExamId(null); };
     const handleCancelEdit = () => setEditingExamId(null);
 
@@ -197,14 +199,14 @@ export default function ExamsTab({ student, records }: any) {
     };
 
     // ── الأهداف حسب النوع النشط ──
-    const activeGoals: ExamGoal[] = goals.filter((g: ExamGoal) => g.examType === activeTab);
-    const activeGoalCount = (type: ExamType) => goals.filter((g: ExamGoal) => g.examType === type).length;
+    const activeGoals: ExamGoal[] = goals.filter((g) => g.examType === activeTab);
+    const activeGoalCount = (type: ExamType) => goals.filter((g) => g.examType === type).length;
     const cfg = TYPE_CONFIG[activeTab];
 
     // ── الاختبارات غير المصنفة (التي لا يوجد هدف من نفس نوعها) ──
     const unclassifiedExams = exams
-        .filter((e: any) => !e.goalId && e.type === activeTab)
-        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        .filter((e) => !e.goalId && e.type === activeTab)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return (
         <div className="space-y-4">
@@ -214,7 +216,7 @@ export default function ExamsTab({ student, records }: any) {
                 {EXAM_TYPES.map(type => {
                     const c = TYPE_CONFIG[type];
                     const goalCount = activeGoalCount(type);
-                    const examCount = exams.filter((e: any) => e.type === type).length;
+                    const examCount = exams.filter((e) => e.type === type).length;
                     const isActive = activeTab === type;
                     return (
                         <button
@@ -269,10 +271,10 @@ export default function ExamsTab({ student, records }: any) {
                     </div>
                 )}
 
-                {activeGoals.map((goal: ExamGoal) => {
+                {activeGoals.map((goal) => {
                     const goalExams = exams
-                        .filter((e: any) => e.goalId === goal.id)
-                        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                        .filter((e) => e.goalId === goal.id)
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                     const isOpen = expandedGoals[goal.id] ?? false;
                     const dl = goal.isCompleted ? null : daysLeft(goal.endDate);
 
@@ -404,7 +406,7 @@ export default function ExamsTab({ student, records }: any) {
                                         </p>
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                            {goalExams.map((exam: any) => (
+                                            {goalExams.map((exam) => (
                                                 <div key={exam.id} className="p-3 bg-white rounded-[16px] border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col gap-2">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
@@ -485,7 +487,7 @@ export default function ExamsTab({ student, records }: any) {
                         {showUnclassified && (
                             <div className="p-3 bg-gray-50/60">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    {unclassifiedExams.map((exam: any) => (
+                                    {unclassifiedExams.map((exam) => (
                                         <div key={exam.id} className="p-3 bg-white rounded-[16px] border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col gap-2">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">

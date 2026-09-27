@@ -80,7 +80,7 @@ export const getStudentAttendance = async (studentId: string): Promise<Attendanc
         const res = await fetch(`/api/attendance?studentId=${encodeURIComponent(studentId)}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((row: any) => {
+        return (data || []).map((row: { id: string; student_id: string; date: string; month_key?: string; status: string; created_at: string }) => {
             const dateObj = new Date(row.date);
             return {
                 id: row.id,
@@ -106,7 +106,7 @@ export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record
         const data = await res.json();
 
         const map: Record<string, AttendanceRecord[]> = {};
-        (data || []).forEach((row: any) => {
+        (data || []).forEach((row: { id: string; student_id: string; date: string; month_key?: string; status: string; created_at: string }) => {
             if (!map[row.student_id]) map[row.student_id] = [];
             const dateStr = (row.date as string).split('T')[0];
             const dateParts = dateStr.split('-');
@@ -217,7 +217,7 @@ export const getStudentFees = async (studentId: string): Promise<FeeRecord[]> =>
         const res = await fetch(`/api/records/fees?studentId=${encodeURIComponent(studentId)}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((row: any) => ({
+        return (data || []).map((row: { id: string; student_id: string; month: string; amount: number; receipt_number: string; date: string; created_by: string; created_at: string }) => ({
             id: row.id,
             studentId: row.student_id,
             month: row.month,
@@ -238,7 +238,7 @@ export const getFeesByMonth = async (monthKey: string): Promise<FeeRecord[]> => 
         const res = await fetch(`/api/records/fees?month=${encodeURIComponent(monthKey)}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((row: any) => ({
+        return (data || []).map((row: { id: string; student_id: string; month: string; amount: number; receipt_number: string; date: string; created_by: string; created_at: string }) => ({
             id: row.id,
             studentId: row.student_id,
             month: row.month,
@@ -278,7 +278,7 @@ export const addFeeRecord = async (record: Omit<FeeRecord, 'id'>): Promise<FeeRe
 };
 
 export const updateFeeRecord = async (id: string, data: Partial<FeeRecord>): Promise<void> => {
-    const updates: any = { id };
+    const updates: Record<string, unknown> = { id };
     if (data.amount) updates.amount = parseArabicAmount(data.amount);
     if (data.receipt) updates.receipt_number = data.receipt;
     const res = await fetch('/api/records/fees', {
@@ -306,7 +306,7 @@ export const getStudentExemptions = async (studentId: string): Promise<Exemption
         const res = await fetch(`/api/records/exemptions?studentId=${encodeURIComponent(studentId)}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((row: any) => ({
+        return (data || []).map((row: { id: string; student_id: string; student_name: string; teacher_id?: string; month: string; amount: number; exempted_by: string; created_at: string }) => ({
             id: row.id,
             studentId: row.student_id,
             studentName: row.student_name,
@@ -322,7 +322,7 @@ export const getStudentExemptions = async (studentId: string): Promise<Exemption
     }
 };
 
-export const addExemptionRecord = async (record: { studentId: string; studentName: string; month: string; amount: number; exemptedBy: string }): Promise<any> => {
+export const addExemptionRecord = async (record: { studentId: string; studentName: string; month: string; amount: number; exemptedBy: string }): Promise<ExemptionRecord> => {
     try {
         const res = await fetch('/api/records/exemptions', {
             method: 'POST',
@@ -357,7 +357,7 @@ export const getStudentPlans = async (studentId: string): Promise<PlanRecord[]> 
         const res = await fetch(`/api/records/plans?studentId=${encodeURIComponent(studentId)}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((row: any) => ({
+        return (data || []).map((row: { id: string; student_id: string; date: string; new_hifz: string; prev_review: string; distant_review: string; session_time?: string; status: string; created_at: string }) => ({
             id: row.id,
             studentId: row.student_id,
             date: row.date,
@@ -365,7 +365,7 @@ export const getStudentPlans = async (studentId: string): Promise<PlanRecord[]> 
             prevReview: row.prev_review,
             distantReview: row.distant_review,
             sessionTime: row.session_time,
-            status: row.status as any,
+            status: row.status as PlanRecord['status'],
             timestamp: new Date(row.created_at).getTime()
         }));
     } catch (error) {
@@ -396,7 +396,7 @@ export const addPlanRecord = async (record: Omit<PlanRecord, 'id'>): Promise<Pla
 };
 
 export const updatePlanRecord = async (id: string, data: Partial<PlanRecord>): Promise<void> => {
-    const updates: any = { id };
+    const updates: Record<string, unknown> = { id };
     if (data.status) updates.status = data.status;
     const res = await fetch('/api/records/plans', {
         method: 'PUT',
@@ -425,7 +425,7 @@ export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
         const res = await fetch('/api/records/leaves');
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((row: any) => ({
+        return (data || []).map((row: { id: string; student_id: string; student_name: string; start_date: string; end_date: string; reason: string; status: 'pending' | 'approved' | 'rejected'; created_at: string }) => ({
             id: row.id,
             studentId: row.student_id,
             studentName: row.student_name,
@@ -528,12 +528,23 @@ export const hasUnpaidFees = async (studentId: string, monthlyAmount: number): P
 };
 
 // ===== سجلات الملحوظات =====
-export const getStudentNotes = async (studentId: string) => {
+export interface StudentNote {
+    id: string;
+    text: string;
+    type: string;
+    date: string;
+    createdBy: string;
+    reply?: string;
+    repliedBy?: string;
+    repliedAt?: string;
+}
+
+export const getStudentNotes = async (studentId: string): Promise<StudentNote[]> => {
     try {
         const res = await fetch(`/api/records/notes?studentId=${encodeURIComponent(studentId)}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((n: any) => ({
+        return (data || []).map((n: { id: string; content: string; type: string; created_at: string; created_by: string; reply?: string; replied_by?: string; replied_at?: string }) => ({
             id: n.id,
             text: n.content,
             type: n.type,
@@ -580,7 +591,7 @@ export const getLatestNotes = async () => {
         const data = await res.json();
 
         const latestNotesMap: Record<string, { text: string, date: string, createdBy: string }> = {};
-        (data || []).forEach((n: any) => {
+        (data || []).forEach((n: { student_id: string; content: string; created_at: string; created_by?: string }) => {
             if (!latestNotesMap[n.student_id]) {
                 latestNotesMap[n.student_id] = {
                     text: n.content,
@@ -601,7 +612,7 @@ export const getAllStudentNotesWithDetails = async (limit: number = 20) => {
         const res = await fetch(`/api/records/notes?limit=${limit}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((n: any) => ({
+        return (data || []).map((n: { id: string; content: string; created_at: string; created_by: string; student_id: string; students?: { full_name?: string; parent_phone?: string; groups?: { name?: string; id?: string; teacher_id?: string; teachers?: { full_name?: string } } }; student_name?: string; group_name?: string; group_id?: string; is_read?: boolean; reply?: string; replied_by?: string; replied_at?: string }) => ({
             id: n.id,
             content: n.content,
             createdAt: n.created_at,
@@ -631,7 +642,7 @@ export const getNotesPage = async (params?: { teacherId?: string; isRead?: boole
         const res = await fetch(`/api/records/notes?${searchParams.toString()}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((n: any) => ({
+        return (data || []).map((n: { id: string; content: string; created_at: string; created_by: string; student_id: string; students?: { full_name?: string; parent_phone?: string; groups?: { name?: string; id?: string; teacher_id?: string; teachers?: { full_name?: string } } }; student_name?: string; group_name?: string; group_id?: string; is_read?: boolean; reply?: string; replied_by?: string; replied_at?: string }) => ({
             id: n.id,
             content: n.content,
             createdAt: n.created_at,
