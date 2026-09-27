@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         const supabase = createServerSupabase();
         let query = supabase
             .from('teacher_attendance')
-            .select('teacher_id, date, status')
+            .select('teacher_id, date, status, applied_by')
             .gte('date', `${monthKey}-01`)
             .lte('date', `${monthKey}-${lastDay}`);
 
@@ -43,12 +43,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
+        // نسجّل اسم من طبّق الإجراء من الجلسة نفسها (وليس مما يرسله العميل)
+        // حتى يظهر اسم المشرف/المدير الحقيقي في سجل الانضباط.
+        const appliedBy = session.displayName || null;
+
         const supabase = createServerSupabase();
         await supabase.from('teacher_attendance').delete().eq('teacher_id', teacherId).eq('date', date);
 
         const { error } = await supabase
             .from('teacher_attendance')
-            .insert({ teacher_id: teacherId, date, status, notes: notes || null });
+            .insert({ teacher_id: teacherId, date, status, notes: notes || null, applied_by: appliedBy });
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });

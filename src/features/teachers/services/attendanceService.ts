@@ -41,6 +41,30 @@ export const getTeacherAttendance = async (teacherId: string, monthKey: string):
 };
 
 /**
+ * جلب اسم من طبّق كل حالة حضور/خصم/مكافأة لمعلم محدد خلال شهر معين
+ * (يُستخدم لعرض "بواسطة: ..." في سجل الانضباط داخل تبويب الحضور)
+ */
+export const getTeacherAttendanceAppliedBy = async (teacherId: string, monthKey: string): Promise<Record<number, string>> => {
+    try {
+        const res = await fetch(`/api/attendance/teacher?monthKey=${encodeURIComponent(monthKey)}&teacherId=${encodeURIComponent(teacherId)}`);
+        if (!res.ok) return {};
+        const data = await res.json();
+
+        const appliedByMap: Record<number, string> = {};
+        (data || []).forEach((row: { date: string; applied_by?: string | null }) => {
+            if (!row.applied_by) return;
+            const day = parseInt(row.date.split('-')[2], 10);
+            appliedByMap[day] = row.applied_by;
+        });
+
+        return appliedByMap;
+    } catch (error) {
+        console.error("Unexpected error fetching teacher attendance applied-by:", error);
+        return {};
+    }
+};
+
+/**
  * جلب سجل حضور جميع المعلمين خلال شهر معين
  */
 export const getAllTeachersAttendance = async (monthKey: string): Promise<Record<string, Record<string, TeacherAttendanceStatus>>> => {
