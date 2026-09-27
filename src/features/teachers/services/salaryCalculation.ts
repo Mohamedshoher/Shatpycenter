@@ -6,18 +6,63 @@ import { normalize } from '@/lib/utils';
 // لضمان تطابق النتائج بدقة متناهية بين الصفحتين.
 // ==========================================================
 
+interface SalaryTeacher {
+    id: string;
+    fullName: string;
+    phone?: string;
+    accountingType?: string;
+    dailyHours?: number;
+    weeklyWorkingDays?: number;
+    partnershipPercentage?: number;
+    salary?: number;
+}
+
+interface SalaryStudent {
+    id: string;
+    groupId: string | null;
+    status: string;
+    archivedDate?: string;
+    enrollmentDate: string;
+    monthlyAmount?: number;
+}
+
+interface SalaryGroup {
+    id: string;
+    teacherId: string | null;
+}
+
+interface SalaryFee {
+    studentId: string;
+    amount: string | number;
+    createdBy?: string;
+    collectedById?: string;
+    collected_by_id?: string;
+}
+
+interface SalaryAmountRecord {
+    amount: string | number;
+}
+
+interface SalaryDeduction {
+    teacherId: string;
+    appliedDate: string | Date;
+    reason: string;
+    appliedBy?: string;
+    amount: string | number;
+}
+
 export interface TeacherSalaryInput {
-    teacher: any;
-    students: any[];
-    groups: any[];
-    allFees: any[];
-    handovers: any[];
-    exemptions: any[];
-    attendanceData: Record<string, any>;
-    deductions: any[];
-    paymentsHistory: any[];
+    teacher: SalaryTeacher;
+    students: SalaryStudent[];
+    groups: SalaryGroup[];
+    allFees: SalaryFee[];
+    handovers: SalaryAmountRecord[];
+    exemptions: unknown[];
+    attendanceData: Record<string, string>;
+    deductions: SalaryDeduction[];
+    paymentsHistory: SalaryAmountRecord[];
     selectedMonthRaw: string;
-    allTeachers: any[];
+    allTeachers: SalaryTeacher[];
 }
 
 export interface TeacherSalaryStats {
@@ -52,7 +97,7 @@ export interface TeacherSalaryStats {
 /**
  * دالة مساعدة لتحويل المبلغ إلى رقم بأمان حتى لو جاء كنص أو رقم
  */
-export const parseAmount = (val: any): number => {
+export const parseAmount = (val: string | number | null | undefined): number => {
     if (val === null || val === undefined) return 0;
     if (typeof val === 'number') return isNaN(val) ? 0 : val;
     return Number(String(val).replace(/[^0-9.]/g, '')) || 0;
@@ -61,7 +106,7 @@ export const parseAmount = (val: any): number => {
 /**
  * استخراج مفتاح الشهر YYYY-MM من السلسلة دون التأثر بالمنطقة الزمنية
  */
-export const getMonthKeyFromDate = (dateVal: any): string => {
+export const getMonthKeyFromDate = (dateVal: string | Date | null | undefined): string => {
     if (!dateVal) return '';
     if (typeof dateVal === 'string' && dateVal.length >= 7) {
         return dateVal.slice(0, 7);
@@ -88,10 +133,10 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
 
     // Map لتحسين سرعة البحث عن الطالب في O(1) بدلاً من O(n)
-    const studentMap = new Map<string, any>(students.map(s => [s.id, s]));
+    const studentMap = new Map<string, SalaryStudent>(students.map(s => [s.id, s]));
 
     // دالة للتحقق إذا كان المنشئ معلماً آخر
-    const isOtherTeacher = (createdBy: string) => {
+    const isOtherTeacher = (createdBy: string | undefined) => {
         if (!createdBy || createdBy === 'غير معروف') return false;
         const normalizedCreator = normalize(createdBy);
         return allTeachers.some(t =>
@@ -179,7 +224,7 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
 
     // 7. أيام الغياب من سجل الحضور
     let absentDays = 0;
-    Object.values(attendanceData || {}).forEach((status: any) => {
+    Object.values(attendanceData || {}).forEach((status) => {
         if (status === 'absent') absentDays += 1;
         else if (status === 'double_absent') absentDays += 2;
         else if (status === 'half') absentDays += 0.5;
@@ -199,7 +244,7 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     const autoDeductions = Math.round((absentDays * dailyRate) * 100) / 100;
 
     // مكافآت تلقائية (حسب الحضور)
-    const autoRewards = Object.values(attendanceData || {}).reduce((acc: number, status: any) => {
+    const autoRewards = Object.values(attendanceData || {}).reduce((acc: number, status) => {
         if (status === 'full_reward') return acc + dailyRate;
         if (status === 'half_reward') return acc + (dailyRate * 0.5);
         if (status === 'quarter_reward') return acc + (dailyRate * 0.25);
@@ -252,7 +297,7 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
         dailyHours,
         weeklyWorkingDays,
         isPartnership,
-        partnershipPercentage: teacher.partnershipPercentage,
+        partnershipPercentage: teacher.partnershipPercentage || 0,
         expectedPartnershipSalary,
         totalWorkingDays,
         attendedDays,

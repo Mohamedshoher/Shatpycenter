@@ -4,8 +4,10 @@ import XCircle from 'lucide-react/dist/esm/icons/x-circle';
 import { cn } from '../../../lib/utils';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useQueryClient } from '@tanstack/react-query';
+import { Student } from '@/types';
+import type { StudentRecordsHook } from '../hooks/types';
 
-export default function AttendanceTab({ student, records }: any) {
+export default function AttendanceTab({ student, records }: { student: Student; records: StudentRecordsHook }) {
     const { user } = useAuthStore();
     const queryClient = useQueryClient();
     const canEditAttendance = user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'teacher';
@@ -23,7 +25,7 @@ export default function AttendanceTab({ student, records }: any) {
     // تصفية سجلات الحضور لهذا الشهر فقط
     const attendanceRecordsMap = useMemo(() => {
         const map: Record<number, string> = {};
-        records.attendance.forEach((rec: any) => {
+        records.attendance.forEach((rec) => {
             if (rec.month === monthKey) map[rec.day] = rec.status;
         });
         return map;

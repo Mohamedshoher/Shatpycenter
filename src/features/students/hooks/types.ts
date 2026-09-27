@@ -1,5 +1,6 @@
 // types.ts - ملف تعريف الأنواع لضمان ربط الملفات ببعضها
 import { Student } from '@/types';
+import { useStudentRecords } from './useStudentRecords';
 
 export interface StudentDetailModalProps {
     student: Student | null;
@@ -11,19 +12,4 @@ export interface StudentDetailModalProps {
 }
 
 // هذا النوع يجمع كل السجلات التي تعود من هوك useStudentRecords
-export interface StudentRecordsHook {
-    attendance: any[];
-    exams: any[];
-    fees: any[];
-    exemptions: any[];
-    notes: any[];
-    addAttendance: any;
-    addExam: any;
-    addFee: any;
-    addNote: any;
-    deleteExam: any;
-    deleteFee: any;
-    deleteExemption: any;
-    deleteNote: any;
-    replyNote: any;
-}
+export type StudentRecordsHook = ReturnType<typeof useStudentRecords>;
