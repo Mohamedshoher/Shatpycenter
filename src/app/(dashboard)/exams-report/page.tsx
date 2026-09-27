@@ -70,6 +70,7 @@ export default function ExamsReportPage() {
     const [performanceTypeFilter, setPerformanceTypeFilter] = useState<'all' | 'quran' | 'talqeen' | 'noor'>('all'); // فلتر نوع المجموعة
 
     const [selectedRemainingCount, setSelectedRemainingCount] = useState('all'); // فلتر عدد الاختبارات المتبقية (3، 2، 1)
+    const [goalsGroupFilter, setGoalsGroupFilter] = useState('all'); // فلتر المجموعة لتبويب الأهداف
 
     // --- 4. إدارة الوقت والتاريخ ---
     const [selectedDate, setSelectedDate] = useState(new Date()); // التاريخ المختار للتقارير الشهرية
@@ -215,13 +216,15 @@ export default function ExamsReportPage() {
                 return {
                     ...g,
                     student,
+                    groupId: group?.id,
                     groupName: group?.name || "غير محدد",
                     teacherName
                 };
             })
             .filter((g) => g.student)
+            .filter((g) => goalsGroupFilter === 'all' || g.groupId === goalsGroupFilter)
             .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
-    }, [allGoals, students, groups, teachers]);
+    }, [allGoals, students, groups, teachers, goalsGroupFilter]);
 
     // ج- تجميع بيانات الأداء لكل مجموعة (إحصائيات الرسوم البيانية)
     const performanceData = useMemo(() => {
@@ -278,15 +281,17 @@ export default function ExamsReportPage() {
                 });
     }, [groups, students, allExams, user, assignedGroupIds, performanceTypeFilter]);
 
-    // هل التبويب الحالي عنده فلاتر أصلاً؟ (الأكثر اختباراً والأهداف بلا فلاتر)
-    const hasFilterableTab = activeTab === 'notTested' || activeTab === 'performance';
+    // هل التبويب الحالي عنده فلاتر أصلاً؟ (الأكثر اختباراً بلا فلاتر)
+    const hasFilterableTab = activeTab === 'notTested' || activeTab === 'performance' || activeTab === 'goals';
 
     // عدد الفلاتر المفعّلة حالياً (لإظهار شارة على زر الفلترة)
     const activeFilterCount = activeTab === 'notTested'
         ? [selectedRemainingCount !== 'all', selectedGroupId !== 'all', selectedExamType !== 'new'].filter(Boolean).length
         : activeTab === 'performance'
             ? [performanceFilter !== 'all', performanceTypeFilter !== 'all'].filter(Boolean).length
-            : 0;
+            : activeTab === 'goals'
+                ? [goalsGroupFilter !== 'all'].filter(Boolean).length
+                : 0;
 
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
@@ -556,11 +561,29 @@ export default function ExamsReportPage() {
                     {/* --- التبويب 3: الأهداف المنتهية --- */}
                     {activeTab === 'goals' && (
                         <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
+                            {showFilters && (
+                                <SlideIn show={showFilters}>
+                                    <div className="flex justify-center md:justify-end mb-2">
+                                        <div className="relative">
+                                            <select
+                                                value={goalsGroupFilter}
+                                                onChange={(e) => setGoalsGroupFilter(e.target.value)}
+                                                className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
+                                            >
+                                                <option value="all">كل المجموعات</option>
+                                                {filteredGroupsList?.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                            </select>
+                                            <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                </SlideIn>
+                            )}
+
                             <div className="flex items-center justify-between px-1 mb-2">
                                 <span className="text-[10px] md:text-xs font-bold text-gray-400">الأهداف المنجزة</span>
                                 <span className="bg-emerald-100 text-emerald-700 text-[10px] md:text-xs font-black px-2 md:px-3 py-0.5 md:py-1 rounded-full font-sans">{completedGoalsData.length} هدف</span>
                             </div>
-                            
+
                             {completedGoalsData.length === 0 ? (
                                 <div className="text-center py-20 bg-white/40 rounded-[32px] border-2 border-dashed border-gray-100">
                                     <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
