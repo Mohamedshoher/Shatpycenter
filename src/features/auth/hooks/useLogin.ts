@@ -30,15 +30,20 @@ export const useLogin = () => {
         
         try {
             // 1. محاولة تسجيل الدخول عبر الخدمة (Service)
-            const user = await loginWithRole(role, pass);
-            
+            const { user, messagingToken } = await loginWithRole(role, pass);
+
             // 2. حفظ بيانات المستخدم المسترجعة في المتجر العالمي
             setUser(user);
 
             // 2.1 إصدار توكن المراسلة الداخلية (اختياري - لا يمنع الدخول عند فشله)
             try {
                 const actor = getMessagingActor(user);
-                if (actor) {
+                if (actor === 'director:main' && messagingToken) {
+                    // جلسة المراسلة للمدير صادرة بالفعل من الخادم أثناء تسجيل الدخول
+                    // (بعد التحقق الفعلي من DIRECTOR_PASSWORD)، فلا داعي لإعادة التحقق
+                    // من كلمة المرور عبر msg_login مرة أخرى.
+                    useMessagingStore.getState().setSession(messagingToken, actor);
+                } else if (actor) {
                     const { token, actor: canonicalActor } = await getMessagingToken(actor, pass);
                     useMessagingStore.getState().setSession(token, canonicalActor);
                 }

@@ -56,11 +56,27 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'بيانات الدخول غير صحيحة' }, { status: 400 });
         }
 
+        let messagingToken: string | undefined;
+
         if (role === 'director') {
             if (password !== directorPassword()) {
                 return NextResponse.json({ error: 'كلمة مرور المدير غير صحيحة' }, { status: 401 });
             }
             displayName = 'المدير العام';
+
+            // نُصدر جلسة المراسلة الداخلية هنا مباشرة (بعد التحقق الفعلي من كلمة المرور)
+            // بدل إعادة التحقق من كلمة المرور عبر دالة msg_login التي تحمل قيمة قديمة
+            // ثابتة ('996644') قد تصبح غير متزامنة مع DIRECTOR_PASSWORD عند تغييرها.
+            try {
+                const { data, error } = await supabase
+                    .from('messaging_sessions')
+                    .insert({ actor: 'director:main' })
+                    .select('token')
+                    .single();
+                if (!error && data) messagingToken = data.token;
+            } catch (e) {
+                console.warn('تعذر إصدار جلسة المراسلة للمدير:', e);
+            }
         }
 
         if (role === 'parent' && phone) {
@@ -139,7 +155,7 @@ export async function POST(request: NextRequest) {
             responsibleSections: user.responsibleSections,
         });
 
-        const response = NextResponse.json({ user });
+        const response = NextResponse.json({ user, messagingToken });
         response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
         return response;
     } catch (error: unknown) {
