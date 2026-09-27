@@ -10,7 +10,9 @@ import User from 'lucide-react/dist/esm/icons/user'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
+import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
+import { SlideIn } from '@/components/ui/transition';
 
 // --- استيراد الـ Hooks والـ Stores الخاصة بالتطبيق ---
 import { useStudents } from '@/features/students/hooks/useStudents';
@@ -73,6 +75,7 @@ export default function ExamsReportPage() {
     const [selectedDate, setSelectedDate] = useState(new Date()); // التاريخ المختار للتقارير الشهرية
     const [selectedHalf, setSelectedHalf] = useState<1 | 2>(new Date().getDate() <= 15 ? 1 : 2); // نصف الشهر المختار
     const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<Student | null>(null); // الطالب المختار لعرض تفاصيله
+    const [showFilters, setShowFilters] = useState(false); // إظهار/إخفاء لوحة الفلاتر (لتبسيط الواجهة على الموبايل)
 
     // تحويل التاريخ إلى مفتاح (مثل 2023-10) لجلب بيانات الاختبارات من السيرفر
     const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
@@ -275,6 +278,16 @@ export default function ExamsReportPage() {
                 });
     }, [groups, students, allExams, user, assignedGroupIds, performanceTypeFilter]);
 
+    // هل التبويب الحالي عنده فلاتر أصلاً؟ (الأكثر اختباراً والأهداف بلا فلاتر)
+    const hasFilterableTab = activeTab === 'notTested' || activeTab === 'performance';
+
+    // عدد الفلاتر المفعّلة حالياً (لإظهار شارة على زر الفلترة)
+    const activeFilterCount = activeTab === 'notTested'
+        ? [selectedRemainingCount !== 'all', selectedGroupId !== 'all', selectedExamType !== 'new'].filter(Boolean).length
+        : activeTab === 'performance'
+            ? [performanceFilter !== 'all', performanceTypeFilter !== 'all'].filter(Boolean).length
+            : 0;
+
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
 
@@ -365,53 +378,80 @@ export default function ExamsReportPage() {
                         الأهداف
                     </button>
                 </div>
+
+                {/* --- زر إظهار/إخفاء الفلاتر (فقط للتبويبات التي تملك فلاتر) --- */}
+                {hasFilterableTab && (
+                    <div className="max-w-4xl mx-auto mt-2 flex justify-end px-1 md:px-0">
+                        <button
+                            onClick={() => setShowFilters((v) => !v)}
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] md:text-xs font-bold border transition-all",
+                                showFilters || activeFilterCount > 0
+                                    ? "bg-blue-50 border-blue-200 text-blue-600"
+                                    : "bg-white border-gray-100 text-gray-500"
+                            )}
+                        >
+                            <SlidersHorizontal size={13} />
+                            فلترة
+                            {activeFilterCount > 0 && (
+                                <span className="bg-blue-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center font-sans">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+                )}
             </header>
 
             <main className="max-w-4xl mx-auto px-2 md:px-6 py-4 space-y-6">
                 {/* --- التبويب 1: قائمة الطلاب الذين لم يختبروا (الباقي) --- */}
                     {activeTab === 'notTested' && (
                         <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-                            <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-4">
-                                <div className="flex flex-row-reverse items-center gap-1 md:gap-3 w-full md:w-auto flex-wrap justify-center">
-                                    {/* فلتر المجموعة ونوع الاختبار */}
-                                    <div className="relative">
-                                        <select
-                                            value={selectedRemainingCount}
-                                            onChange={(e) => setSelectedRemainingCount(e.target.value)}
-                                            className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
-                                        >
-                                            <option value="all">الكل</option>
-                                            <option value="3">بقي 3</option>
-                                            <option value="2">بقي 2</option>
-                                            <option value="1">بقي 1</option>
-                                        </select>
-                                        <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            {showFilters && (
+                                <SlideIn show={showFilters}>
+                                    <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-4">
+                                        <div className="flex flex-row-reverse items-center gap-1 md:gap-3 w-full md:w-auto flex-wrap justify-center">
+                                            {/* فلتر المجموعة ونوع الاختبار */}
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedRemainingCount}
+                                                    onChange={(e) => setSelectedRemainingCount(e.target.value)}
+                                                    className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
+                                                >
+                                                    <option value="all">الكل</option>
+                                                    <option value="3">بقي 3</option>
+                                                    <option value="2">بقي 2</option>
+                                                    <option value="1">بقي 1</option>
+                                                </select>
+                                                <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                            </div>
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedGroupId}
+                                                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                                                    className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
+                                                >
+                                                    <option value="all">كل المجموعات</option>
+                                                    {filteredGroupsList?.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                                </select>
+                                                <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                            </div>
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedExamType}
+                                                    onChange={(e) => setSelectedExamType(e.target.value)}
+                                                    className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
+                                                >
+                                                    <option value="new">جديد</option>
+                                                    <option value="near">ماضي قريب</option>
+                                                    <option value="far">بعيد</option>
+                                                </select>
+                                                <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="relative">
-                                        <select
-                                            value={selectedGroupId}
-                                            onChange={(e) => setSelectedGroupId(e.target.value)}
-                                            className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
-                                        >
-                                            <option value="all">كل المجموعات</option>
-                                            {filteredGroupsList?.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                                        </select>
-                                        <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                    </div>
-                                    <div className="relative">
-                                        <select
-                                            value={selectedExamType}
-                                            onChange={(e) => setSelectedExamType(e.target.value)}
-                                            className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
-                                        >
-                                            <option value="new">جديد</option>
-                                            <option value="near">ماضي قريب</option>
-                                            <option value="far">بعيد</option>
-                                        </select>
-                                        <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                    </div>
-                                </div>
-                            </div>
+                                </SlideIn>
+                            )}
 
                             <div className="space-y-3">
                                 {/* عداد الطلاب */}
@@ -577,51 +617,55 @@ export default function ExamsReportPage() {
                     {/* --- التبويب 4: مقارنة أداء المجموعات --- */}
                     {activeTab === 'performance' && (
                         <div className="space-y-8 animate-[fadeIn_0.3s_ease-out]">
-                            {/* شريط الفلاتر التفاعلي لتبويب الأداء - سطر واحد */}
-                            <div className="flex items-center justify-start md:justify-center gap-1 md:gap-4 py-3 border-y border-gray-100 flex-row-reverse flex-wrap w-full">
-                                <button
-                                    onClick={() => setPerformanceFilter('all')}
-                                    className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'all' ? "bg-blue-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
-                                >
-                                    <span className="text-[9px] md:text-sm font-black">الكل</span>
-                                    <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'all' ? "bg-white/20" : "bg-blue-600")} />
-                                </button>
-                                <button
-                                    onClick={() => setPerformanceFilter('new')}
-                                    className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'new' ? "bg-green-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
-                                >
-                                    <span className="text-[9px] md:text-sm font-black">جديد</span>
-                                    <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'new' ? "bg-white" : "bg-green-500")} />
-                                </button>
-                                <button
-                                    onClick={() => setPerformanceFilter('near')}
-                                    className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'near' ? "bg-amber-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
-                                >
-                                    <span className="text-[9px] md:text-sm font-black">ماضي قريب</span>
-                                    <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'near' ? "bg-white" : "bg-amber-500")} />
-                                </button>
-                                <button
-                                    onClick={() => setPerformanceFilter('far')}
-                                    className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'far' ? "bg-purple-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
-                                >
-                                    <span className="text-[9px] md:text-sm font-black">بعيد</span>
-                                    <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'far' ? "bg-white" : "bg-purple-500")} />
-                                </button>
+                            {/* شريط الفلاتر التفاعلي لتبويب الأداء */}
+                            {showFilters && (
+                                <SlideIn show={showFilters}>
+                                    <div className="flex items-center justify-start md:justify-center gap-1 md:gap-4 py-3 border-y border-gray-100 flex-row-reverse flex-wrap w-full">
+                                        <button
+                                            onClick={() => setPerformanceFilter('all')}
+                                            className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'all' ? "bg-blue-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
+                                        >
+                                            <span className="text-[9px] md:text-sm font-black">الكل</span>
+                                            <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'all' ? "bg-white/20" : "bg-blue-600")} />
+                                        </button>
+                                        <button
+                                            onClick={() => setPerformanceFilter('new')}
+                                            className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'new' ? "bg-green-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
+                                        >
+                                            <span className="text-[9px] md:text-sm font-black">جديد</span>
+                                            <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'new' ? "bg-white" : "bg-green-500")} />
+                                        </button>
+                                        <button
+                                            onClick={() => setPerformanceFilter('near')}
+                                            className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'near' ? "bg-amber-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
+                                        >
+                                            <span className="text-[9px] md:text-sm font-black">ماضي قريب</span>
+                                            <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'near' ? "bg-white" : "bg-amber-500")} />
+                                        </button>
+                                        <button
+                                            onClick={() => setPerformanceFilter('far')}
+                                            className={cn("flex flex-row-reverse items-center gap-1 md:gap-3 px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all", performanceFilter === 'far' ? "bg-purple-500 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100")}
+                                        >
+                                            <span className="text-[9px] md:text-sm font-black">بعيد</span>
+                                            <div className={cn("w-1 h-1 md:w-2 md:h-2 rounded-full", performanceFilter === 'far' ? "bg-white" : "bg-purple-500")} />
+                                        </button>
 
-                                <div className="relative">
-                                    <select
-                                        value={performanceTypeFilter}
-                                        onChange={(e) => setPerformanceTypeFilter(e.target.value as 'all' | 'quran' | 'talqeen' | 'noor')}
-                                        className="appearance-none bg-white border border-gray-100 px-3 md:px-5 py-1.5 md:py-2 pr-2 md:pr-3 rounded-lg md:rounded-xl text-[9px] md:text-sm font-bold text-gray-600 focus:outline-none text-right cursor-pointer"
-                                    >
-                                        <option value="all">كل المجموعات</option>
-                                        <option value="quran">قرآن</option>
-                                        <option value="talqeen">تلقين</option>
-                                        <option value="noor">نور البيان</option>
-                                    </select>
-                                    <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                </div>
-                            </div>
+                                        <div className="relative">
+                                            <select
+                                                value={performanceTypeFilter}
+                                                onChange={(e) => setPerformanceTypeFilter(e.target.value as 'all' | 'quran' | 'talqeen' | 'noor')}
+                                                className="appearance-none bg-white border border-gray-100 px-3 md:px-5 py-1.5 md:py-2 pr-2 md:pr-3 rounded-lg md:rounded-xl text-[9px] md:text-sm font-bold text-gray-600 focus:outline-none text-right cursor-pointer"
+                                            >
+                                                <option value="all">كل المجموعات</option>
+                                                <option value="quran">قرآن</option>
+                                                <option value="talqeen">تلقين</option>
+                                                <option value="noor">نور البيان</option>
+                                            </select>
+                                            <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                </SlideIn>
+                            )}
 
                             {/* الرسوم البيانية (أشرطة التقدم) */}
                             <div className="space-y-6">
