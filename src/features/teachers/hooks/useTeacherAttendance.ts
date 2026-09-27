@@ -7,11 +7,12 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tansta
 import { useMemo } from "react";
 
 // استيراد دوال الخدمات (Services) والأنواع (Types) الخاصة بسجل الحضور
-import { 
-    getTeacherAttendance, 
-    getAllTeachersAttendance, 
-    updateTeacherAttendance, 
-    TeacherAttendanceStatus 
+import {
+    getTeacherAttendance,
+    getAllTeachersAttendance,
+    getTeacherAttendanceAppliedBy,
+    updateTeacherAttendance,
+    TeacherAttendanceStatus
 } from "../services/attendanceService";
 
 // ============================================================================
@@ -66,6 +67,7 @@ export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['teacher-attendance', teacherId, monthKey] });
             queryClient.invalidateQueries({ queryKey: ['all-teachers-attendance', monthKey] });
+            queryClient.invalidateQueries({ queryKey: ['teacher-attendance-applied-by', teacherId, monthKey] });
         }
     });
 
@@ -73,9 +75,19 @@ export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
     // (كان يكسر أي useMemo/useCallback يعتمد على هذه القيمة كتبعية)
     const attendance = useMemo(() => attendanceQuery.data || {}, [attendanceQuery.data]);
 
+    // 3. استعلام جلب اسم من طبّق كل حالة (لعرضه في سجل الانضباط)
+    const appliedByQuery = useQuery({
+        queryKey: ['teacher-attendance-applied-by', teacherId, monthKey],
+        queryFn: () => teacherId && monthKey ? getTeacherAttendanceAppliedBy(teacherId, monthKey) : Promise.resolve({}),
+        enabled: !!teacherId && !!monthKey,
+        placeholderData: keepPreviousData,
+    });
+    const appliedBy = useMemo(() => appliedByQuery.data || {}, [appliedByQuery.data]);
+
     // إرجاع البيانات والدوال اللازمة لاستخدامها في واجهة المستخدم
     return {
         attendance, // بيانات الحضور
+        appliedBy, // خريطة اليوم -> اسم من طبّق الإجراء
         loading: attendanceQuery.isLoading, // حالة التحميل
         updateAttendance: updateAttendanceMutation.mutate, // دالة التحديث العادية
         updateAttendanceAsync: updateAttendanceMutation.mutateAsync, // دالة التحديث غير المتزامنة (ترجع Promise)

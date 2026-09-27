@@ -134,7 +134,7 @@ export default function TeacherDetailModal({
     const { deductions, loadDeductions } = useTeacherDeductions(teacher?.id);
 
     // 2. جلب الحضور
-    const { attendance: attendanceData, updateAttendanceAsync } = useTeacherAttendance(teacher?.id, selectedMonthRaw);
+    const { attendance: attendanceData, appliedBy: attendanceAppliedBy, updateAttendanceAsync } = useTeacherAttendance(teacher?.id, selectedMonthRaw);
 
     // 3. جلب المصروفات/الرسوم للشهر المختار
     const { data: allFees = [] } = useQuery({
@@ -703,6 +703,7 @@ export default function TeacherDetailModal({
                             selectedMonthRaw={selectedMonthRaw}
                             selectedMonth={selectedMonth}
                             attendanceData={attendanceData}
+                            appliedByData={attendanceAppliedBy}
                             isTeacher={isTeacher}
                             activeDayMenu={activeDayMenu}
                             setActiveDayMenu={setActiveDayMenu}

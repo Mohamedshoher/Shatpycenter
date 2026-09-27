@@ -17,6 +17,7 @@ interface TeacherAttendanceTabProps {
     selectedMonthRaw: string;
     selectedMonth: string;
     attendanceData: Record<string, TeacherAttendanceStatus>;
+    appliedByData?: Record<number, string>;
     isTeacher: boolean;
     setActiveDayMenu: (day: number | null) => void;
     setTempStatus: (status: 'present' | 'absent' | 'discipline' | 'reward') => void;
@@ -35,7 +36,7 @@ interface TeacherAttendanceTabProps {
 }
 
 export const TeacherAttendanceTab = ({
-    updateMonth, selectedMonthRaw, selectedMonth, attendanceData,
+    updateMonth, selectedMonthRaw, selectedMonth, attendanceData, appliedByData = {},
     isTeacher, setActiveDayMenu, setTempStatus, activeDayMenu,
     handleAddDiscipline, tempStatus, tempAmount, setTempAmount,
     tempReason, setTempReason, dayDetails,
@@ -323,6 +324,7 @@ export const TeacherAttendanceTab = ({
                                 amount: number;
                                 displayReason: string;
                                 canDelete: boolean;
+                                appliedBy?: string;
                             }
                             const mergedRecords: MergedRecord[] = [];
 
@@ -363,6 +365,7 @@ export const TeacherAttendanceTab = ({
                                     amount,
                                     displayReason,
                                     canDelete: true,
+                                    appliedBy: appliedByData[d],
                                 });
                             });
 
@@ -383,6 +386,7 @@ export const TeacherAttendanceTab = ({
                                     amount: Math.abs(d.amount),
                                     displayReason: d.reason,
                                     canDelete: false,
+                                    appliedBy: d.appliedBy,
                                 });
                             });
 
@@ -406,12 +410,15 @@ export const TeacherAttendanceTab = ({
                                                 <span className="text-xs font-black text-gray-400 font-sans">{rec.day} {selectedMonth.split(' ')[0]}</span>
                                             </div>
 
-                                            <div className="flex items-center justify-between mb-3 text-right">
+                                            <div className="flex items-center justify-between mb-1 text-right">
                                                 <h5 className="font-bold text-gray-900 text-sm">
                                                     {rec.displayReason}
                                                 </h5>
                                                 <span className="font-black font-sans text-gray-800 text-sm mr-2 shrink-0">{rec.amount.toFixed(2)} ج.م</span>
                                             </div>
+                                            {rec.appliedBy && (
+                                                <p className="text-[10px] text-gray-400 font-bold mb-2 text-right">بواسطة: {rec.appliedBy}</p>
+                                            )}
                                         </div>
 
                                         {!isTeacher && rec.canDelete && (
