@@ -1,5 +1,4 @@
 "use client";
-import Link from 'next/link';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStudents } from '../hooks/useStudents';
@@ -69,18 +68,6 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     }, [groups, user]);
 
     const { data: students, isLoading } = useStudents(myGroupsIds, 'active');
-
-    const myGroups = useMemo(() => {
-        if (!groups) return [];
-        return groups.filter(g => {
-            if (user?.role === 'teacher') return g.teacherId === user.teacherId;
-            if (user?.role === 'supervisor') {
-                const sections = user.responsibleSections || [];
-                return sections.some(section => g.name.includes(section));
-            }
-            return true;
-        });
-    }, [groups, user]);
 
     const groupsMap = useMemo(() => {
         return (groups || []).reduce((acc, g) => {
@@ -192,7 +179,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     }, [students, currentDayName, groupId, user, myGroupsIds]);
 
 
-    const { data: attendanceData = { today: {} } as AttendanceContext, isFetching: isAttendanceFetching } = useQuery({
+    const { data: attendanceData = { today: {} } as AttendanceContext } = useQuery({
         queryKey: ['attendance-context', selectedDate],
         queryFn: async () => {
             if (!students || students.length === 0) return { today: {} };
@@ -319,39 +306,6 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         setSelectedStudent(student);
     };
 
-    const handleWhatsApp = (student: Student) => {
-        window.open(getWhatsAppUrl(student.parentPhone), '_blank');
-    };
-
-    const handleWelcomeWhatsApp = (student: Student) => {
-        const phone = student.parentPhone || student.studentPhone || '';
-        const password = phone.length >= 6 ? phone.slice(-6) : phone;
-        const message = `السلام عليكم ورحمة الله وبركاته، 🌸
-أهلاً بكم في مركز الشاطبي لتحفيظ القرآن الكريم! 📖
-
-يسعدنا انضمام الطالب/ة: *${student.fullName}* إلينا. 🎉
-
-💰 *تفاصيل المصروفات:*
-قيمة الاشتراك الشهري هي *${student.monthlyAmount || 80} ج.م* للمجموعة الواحدة.
-⚠️ *تنبيه مهم:* تُستحق المصروفات مقدماً مع أول يوم من كل شهر.
-
-🚫 *الغياب والاعتذار:*
-في حال الرغبة في التغيب، لابد من إرسال اعتذار مسبق عبر رسالة على الواتساب أو من خلال موقعنا الإلكتروني.
-
-🌐 *بوابة ولي الأمر:*
-لمتابعة مستوى الطالب، تقارير الحفظ، وسجل الحضور والغياب، يرجى الدخول إلى حسابكم عبر الرابط التالي:
-🔗 https://shatpycenter-um2b.vercel.app/attendance-report
-
-📱 *طريقة الدخول:*
-- *اسم المستخدم:* رقم الهاتف المسجل لدينا (${phone}).
-- *كلمة المرور:* آخر 6 أرقام من رقم الهاتف (${password}).
-
-متابعتكم المستمرة عبر الموقع تساهم بشكل كبير في تشجيع الطالب ورفع مستواه. 🌟
-نسأل الله التوفيق لأبنائنا جميعاً. 🤲`;
-
-        window.open(getWhatsAppUrl(phone, message), '_blank');
-    };
-
     const handleCall = (student: Student) => {
         window.location.href = `tel:${student.parentPhone}`;
     };
@@ -416,13 +370,6 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
             console.error('Error saving attendance:', error);
         }
     }, [queryClient, selectedDate]);
-
-    const handleEdit = (student: Student) => {
-        setStudentToEdit(student);
-        setIsEditModalOpen(true);
-    };
-
-
 
     if (isLoading) {
         return (

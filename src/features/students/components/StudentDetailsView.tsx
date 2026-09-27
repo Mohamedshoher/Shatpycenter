@@ -7,7 +7,7 @@ interface StudentDetailsViewProps {
   studentId: string;
 }
 
-export default function StudentDetailsView({ studentId }: StudentDetailsViewProps) {
+export default function StudentDetailsView({ studentId: _studentId }: StudentDetailsViewProps) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (

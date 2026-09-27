@@ -3,14 +3,13 @@
 // --- الاستيرادات (Imports) ---
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getGroups, updateGroup, deleteGroup } from '@/features/groups/services/groupService';
+import { getGroups, deleteGroup } from '@/features/groups/services/groupService';
 import { Group } from '@/types';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import { getStudents } from '@/features/students/services/studentService';
 import Modal from '@/components/ui/modal';
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import User from 'lucide-react/dist/esm/icons/user'
-import X from 'lucide-react/dist/esm/icons/x'
 import Edit2 from 'lucide-react/dist/esm/icons/edit-2';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -58,7 +57,6 @@ export default function ManageGroupsModal({ isOpen, onClose }: ManageGroupsModal
         return filtered.map(group => {
             const teacher = teachers?.find(t => t.id === group.teacherId);
             const activeCount = students?.filter(s => s.groupId === group.id && s.status === 'active').length || 0;
-            const totalCount = students?.filter(s => s.groupId === group.id).length || 0;
 
             return {
                 ...group,

@@ -1,41 +1,33 @@
 "use client";
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useStudents } from '../hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
-import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import Search from 'lucide-react/dist/esm/icons/search'
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
-import Menu from 'lucide-react/dist/esm/icons/menu'
 import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal'
 import X from 'lucide-react/dist/esm/icons/x'
 import User from 'lucide-react/dist/esm/icons/user'
-import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right'
 import Clock from 'lucide-react/dist/esm/icons/clock'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import Check from 'lucide-react/dist/esm/icons/check'
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
 import Gift from 'lucide-react/dist/esm/icons/gift'
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import { useRouter } from 'next/navigation';
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
 import { Student } from '@/types';
 import StudentDetailModal from './StudentDetailModal';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import EditStudentModal from './EditStudentModal';
-import { Button } from '@/components/ui/button';
 
 interface DebtInfo { isIndebted: boolean; amount: number; label: string; unpaidMonths: { label: string; key: string }[] }
 
 export default function ArchiveList() {
     const { data: students, isLoading, restoreStudent, deleteStudent } = useStudents();
     const { data: groups } = useGroups();
-    const { toggleSidebar } = useUIStore();
     const { user } = useAuthStore();
-    const router = useRouter();
 
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);

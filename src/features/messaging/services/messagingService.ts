@@ -10,7 +10,7 @@ export const getMessagingToken = async (actor: string, passcode: string): Promis
 };
 
 /** جلب محادثات المستخدم الحالي */
-export const fetchConversations = async (actor: string): Promise<Conversation[]> => {
+export const fetchConversations = async (_actor: string): Promise<Conversation[]> => {
     const { token } = useMessagingStore.getState();
     if (!token) throw new Error('غير مصرح لك');
     
@@ -80,7 +80,7 @@ export const setMessagePinned = async (
 };
 
 /** جلب جهات الاتصال المسموح للمستخدم بمراسلتها */
-export const fetchContacts = async (actor: string): Promise<MessagingContacts> => {
+export const fetchContacts = async (_actor: string): Promise<MessagingContacts> => {
     const { token } = useMessagingStore.getState();
     if (!token) throw new Error('غير مصرح لك');
 

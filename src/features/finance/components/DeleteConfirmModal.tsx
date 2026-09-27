@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from 'react';
 import X from 'lucide-react/dist/esm/icons/x';
-import { cn } from '@/lib/utils';
 
 interface DeleteConfirmModalProps {
     isOpen: boolean;

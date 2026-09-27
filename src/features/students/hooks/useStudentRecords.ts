@@ -69,7 +69,7 @@ export const useStudentRecords = (studentId: string) => {
 
             return { previousAttendance };
         },
-        onError: (err, newRecord, context) => {
+        onError: (err) => {
             console.error('Attendance mutation error:', err);
         },
         onSettled: () => {

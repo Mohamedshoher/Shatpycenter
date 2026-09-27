@@ -15,7 +15,6 @@ import Send from 'lucide-react/dist/esm/icons/send';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
-import { useAuthStore } from '@/store/useAuthStore';
 
 export interface StudentNote {
     id: string;
@@ -62,7 +61,6 @@ export default function StudentNotesModal({
     const [replyText, setReplyText] = useState('');
     const [localHidden, setLocalHidden] = useState<string[]>([]);
     const [readOverrides, setReadOverrides] = useState<Record<string, boolean>>({});
-    const { user } = useAuthStore();
 
     useEffect(() => {
         if (!isOpen) {

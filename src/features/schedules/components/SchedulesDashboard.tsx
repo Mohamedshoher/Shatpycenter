@@ -8,7 +8,6 @@ import { getGroups } from '@/features/groups/services/groupService';
 import { useAuthStore } from '@/store/useAuthStore';
 import Clock from 'lucide-react/dist/esm/icons/clock'
 import Users from 'lucide-react/dist/esm/icons/users'
-import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right'
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock'
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
@@ -50,7 +49,7 @@ export default function SchedulesDashboard() {
             await clearGroupAppointments(groupToCancel.id, dayOnly);
             await queryClient.invalidateQueries({ queryKey: ['students'] });
             setGroupToCancel(null);
-        } catch (error) {
+        } catch {
             alert('حدث خطأ أثناء إلغاء مواعيد المجموعة');
         } finally {
             setIsCancellingGroup(false);

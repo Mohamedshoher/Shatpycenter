@@ -12,8 +12,6 @@ import X from 'lucide-react/dist/esm/icons/x'
 import Wallet from 'lucide-react/dist/esm/icons/wallet'
 import Plus from 'lucide-react/dist/esm/icons/plus'
 import Banknote from 'lucide-react/dist/esm/icons/banknote'
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
-import { cn } from '@/lib/utils';
 import { FinancialTransaction } from '@/types';
 
 interface TeacherPayrollTabProps {
@@ -71,7 +69,6 @@ export const TeacherPayrollTab = ({
     totalWorkingDays = 22,
     attendedDays = 0,
     absentDays = 0,
-    totalAbsentDays = 0,
     dailyRate = 0,
     hourlyRate = 0,
     dailyHours = 4,
