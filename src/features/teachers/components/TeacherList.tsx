@@ -70,9 +70,9 @@ export default function TeacherList() {
         onMutate: async (id) => {
             await queryClient.cancelQueries({ queryKey: ['teachers'] });
             const previousTeachers = queryClient.getQueryData(['teachers']);
-            queryClient.setQueryData(['teachers'], (old: any) => {
+            queryClient.setQueryData(['teachers'], (old: Teacher[] | undefined) => {
                 if (!old) return old;
-                return old.filter((t: any) => t.id !== id);
+                return old.filter((t) => t.id !== id);
             });
             return { previousTeachers };
         },
@@ -166,7 +166,7 @@ export default function TeacherList() {
 
             // فلتر الأقسام
             const matchesSection = sectionFilter === 'الكل' ||
-                ((teacher as any).responsibleSections || []).includes(sectionFilter);
+                (teacher.responsibleSections || []).includes(sectionFilter);
 
             return matchesStatus && matchesSection;
         });
@@ -335,18 +335,18 @@ export default function TeacherList() {
                                         {/* شارة الوظيفة */}
                                         <span className={cn(
                                             "text-[10px] font-black px-2 py-0.5 rounded-full w-fit mt-0.5",
-                                            (teacher as any).role === 'schedule_secretary'
+                                            teacher.role === 'schedule_secretary'
                                                 ? "bg-purple-100 text-purple-600"
-                                                : (teacher as any).role === 'supervisor'
+                                                : teacher.role === 'supervisor'
                                                     ? "bg-blue-100 text-blue-600"
                                                     : "bg-teal-50 text-teal-600"
                                         )}>
-                                            {(teacher as any).role === 'schedule_secretary' ? (
+                                            {teacher.role === 'schedule_secretary' ? (
                                                 <span className="flex items-center gap-1">
                                                     <CalendarClock size={10} />
                                                     سكرتارية مواعيد
                                                 </span>
-                                            ) : (teacher as any).role === 'supervisor' ? 'مشرف' : 'مدرس'}
+                                            ) : teacher.role === 'supervisor' ? 'مشرف' : 'مدرس'}
                                         </span>
                                     </div>
                             </div>

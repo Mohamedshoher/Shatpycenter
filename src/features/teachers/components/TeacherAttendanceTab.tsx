@@ -10,6 +10,7 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { TeacherAttendanceStatus } from '../services/attendanceService';
+import type { TeacherDeduction } from '../services/deductionService';
 
 interface TeacherAttendanceTabProps {
     updateMonth: (val: number | string) => void;
@@ -27,10 +28,10 @@ interface TeacherAttendanceTabProps {
     tempReason: string;
     setTempReason: (val: string) => void;
     dayDetails: Record<number, { reason: string, type: string }>;
-    setDayDetails: (details: any) => void;
+    setDayDetails: (details: Record<number, { reason: string, type: string }>) => void;
     updateAttendanceAsync: (params: { date: string, status: TeacherAttendanceStatus, notes?: string }) => Promise<void>;
     dailyRate: number;
-    deductions?: any[];
+    deductions?: TeacherDeduction[];
 }
 
 export const TeacherAttendanceTab = ({
@@ -187,7 +188,7 @@ export const TeacherAttendanceTab = ({
 
                         return Array.from({ length: daysInMonth }).map((_, i) => {
                             const day = i + 1;
-                            const rawStatus = (attendanceData as any)[String(day)];
+                            const rawStatus = attendanceData[String(day)];
 
                             const isFutureMonth = year > now.getFullYear() || (year === now.getFullYear() && month > (now.getMonth() + 1));
                             const isFutureDay = isCurrentMonth && day > todayDay;
@@ -253,7 +254,7 @@ export const TeacherAttendanceTab = ({
                                             ].map(opt => (
                                                 <button
                                                     key={opt.id}
-                                                    onClick={() => setTempStatus(opt.id as any)}
+                                                    onClick={() => setTempStatus(opt.id as 'present' | 'absent' | 'discipline' | 'reward')}
                                                     className={cn(
                                                         "h-10 rounded-xl text-[10px] font-bold border transition-all",
                                                         tempStatus === opt.id ? `${opt.color} text-white border-transparent shadow-lg shadow-${opt.id}-500/20` : "bg-gray-50 text-gray-500 border-gray-100"
@@ -270,7 +271,7 @@ export const TeacherAttendanceTab = ({
                                                     {(tempStatus === 'discipline' ? ['day', 'double', 'half', 'quarter'] : ['day', 'half', 'quarter']).map(amt => (
                                                         <button
                                                             key={amt}
-                                                            onClick={() => setTempAmount(amt as any)}
+                                                            onClick={() => setTempAmount(amt as 'day' | 'half' | 'quarter' | 'double')}
                                                             className={cn(
                                                                 "flex-1 h-8 rounded-lg text-[9px] font-bold border transition-all",
                                                                 tempAmount === amt ? "bg-gray-900 text-white border-transparent" : "bg-white text-gray-400 border-gray-100"
@@ -314,7 +315,16 @@ export const TeacherAttendanceTab = ({
                             const firstDay = new Date(parseInt(year), parseInt(month) - 1, 1);
                             const startOffset = (firstDay.getDay() + 1) % 7;
 
-                            const mergedRecords: any[] = [];
+                            interface MergedRecord {
+                                id: string;
+                                day: number;
+                                dateStr: string;
+                                isReward: boolean | undefined;
+                                amount: number;
+                                displayReason: string;
+                                canDelete: boolean;
+                            }
+                            const mergedRecords: MergedRecord[] = [];
 
                             // 1. إضافة سجلات تقويم الحضور
                             Object.entries(attendanceData).forEach(([day, status]: [string, TeacherAttendanceStatus]) => {
@@ -332,7 +342,7 @@ export const TeacherAttendanceTab = ({
                                             status === 'quarter_reward' ? (dailyRate * 0.25) : 0;
 
                                 const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
-                                const relatedDeduction = deductions.find(dd => dd.date === dateStr || (dd.appliedDate && new Date(dd.appliedDate).toISOString().startsWith(dateStr)));
+                                const relatedDeduction = deductions.find(dd => dd.appliedDate && new Date(dd.appliedDate).toISOString().startsWith(dateStr));
                                 let actionText = 'غياب';
                                 if (status === 'full_reward') actionText = 'مكافأة (يوم كامل)';
                                 else if (status === 'half_reward') actionText = 'مكافأة (نصف يوم)';
@@ -357,7 +367,7 @@ export const TeacherAttendanceTab = ({
                             });
 
                             // 2. إضافة الخصومات اليدوية (من جدول deductions وتجنب الأتمتة المضافة بالتقويم مسبقاً)
-                            deductions.forEach((d: any) => {
+                            deductions.forEach((d) => {
                                 if (d.appliedBy === 'system-automation') return;
 
                                 const dDate = new Date(d.appliedDate);
@@ -382,7 +392,7 @@ export const TeacherAttendanceTab = ({
                                 return <div className="col-span-full py-8 text-center text-gray-400 text-sm font-bold bg-white rounded-3xl border border-gray-100 md:col-span-2">لا توجد سجلات انضباط أو خصومات لهذا الشهر</div>
                             }
 
-                            return mergedRecords.map((rec: any) => {
+                            return mergedRecords.map((rec) => {
                                 return (
                                     <div key={rec.id} className="bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-md transition-all relative group flex flex-col justify-between">
                                         <div>

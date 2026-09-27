@@ -25,7 +25,7 @@ export const teacherDeductionService = {
       if (!res.ok) return [];
       const data = await res.json();
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: { id: string; teacher_id: string; teachers?: { full_name?: string }; amount: number | string; reason: string; date: string; applied_by?: string; status?: 'applied' | 'pending' | 'appealed'; notes?: string }) => ({
         id: row.id,
         teacherId: row.teacher_id,
         teacherName: row.teachers?.full_name || 'Unknown',
@@ -49,7 +49,7 @@ export const teacherDeductionService = {
       if (!res.ok) return [];
       const data = await res.json();
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: { id: string; teacher_id: string; teachers?: { full_name?: string }; amount: number | string; reason: string; date: string; applied_by?: string; status?: 'applied' | 'pending' | 'appealed'; notes?: string }) => ({
         id: row.id,
         teacherId: row.teacher_id,
         teacherName: row.teachers?.full_name || 'Unknown',
@@ -154,7 +154,7 @@ export const teacherDeductionService = {
       if (!res.ok) return [];
       const data = await res.json();
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: { id: string; teacher_id: string; teachers?: { full_name?: string }; amount: number | string; reason: string; date: string; applied_by?: string; status?: 'applied' | 'pending' | 'appealed'; notes?: string }) => ({
         id: row.id,
         teacherId: row.teacher_id,
         teacherName: row.teachers?.full_name || 'Unknown',
@@ -201,7 +201,7 @@ export const teacherDeductionService = {
       const res = await fetch(`/api/deductions?teacherId=${encodeURIComponent(teacherId)}`);
       if (!res.ok) return false;
       const data = await res.json();
-      return data && (data as any[]).some((d: any) => d.date === dateStr);
+      return data && (data as { date: string }[]).some((d) => d.date === dateStr);
     } catch (error) {
       console.error("Error checking deduction for date:", error);
       return false;
