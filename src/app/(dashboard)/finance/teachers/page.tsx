@@ -92,7 +92,10 @@ export default function FinanceTeachersPage() {
     });
 
     const allAttendanceResult = useAllTeachersAttendance(selectedMonth);
-    const allAttendanceMap = (allAttendanceResult.data || {}) as Record<string, any>;
+    const allAttendanceMap = useMemo(
+        () => (allAttendanceResult.data || {}) as Record<string, any>,
+        [allAttendanceResult.data]
+    );
 
     const normalize = (s: string) => { if (!s) return ''; return s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/[ًٌٍَُِّ]/g, '').replace(/\s+/g, '').trim(); };
 

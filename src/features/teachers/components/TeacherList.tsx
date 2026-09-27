@@ -1,6 +1,6 @@
 "use client";// قائمة المدرسين
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTeachers } from '../hooks/useTeachers';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -57,7 +57,10 @@ export default function TeacherList() {
     const today = new Date();
     const [selectedMonthRaw, setSelectedMonthRaw] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
     const allTeachersAttendanceResult = useAllTeachersAttendance(selectedMonthRaw);
-    const allTeachersAttendanceMap = (allTeachersAttendanceResult.data || {}) as Record<string, any>;
+    const allTeachersAttendanceMap = useMemo(
+        () => (allTeachersAttendanceResult.data || {}) as Record<string, any>,
+        [allTeachersAttendanceResult.data]
+    );
 
     const { updateAttendance, updateAttendanceAsync } = useTeacherAttendance(selectedTeacher?.id, selectedMonthRaw);
 

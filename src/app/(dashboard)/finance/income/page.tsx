@@ -133,7 +133,7 @@ export default function FinanceIncomePage() {
             map.set(teacherId, entry);
         });
         return Array.from(map.values()).sort((a, b) => b.total - a.total);
-    }, [incomeData.feeTransactions, teachers]);
+    }, [incomeData, teachers]);
 
     const selectedTeacher = teacherGroups.find(g => g.teacherId === selectedTeacherId) || null;
     const selectedTeacherTxns = selectedTeacher?.transactions || [];

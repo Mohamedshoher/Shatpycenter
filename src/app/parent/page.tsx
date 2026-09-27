@@ -2,6 +2,7 @@
 
 import { useAuthStore } from "@/store/useAuthStore";
 import { useState } from "react";
+import Image from "next/image";
 import { useStudents } from "@/features/students/hooks/useStudents";
 import { useGroups } from "@/features/groups/hooks/useGroups";
 import { useStudentRecords } from "@/features/students/hooks/useStudentRecords";
@@ -70,7 +71,7 @@ export default function ParentDashboard() {
                     {/* المنتصف: شعار المركز */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                         <div className="bg-white w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center shadow-lg border border-gray-50">
-                            <img src="/icon-192.png" alt="شعار المركز" className="w-8 h-8 md:w-10 md:h-10 object-contain" />
+                            <Image src="/icon-192.png" alt="شعار المركز" width={40} height={40} className="w-8 h-8 md:w-10 md:h-10 object-contain" />
                         </div>
                     </div>
 

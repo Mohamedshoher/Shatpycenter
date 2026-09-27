@@ -57,7 +57,7 @@ export default function AttendanceReportPage() {
         });
         const gIds = filteredGroups.map(g => g.id);
         return students.filter(s => s.status === 'active' && (isControlRole || gIds.includes(s.groupId!))).map(s => s.id);
-    }, [students, groups, user]);
+    }, [students, groups, user, isControlRole]);
 
     const groupIdsForQuery = useMemo(() => {
         if (isControlRole) return 'all';
@@ -66,7 +66,7 @@ export default function AttendanceReportPage() {
             if (user?.role === 'supervisor') return (user.responsibleSections || []).some(sec => g.name.includes(sec));
             return false;
         }).map(g => g.id).join(',') || 'none';
-    }, [groups, user]);
+    }, [groups, user, isControlRole]);
 
     // 1. جلب بيانات الغياب والملحوظات
     const { data: reportData, isLoading } = useQuery({
@@ -167,7 +167,7 @@ export default function AttendanceReportPage() {
                     currentStatus: dailyStatusMap.get(selectedDateStr) || 'not_recorded'
                 };
             });
-    }, [students, reportData, groups, user, selectedDateStr]);
+    }, [students, reportData, groups, user, selectedDateStr, isControlRole]);
 
     // 3. الفلترة النهائية للعرض وحساب إحصائيات المخططات
     const { displayStudents, chartData } = useMemo(() => {
