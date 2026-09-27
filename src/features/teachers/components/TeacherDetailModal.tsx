@@ -634,7 +634,10 @@ export default function TeacherDetailModal({
         { id: 'groups', label: 'المجموعات', icon: Layers },
         { id: 'agreement', label: 'الاتفاق', icon: FileText },
     ].filter(tab => {
-        if (user?.role === 'supervisor') return tab.id !== 'payroll' && tab.id !== 'collection';
+        // المشرف ممنوع من رؤية التحصيل/الراتب الخاصين بمعلم آخر، لكنه يقدر يشوف
+        // تحصيله وراتبه هو في ملفه الشخصي (لما يفتح سجله هو نفسه)
+        const isOwnProfile = user?.role === 'supervisor' && teacher?.id === user?.teacherId;
+        if (user?.role === 'supervisor' && !isOwnProfile) return tab.id !== 'payroll' && tab.id !== 'collection';
         return true;
     });
 
