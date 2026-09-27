@@ -1,19 +1,27 @@
 import { useMemo } from 'react';
 import { normalize } from '@/lib/utils';
 import { computeTeacherSalaryStats, TeacherSalaryStats } from '@/features/teachers/services/salaryCalculation';
+import { Teacher, Student, Group, FinancialTransaction } from '@/types';
+import type { FeeRecord } from '@/features/students/services/recordsService';
+import type { TeacherDeduction } from '@/features/teachers/services/deductionService';
+
+interface DashboardExemption {
+    student_id: string;
+    amount?: number;
+}
 
 export const useTeacherDashboard = (
-    teacher: any,
-    students: any[] = [],
-    groups: any[] = [],
-    allFees: any[] = [],
-    handovers: any[] = [],
-    exemptions: any[] = [],
-    attendanceData: any = {},
-    deductions: any[] = [],
-    paymentsHistory: any[] = [],
+    teacher: Teacher | null | undefined,
+    students: Student[] = [],
+    groups: Group[] = [],
+    allFees: FeeRecord[] = [],
+    handovers: FinancialTransaction[] = [],
+    exemptions: DashboardExemption[] = [],
+    attendanceData: Record<string, string> = {},
+    deductions: TeacherDeduction[] = [],
+    paymentsHistory: FinancialTransaction[] = [],
     selectedMonthRaw: string,
-    allTeachers: any[] = [] // إضافة قائمة المعلمين هنا
+    allTeachers: Teacher[] = [] // إضافة قائمة المعلمين هنا
 ) => {
     return useMemo(() => {
         if (!teacher) return null;
@@ -21,7 +29,7 @@ export const useTeacherDashboard = (
         const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
 
         // وظيفة للتحقق إذا كان المنشئ معلماً آخر
-        const isOtherTeacher = (createdBy: string) => {
+        const isOtherTeacher = (createdBy: string | undefined) => {
             if (!createdBy || createdBy === 'غير معروف') return false;
             const normalizedCreator = normalize(createdBy);
             return allTeachers.some(t => 
@@ -127,7 +135,7 @@ export const useTeacherDashboard = (
         } = salaryStats;
 
         // 4. الطلاب الذين لم يدفعوا
-        const exemptedStudentIds = exemptions.map((e: any) => e.student_id);
+        const exemptedStudentIds = exemptions.map((e) => e.student_id);
         const unpaidStudents = students
             .filter(s => {
                 const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
@@ -149,7 +157,6 @@ export const useTeacherDashboard = (
                     remaining: Math.max(0, remaining),
                     isExempted,
                     enrollmentDate: student.enrollmentDate,
-                    phone: student.phone,
                     parentPhone: student.parentPhone
                 };
             })
