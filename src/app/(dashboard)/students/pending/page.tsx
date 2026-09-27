@@ -161,16 +161,6 @@ export default function PendingStudentsPage() {
         }
     });
 
-    const updateMutation = useMutation({
-        mutationFn: (data: { id: string; updates: Partial<Student> }) =>
-            updateStudent(data.id, data.updates),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['students'] });
-            setEditingStudent(null);
-            alert('✅ تم تحديث بيانات الطالب');
-        }
-    });
-
     const handleEdit = (student: Student) => {
         setEditingStudent(student);
     };

@@ -20,8 +20,7 @@ export default function AttendanceFilters({
     continuousLimit,
     setContinuousLimit,
     totalLimit,
-    setTotalLimit,
-    count
+    setTotalLimit
 }: AttendanceFiltersProps) {
     return (
         <div className="flex flex-wrap items-center gap-3 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm mb-2">

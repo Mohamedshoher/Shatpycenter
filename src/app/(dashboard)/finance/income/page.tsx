@@ -1,14 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import ArrowUpCircle from 'lucide-react/dist/esm/icons/arrow-up-circle'
-import Wallet from 'lucide-react/dist/esm/icons/wallet'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import Plus from 'lucide-react/dist/esm/icons/plus'
-import X from 'lucide-react/dist/esm/icons/x'
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -16,8 +13,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getTransactionsByMonth } from '@/features/finance/services/financeService';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { useAuthStore } from '@/store/useAuthStore';
-import { supabase } from '@/lib/supabase';
-import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import dynamic from 'next/dynamic';
@@ -59,7 +54,7 @@ export default function FinanceIncomePage() {
         return result;
     }, []);
 
-    const { data: dbTransactions = [], isLoading } = useQuery({
+    const { data: dbTransactions = [] } = useQuery({
         queryKey: ['transactions', selectedMonth],
         queryFn: async () => {
             if (!isClient) return [];

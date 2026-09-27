@@ -7,7 +7,6 @@ import CalendarCheck from 'lucide-react/dist/esm/icons/calendar-check'
 import UserCheck from 'lucide-react/dist/esm/icons/user-check'
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days'
-import MessageSquare from 'lucide-react/dist/esm/icons/message-square'
 import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import Loader from 'lucide-react/dist/esm/icons/loader'
 import CloseIcon from 'lucide-react/dist/esm/icons/x'
@@ -30,7 +29,7 @@ export default function DashboardOverview() {
     const user = useAuthStore((state) => state.user);
     const router = useRouter();
     const today = new Date();
-    const [isSyncing, setIsSyncing] = useState(false);
+    const [, setIsSyncing] = useState(false);
     const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
     const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
     const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<Student | null>(null);
@@ -60,7 +59,6 @@ export default function DashboardOverview() {
     const students = dashData?.students || [];
     const myAttendanceCount = dashData?.todayAttendanceCount || 0;
     const pendingLeaves = dashData?.pendingLeaves || [];
-    const unreadNotesCount = dashData?.unreadNotesCount || 0;
     const recentNotes = dashData?.recentNotes || [];
 
     const activeStudents = students.filter((s: Student) => s.status !== 'archived');

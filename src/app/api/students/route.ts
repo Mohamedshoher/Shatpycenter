@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
         const studentId = searchParams.get('studentId');
 
         const supabase = createServerSupabase();
-        const isListView = !searchParams.get('full');
         let query = supabase
             .from('students')
             .select('id, full_name, group_id, parent_phone, status, monthly_amount, appointment, notes, is_azhari, azhari_grade, is_orphan, enrollment_date, archived_date, created_at');

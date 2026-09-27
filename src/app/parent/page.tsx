@@ -16,8 +16,7 @@ import {
     ChevronLeft,
     AlertCircle,
     MessageCircle,
-    X,
-    FileText
+    X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/features/auth/services/authService";

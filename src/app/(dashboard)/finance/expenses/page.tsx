@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import ArrowDownCircle from 'lucide-react/dist/esm/icons/arrow-down-circle'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
@@ -12,7 +11,6 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getTransactionsByMonth } from '@/features/finance/services/financeService';
-import { FadeIn, SlideIn } from '@/components/ui/transition';
 import dynamic from 'next/dynamic';
 import type { TransactionData } from '@/features/finance/components/AddTransactionModal';
 
@@ -46,7 +44,7 @@ export default function FinanceExpensesPage() {
         return result;
     }, []);
 
-    const { data: dbTransactions = [], isLoading } = useQuery({
+    const { data: dbTransactions = [] } = useQuery({
         queryKey: ['transactions', selectedMonth],
         queryFn: async () => {
             if (!isClient) return [];

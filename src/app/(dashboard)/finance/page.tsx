@@ -58,7 +58,6 @@ export default function FinancePage() {
     const [isFromTeachersOpen, setIsFromTeachersOpen] = useState(false);
     const [selectedFromTeacherId, setSelectedFromTeacherId] = useState<string | null>(null);
     const [isOtherIncomeOpen, setIsOtherIncomeOpen] = useState(false);
-    const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
     const [isExemptionsOpen, setIsExemptionsOpen] = useState(false);
     const [isDeductionsOpen, setIsDeductionsOpen] = useState(false);
     const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
@@ -173,7 +172,6 @@ export default function FinancePage() {
         otherIncome,
         paidCount,
         unpaidCount,
-        totalRemaining,
     } = useMemo(() => {
         const incomeTransactions = filteredTransactions.filter(tr => tr.type === 'income');
         const expenseTransactions = filteredTransactions.filter(tr => tr.type === 'expense');
@@ -208,7 +206,7 @@ export default function FinancePage() {
         const totalExp = expenseTransactions.reduce((sum, tr) => sum + tr.amount, 0);
 
         const exemptedIds = new Set(exemptions.map((e) => e.student_id));
-        const totalDeficit = Object.entries(collectionsByTeacher).reduce((sum, [id, data]) => {
+        const totalDeficit = Object.entries(collectionsByTeacher).reduce((sum, [id]) => {
             const tGroups = groups.filter(g => g.teacherId === id).map(g => g.id);
             const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
             return sum + tStudents.reduce((acc, s) => {
