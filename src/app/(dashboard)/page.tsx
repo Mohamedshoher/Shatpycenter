@@ -65,6 +65,7 @@ export default function DashboardOverview() {
     const pendingStudents = students.filter((s: Student) => s.status === 'pending');
     const isDirectorOrSupervisor = user?.role === 'director' || user?.role === 'supervisor';
     const isDirector = user?.role === 'director';
+    const isSupervisor = user?.role === 'supervisor';
 
     const hour = today.getHours();
     const greeting = hour >= 5 && hour < 12 ? 'صباح الخير' : hour >= 12 && hour < 18 ? 'مساء الخير' : 'مرحباً';
@@ -81,6 +82,45 @@ export default function DashboardOverview() {
         }
         setIsSyncing(false);
     };
+
+    // لوحة المشرف مختصرة عمداً: إحصائيات قسمه فقط ووصول سريع لما يخصه،
+    // بدون إجراءات خاصة بالمدير العام (تحديث الحسابات، الأتمتة، إلخ)
+    const supervisorStats = [
+        {
+            title: 'طلاب قسمي',
+            value: activeStudents.length.toString(),
+            icon: Users,
+            color: 'from-blue-500 to-blue-600',
+            link: '/students'
+        },
+        {
+            title: 'مجموعاتي',
+            value: groups.length.toString(),
+            icon: LayoutGrid,
+            color: 'from-orange-500 to-orange-600',
+            link: '/groups'
+        },
+        {
+            title: 'الحضور اليوم',
+            value: myAttendanceCount.toString(),
+            icon: CalendarCheck,
+            color: 'from-green-500 to-emerald-600',
+            link: '/attendance-report'
+        },
+        {
+            title: 'طلبات الإجازة',
+            value: pendingLeaves.length.toString(),
+            icon: CalendarDays,
+            color: 'from-orange-500 to-rose-600',
+            onClick: () => setIsLeaveModalOpen(true)
+        },
+    ];
+
+    const supervisorQuickActions = [
+        { title: 'الحضور', desc: 'متابعة الغياب اليومي', icon: CalendarCheck, color: 'from-green-500 to-emerald-600', link: '/attendance-report' },
+        { title: 'الاختبارات', desc: 'نتائج تقييم الطلاب', icon: Trophy, color: 'from-amber-500 to-amber-600', link: '/exams-report' },
+        { title: 'المجموعات', desc: 'توزيع الطلاب', icon: LayoutGrid, color: 'from-blue-500 to-blue-600', link: '/groups' },
+    ];
 
     const stats = [
         {
@@ -163,7 +203,7 @@ export default function DashboardOverview() {
                     <>
                         {/* Stats Grid */}
                         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 md:gap-4">
-                            {stats.map((stat, idx) => (
+                            {(isSupervisor ? supervisorStats : stats).map((stat, idx) => (
                                 <div
                                     key={idx}
                                     style={{ animationDelay: `${idx * 50}ms` }}
@@ -198,12 +238,12 @@ export default function DashboardOverview() {
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 md:gap-4">
-                                {[
+                                {(isSupervisor ? supervisorQuickActions : [
                                     { title: 'الأتمتة', desc: 'خصومات وتقارير آلي', icon: RefreshCw, color: 'from-purple-500 to-purple-600', link: '/automation' },
                                     { title: 'الحضور', desc: 'متابعة الغياب اليومي', icon: CalendarCheck, color: 'from-green-500 to-emerald-600', link: '/attendance-report' },
                                     { title: 'الاختبارات', desc: 'نتائج تقييم الطلاب', icon: Trophy, color: 'from-amber-500 to-amber-600', link: '/exams-report' },
                                     { title: 'المجموعات', desc: 'توزيع الطلاب', icon: LayoutGrid, color: 'from-blue-500 to-blue-600', link: '/groups' },
-                                ].map((action, idx) => (
+                                ]).map((action, idx) => (
                                     <div
                                         key={idx}
                                         onClick={() => router.push(action.link)}
