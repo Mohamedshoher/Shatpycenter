@@ -43,7 +43,8 @@ export interface Teacher {
   status: 'active' | 'inactive';
   dailyReportSubmitted?: boolean;
   lastReportTimestamp?: number;
-  role?: 'teacher' | 'supervisor';
+  role?: 'teacher' | 'supervisor' | 'schedule_secretary';
+  email?: string;
   accountingType?: 'fixed' | 'partnership';
   salary?: number;
   partnershipPercentage?: number;

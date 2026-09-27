@@ -52,18 +52,18 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
     const [formData, setFormData] = useState({
         fullName: initialTeacher?.fullName || '',
         phone: initialTeacher?.phone || '',
-        email: (initialTeacher as any)?.email || '',
-        role: (initialTeacher as any)?.role || 'teacher' as 'teacher' | 'supervisor' | 'schedule_secretary',
-        accountingType: (initialTeacher as any)?.accountingType || 'fixed' as 'fixed' | 'partnership',
-        salary: (initialTeacher as any)?.salary || 0,
-        partnershipPercentage: (initialTeacher as any)?.partnershipPercentage || 30,
+        email: initialTeacher?.email || '',
+        role: initialTeacher?.role || 'teacher' as 'teacher' | 'supervisor' | 'schedule_secretary',
+        accountingType: initialTeacher?.accountingType || 'fixed' as 'fixed' | 'partnership',
+        salary: initialTeacher?.salary || 0,
+        partnershipPercentage: initialTeacher?.partnershipPercentage || 30,
         dailyHours: Number(initialTeacher?.dailyHours) || 4,
         weeklyWorkingDays: Number(initialTeacher?.weeklyWorkingDays) || 5,
         // ملاحظة أمنية: الـ API لم يعد يُرجع كلمة المرور الحالية إطلاقاً،
         // لذا يبقى الحقل فارغاً دائماً عند فتح نافذة التعديل (وليس معبّأً مسبقاً).
         password: '',
-        status: (initialTeacher?.status as any) || 'active' as 'active' | 'inactive',
-        responsibleSections: (initialTeacher as any)?.responsibleSections || ['قرآن'] as string[],
+        status: initialTeacher?.status || 'active' as 'active' | 'inactive',
+        responsibleSections: initialTeacher?.responsibleSections || ['قرآن'] as string[],
     });
 
     // حالة تخزين وعرض الأخطاء
@@ -78,16 +78,16 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
             setFormData({
                 fullName: initialTeacher.fullName,
                 phone: initialTeacher.phone,
-                email: (initialTeacher as any).email || '',
-                role: (initialTeacher as any).role || 'teacher' as 'teacher' | 'supervisor' | 'schedule_secretary',
-                accountingType: (initialTeacher as any).accountingType || 'fixed',
-                salary: (initialTeacher as any).salary || 0,
-                partnershipPercentage: (initialTeacher as any).partnershipPercentage || 30,
+                email: initialTeacher.email || '',
+                role: initialTeacher.role || 'teacher' as 'teacher' | 'supervisor' | 'schedule_secretary',
+                accountingType: initialTeacher.accountingType || 'fixed',
+                salary: initialTeacher.salary || 0,
+                partnershipPercentage: initialTeacher.partnershipPercentage || 30,
                 dailyHours: Number(initialTeacher?.dailyHours) || 4,
                 weeklyWorkingDays: Number(initialTeacher?.weeklyWorkingDays) || 5,
                 password: '',
-                status: (initialTeacher.status as any) || 'active',
-                responsibleSections: (initialTeacher as any).responsibleSections || ['قرآن'],
+                status: initialTeacher.status || 'active',
+                responsibleSections: initialTeacher.responsibleSections || ['قرآن'],
             });
         }
     }, [initialTeacher]);
@@ -110,7 +110,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
     // ==========================================
     const mutation = useMutation({
         // دالة التنفيذ الفعلية
-        mutationFn: async (data: any) => {
+        mutationFn: async (data: Omit<Teacher, 'id'>) => {
             setError(null); // مسح الأخطاء السابقة
             if (initialTeacher) {
                 return await updateTeacher(initialTeacher.id, data); // تعديل موظف حالي
@@ -122,10 +122,10 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
             await queryClient.cancelQueries({ queryKey: ['teachers'] });
             const previousTeachers = queryClient.getQueryData(['teachers']);
 
-            queryClient.setQueryData(['teachers'], (old: any) => {
+            queryClient.setQueryData(['teachers'], (old: Teacher[] | undefined) => {
                 if (!old) return [newData];
                 if (initialTeacher) {
-                    return old.map((t: any) => t.id === initialTeacher.id ? { ...t, ...newData } : t);
+                    return old.map((t) => t.id === initialTeacher.id ? { ...t, ...newData } : t);
                 }
                 return [...old, { ...newData, id: 'temp-' + Date.now() }]; // إنشاء ID مؤقت
             });
@@ -155,7 +155,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
             }
         },
         // عند حدوث خطأ
-        onError: (err: any, variables) => {
+        onError: (err: unknown) => {
             console.error("Teacher mutation failed", err);
             onClose();
         }
@@ -168,7 +168,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
         const email = formData.phone + "@shadbi.com";
         // في وضع التعديل: إن تُرك حقل كلمة المرور فارغاً فهذا يعني "لا تغيير"،
         // فلا نرسله حتى لا نمسح كلمة المرور الحالية بقيمة فارغة
-        const payload: any = { ...formData, email, assignedGroups: initialTeacher?.assignedGroups || [] };
+        const payload: Omit<Teacher, 'id'> & { password?: string } = { ...formData, email, assignedGroups: initialTeacher?.assignedGroups || [] };
         if (initialTeacher && !formData.password) {
             delete payload.password;
         }
@@ -410,7 +410,7 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                     <label className="text-[10px] font-black text-gray-400 uppercase mr-1">الحالة</label>
                     <select
                         value={formData.status}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
                         className="w-full h-12 bg-gray-50/30 border border-gray-100 rounded-[18px] px-4 text-right text-sm font-bold focus:outline-none focus:ring-2 focus:ring-teal-500/10 focus:bg-white transition-all appearance-none"
                         style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'left 1rem center', backgroundSize: '1.2em' }}
                     >

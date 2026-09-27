@@ -25,6 +25,14 @@ import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useAllTeachersAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
 import { teacherDeductionService } from '@/features/teachers/services/deductionService';
 
+interface ExemptionRecord {
+    id: string;
+    student_id: string;
+    student_name?: string;
+    amount: number;
+    exempted_by?: string;
+}
+
 export default function FinanceTeachersPage() {
     const { user } = useAuthStore();
     const [selectedMonth, setSelectedMonth] = useState('');
@@ -79,7 +87,7 @@ export default function FinanceTeachersPage() {
         queryKey: ['exemptions', selectedMonth],
         queryFn: async () => {
             const res = await fetch(`/api/records/exemptions?month=${encodeURIComponent(selectedMonth)}`);
-            const data: any[] = res.ok ? await res.json() : [];
+            const data: ExemptionRecord[] = res.ok ? await res.json() : [];
             return data || [];
         },
         enabled: isClient && !!selectedMonth,
@@ -93,44 +101,44 @@ export default function FinanceTeachersPage() {
 
     const allAttendanceResult = useAllTeachersAttendance(selectedMonth);
     const allAttendanceMap = useMemo(
-        () => (allAttendanceResult.data || {}) as Record<string, any>,
+        () => (allAttendanceResult.data || {}) as Record<string, Record<string, string>>,
         [allAttendanceResult.data]
     );
 
     const normalize = (s: string) => { if (!s) return ''; return s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/[ًٌٍَُِّ]/g, '').replace(/\s+/g, '').trim(); };
 
     const transactions = useMemo(() => dbTransactions.map(tr => ({ ...tr, type: tr.type as 'income' | 'expense' })), [dbTransactions]);
-    const filteredTransactions = useMemo(() => transactions.filter((tr: any) => tr.date?.substring(0, 7) === selectedMonth), [transactions, selectedMonth]);
+    const filteredTransactions = useMemo(() => transactions.filter((tr) => tr.date?.substring(0, 7) === selectedMonth), [transactions, selectedMonth]);
 
     const teacherData = useMemo(() => {
         const collectionsByTeacher: Record<string, { amount: number; count: number }> = {};
         teachers.filter(t => t.status === 'active' || !t.status).forEach(t => { collectionsByTeacher[t.id] = { amount: 0, count: 0 }; });
 
-        allFees.forEach((fee: any) => {
+        allFees.forEach((fee) => {
             const matched = teachers.find(t => fee.createdBy === t.fullName || fee.createdBy === t.phone || normalize(fee.createdBy) === normalize(t.fullName));
             if (matched) { collectionsByTeacher[matched.id].amount += Number(fee.amount?.toString().replace(/[^0-9.]/g, '')) || 0; collectionsByTeacher[matched.id].count += 1; }
         });
 
-        const exemptedIds = exemptions.map((e: any) => e.student_id);
+        const exemptedIds = exemptions.map((e) => e.student_id);
         const collections = Object.entries(collectionsByTeacher).map(([id, data]) => {
             const teacher = teachers.find(t => t.id === id);
             const tGroups = groups.filter(g => g.teacherId === id).map(g => g.id);
             const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
             let deficit = 0, expected = 0;
             tStudents.forEach(s => {
-                const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((sum: number, f: any) => sum + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
+                const paid = allFees.filter((f) => f.studentId === s.id).reduce((sum: number, f) => sum + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
                 const amt = Number(s.monthlyAmount) || 0;
                 expected += amt;
                 if (amt > paid && !exemptedIds.includes(s.id)) deficit += amt - paid;
             });
-            return { teacherId: id, teacherName: teacher?.fullName || id, amount: data.amount, count: data.count, deficit, expected, unpaidCount: tStudents.filter(s => { const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((sum: number, f: any) => sum + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0); return paid < (Number(s.monthlyAmount) || 0); }).length };
+            return { teacherId: id, teacherName: teacher?.fullName || id, amount: data.amount, count: data.count, deficit, expected, unpaidCount: tStudents.filter(s => { const paid = allFees.filter((f) => f.studentId === s.id).reduce((sum: number, f) => sum + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0); return paid < (Number(s.monthlyAmount) || 0); }).length };
         });
 
-        const filteredDeductions = monthDeductions.filter((d: any) => { const dDate = new Date(d.appliedDate); const dm = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`; return dm === selectedMonth && d.status === 'applied' && !d.reason.startsWith('مكافأة:'); });
+        const filteredDeductions = monthDeductions.filter((d) => { const dDate = new Date(d.appliedDate); const dm = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}`; return dm === selectedMonth && d.status === 'applied' && !d.reason.startsWith('مكافأة:'); });
         const deductionBreakdown = teachers.map(t => {
-            const manualDays = filteredDeductions.filter((d: any) => d.teacherId === t.id).reduce((sum: number, d: any) => sum + d.amount, 0);
+            const manualDays = filteredDeductions.filter((d) => d.teacherId === t.id).reduce((sum: number, d) => sum + d.amount, 0);
             const att = allAttendanceMap[t.id] || {};
-            const absenceDays = Object.values(att).reduce((acc: number, s: any) => { if (s === 'absent') return acc + 1; if (s === 'double_absent') return acc + 2; if (s === 'half') return acc + 0.5; if (s === 'quarter') return acc + 0.25; return acc; }, 0);
+            const absenceDays = Object.values(att).reduce((acc: number, s) => { if (s === 'absent') return acc + 1; if (s === 'double_absent') return acc + 2; if (s === 'half') return acc + 0.5; if (s === 'quarter') return acc + 0.25; return acc; }, 0);
             const weeklyWorkingDays = Number(t.weeklyWorkingDays) || 5;
             const standardWorkingDays = Math.max(1, Math.round(weeklyWorkingDays * 4.33));
             const dailyRate = t.accountingType === 'partnership' ? ((Number(t.partnershipPercentage) || 0) / standardWorkingDays) : ((Number(t.salary) || 1000) / standardWorkingDays);
@@ -142,7 +150,7 @@ export default function FinanceTeachersPage() {
         const totalCollected = collections.reduce((s, c) => s + c.amount, 0);
         const totalDeficit = collections.reduce((s, c) => s + c.deficit, 0);
         const totalExpected = collections.reduce((s, c) => s + c.expected, 0);
-        const totalExempted = exemptions.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+        const totalExempted = exemptions.reduce((s: number, e) => s + (Number(e.amount) || 0), 0);
         const totalDeductions = deductionBreakdown.reduce((s, d) => s + d.totalAmount, 0);
 
         return { collections, deductionBreakdown, totalCollected, totalDeficit, totalExpected, totalExempted, totalDeductions };
@@ -240,7 +248,7 @@ export default function FinanceTeachersPage() {
                         {exemptions.length === 0 ? (
                             <p className="text-xs text-gray-400 font-bold text-center py-8 bg-white rounded-2xl border border-dashed border-gray-100">لا توجد إعفاءات.</p>
                         ) : (
-                            exemptions.map((ex: any) => {
+                            exemptions.map((ex) => {
                                 const student = students.find(s => s.id === ex.student_id);
                                 const group = student ? groups.find(g => g.id === student.groupId) : null;
                                 return (
