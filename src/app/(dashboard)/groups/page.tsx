@@ -7,18 +7,10 @@ import { Group } from '@/types';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import { getStudents } from '@/features/students/services/studentService';
 import { getAllAttendanceForMonth } from '@/features/students/services/recordsService';
-import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import Users from 'lucide-react/dist/esm/icons/users'
-import Search from 'lucide-react/dist/esm/icons/search'
 import Plus from 'lucide-react/dist/esm/icons/plus'
-import Menu from 'lucide-react/dist/esm/icons/menu'
 import X from 'lucide-react/dist/esm/icons/x'
-import Settings2 from 'lucide-react/dist/esm/icons/settings-2'
-import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
-import Filter from 'lucide-react/dist/esm/icons/filter'
-import ArrowDownUp from 'lucide-react/dist/esm/icons/arrow-down-up'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import Edit2 from 'lucide-react/dist/esm/icons/edit-2'
 import Check from 'lucide-react/dist/esm/icons/check'
@@ -60,7 +52,7 @@ export default function GroupsPage() {
         }
     });
 
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm] = useState('');
     const [filters, setFilters] = useState<string[]>(['الكل']);
 
     // Modal states
@@ -74,7 +66,6 @@ export default function GroupsPage() {
     const [editTeacherId, setEditTeacherId] = useState('');
 
     const [sortBy, setSortBy] = useState<'name' | 'studentCount' | 'attendance'>('name');
-    const { toggleSidebar } = useUIStore();
     const { user } = useAuthStore();
 
     // Mutations

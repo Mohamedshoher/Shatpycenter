@@ -110,28 +110,6 @@ export const useTeacherDashboard = (
             totalCollected,
             totalCollectedByManager,
             totalHandedOver,
-            directorReceivedTotal,
-            totalCollectedForGroup,
-            basicSalary,
-            attendanceBasedSalary,
-            autoRewards,
-            manualRewardsTotal,
-            autoDeductions,
-            manualDeductionsTotal,
-            totalPaid,
-            totalEntitlement,
-            remainingToPay,
-            dailyRate,
-            hourlyRate,
-            dailyHours,
-            weeklyWorkingDays,
-            isPartnership,
-            partnershipPercentage,
-            expectedPartnershipSalary,
-            totalWorkingDays,
-            attendedDays,
-            absentDays,
-            totalAbsentDays
         } = salaryStats;
 
         // 4. الطلاب الذين لم يدفعوا

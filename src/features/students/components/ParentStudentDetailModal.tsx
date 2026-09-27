@@ -8,15 +8,9 @@ import BookOpen from 'lucide-react/dist/esm/icons/book-open'
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
 import XCircle from 'lucide-react/dist/esm/icons/x-circle'
-import Info from 'lucide-react/dist/esm/icons/info'
 import User from 'lucide-react/dist/esm/icons/user'
-import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
-import MapPin from 'lucide-react/dist/esm/icons/map-pin'
 import Clock from 'lucide-react/dist/esm/icons/clock'
-import Book from 'lucide-react/dist/esm/icons/book'
-import Award from 'lucide-react/dist/esm/icons/award'
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import Users from 'lucide-react/dist/esm/icons/users'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
@@ -61,10 +55,6 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
         fees,
         plans,
         exemptions,
-        isLoadingAttendance,
-        isLoadingExams,
-        isLoadingFees,
-        isLoadingPlans,
     } = useStudentRecords(student?.id || '');
 
     const saveScheduleMutation = useMutation({

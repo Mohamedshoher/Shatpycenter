@@ -6,7 +6,6 @@
 import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { useQuery, useQueryClient, useMutation, keepPreviousData } from '@tanstack/react-query';
 
 // ==========================================
@@ -15,23 +14,12 @@ import { useQuery, useQueryClient, useMutation, keepPreviousData } from '@tansta
 import X from 'lucide-react/dist/esm/icons/x'
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
-import Briefcase from 'lucide-react/dist/esm/icons/briefcase'
 import Phone from 'lucide-react/dist/esm/icons/phone'
-import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
 import FileText from 'lucide-react/dist/esm/icons/file-text'
-import Users from 'lucide-react/dist/esm/icons/users'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import Edit3 from 'lucide-react/dist/esm/icons/edit-3'
-import Plus from 'lucide-react/dist/esm/icons/plus'
 import CircleDollarSign from 'lucide-react/dist/esm/icons/circle-dollar-sign'
-import Coins from 'lucide-react/dist/esm/icons/coins'
-import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import Loader from 'lucide-react/dist/esm/icons/loader'
-import UserX from 'lucide-react/dist/esm/icons/user-x'
-import Gift from 'lucide-react/dist/esm/icons/gift'
-import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
-import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
 import Layers from 'lucide-react/dist/esm/icons/layers';
 
 // ==========================================
@@ -45,11 +33,9 @@ import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeductions';
 import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
 import { getTeacherAttendance, TeacherAttendanceStatus } from '@/features/teachers/services/attendanceService';
-import { DeductionsList } from '@/features/teachers/components/DeductionsList';
 import { getFeesByMonth, deleteFeeRecord } from '@/features/students/services/recordsService';
 import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction, addTransaction } from '@/features/finance/services/financeService';
 import { updateGroup } from '@/features/groups/services/groupService';
-import { automationService } from '@/features/automation/services/automationService';
 import { createNotification } from '@/features/notifications/services/notificationService';
 import { useTeacherDashboard } from '@/features/teachers/hooks/useTeacherDashboard';
 import { TeacherDeficitModal } from './TeacherDeficitModal';
@@ -68,13 +54,6 @@ const TeacherCollectedPaymentsModal = lazy(() => import('./TeacherCollectedPayme
 // ==========================================
 // 4. الدوال المساعدة (Helper Functions) - خارج المكون لتحسين الأداء
 // ==========================================
-// دالة لتحويل الأرقام العربية إلى إنجليزية
-const arabicToEnglishNumber = (str: string): number => {
-    const arabicNumerals = '٠١٢٣٤٥٦٧٨٩';
-    const converted = String(str).replace(/[٠-٩]/g, d => arabicNumerals.indexOf(d).toString());
-    return parseInt(converted.replace(/[^0-9]/g, '')) || 0;
-};
-
 // دالة لجلب اسم الشهر والسنة بشكل ديناميكي
 const getMonthLabel = (offset: number) => {
     const d = new Date();
@@ -110,7 +89,6 @@ export default function TeacherDetailModal({
 
     // --- تحديد صلاحيات المستخدم الحالي ---
     const isTeacher = user?.role === 'teacher' || user?.role === 'schedule_secretary';
-    const isDirectorOnly = user?.role === 'director';
     const isDirector = user?.role === 'director' || user?.role === 'supervisor';
 
     // --- جلب البيانات العامة ---
@@ -119,7 +97,6 @@ export default function TeacherDetailModal({
     const { data: teachers } = useTeachers();
 
     const currentMonthLabel = getMonthLabel(0); // الشهر الحالي
-    const previousMonthLabel = getMonthLabel(-1); // الشهر السابق
 
     // ==========================================
     // إدارة حالة الشهر والتواريخ
@@ -154,7 +131,7 @@ export default function TeacherDetailModal({
     // ==========================================
 
     // 1. جلب الخصومات
-    const { deductions, loading: deductionsLoading, loadDeductions, applyDeduction } = useTeacherDeductions(teacher?.id);
+    const { deductions, loadDeductions } = useTeacherDeductions(teacher?.id);
 
     // 2. جلب الحضور
     const { attendance: attendanceData, updateAttendanceAsync } = useTeacherAttendance(teacher?.id, selectedMonthRaw);
@@ -201,7 +178,7 @@ export default function TeacherDetailModal({
     });
 
     // 6. جلب سجل الرواتب
-    const { data: paymentsHistory = [], isLoading: paymentsLoading } = useQuery({
+    const { data: paymentsHistory = [] } = useQuery({
         queryKey: ['salaryPayments', teacher?.id, selectedMonthRaw],
         queryFn: async () => {
             if (!teacher?.id) return [];
@@ -301,7 +278,6 @@ export default function TeacherDetailModal({
         isPartnership,
         partnershipPercentage,
         directorReceivedTotal,
-        expectedPartnershipSalary,
         totalWorkingDays,
         attendedDays,
         absentDays,
@@ -320,11 +296,6 @@ export default function TeacherDetailModal({
     const [activeTab, setActiveTab] = useState('collection'); // التبويب النشط
     const [amount, setAmount] = useState(''); // مبلغ التحصيل
     const [notes, setNotes] = useState(''); // ملاحظات التحصيل
-
-    // حالات الخصم والمكافأة اليدوية
-    const [manualEntryType, setManualEntryType] = useState<'reward' | 'discipline'>('reward');
-    const [manualEntryAmount, setManualEntryAmount] = useState('');
-    const [manualEntryNote, setManualEntryNote] = useState('');
 
     // حالات عجز المجموعة
     const [deficitTab, setDeficitTab] = useState<'unpaid' | 'exempted'>('unpaid');
@@ -361,18 +332,18 @@ export default function TeacherDetailModal({
             if (!res.ok) return;
 
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
-        } catch (err) {
+        } catch {
             // Silently ignore
         }
     };
 
     // 2. إلغاء العفو
-    const handleRemoveExemption = async (studentId: string, studentName: string) => {
+    const handleRemoveExemption = async (studentId: string) => {
         try {
             const res = await fetch(`/api/records/exemptions?studentId=${encodeURIComponent(studentId)}&month=${encodeURIComponent(selectedMonthRaw)}`, { method: 'DELETE' });
             if (!res.ok) return;
             queryClient.invalidateQueries({ queryKey: ['free_exemptions', selectedMonthRaw] });
-        } catch (err) {
+        } catch {
             // Silently ignore
         }
     };
@@ -393,37 +364,7 @@ export default function TeacherDetailModal({
         }
     };
 
-    // 4. إضافة خصم أو مكافأة يدوية
-    const handleAddManualEntry = async () => {
-        if (!manualEntryAmount || !teacher) return;
-        const prefix = manualEntryType === 'reward' ? 'مكافأة: ' : 'خصم: ';
-        const actualAmount = Number(manualEntryAmount);
-
-        try {
-            await applyDeduction(teacher.id, teacher.fullName, actualAmount, prefix + (manualEntryNote || 'بدون سبب'));
-
-            const title = manualEntryType === 'reward' ? 'مكافأة' : 'خصم';
-            const relatedDate = new Date().toISOString().split('T')[0];
-            await createNotification({
-                teacherId: manualEntryType === 'reward' ? null : teacher.id,
-                type: manualEntryType as 'deduction' | 'reward',
-                title,
-                message: `${title}: ${teacher.fullName} - ${actualAmount} يوم`,
-                reason: manualEntryNote || 'بدون سبب',
-                amount: actualAmount,
-                relatedDate,
-            });
-
-            setManualEntryAmount('');
-            setManualEntryNote('');
-            loadDeductions();
-        } catch (error) {
-            console.error("Error adding manual entry:", error);
-            alert('حدث خطأ أثناء الإضافة');
-        }
-    };
-
-    // 5. صرف جزء أو كامل الراتب
+    // 4. صرف جزء أو كامل الراتب
     const handlePaySalary = async (amount: number, type: string) => {
         if (amount <= 0 || !teacher) return alert('لا يمكن صرف مبلغ صفر أو سالب');
 

@@ -1,24 +1,17 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import Wallet from 'lucide-react/dist/esm/icons/wallet'
-import Gift from 'lucide-react/dist/esm/icons/gift'
-import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
-import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check'
-import Loader from 'lucide-react/dist/esm/icons/loader'
-import X from 'lucide-react/dist/esm/icons/x';
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getTransactionsByMonth } from '@/features/finance/services/financeService';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { useAuthStore } from '@/store/useAuthStore';
-import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
@@ -60,15 +53,6 @@ export default function FinanceTeachersPage() {
         return result;
     }, []);
 
-    const { data: dbTransactions = [] } = useQuery({
-        queryKey: ['transactions', selectedMonth],
-        queryFn: async () => {
-            if (!isClient) return [];
-            const [year, month] = selectedMonth.split('-');
-            return await getTransactionsByMonth(parseInt(year), parseInt(month));
-        },
-        enabled: isClient && !!selectedMonth,
-    });
 
     const { data: allFees = [] } = useQuery({
         queryKey: ['all-fees', selectedMonth],
@@ -106,9 +90,6 @@ export default function FinanceTeachersPage() {
     );
 
     const normalize = (s: string) => { if (!s) return ''; return s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/[ًٌٍَُِّ]/g, '').replace(/\s+/g, '').trim(); };
-
-    const transactions = useMemo(() => dbTransactions.map(tr => ({ ...tr, type: tr.type as 'income' | 'expense' })), [dbTransactions]);
-    const filteredTransactions = useMemo(() => transactions.filter((tr) => tr.date?.substring(0, 7) === selectedMonth), [transactions, selectedMonth]);
 
     const teacherData = useMemo(() => {
         const collectionsByTeacher: Record<string, { amount: number; count: number }> = {};
