@@ -293,7 +293,8 @@ export default function TeacherDetailModal({
     const [showCollectedDetails, setShowCollectedDetails] = useState(false);
     const [showManagerCollectedDetails, setShowManagerCollectedDetails] = useState(false);
     const [showDeficitDetails, setShowDeficitDetails] = useState(false);
-    const [activeTab, setActiveTab] = useState('collection'); // التبويب النشط
+    // تبويب "التحصيل" غير متاح للمشرف، فنفتح على "الحضور" بدلاً منه كتبويب افتراضي
+    const [activeTab, setActiveTab] = useState(user?.role === 'supervisor' ? 'attendance' : 'collection'); // التبويب النشط
     const [amount, setAmount] = useState(''); // مبلغ التحصيل
     const [notes, setNotes] = useState(''); // ملاحظات التحصيل
 
@@ -633,7 +634,10 @@ export default function TeacherDetailModal({
         { id: 'groups', label: 'المجموعات', icon: Layers },
         { id: 'agreement', label: 'الاتفاق', icon: FileText },
     ].filter(tab => {
-        if (user?.role === 'supervisor') return tab.id !== 'payroll' && tab.id !== 'collection';
+        // المشرف ممنوع من رؤية التحصيل/الراتب الخاصين بمعلم آخر، لكنه يقدر يشوف
+        // تحصيله وراتبه هو في ملفه الشخصي (لما يفتح سجله هو نفسه)
+        const isOwnProfile = user?.role === 'supervisor' && teacher?.id === user?.teacherId;
+        if (user?.role === 'supervisor' && !isOwnProfile) return tab.id !== 'payroll' && tab.id !== 'collection';
         return true;
     });
 
@@ -788,8 +792,12 @@ export default function TeacherDetailModal({
                                 <h2 className="text-base md:text-2xl font-black text-slate-900 truncate leading-tight">{teacher!.fullName}</h2>
                                 {isDirector ? (
                                     <div className="flex flex-row items-center gap-1 shrink-0">
-                                        <button onClick={() => onDelete?.(teacher!)} className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="حذف"><Trash2 size={14} className="md:w-[18px] md:h-[18px]" /></button>
-                                        <button onClick={() => onEdit?.(teacher!)} className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="تعديل"><Edit3 size={14} className="md:w-[18px] md:h-[18px]" /></button>
+                                        {user?.role === 'director' && (
+                                            <>
+                                                <button onClick={() => onDelete?.(teacher!)} className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="حذف"><Trash2 size={14} className="md:w-[18px] md:h-[18px]" /></button>
+                                                <button onClick={() => onEdit?.(teacher!)} className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="تعديل"><Edit3 size={14} className="md:w-[18px] md:h-[18px]" /></button>
+                                            </>
+                                        )}
                                         <a href={`tel:${teacher!.phone}`} className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="اتصال"><Phone size={14} className="md:w-[18px] md:h-[18px]" /></a>
                                     </div>
                                 ) : (
