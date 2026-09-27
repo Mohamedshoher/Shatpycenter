@@ -6,7 +6,7 @@ import { User } from "@/types";// نوع المستخدم
  * وتُصدر جلسة موقّعة (Cookie آمن httpOnly). لا يجري أي تحقق من كلمات المرور
  * داخل المتصفح حتى لا تصل كلمات المرور أو منطق التحقق إلى حزمة جافاسكريبت للعميل.
  */
-export const loginWithRole = async (identifier: string, password: string): Promise<User> => {
+export const loginWithRole = async (identifier: string, password: string): Promise<{ user: User; messagingToken?: string }> => {
     const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -19,7 +19,7 @@ export const loginWithRole = async (identifier: string, password: string): Promi
         throw new Error(body.error || 'حدث خطأ في تسجيل الدخول.');
     }
 
-    return body.user as User;
+    return { user: body.user as User, messagingToken: body.messagingToken as string | undefined };
 };
 
 /**
