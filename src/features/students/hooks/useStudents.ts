@@ -25,9 +25,9 @@ export const useStudents = (groupIds?: string[], status?: string) => {
         onMutate: async ({ id, status, groupId }) => {
             await queryClient.cancelQueries({ queryKey: ['students'] });
             const previousStudents = queryClient.getQueryData(['students']);
-            queryClient.setQueryData(['students'], (old: any) => {
+            queryClient.setQueryData(['students'], (old: Student[] | undefined) => {
                 if (!old) return old;
-                return old.map((s: any) => s.id === id ? { ...s, status, groupId: status === 'active' ? groupId : s.groupId } : s);
+                return old.map((s) => s.id === id ? { ...s, status, groupId: status === 'active' ? groupId : s.groupId } : s);
             });
             return { previousStudents };
         },
@@ -44,9 +44,9 @@ export const useStudents = (groupIds?: string[], status?: string) => {
         onMutate: async (id) => {
             await queryClient.cancelQueries({ queryKey: ['students'] });
             const previousStudents = queryClient.getQueryData(['students']);
-            queryClient.setQueryData(['students'], (old: any) => {
+            queryClient.setQueryData(['students'], (old: Student[] | undefined) => {
                 if (!old) return old;
-                return old.filter((s: any) => s.id !== id);
+                return old.filter((s) => s.id !== id);
             });
             return { previousStudents };
         },

@@ -17,7 +17,7 @@ export const useAddGroup = () => {
         onMutate: async (newGroup) => {
             await queryClient.cancelQueries({ queryKey: ['groups'] });
             const previousGroups = queryClient.getQueryData(['groups']);
-            queryClient.setQueryData(['groups'], (old: any) => [...(old || []), { ...newGroup, id: 'temp-' + Date.now() }]);
+            queryClient.setQueryData(['groups'], (old: Group[] | undefined) => [...(old || []), { ...newGroup, id: 'temp-' + Date.now() }]);
             return { previousGroups };
         },
         onSuccess: () => {
@@ -33,9 +33,9 @@ export const useUpdateGroup = () => {
         onMutate: async ({ id, data }) => {
             await queryClient.cancelQueries({ queryKey: ['groups'] });
             const previousGroups = queryClient.getQueryData(['groups']);
-            queryClient.setQueryData(['groups'], (old: any) => {
+            queryClient.setQueryData(['groups'], (old: Group[] | undefined) => {
                 if (!old) return old;
-                return old.map((g: any) => g.id === id ? { ...g, ...data } : g);
+                return old.map((g) => g.id === id ? { ...g, ...data } : g);
             });
             return { previousGroups };
         },
@@ -52,9 +52,9 @@ export const useDeleteGroup = () => {
         onMutate: async (id) => {
             await queryClient.cancelQueries({ queryKey: ['groups'] });
             const previousGroups = queryClient.getQueryData(['groups']);
-            queryClient.setQueryData(['groups'], (old: any) => {
+            queryClient.setQueryData(['groups'], (old: Group[] | undefined) => {
                 if (!old) return old;
-                return old.filter((g: any) => g.id !== id);
+                return old.filter((g) => g.id !== id);
             });
             return { previousGroups };
         },

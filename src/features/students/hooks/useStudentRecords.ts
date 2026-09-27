@@ -20,6 +20,7 @@ import {
     updateExamGoal,
     deleteExamGoal,
 } from "../services/recordsService";
+import type { AttendanceRecord, ExamRecord, FeeRecord, PlanRecord, ExamGoal } from "../services/recordsService";
 
 export const useStudentRecords = (studentId: string) => {
     const queryClient = useQueryClient();
@@ -60,9 +61,9 @@ export const useStudentRecords = (studentId: string) => {
             await queryClient.cancelQueries({ queryKey: ['attendance', studentId] });
             const previousAttendance = queryClient.getQueryData(['attendance', studentId]);
 
-            queryClient.setQueryData(['attendance', studentId], (old: any) => {
+            queryClient.setQueryData(['attendance', studentId], (old: AttendanceRecord[] | undefined) => {
                 const records = Array.isArray(old) ? old : [];
-                const filtered = records.filter((r: any) => !(r.day === newRecord.day && r.month === newRecord.month));
+                const filtered = records.filter((r) => !(r.day === newRecord.day && r.month === newRecord.month));
                 return [...filtered, { ...newRecord, id: 'temp-' + Date.now() }];
             });
 
@@ -83,7 +84,7 @@ export const useStudentRecords = (studentId: string) => {
         onMutate: async (newRecord) => {
             await queryClient.cancelQueries({ queryKey: ['exams', studentId] });
             const previousExams = queryClient.getQueryData(['exams', studentId]);
-            queryClient.setQueryData(['exams', studentId], (old: any) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
+            queryClient.setQueryData(['exams', studentId], (old: ExamRecord[] | undefined) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
             return { previousExams };
         },
         onSettled: () => {
@@ -96,7 +97,7 @@ export const useStudentRecords = (studentId: string) => {
         onMutate: async (newRecord) => {
             await queryClient.cancelQueries({ queryKey: ['fees', studentId] });
             const previousFees = queryClient.getQueryData(['fees', studentId]);
-            queryClient.setQueryData(['fees', studentId], (old: any) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
+            queryClient.setQueryData(['fees', studentId], (old: FeeRecord[] | undefined) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
             return { previousFees };
         },
         onSettled: () => {
@@ -112,7 +113,7 @@ export const useStudentRecords = (studentId: string) => {
     });
 
     const updateExam = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: any }) => updateExamRecord(id, data),
+        mutationFn: ({ id, data }: { id: string; data: Partial<ExamRecord> }) => updateExamRecord(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exams', studentId] });
         }
@@ -191,7 +192,7 @@ export const useStudentRecords = (studentId: string) => {
         onMutate: async (newRecord) => {
             await queryClient.cancelQueries({ queryKey: ['plans', studentId] });
             const previousPlans = queryClient.getQueryData(['plans', studentId]);
-            queryClient.setQueryData(['plans', studentId], (old: any) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
+            queryClient.setQueryData(['plans', studentId], (old: PlanRecord[] | undefined) => [...(old || []), { ...newRecord, id: 'temp-' + Date.now() }]);
             return { previousPlans };
         },
         onSettled: () => {
@@ -207,7 +208,7 @@ export const useStudentRecords = (studentId: string) => {
     });
 
     const updateGoal = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: any }) => updateExamGoal(id, data),
+        mutationFn: ({ id, data }: { id: string; data: Partial<Omit<ExamGoal, 'id' | 'studentId'>> }) => updateExamGoal(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exam_goals', studentId] });
         }
