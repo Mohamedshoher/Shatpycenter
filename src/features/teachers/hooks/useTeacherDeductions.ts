@@ -32,7 +32,7 @@ export const useTeacherDeductions = (teacherId?: string) => {
         ? await teacherDeductionService.getTeacherDeductions(teacherId)
         : await teacherDeductionService.getAllDeductions();
       setDeductions(data);
-    } catch (err) {
+    } catch {
       setError('خطأ في تحميل الخصومات');
     } finally {
       setLoading(false);
@@ -57,7 +57,7 @@ export const useTeacherDeductions = (teacherId?: string) => {
         // تحديث القائمة فوراً بإضافة الخصم الجديد
         setDeductions((prev) => [...prev, deduction]);
         return deduction;
-      } catch (err) {
+      } catch {
         setError('خطأ في تطبيق الخصم');
       }
     },
@@ -70,7 +70,7 @@ export const useTeacherDeductions = (teacherId?: string) => {
       await teacherDeductionService.removeDeduction(deductionId);
       // تحديث القائمة بحذف الخصم المختار
       setDeductions((prev) => prev.filter((d) => d.id !== deductionId));
-    } catch (err) {
+    } catch {
       setError('خطأ في حذف الخصم');
     }
   }, []);

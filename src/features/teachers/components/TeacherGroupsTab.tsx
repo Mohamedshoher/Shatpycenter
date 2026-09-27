@@ -4,7 +4,6 @@ import { FadeIn, SlideIn } from '@/components/ui/transition';
 import Plus from 'lucide-react/dist/esm/icons/plus'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import X from 'lucide-react/dist/esm/icons/x'
-import Layers from 'lucide-react/dist/esm/icons/layers';
 import { Teacher, Group, Student } from '@/types';
 
 interface Props {

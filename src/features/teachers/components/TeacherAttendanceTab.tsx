@@ -38,7 +38,7 @@ export const TeacherAttendanceTab = ({
     updateMonth, selectedMonthRaw, selectedMonth, attendanceData,
     isTeacher, setActiveDayMenu, setTempStatus, activeDayMenu,
     handleAddDiscipline, tempStatus, tempAmount, setTempAmount,
-    tempReason, setTempReason, dayDetails, setDayDetails,
+    tempReason, setTempReason, dayDetails,
     updateAttendanceAsync, dailyRate, deductions = []
 }: TeacherAttendanceTabProps) => {
 
@@ -82,7 +82,7 @@ export const TeacherAttendanceTab = ({
                                 const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
                                 try {
                                     await updateAttendanceAsync({ date: dateStr, status: 'absent' });
-                                } catch (e) {}
+                                } catch {}
                             }
                             alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
                         }}

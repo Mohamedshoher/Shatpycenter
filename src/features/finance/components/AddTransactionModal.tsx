@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import X from 'lucide-react/dist/esm/icons/x'
-import Plus from 'lucide-react/dist/esm/icons/plus'
 import Loader from 'lucide-react/dist/esm/icons/loader';
 import { cn } from '@/lib/utils';
 import { addTransaction } from '../services/financeService';
@@ -63,7 +62,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
                 relatedUserId: undefined
             });
         },
-        onMutate: async (newRecord) => {
+        onMutate: async (newRecord: TransactionData) => {
             // Optimistic update
             const formData: TransactionData = {
                 ...newRecord,
@@ -73,10 +72,10 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
             resetForm();
             onClose();
         },
-        onError: (err, newRecord) => {
+        onError: (err) => {
             console.error('Transaction failed', err);
         },
-        onSuccess: (result) => {
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
         }
     });

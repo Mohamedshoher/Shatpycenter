@@ -334,7 +334,7 @@ export default function ScheduleTab({ student }: { student: Student }) {
             setSelectedSlotKey('');
             setShowSaveSuccess(true);
             setTimeout(() => setShowSaveSuccess(false), 2000);
-        } catch (e) {
+        } catch {
             alert('حدث خطأ أثناء التبديل');
         } finally {
             setIsSwapping(false);

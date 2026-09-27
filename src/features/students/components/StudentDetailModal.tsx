@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import X from 'lucide-react/dist/esm/icons/x'
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import CreditCard from 'lucide-react/dist/esm/icons/credit-card'
 import BookOpen from 'lucide-react/dist/esm/icons/book-open'
@@ -28,9 +27,8 @@ export default function StudentDetailModal({
     student: initialStudent, 
     isOpen, 
     onClose, 
-    initialTab = 'attendance', 
-    onEdit,
-    currentAttendance 
+    initialTab = 'attendance',
+    onEdit
 }: StudentDetailModalProps) {
     // تحديد التبويب النشط (الافتراضي هو الحضور)
     const [activeTab, setActiveTab] = useState(initialTab);

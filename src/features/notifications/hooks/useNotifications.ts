@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AppNotification } from '@/types';
 import { getNotifications, createNotification, markAsRead, markAllAsRead, deleteNotification, clearAllNotifications } from '../services/notificationService';
 
 export const useNotifications = (teacherId?: string) => {

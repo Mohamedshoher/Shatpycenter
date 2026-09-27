@@ -56,7 +56,6 @@ export interface AutomationLog {
 // ==========================================
 
 const WEEKEND_DAYS = [4, 5]; // الخميس والجمعة
-const DAYS_MAP = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
 /** تحويل أي صيغة تاريخ إلى YYYY-MM-DD */
 const normalizeDate = (dateInput: string | Date | undefined): string => {

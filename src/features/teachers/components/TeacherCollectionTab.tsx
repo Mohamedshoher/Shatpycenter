@@ -8,7 +8,6 @@ import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
 import Coins from 'lucide-react/dist/esm/icons/coins'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
-import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { Teacher } from '@/types';
 
@@ -71,7 +70,6 @@ export const TeacherCollectionTab = ({
     setShowDeficitDetails,
     realDeficit,
     unpaidStudents,
-    handleDeleteFee,
     collectionOverage
 }: TeacherCollectionTabProps) => {
     

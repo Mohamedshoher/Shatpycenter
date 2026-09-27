@@ -16,14 +16,13 @@ import Phone from 'lucide-react/dist/esm/icons/phone'
 import Briefcase from 'lucide-react/dist/esm/icons/briefcase'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
 import XCircle from 'lucide-react/dist/esm/icons/x-circle'
-import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
 import Pencil from 'lucide-react/dist/esm/icons/pencil';
 import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
 
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { Teacher } from '@/types';
 import { updateTeacherAttendance } from '../services/attendanceService';
-import { useTeacherAttendance, useAllTeachersAttendance } from '../hooks/useTeacherAttendance';
+import { useAllTeachersAttendance } from '../hooks/useTeacherAttendance';
 import dynamic from 'next/dynamic';
 
 // تحميل المكونات ديناميكياً
@@ -55,14 +54,12 @@ export default function TeacherList() {
 
     // حالة الحضور
     const today = new Date();
-    const [selectedMonthRaw, setSelectedMonthRaw] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
+    const [selectedMonthRaw] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
     const allTeachersAttendanceResult = useAllTeachersAttendance(selectedMonthRaw);
     const allTeachersAttendanceMap = useMemo(
         () => (allTeachersAttendanceResult.data || {}) as Record<string, Record<string, string>>,
         [allTeachersAttendanceResult.data]
     );
-
-    const { updateAttendance, updateAttendanceAsync } = useTeacherAttendance(selectedTeacher?.id, selectedMonthRaw);
 
     // دالة حذف المدرس
     const deleteMutation = useMutation({
@@ -132,9 +129,6 @@ export default function TeacherList() {
             queryClient.invalidateQueries({ queryKey: ['all-teachers-attendance', selectedMonthRaw] });
         });
     };
-
-    // دالة توحيد الحروف العربية
-    const normalize = (s: string) => s?.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/\s+/g, '').trim() || '';
 
     // تصفية المعلمين بناءً على البحث والفلتر
     const filteredTeachers = (() => {

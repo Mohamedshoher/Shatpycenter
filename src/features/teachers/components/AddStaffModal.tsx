@@ -5,7 +5,6 @@
 // ==========================================
 import { useState, useEffect } from 'react'; // هوكس إدارة الحالة والتأثيرات من React
 import Modal from '@/components/ui/modal'; // مكون النافذة المنبثقة الأساسي
-import { Button } from '@/components/ui/button'; // مكون الزر الجاهز
 import { cn } from '@/lib/utils'; // وظيفة لدمج أصناف CSS بشكل ديناميكي
 
 // ==========================================

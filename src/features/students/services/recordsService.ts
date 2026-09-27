@@ -100,7 +100,7 @@ export const getStudentAttendance = async (studentId: string): Promise<Attendanc
 
 export const getAllAttendanceForMonth = async (monthKey: string): Promise<Record<string, AttendanceRecord[]>> => {
     try {
-        const [year, month] = monthKey.split('-').map(Number);
+        const [, month] = monthKey.split('-').map(Number);
         const res = await fetch(`/api/attendance?monthKey=${encodeURIComponent(monthKey)}`);
         if (!res.ok) return {};
         const data = await res.json();
@@ -440,7 +440,7 @@ export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
         return [];
     }
 };
-export const getStudentLeaveRequests = async (studentId: string): Promise<LeaveRequest[]> => { return []; };
+export const getStudentLeaveRequests = async (_studentId: string): Promise<LeaveRequest[]> => { return []; };
 export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status' | 'createdAt'>): Promise<LeaveRequest> => {
     try {
         const res = await fetch('/api/records/leaves', {
@@ -500,7 +500,7 @@ export const updateLeaveRequest = async (id: string, data: Partial<LeaveRequest>
         throw error;
     }
 };
-export const deleteLeaveRequest = async (id: string): Promise<void> => { };
+export const deleteLeaveRequest = async (_id: string): Promise<void> => { };
 
 // ===== حساب الحضور الشهري =====
 export const getMonthlyAttendanceSummary = async (studentId: string, month: string) => {
@@ -516,7 +516,7 @@ export const getMonthlyAttendanceSummary = async (studentId: string, month: stri
 };
 
 // ===== حساب الرسوم المستحقة =====
-export const hasUnpaidFees = async (studentId: string, monthlyAmount: number): Promise<boolean> => {
+export const hasUnpaidFees = async (studentId: string, _monthlyAmount: number): Promise<boolean> => {
     const fees = await getStudentFees(studentId);
     const currentDate = new Date();
     const currentMonth = currentDate.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
