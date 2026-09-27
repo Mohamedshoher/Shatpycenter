@@ -46,14 +46,14 @@ export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
 
             // أ) تحديث ذاكرة التخزين المؤقت (Cache) الخاصة بالمعلم الفردي
             await queryClient.cancelQueries({ queryKey: ['teacher-attendance', teacherId, monthKey] }); // إيقاف أي جلب جاري
-            queryClient.setQueryData(['teacher-attendance', teacherId, monthKey], (old: any) => ({
+            queryClient.setQueryData(['teacher-attendance', teacherId, monthKey], (old: Record<string, TeacherAttendanceStatus> | undefined) => ({
                 ...(old || {}),
                 [day]: status // تحديث حالة اليوم المطلوب فقط
             }));
 
             // ب) تحديث ذاكرة التخزين المؤقت (Cache) الخاصة بخريطة جميع المعلمين
             await queryClient.cancelQueries({ queryKey: ['all-teachers-attendance', monthKey] }); // إيقاف أي جلب جاري
-            queryClient.setQueryData(['all-teachers-attendance', monthKey], (old: any) => ({
+            queryClient.setQueryData(['all-teachers-attendance', monthKey], (old: Record<string, Record<string, TeacherAttendanceStatus>> | undefined) => ({
                 ...(old || {}),
                 [teacherId]: {
                     ...(old?.[teacherId] || {}),

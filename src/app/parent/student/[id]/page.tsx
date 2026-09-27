@@ -103,7 +103,7 @@ export default function StudentDetailParentPage() {
     );
 
     const renderTabs = () => {
-        const tabs: { id: TabType, label: string, icon: any }[] = [
+        const tabs: { id: TabType, label: string, icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }> }[] = [
             { id: "exams", label: "الاختبارات", icon: BookOpen },
             { id: "fees", label: "المصروفات", icon: CreditCard },
             { id: "attendance", label: "الحضور", icon: Calendar },

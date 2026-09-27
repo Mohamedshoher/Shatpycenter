@@ -10,11 +10,12 @@ import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import TrendingDown from 'lucide-react/dist/esm/icons/trending-down'
 import Users from 'lucide-react/dist/esm/icons/users'
 import Loader from 'lucide-react/dist/esm/icons/loader';
+import type { TeacherDeduction } from '@/features/teachers/services/deductionService';
 
 export default function DisciplineLogPage() {
-  const [allDeductions, setAllDeductions] = useState<any[]>([]);
+  const [allDeductions, setAllDeductions] = useState<TeacherDeduction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filteredDeductions, setFilteredDeductions] = useState<any[]>([]);
+  const [filteredDeductions, setFilteredDeductions] = useState<TeacherDeduction[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
@@ -166,7 +167,7 @@ export default function DisciplineLogPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">جميع المعلمين</option>
-                {uniqueTeachers.map((teacher: any) => (
+                {uniqueTeachers.map((teacher) => (
                   <option key={teacher.id} value={teacher.id}>
                     {teacher.name}
                   </option>

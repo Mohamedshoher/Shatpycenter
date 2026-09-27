@@ -4,6 +4,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getGroups, updateGroup, deleteGroup } from '@/features/groups/services/groupService';
+import { Group } from '@/types';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import { getStudents } from '@/features/students/services/studentService';
 import Modal from '@/components/ui/modal';
@@ -38,7 +39,7 @@ export default function ManageGroupsModal({ isOpen, onClose }: ManageGroupsModal
     const { data: teachers } = useQuery({ queryKey: ['teachers'], queryFn: () => getTeachers() });
     const { data: students } = useQuery({ queryKey: ['students'], queryFn: () => getStudents() });
 
-    const [selectedGroupToEdit, setSelectedGroupToEdit] = useState<any | null>(null);
+    const [selectedGroupToEdit, setSelectedGroupToEdit] = useState<Group | null>(null);
 
     // 3. تحسين وتصفية بيانات المجموعات (Memoized Data)
     const enhancedGroups = useMemo(() => {

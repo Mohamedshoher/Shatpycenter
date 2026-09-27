@@ -61,7 +61,7 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<string> 
 };
 
 export const updateStudent = async (id: string, data: Partial<Student>): Promise<void> => {
-    const payload: any = { id, ...data };
+    const payload: Record<string, unknown> = { id, ...data };
     if (data.notes !== undefined || data.isAzhari !== undefined || data.azhariGrade !== undefined) {
         payload.notes = formatNotesWithAzhari(data.notes, !!data.isAzhari, data.azhariGrade) || null;
     }

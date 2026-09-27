@@ -14,6 +14,7 @@ import Plus from 'lucide-react/dist/esm/icons/plus'
 import Banknote from 'lucide-react/dist/esm/icons/banknote'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { cn } from '@/lib/utils';
+import { FinancialTransaction } from '@/types';
 
 interface TeacherPayrollTabProps {
     selectedMonth: string;
@@ -28,10 +29,10 @@ interface TeacherPayrollTabProps {
     totalEntitlement: number;
     remainingToPay: number;
     isTeacher: boolean;
-    paymentsHistory: any[];
+    paymentsHistory: FinancialTransaction[];
     handlePaySalary: (amount: number, description: string) => void;
     handleSendReport: () => void;
-    deleteSalaryMutation: any;
+    deleteSalaryMutation: { mutate: (id: string) => void; isPending: boolean };
     isPartnership?: boolean;
     partnershipPercentage?: number;
     directorReceivedTotal?: number;
@@ -239,7 +240,7 @@ export const TeacherPayrollTab = ({
                         </div>
                     ) : (
                         <div className="space-y-2">
-                            {paymentsHistory.map((p: any) => (
+                            {paymentsHistory.map((p) => (
                                 <div key={p.id} className="flex flex-row-reverse items-center justify-between bg-white p-4 rounded-2xl border border-gray-50 hover:border-gray-200 hover:shadow-sm transition-all group">
                                     <div className="flex flex-row-reverse items-center gap-3">
                                         <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">

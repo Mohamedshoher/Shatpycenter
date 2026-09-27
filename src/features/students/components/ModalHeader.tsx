@@ -9,8 +9,9 @@ import { useStudents } from '../hooks/useStudents';
 import { useGroups } from '../../../features/groups/hooks/useGroups';
 import { cn, getWhatsAppUrl } from '../../../lib/utils';
 import { getStudentAzhariInfo } from '../constants/azharCurriculum';
+import { Student } from '@/types';
 
-export default function ModalHeader({ student, onClose, onEdit }: any) {
+export default function ModalHeader({ student, onClose, onEdit }: { student: Student | null; onClose: () => void; onEdit?: (student: Student) => void }) {
     const { user } = useAuthStore();
     const { data: groups = [] } = useGroups();
     const { archiveStudent, restoreStudent } = useStudents();
@@ -33,6 +34,7 @@ export default function ModalHeader({ student, onClose, onEdit }: any) {
 
     // وظيفة تبديل حالة الأرشفة
     const handleArchiveToggle = () => {
+        if (!student) return;
         if (isArchived) {
             if (confirm(`استعادة ${student.fullName}؟`)) restoreStudent(student.id, student.groupId || null);
         } else {
@@ -57,7 +59,7 @@ export default function ModalHeader({ student, onClose, onEdit }: any) {
                     {/* اسم المجموعة */}
                     <span className="text-blue-600 font-bold text-sm bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                        {groups.find((g: any) => g.id === student?.groupId)?.name || 'بدون مجموعة'}
+                        {groups.find((g) => g.id === student?.groupId)?.name || 'بدون مجموعة'}
                     </span>
 
                     {/* شارة أزهري */}
@@ -72,7 +74,7 @@ export default function ModalHeader({ student, onClose, onEdit }: any) {
                         {canManage && (
                             <>
                                 {/* أزرار التحكم (أرشفة، تعديل) */}
-                                <button onClick={() => onEdit?.(student)} className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Edit3 size={16} /></button>
+                                <button onClick={() => student && onEdit?.(student)} className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Edit3 size={16} /></button>
                                 <button onClick={handleArchiveToggle} className={cn("w-9 h-9 rounded-xl flex items-center justify-center transition-all", isArchived ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-500")}>
                                     {isArchived ? <RotateCcw size={16} /> : <Archive size={16} />}
                                 </button>

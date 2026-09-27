@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
-import { automationService } from '@/features/automation/services/automationService';
+import { automationService, AutomationLog } from '@/features/automation/services/automationService';
 
 export const useAutomationExecution = () => {
     const [isExecuting, setIsExecuting] = useState(false);
     const [isExecutingExams, setIsExecutingExams] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [logs, setLogs] = useState<any[]>([]);
+    const [logs, setLogs] = useState<AutomationLog[]>([]);
 
     // أتمتة التقارير اليومية
     const executeMissingReportDeduction = useCallback(async (customDate?: string) => {

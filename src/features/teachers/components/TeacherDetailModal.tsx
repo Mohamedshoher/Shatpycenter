@@ -44,7 +44,7 @@ import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useTeacherDeductions } from '@/features/teachers/hooks/useTeacherDeductions';
 import { useTeacherAttendance } from '@/features/teachers/hooks/useTeacherAttendance';
-import { getTeacherAttendance } from '@/features/teachers/services/attendanceService';
+import { getTeacherAttendance, TeacherAttendanceStatus } from '@/features/teachers/services/attendanceService';
 import { DeductionsList } from '@/features/teachers/components/DeductionsList';
 import { getFeesByMonth, deleteFeeRecord } from '@/features/students/services/recordsService';
 import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction, addTransaction } from '@/features/finance/services/financeService';
@@ -562,7 +562,7 @@ export default function TeacherDetailModal({
                 return;
             }
 
-            let finalStatus: any = 'present';
+            let finalStatus: TeacherAttendanceStatus = 'present';
             if (tempStatus === 'present') finalStatus = 'present';
             else if (tempStatus === 'absent') finalStatus = 'absent';
             else if (tempStatus === 'discipline') finalStatus = tempAmount === 'day' ? 'absent' : tempAmount === 'half' ? 'half' : tempAmount === 'double' ? 'double_absent' : 'quarter';

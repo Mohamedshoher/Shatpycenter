@@ -138,7 +138,7 @@ export default function FinancePage() {
 
     const allAttendanceResult = useAllTeachersAttendance(selectedMonth);
     const allAttendanceMap = useMemo(
-        () => (allAttendanceResult.data || {}) as Record<string, any>,
+        () => (allAttendanceResult.data || {}) as Record<string, Record<string, string>>,
         [allAttendanceResult.data]
     );
 

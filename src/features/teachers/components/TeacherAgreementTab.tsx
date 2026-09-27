@@ -2,9 +2,10 @@
 
 import FileText from 'lucide-react/dist/esm/icons/file-text'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import { Teacher } from '@/types';
 
 interface Props {
-    teacher: any;
+    teacher: Teacher | null | undefined;
 }
 
 export const TeacherAgreementTab = ({ teacher }: Props) => {

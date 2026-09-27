@@ -13,8 +13,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { updateStudent, getStudents } from '../services/studentService';
 import { getGroups } from '../../groups/services/groupService';
 import { cn } from '../../../lib/utils';
+import { Student } from '@/types';
 
-export default function ScheduleTab({ student }: any) {
+export default function ScheduleTab({ student }: { student: Student }) {
     const queryClient = useQueryClient();
     const weekDaysNames = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
@@ -259,7 +260,7 @@ export default function ScheduleTab({ student }: any) {
     // منطق التبديل مع طالب آخر
     const allGroupSlots = useMemo(() => {
         if (!swapState || !allStudents || !student.groupId) return [];
-        const slotsMap = new Map<string, { day: string, time: string, students: any[] }>();
+        const slotsMap = new Map<string, { day: string, time: string, students: Student[] }>();
         
         allStudents.forEach(s => {
             if (s.id !== student.id && s.groupId === student.groupId && s.status === 'active' && s.appointment) {

@@ -38,7 +38,7 @@ export default function AutomationPage() {
             const result = await executeMissingReportDeduction(checkDateStr);
             setSelectedDate('');
 
-            const violators = (result || []).filter((r: any) => r.recipientId !== 'system');
+            const violators = (result || []).filter((r) => r.recipientId !== 'system');
 
             if (violators.length > 0) {
                 alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة ليوم ${checkDateDisplay}.`);
@@ -53,7 +53,7 @@ export default function AutomationPage() {
             const result = await executeMissingExamDeduction();
             setSelectedDate('');
 
-            const violators = (result || []).filter((r: any) => r.recipientId !== 'system');
+            const violators = (result || []).filter((r) => r.recipientId !== 'system');
 
             if (violators.length > 0) {
                 alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة.`);
@@ -85,7 +85,7 @@ export default function AutomationPage() {
         new Date(log.timestamp).getTime() === lastExamTimestamp
     );
 
-    const renderLogList = (items: typeof logs, title: string, Icon: any, colorClass: string, bgClass: string, borderClass: string) => (
+    const renderLogList = (items: typeof logs, title: string, Icon: React.ComponentType<{ className?: string }>, colorClass: string, bgClass: string, borderClass: string) => (
         <div className={`rounded-3xl p-6 shadow-sm border ${borderClass} h-full flex flex-col ${bgClass}`}>
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">

@@ -79,7 +79,7 @@ export default function EditStudentModal({ student, isOpen, onClose }: EditStude
     // دالة معالجة إرسال النموذج
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        mutation.mutate(formData as any); // تنفيذ عملية التعديل
+        mutation.mutate(formData); // تنفيذ عملية التعديل
     };
 
     // في حال عدم وجود طالب مختار، لا يتم عرض أي شيء
@@ -236,8 +236,8 @@ export default function EditStudentModal({ student, isOpen, onClose }: EditStude
                     <Input
                         label="موعد الحضور"
                         placeholder="مثال: السبت والأربعاء الساعة ٤ عصراً"
-                        value={(formData as any).appointment || ''}
-                        onChange={(e) => setFormData({ ...formData, appointment: e.target.value } as any)}
+                        value={formData.appointment || ''}
+                        onChange={(e) => setFormData({ ...formData, appointment: e.target.value })}
                     />
                 </div>
 

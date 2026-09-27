@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { useAuthStore } from '@/store/useAuthStore';
 
-interface StudentNote {
+export interface StudentNote {
     id: string;
     content: string;
     createdAt: string;

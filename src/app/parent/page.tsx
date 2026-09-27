@@ -24,14 +24,15 @@ import { logout } from "@/features/auth/services/authService";
 import { useMessagingStore } from "@/features/messaging/store/useMessagingStore";
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { Button } from "@/components/ui/button";
+import { Student, Group, Teacher } from "@/types";
 
 export default function ParentDashboard() {
     const { user, setUser } = useAuthStore();
     const router = useRouter();
     const { data: students, isLoading } = useStudents();
     const { data: groups } = useGroups();
-    const [selectedKidForLeave, setSelectedKidForLeave] = useState<any>(null);
-    const [selectedKidForDetail, setSelectedKidForDetail] = useState<any>(null);
+    const [selectedKidForLeave, setSelectedKidForLeave] = useState<Student | null>(null);
+    const [selectedKidForDetail, setSelectedKidForDetail] = useState<Student | null>(null);
     const { data: teachers } = useTeachers();
 
     const parentPhone = user?.displayName || "";
@@ -195,7 +196,7 @@ export default function ParentDashboard() {
 /**
  * مكون منبثق لتقديم طلب إجازة
  */
-function LeaveRequestModal({ kid, onClose }: { kid: any, onClose: () => void }) {
+function LeaveRequestModal({ kid, onClose }: { kid: Student, onClose: () => void }) {
     const { addLeave } = useStudentRecords(kid.id);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -287,7 +288,7 @@ function LeaveRequestModal({ kid, onClose }: { kid: any, onClose: () => void }) 
 /**
  * مكون بطاقة عرض الطالب المختصرة
  */
-function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid: any, groups: any[], teachers: any[], onSelect: () => void, onLeaveRequest: () => void }) {
+function StudentCard({ kid, groups, teachers, onSelect, onLeaveRequest }: { kid: Student, groups: Group[], teachers: Teacher[], onSelect: () => void, onLeaveRequest: () => void }) {
     const { attendance, exams, fees } = useStudentRecords(kid.id);
     const group = groups.find(g => g.id === kid.groupId);
     const teacher = teachers.find(t => t.id === group?.teacherId);
