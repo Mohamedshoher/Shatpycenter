@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useAuthStore } from '@/store/useAuthStore';
+import type { ProcessedAttendanceStudent } from './StudentReportCard';
+import { Student } from '@/types';
 
 const AttendanceChartModal = dynamic(() => import('./AttendanceChartModal'), { ssr: false });
 const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
@@ -39,10 +41,10 @@ export default function AttendanceReportPage() {
     const [totalLimit, setTotalLimit] = useState('');
     const [showAbsentChart, setShowAbsentChart] = useState(false);
     const [showPresentChart, setShowPresentChart] = useState(false);
-    const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [selectedStudent, setSelectedStudent] = useState<ProcessedAttendanceStudent | null>(null);
     const [selectedStudentTab, setSelectedStudentTab] = useState<'attendance' | 'notes'>('attendance');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [studentToEdit, setStudentToEdit] = useState<any>(null);
+    const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
 
     // 0. تحديد الطلاب المسموح للمستخدم رؤيتهم
     const relevantStudentIds = useMemo(() => {
@@ -82,7 +84,7 @@ export default function AttendanceReportPage() {
                 params.set('studentIds', relevantStudentIds.join(','));
             }
             const res = await fetch(`/api/attendance?${params.toString()}`);
-            const attData: any[] = res.ok ? await res.json() : [];
+            const attData: { student_id: string; date: string; status: string }[] = res.ok ? await res.json() : [];
 
             const map: Record<string, any[]> = {};
             (attData || []).forEach(row => {
@@ -193,7 +195,7 @@ export default function AttendanceReportPage() {
             return pass;
         }).sort((a, b) => b.totalAbsences - a.totalAbsences);
 
-        const getGroupStats = (list: any[]) => {
+        const getGroupStats = (list: ProcessedAttendanceStudent[]) => {
             const counts: Record<string, number> = {};
             list.forEach(s => { counts[s.groupName] = (counts[s.groupName] || 0) + 1; });
             return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
@@ -290,15 +292,15 @@ export default function AttendanceReportPage() {
                                         index={i}
                                         userRole={user?.role}
                                         onArchive={archiveStudent}
-                                        onOpenDetails={(st: any) => {
+                                        onOpenDetails={(st) => {
                                             setSelectedStudentTab('attendance');
                                             setSelectedStudent(st);
                                         }}
-                                        onOpenNotes={(st: any) => {
+                                        onOpenNotes={(st) => {
                                             setSelectedStudentTab('notes');
                                             setSelectedStudent(st);
                                         }}
-                                        onEdit={(s: any) => {
+                                        onEdit={(s) => {
                                             setStudentToEdit(s);
                                             setIsEditModalOpen(true);
                                         }}
@@ -320,7 +322,7 @@ export default function AttendanceReportPage() {
                 isOpen={!!selectedStudent}
                 onClose={() => setSelectedStudent(null)}
                 initialTab={selectedStudentTab}
-                onEdit={(s: any) => {
+                onEdit={(s) => {
                     setSelectedStudent(null);
                     setStudentToEdit(s);
                     setIsEditModalOpen(true);

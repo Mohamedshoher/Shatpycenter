@@ -22,7 +22,7 @@ import Users from 'lucide-react/dist/esm/icons/users'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import { cn } from '@/lib/utils';
 import { useStudentRecords } from '../hooks/useStudentRecords';
-import { Group, Teacher } from '@/types';
+import { Group, Teacher, Student } from '@/types';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStudents, updateStudent } from '../services/studentService';
@@ -30,7 +30,7 @@ import { getStudents, updateStudent } from '../services/studentService';
 interface ParentStudentDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
-    student: any;
+    student: Student;
     group?: Group;
     teacher?: Teacher;
 }
@@ -87,7 +87,7 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
 
     if (!student) return null;
 
-    const tabs: { id: TabType; label: string; icon: any; color: string }[] = [
+    const tabs: { id: TabType; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; color: string }[] = [
         { id: 'schedule', label: 'المواعيد', icon: Clock, color: 'text-indigo-600' },
         { id: 'attendance', label: 'الحضور', icon: Calendar, color: 'text-blue-600' },
         { id: 'exams', label: 'الاختبارات', icon: BookOpen, color: 'text-teal-600' },
@@ -276,10 +276,10 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
             return list;
         })();
 
-        const paidCount = monthsList.filter((m: any) => fees.find((f: any) => f.month === m.label || f.month === m.key)).length;
-        const unpaidMonths = monthsList.filter((m: any) => {
-            const paid = fees.find((f: any) => f.month === m.label || f.month === m.key);
-            const exempted = exemptions.find((e: any) => e.month === m.label || e.month === m.key);
+        const paidCount = monthsList.filter((m) => fees.find((f) => f.month === m.label || f.month === m.key)).length;
+        const unpaidMonths = monthsList.filter((m) => {
+            const paid = fees.find((f) => f.month === m.label || f.month === m.key);
+            const exempted = exemptions.find((e) => e.month === m.label || e.month === m.key);
             return !paid && !exempted;
         });
 
@@ -311,7 +311,7 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
                         شهور غير مسددة ({unpaidMonths.length})
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                        {unpaidMonths.map((m: any) => (
+                        {unpaidMonths.map((m) => (
                             <div key={m.key} className="bg-red-50/60 border-2 border-red-100 rounded-2xl p-4 flex items-center justify-between">
                                 <div>
                                     <h5 className="text-sm font-black text-red-700">{m.label}</h5>
@@ -337,8 +337,8 @@ export const ParentStudentDetailModal: React.FC<ParentStudentDetailModalProps> =
                         الشهور المسددة ({paidCount})
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
-                        {monthsList.map((m: any) => {
-                            const fee = fees.find((f: any) => f.month === m.label || f.month === m.key);
+                        {monthsList.map((m) => {
+                            const fee = fees.find((f) => f.month === m.label || f.month === m.key);
                             if (!fee) return null;
                             return (
                                 <div key={m.key} className="bg-white p-4 rounded-2xl border border-green-100 shadow-sm flex items-center justify-between">

@@ -5,15 +5,25 @@ import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
 import Phone from 'lucide-react/dist/esm/icons/phone'
 import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
 import { getWhatsAppUrl } from '@/lib/utils';
+import { Student } from '@/types';
+
+export type ProcessedAttendanceStudent = Student & {
+    groupName: string;
+    totalAbsences: number;
+    continuousAbsences: number;
+    absencePercentage: number;
+    presencePercentage: number;
+    currentStatus: string;
+};
 
 interface StudentReportCardProps {
-    student: any;
+    student: ProcessedAttendanceStudent;
     index: number;
     userRole?: string;
     onArchive: (id: string) => void;
-    onOpenDetails: (student: any) => void;
-    onOpenNotes?: (student: any) => void;
-    onEdit?: (student: any) => void;
+    onOpenDetails: (student: ProcessedAttendanceStudent) => void;
+    onOpenNotes?: (student: ProcessedAttendanceStudent) => void;
+    onEdit?: (student: ProcessedAttendanceStudent) => void;
 }
 
 export default function StudentReportCard({ student, index, userRole, onArchive, onOpenDetails, onOpenNotes, onEdit }: StudentReportCardProps) {
