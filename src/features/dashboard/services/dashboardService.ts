@@ -1,11 +1,15 @@
+import type { Group, Student } from '@/types';
+import type { LeaveRequest } from '@/features/students/services/recordsService';
+import type { StudentNote } from '@/features/finance/components/StudentNotesModal';
+
 export interface DashboardData {
-    groups: any[];
-    students: any[];
+    groups: Group[];
+    students: Student[];
     todayAttendanceCount: number;
     monthlyIncome: number;
-    pendingLeaves: any[];
+    pendingLeaves: LeaveRequest[];
     unreadNotesCount: number;
-    recentNotes: any[];
+    recentNotes: StudentNote[];
 }
 
 export async function getDashboardData(params: {

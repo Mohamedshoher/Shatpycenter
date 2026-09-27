@@ -24,7 +24,7 @@ export const useAutomation = () => {
         try {
             const data = await automationService.getRules();
             setRules(data);
-        } catch (err: any) {
+        } catch (err) {
             setError("فشل في تحميل قواعد الأتمتة");
             console.error(err);
         } finally {
@@ -41,7 +41,7 @@ export const useAutomation = () => {
         try {
             const data = await automationService.getLogs(500, selectedDate);
             setLogs(data);
-        } catch (err: any) {
+        } catch (err) {
             setError("فشل في تحميل السجلات");
             console.error(err);
         } finally {

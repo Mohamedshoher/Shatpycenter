@@ -242,7 +242,7 @@ export default function DashboardOverview() {
                                 لا توجد طلبات إجازة معلقة حالياً
                             </div>
                         ) : (
-                            pendingLeaves.map((req: any) => (
+                            pendingLeaves.map((req) => (
                                 <div key={req.id} className="bg-gray-50 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-gray-100">
                                     <div className="flex items-center justify-between mb-3 md:mb-4">
                                         <div>

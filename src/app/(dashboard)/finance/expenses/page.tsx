@@ -57,7 +57,7 @@ export default function FinanceExpensesPage() {
     });
 
     const transactions: Transaction[] = useMemo(() =>
-        dbTransactions.map(tr => ({ id: tr.id, type: tr.type as 'income' | 'expense', title: tr.description, category: tr.category as any, amount: tr.amount, date: tr.date, notes: '', performedBy: tr.performedBy })),
+        dbTransactions.map(tr => ({ id: tr.id, type: tr.type as 'income' | 'expense', title: tr.description, category: tr.category as TransactionData['category'], amount: tr.amount, date: tr.date, notes: '', performedBy: tr.performedBy })),
         [dbTransactions]
     );
 

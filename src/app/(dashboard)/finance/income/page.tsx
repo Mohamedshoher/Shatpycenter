@@ -83,7 +83,7 @@ export default function FinanceIncomePage() {
     });
 
     const transactions: Transaction[] = useMemo(() =>
-        dbTransactions.map(tr => ({ id: tr.id, type: tr.type as 'income' | 'expense', title: tr.description, category: tr.category as any, amount: tr.amount, date: tr.date, notes: '', performedBy: tr.performedBy, relatedUserId: tr.relatedUserId })),
+        dbTransactions.map(tr => ({ id: tr.id, type: tr.type as 'income' | 'expense', title: tr.description, category: tr.category as TransactionData['category'], amount: tr.amount, date: tr.date, notes: '', performedBy: tr.performedBy, relatedUserId: tr.relatedUserId })),
         [dbTransactions]
     );
 
@@ -217,12 +217,12 @@ export default function FinanceIncomePage() {
                         {incomeData.managerDirectFeesList.length === 0 ? (
                             <p className="text-xs text-gray-400 font-bold text-center py-8 bg-white rounded-2xl border border-dashed border-gray-100">لا توجد مبالغ محصلة هذا الشهر.</p>
                         ) : (
-                            incomeData.managerDirectFeesList.map((fee: any) => {
+                            incomeData.managerDirectFeesList.map((fee) => {
                                 const std = students.find(s => s.id === fee.studentId);
                                 return (
                                     <div key={fee.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
                                         <div className="text-right">
-                                            <p className="font-black text-gray-900 text-sm">{std?.fullName || fee.studentName || 'طالب'}</p>
+                                            <p className="font-black text-gray-900 text-sm">{std?.fullName || 'طالب'}</p>
                                             <p className="text-[10px] text-gray-400 font-bold">{typeof fee.date === 'string' ? fee.date.split('T')[0] : fee.date}</p>
                                         </div>
                                         <div className="text-left">
@@ -274,7 +274,7 @@ export default function FinanceIncomePage() {
                                 {selectedTeacherTxns.length === 0 ? (
                                     <p className="text-xs text-gray-400 font-bold text-center py-8 bg-white rounded-2xl border border-dashed border-gray-100">لا توجد مبالغ مستلمة من هذا المدرس هذا الشهر.</p>
                                 ) : (
-                                    selectedTeacherTxns.map((tr: any) => (
+                                    selectedTeacherTxns.map((tr) => (
                                         <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
                                             <div className="text-right">
                                                 <p className="font-black text-gray-900 text-sm">{tr.title}</p>
@@ -298,7 +298,7 @@ export default function FinanceIncomePage() {
                         {incomeData.otherIncomeTransactions.length === 0 ? (
                             <p className="text-xs text-gray-400 font-bold text-center py-8 bg-white rounded-2xl border border-dashed border-gray-100">لا توجد إيرادات أخرى هذا الشهر.</p>
                         ) : (
-                            incomeData.otherIncomeTransactions.map((tr: any) => (
+                            incomeData.otherIncomeTransactions.map((tr) => (
                                 <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
                                     <div className="text-right">
                                         <p className="font-black text-gray-900 text-sm">{tr.title}</p>

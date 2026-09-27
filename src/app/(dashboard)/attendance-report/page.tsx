@@ -86,7 +86,7 @@ export default function AttendanceReportPage() {
             const res = await fetch(`/api/attendance?${params.toString()}`);
             const attData: { student_id: string; date: string; status: string }[] = res.ok ? await res.json() : [];
 
-            const map: Record<string, any[]> = {};
+            const map: Record<string, { date: string; status: string }[]> = {};
             (attData || []).forEach(row => {
                 if (!map[row.student_id]) map[row.student_id] = [];
                 map[row.student_id].push({

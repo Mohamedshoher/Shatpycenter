@@ -58,7 +58,7 @@ export default function TeacherList() {
     const [selectedMonthRaw, setSelectedMonthRaw] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
     const allTeachersAttendanceResult = useAllTeachersAttendance(selectedMonthRaw);
     const allTeachersAttendanceMap = useMemo(
-        () => (allTeachersAttendanceResult.data || {}) as Record<string, any>,
+        () => (allTeachersAttendanceResult.data || {}) as Record<string, Record<string, string>>,
         [allTeachersAttendanceResult.data]
     );
 

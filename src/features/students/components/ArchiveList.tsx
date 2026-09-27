@@ -28,6 +28,8 @@ import { FadeIn, SlideIn } from '@/components/ui/transition';
 import EditStudentModal from './EditStudentModal';
 import { Button } from '@/components/ui/button';
 
+interface DebtInfo { isIndebted: boolean; amount: number; label: string; unpaidMonths: { label: string; key: string }[] }
+
 export default function ArchiveList() {
     const { data: students, isLoading, restoreStudent, deleteStudent } = useStudents();
     const { data: groups } = useGroups();
@@ -75,7 +77,7 @@ export default function ArchiveList() {
     // فصل حساب الدين في useMemo مستقل: يعيد الحساب فقط عند تغير البيانات المالية
     // هذا يمنع إعادة الحساب عند تغيير searchTerm/filter/daysInArchiveFilter
     const debtMap = useMemo(() => {
-        if (!students) return new Map<string, any>();
+        if (!students) return new Map<string, DebtInfo>();
 
         // فهرسة البيانات مرة واحدة باستخدام Map/Set بدلاً من الفلاتر المتكررة
         const feeSetByStudentId = new Map<string, Set<string>>();
@@ -164,7 +166,7 @@ export default function ArchiveList() {
 
         // حساب الدين لكل طالب مؤرشف
         const archivedStudentsList = students.filter(s => s.status === 'archived');
-        const map = new Map<string, any>();
+        const map = new Map<string, DebtInfo>();
         for (const student of archivedStudentsList) {
             map.set(student.id, calculateDebtForStudent(student));
         }
@@ -172,7 +174,7 @@ export default function ArchiveList() {
     }, [students, allFees, allAttendance, allExemptions]);
 
     const [isExempting, setIsExempting] = useState<string | null>(null);
-    const handleExemptAll = async (student: Student, debtInfo: any) => {
+    const handleExemptAll = async (student: Student, debtInfo: { isIndebted: boolean; amount: number; label: string; unpaidMonths: { label: string; key: string }[] }) => {
         if (!debtInfo.isIndebted) return;
         if (!confirm(`هل أنت متأكد من العفو عن كافة المتأخرات للطالب ${student.fullName}؟`)) return;
 
@@ -709,7 +711,7 @@ export default function ArchiveList() {
                 isOpen={!!selectedStudent}
                 onClose={() => setSelectedStudent(null)}
                 initialTab="attendance"
-                onEdit={(s: any) => {
+                onEdit={(s) => {
                     setSelectedStudent(null);
                     setStudentToEdit(s);
                     setIsEditModalOpen(true);

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getGroups, updateGroup, deleteGroup } from '@/features/groups/services/groupService';
+import { Group } from '@/types';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import { getStudents } from '@/features/students/services/studentService';
 import { getAllAttendanceForMonth } from '@/features/students/services/recordsService';
@@ -68,7 +69,7 @@ export default function GroupsPage() {
     const [isConfigDropdownOpen, setIsConfigDropdownOpen] = useState(false);
     
     // Group Edit States
-    const [selectedGroupToEdit, setSelectedGroupToEdit] = useState<any | null>(null);
+    const [selectedGroupToEdit, setSelectedGroupToEdit] = useState<Group | null>(null);
     const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
     const [editTeacherId, setEditTeacherId] = useState('');
 
@@ -78,7 +79,7 @@ export default function GroupsPage() {
 
     // Mutations
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string, data: any }) => updateGroup(id, data),
+        mutationFn: ({ id, data }: { id: string, data: Partial<Group> }) => updateGroup(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups'] });
             setEditingGroupId(null);
@@ -193,7 +194,7 @@ export default function GroupsPage() {
         });
 
         // تطبيق البحث المتدرج على المجموعات (باسم المجموعة أو اسم المعلم)
-        const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (g: any) => `${g.name} ${g.teacher}`);
+        const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (g) => `${g.name} ${g.teacher}`);
 
         return finalResults.sort((a, b) => {
             if (sortBy === 'studentCount') return b.count - a.count;
@@ -293,7 +294,7 @@ export default function GroupsPage() {
                                                             <button
                                                                 key={sortOption.id}
                                                                 onClick={() => {
-                                                                    setSortBy(sortOption.id as any);
+                                                                    setSortBy(sortOption.id as 'name' | 'studentCount' | 'attendance');
                                                                     setIsConfigDropdownOpen(false);
                                                                 }}
                                                                 className={cn(

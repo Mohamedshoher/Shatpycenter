@@ -10,11 +10,12 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
+import { Teacher } from '@/types';
 
 // ==========================================================
 // مكون تبويب التحصيل المالي (TeacherCollectionTab)
 // ==========================================================
-interface UnpaidStudent {
+export interface UnpaidStudent {
     id: string;
     name: string;
     groupName: string;
@@ -23,10 +24,11 @@ interface UnpaidStudent {
     remaining: number;
     isExempted: boolean;
     enrollmentDate?: string;
+    parentPhone?: string;
 }
 
 interface TeacherCollectionTabProps {
-    teacher: any;
+    teacher: Teacher | null | undefined;
     isTeacher: boolean;
     updateMonth: (val: number | string) => void;
     selectedMonthRaw: string;
@@ -39,7 +41,7 @@ interface TeacherCollectionTabProps {
     totalCollected: number;
     totalCollectedByManager: number;
     totalHandedOver: number;
-    collectionHistoryMapped: any[];
+    collectionHistoryMapped: { id: string, amount: string, date: string, timestamp?: number, type: string, notes: string }[];
     setShowCollectedDetails: (val: boolean) => void;
     setShowManagerCollectedDetails: (val: boolean) => void;
     setShowDeficitDetails: (val: boolean) => void;

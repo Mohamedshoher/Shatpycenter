@@ -51,7 +51,7 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
         onMutate: async (newStudent) => {
             await queryClient.cancelQueries({ queryKey: ['students'] });
             const previousStudents = queryClient.getQueryData(['students']);
-            queryClient.setQueryData(['students'], (old: any) => [...(old || []), { ...newStudent, id: 'temp-' + Date.now() }]);
+            queryClient.setQueryData(['students'], (old: Student[] | undefined) => [...(old || []), { ...newStudent, id: 'temp-' + Date.now() }]);
 
             if (isTeacher) {
                 alert('تم إرسال بيانات الطالب، وفي انتظار مراجعة وقبول الإدارة.');
@@ -72,7 +72,7 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
 
             return { previousStudents };
         },
-        onError: (err, newStudent, context: any) => {
+        onError: (err, newStudent, context) => {
             queryClient.setQueryData(['students'], context?.previousStudents);
         },
         onSettled: () => {
@@ -88,7 +88,7 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        mutation.mutate(formData as any);
+        mutation.mutate(formData);
     };
 
     return (

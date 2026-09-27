@@ -6,12 +6,22 @@ import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import { cn } from '@/lib/utils';
 
+interface PaymentItem {
+    id: string;
+    feeId: string;
+    studentName: string;
+    amount: number;
+    date: string;
+    groupName: string;
+    isTransferred?: boolean | null;
+}
+
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     title: string;
     totalAmount: number;
-    payments: any[];
+    payments: PaymentItem[];
     isDirector: boolean;
     onDeleteFee: (feeId: string, studentName: string) => void;
     accentColor?: 'blue' | 'indigo';

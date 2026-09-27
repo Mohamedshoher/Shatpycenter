@@ -56,7 +56,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
             return await addTransaction({
                 amount: transactionData.amount,
                 type: transactionData.type,
-                category: transactionData.category as any,
+                category: transactionData.category as TransactionData['category'],
                 date: transactionData.date,
                 description: transactionData.title,
                 performedBy: user?.uid || 'unknown',
@@ -122,7 +122,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
 
         saveMutation.mutate({
             type,
-            category: category as any,
+            category,
             amount: parseFloat(amount),
             title,
             notes,
@@ -196,7 +196,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd }: AddTrans
                         <label className="block text-sm font-semibold text-gray-700">الفئة</label>
                         <select
                             value={category}
-                            onChange={(e) => setCategory(e.target.value as any)}
+                            onChange={(e) => setCategory(e.target.value as TransactionData['category'])}
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             {categoryOptions[type].map((cat) => (

@@ -5,12 +5,13 @@ import Gift from 'lucide-react/dist/esm/icons/gift'
 import UserX from 'lucide-react/dist/esm/icons/user-x';
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
+import type { UnpaidStudent } from './TeacherCollectionTab';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     realDeficit: number;
-    unpaidStudents: any[];
+    unpaidStudents: UnpaidStudent[];
     deficitTab: 'unpaid' | 'exempted';
     setDeficitTab: (tab: 'unpaid' | 'exempted') => void;
     isDirector: boolean;
@@ -97,9 +98,9 @@ export const TeacherDeficitModal = ({
                                                     )}
                                                 </>
                                             )}
-                                            {!student.isExempted && showWhatsApp && (student.parentPhone || student.phone) && (
+                                            {!student.isExempted && showWhatsApp && student.parentPhone && (
                                                 <a 
-                                                    href={getWhatsAppUrl(student.parentPhone || student.phone, whatsappMessage)}
+                                                    href={getWhatsAppUrl(student.parentPhone, whatsappMessage)}
                                                     target="_blank" 
                                                     rel="noreferrer"
                                                     className="text-xs text-green-600 bg-green-50 px-3 py-1 rounded-lg flex items-center gap-1 hover:bg-green-100 transition-colors"
