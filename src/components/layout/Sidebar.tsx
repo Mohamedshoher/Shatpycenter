@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -164,7 +165,7 @@ export default function Sidebar() {
                     <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
                         <div className="flex items-center gap-2">
                             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm p-1.5 border border-gray-50">
-                                <img src="/icon-192.png" alt="Logo" className="w-full h-full object-contain" />
+                                <Image src="/icon-192.png" alt="Logo" width={40} height={40} className="w-full h-full object-contain" />
                             </div>
                             <span className="text-lg font-black text-gray-900 tracking-tighter">مركز الشاطبي</span>
                         </div>

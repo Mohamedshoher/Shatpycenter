@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     getStudentAttendance,
@@ -219,20 +220,30 @@ export const useStudentRecords = (studentId: string) => {
         }
     });
 
+    // نثبّت مراجع المصفوفات الافتراضية [] حتى لا تتغيّر مع كل render
+    // (تكسر أي useMemo/useCallback لدى المستهلك يعتمد عليها كتبعية)
+    const attendance = useMemo(() => attendanceQuery.data || [], [attendanceQuery.data]);
+    const exams = useMemo(() => examsQuery.data || [], [examsQuery.data]);
+    const fees = useMemo(() => feesQuery.data || [], [feesQuery.data]);
+    const exemptions = useMemo(() => exemptionsQuery.data || [], [exemptionsQuery.data]);
+    const plans = useMemo(() => plansQuery.data || [], [plansQuery.data]);
+    const notes = useMemo(() => notesQuery.data || [], [notesQuery.data]);
+    const goals = useMemo(() => goalsQuery.data || [], [goalsQuery.data]);
+
     return {
-        attendance: attendanceQuery.data || [],
+        attendance,
         isLoadingAttendance: attendanceQuery.isLoading,
-        exams: examsQuery.data || [],
+        exams,
         isLoadingExams: examsQuery.isLoading,
-        fees: feesQuery.data || [],
+        fees,
         isLoadingFees: feesQuery.isLoading,
-        exemptions: exemptionsQuery.data || [],
+        exemptions,
         isLoadingExemptions: exemptionsQuery.isLoading,
-        plans: plansQuery.data || [],
+        plans,
         isLoadingPlans: plansQuery.isLoading,
-        notes: notesQuery.data || [],
+        notes,
         isLoadingNotes: notesQuery.isLoading,
-        goals: goalsQuery.data || [],
+        goals,
         isLoadingGoals: goalsQuery.isLoading,
 
         addAttendance,

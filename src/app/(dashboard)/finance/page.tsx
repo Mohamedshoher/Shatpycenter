@@ -129,7 +129,10 @@ export default function FinancePage() {
     });
 
     const allAttendanceResult = useAllTeachersAttendance(selectedMonth);
-    const allAttendanceMap = (allAttendanceResult.data || {}) as Record<string, any>;
+    const allAttendanceMap = useMemo(
+        () => (allAttendanceResult.data || {}) as Record<string, any>,
+        [allAttendanceResult.data]
+    );
 
     const transactions: Transaction[] = useMemo(() => {
         return dbTransactions.map(tr => ({
@@ -285,7 +288,7 @@ export default function FinancePage() {
             map.set(teacherId, entry);
         });
         return Array.from(map.values()).sort((a, b) => b.total - a.total);
-    }, [incomeDetails.fromTeacherTxns, teachers]);
+    }, [incomeDetails, teachers]);
 
     const selectedFromTeacher = fromTeacherGroups.find(g => g.teacherId === selectedFromTeacherId) || null;
     const selectedFromTeacherTxns = selectedFromTeacher?.transactions || [];
@@ -396,7 +399,7 @@ export default function FinancePage() {
             const deficit = collected - handedOver;
             return { teacherId: id, teacherName: teacher?.fullName || id, collected, handedOver, deficit };
         }).filter(d => d.deficit > 0).sort((a, b) => b.deficit - a.deficit);
-    }, [teachers, allFees, filteredTransactions, selectedMonth]);
+    }, [teachers, allFees, filteredTransactions]);
 
     const totalDeliveryDeficit = useMemo(() => {
         return deliveryDeficitByTeacher.reduce((sum, d) => sum + d.deficit, 0);

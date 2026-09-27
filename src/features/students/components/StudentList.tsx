@@ -41,6 +41,9 @@ interface StudentListProps {
     customTitle?: string;
 }
 
+// ثابت خارج المكون حتى لا يُعاد إنشاء المصفوفة (مرجع جديد) في كل render
+const WEEK_DAYS_NAMES = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
 export default function StudentList({ groupId, customTitle }: StudentListProps) {
     const { data: groups } = useGroups();
     const { user } = useAuthStore();
@@ -105,11 +108,10 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         return selectedDate === todayStr;
     }, [selectedDate]);
 
-    const weekDaysNames = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
     const currentDayName = useMemo(() => {
         // (getDay() + 1) % 7 يرفع الرقم 1 (ليصبح السبت 0 بدلاً من 6 والأحد 1 بدلاً من 0)
         const dateObj = new Date(selectedDate.replace(/-/g, '/') + ' 12:00:00');
-        return weekDaysNames[(dateObj.getDay() + 1) % 7];
+        return WEEK_DAYS_NAMES[(dateObj.getDay() + 1) % 7];
     }, [selectedDate]);
 
     const hasClassOnDay = useCallback((appointment: string | undefined | null, dayName: string) => {

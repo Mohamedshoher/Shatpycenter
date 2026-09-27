@@ -42,11 +42,13 @@ export default function TeacherNewStudentsPage() {
         return group?.name || 'مجموعة غير معروفة';
     };
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
-
     const newStudents = useMemo(() => {
+        // نحسبها هنا داخل الـ useMemo نفسه (بدل متغيّر خارجي) حتى لا يعتمد
+        // الحساب على تاريخ قديم محفوظ من عملية render سابقة لم تُعِد الحساب
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
         return allStudents
             .filter((s: Student) => {
                 if (s.status === 'archived') return false;

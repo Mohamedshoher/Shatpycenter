@@ -68,9 +68,9 @@ export default function ArchiveList() {
         enabled: archivedIds.length > 0
     });
 
-    const allFees = archiveData?.fees || [];
-    const allAttendance = archiveData?.attendance || [];
-    const allExemptions = archiveData?.exemptions || [];
+    const allFees = useMemo(() => archiveData?.fees || [], [archiveData?.fees]);
+    const allAttendance = useMemo(() => archiveData?.attendance || [], [archiveData?.attendance]);
+    const allExemptions = useMemo(() => archiveData?.exemptions || [], [archiveData?.exemptions]);
 
     // فصل حساب الدين في useMemo مستقل: يعيد الحساب فقط عند تغير البيانات المالية
     // هذا يمنع إعادة الحساب عند تغيير searchTerm/filter/daysInArchiveFilter

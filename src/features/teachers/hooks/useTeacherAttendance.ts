@@ -4,6 +4,7 @@
 
 // استيراد أدوات مكتبة React Query المسؤولة عن جلب البيانات وإدارة ذاكرة التخزين المؤقت (Cache)
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 // استيراد دوال الخدمات (Services) والأنواع (Types) الخاصة بسجل الحضور
 import { 
@@ -68,9 +69,13 @@ export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
         }
     });
 
+    // نثبّت مرجع الكائن الافتراضي {} حتى لا يتغيّر مع كل عملية render
+    // (كان يكسر أي useMemo/useCallback يعتمد على هذه القيمة كتبعية)
+    const attendance = useMemo(() => attendanceQuery.data || {}, [attendanceQuery.data]);
+
     // إرجاع البيانات والدوال اللازمة لاستخدامها في واجهة المستخدم
     return {
-        attendance: attendanceQuery.data || {}, // بيانات الحضور
+        attendance, // بيانات الحضور
         loading: attendanceQuery.isLoading, // حالة التحميل
         updateAttendance: updateAttendanceMutation.mutate, // دالة التحديث العادية
         updateAttendanceAsync: updateAttendanceMutation.mutateAsync, // دالة التحديث غير المتزامنة (ترجع Promise)
