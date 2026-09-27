@@ -23,6 +23,7 @@ import X from 'lucide-react/dist/esm/icons/x'
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { FadeIn } from '@/components/ui/transition';
 import StudentDetailModal from '@/features/students/components/StudentDetailModal';
+import { Student } from '@/types';
 
 const AddStudentModal = dynamic(() => import('@/features/students/components/AddStudentModal'), { ssr: false });
 
@@ -35,7 +36,7 @@ export default function SchedulesDashboard() {
     const [expandedSlotId, setExpandedSlotId] = useState<string | null>(null);
     const [expandedUnscheduledGroupId, setExpandedUnscheduledGroupId] = useState<string | null>(null);
     const [expandedGroupSlotsIds, setExpandedGroupSlotsIds] = useState<string[]>([]);
-    const [selectedStudentForModal, setSelectedStudentForModal] = useState<any | null>(null);
+    const [selectedStudentForModal, setSelectedStudentForModal] = useState<Student | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [groupToCancel, setGroupToCancel] = useState<{ id: string, name: string, totalStudents: number, dayStudents: number } | null>(null);
     const [isCancellingGroup, setIsCancellingGroup] = useState(false);
@@ -87,8 +88,8 @@ export default function SchedulesDashboard() {
             const maxCapacity = group.maxStudentsPerHour || 5;
             
             // استخراج المواعيد الخاصة بهذه المجموعة في اليوم المحدد
-            const slotsMap = new Map<string, any[]>();
-            const studentsWithoutSchedule: any[] = [];
+            const slotsMap = new Map<string, Student[]>();
+            const studentsWithoutSchedule: Student[] = [];
 
             allStudents.forEach(s => {
                 if (s.groupId === group.id && s.status === 'active') {
@@ -169,7 +170,7 @@ export default function SchedulesDashboard() {
     const studentSearchResults = useMemo(() => {
         if (!searchStudent.trim() || !allStudents) return [];
         const activeStudents = allStudents.filter(s => s.status === 'active');
-        return tieredSearchFilter(activeStudents, searchStudent, (s: any) => s.fullName || '').slice(0, 10);
+        return tieredSearchFilter(activeStudents, searchStudent, (s) => s.fullName || '').slice(0, 10);
     }, [allStudents, searchStudent]);
 
     const getGroupName = (groupId: string | null | undefined) =>
@@ -254,7 +255,7 @@ export default function SchedulesDashboard() {
                         <p className="text-sm font-bold text-gray-400 text-center py-4">لا يوجد طالب مطابق لهذا الاسم</p>
                     ) : (
                         <div className="flex flex-wrap gap-2">
-                            {studentSearchResults.map((st: any) => {
+                            {studentSearchResults.map((st) => {
                                 const hasAppointment = st.appointment?.split(',').some((p: string) => p.trim().startsWith(`${selectedDay}:`));
                                 return (
                                     <button
@@ -358,7 +359,7 @@ export default function SchedulesDashboard() {
                                     <div className="p-4 md:p-5">
                                         <p className="text-xs font-bold text-red-600 mb-3">الطلاب الذين لم يسجلوا مواعيد بعد (انقر على اسم الطالب لتسجيل موعد):</p>
                                         <div className="flex flex-wrap gap-2">
-                                            {group.studentsWithoutSchedule.map((st: any) => (
+                                            {group.studentsWithoutSchedule.map((st) => (
                                                 <button
                                                     key={st.id}
                                                     onClick={() => setSelectedStudentForModal(st)}
@@ -423,7 +424,7 @@ export default function SchedulesDashboard() {
                                             <FadeIn show={isExpanded}>
                                                 <div className="pt-3 border-t border-gray-200/50 space-y-2">
                                                     <p className="text-[11px] font-black text-gray-500 mb-2">الطلاب المسجلين (انقر على الطالب لفتح تفاصيله):</p>
-                                                    {slot.students.map((st: any) => (
+                                                    {slot.students.map((st) => (
                                                         <button
                                                             key={st.id}
                                                             onClick={(e) => {

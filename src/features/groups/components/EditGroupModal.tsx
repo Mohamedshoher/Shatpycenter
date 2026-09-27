@@ -5,13 +5,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateGroup } from '@/features/groups/services/groupService';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import Modal from '@/components/ui/modal';
+import { Group } from '@/types';
 import Save from 'lucide-react/dist/esm/icons/save'
 import X from 'lucide-react/dist/esm/icons/x';
 
 interface EditGroupModalProps {
     isOpen: boolean;
     onClose: () => void;
-    group: any | null;
+    group: Group | null;
 }
 
 export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModalProps) {
@@ -21,8 +22,8 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
     const activeSortedTeachers = useMemo(() => {
         if (!teachers) return [];
         return teachers
-            .filter((t: any) => t.status === 'active')
-            .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName, 'ar'));
+            .filter((t) => t.status === 'active')
+            .sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
     }, [teachers]);
 
     const [editGroupName, setEditGroupName] = useState('');
@@ -45,7 +46,7 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
     }, [group]);
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string, data: any }) => updateGroup(id, data),
+        mutationFn: ({ id, data }: { id: string, data: Partial<Group> }) => updateGroup(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups'] });
             onClose(); // إغلاق النافذة عند النجاح
@@ -54,7 +55,7 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
 
     const handleUpdate = () => {
         if (!group) return;
-        const selectedTeacher = teachers?.find((t: any) => t.id === editTeacherId);
+        const selectedTeacher = teachers?.find((t) => t.id === editTeacherId);
         updateMutation.mutate({
             id: group.id,
             data: {
@@ -101,7 +102,7 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
                         className="w-full h-11 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-right text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all shadow-inner appearance-none"
                     >
                         <option value="">اختر المدرس المسئول</option>
-                        {activeSortedTeachers.map((t: any) => (
+                        {activeSortedTeachers.map((t) => (
                             <option key={t.id} value={t.id}>{t.fullName} {t.dailyHours ? `(${t.dailyHours} ساعات/يوم)` : ''}</option>
                         ))}
                     </select>
