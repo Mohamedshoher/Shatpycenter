@@ -24,6 +24,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import dynamic from 'next/dynamic';
 import { useAllExams } from '@/features/students/hooks/useAllExams';
 import { useAllGoals } from '@/features/students/hooks/useAllGoals';
+import { Student } from '@/types';
 import Target from 'lucide-react/dist/esm/icons/target';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import XCircle from 'lucide-react/dist/esm/icons/x-circle';
@@ -48,7 +49,7 @@ export default function ExamsReportPage() {
 
     // --- 2. إعدادات الفلترة والأذونات ---
     // إذا كان المستخدم "مدرس"، نقوم بتصفية المجموعات لتظهر مجموعاته فقط
-    const filteredGroupsList = groups?.filter((g: any) => {
+    const filteredGroupsList = groups?.filter((g) => {
         if (user?.role === 'teacher') return g.teacherId === user.teacherId;
         if (user?.role === 'supervisor') {
             const sections = user.responsibleSections || [];
@@ -56,7 +57,7 @@ export default function ExamsReportPage() {
         }
         return true;
     }) || [];
-    const assignedGroupIds = filteredGroupsList.map((g: any) => g.id);
+    const assignedGroupIds = filteredGroupsList.map((g) => g.id);
     const relevantStudentIds = useMemo(() => {
         if (!students || user?.role === 'director') return undefined;
         return students.filter(s => s.groupId && assignedGroupIds.includes(s.groupId)).map(s => s.id);
@@ -75,7 +76,7 @@ export default function ExamsReportPage() {
     // --- 4. إدارة الوقت والتاريخ ---
     const [selectedDate, setSelectedDate] = useState(new Date()); // التاريخ المختار للتقارير الشهرية
     const [selectedHalf, setSelectedHalf] = useState<1 | 2>(new Date().getDate() <= 15 ? 1 : 2); // نصف الشهر المختار
-    const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<any>(null); // الطالب المختار لعرض تفاصيله
+    const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<Student | null>(null); // الطالب المختار لعرض تفاصيله
 
     // تحويل التاريخ إلى مفتاح (مثل 2023-10) لجلب بيانات الاختبارات من السيرفر
     const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
@@ -108,19 +109,19 @@ export default function ExamsReportPage() {
 
     // أ- حساب الطلاب الذين "لم يختبروا" هذا الشهر بناءً على الفلاتر
     const notTestedStudents = useMemo(() => {
-        let base = (students || []).filter((s: any) => s.status === 'active');
+        let base = (students || []).filter((s) => s.status === 'active');
 
         if (selectedGroupId !== 'all') {
-            base = base.filter((s: any) => s.groupId === selectedGroupId);
+            base = base.filter((s) => s.groupId === selectedGroupId);
         } else if (user?.role === 'teacher' || user?.role === 'supervisor') {
-            base = base.filter((s: any) => s.groupId && assignedGroupIds.includes(s.groupId));
+            base = base.filter((s) => s.groupId && assignedGroupIds.includes(s.groupId));
         }
 
         const selectedArabicType = EXAM_TYPE_MAP[selectedExamType] || 'جديد';
 
         return base
-            .map((s: any) => {
-                const groupName = groups?.find((g: any) => g.id === s.groupId)?.name || 'غير محدد';
+            .map((s) => {
+                const groupName = groups?.find((g) => g.id === s.groupId)?.name || 'غير محدد';
 
                 // تحديد عدد الاختبارات المطلوبة حسب نوع المجموعة
                 // تلقين/نور بيان: 2، قرآن (الافتراضي): 3
@@ -128,11 +129,11 @@ export default function ExamsReportPage() {
                 const requiredCount = isReducedReq ? 2 : 3;
 
                 // جلب اختبارات الطالب لهذا النصف (باستثناء "يعاد")
-                const studentExams = allExams.filter((e: any) => e.studentId === s.id && e.grade?.trim() !== 'يعاد');
+                const studentExams = allExams.filter((e) => e.studentId === s.id && e.grade?.trim() !== 'يعاد');
 
                 // حساب الأنواع الفريدة التي اختبرها الطالب (مثلاً: جديد، ماضي قريب)
                 // إذا اختبر مرتين "جديد" تحسب مرة واحدة
-                const completedTypes = Array.from(new Set(studentExams.map((e: any) => e.type?.trim())));
+                const completedTypes = Array.from(new Set(studentExams.map((e) => e.type?.trim())));
 
                 // هل اختبر النوع المحدد في الفلتر؟
                 const hasDoneSelected = completedTypes.includes(selectedArabicType.trim());
@@ -152,7 +153,7 @@ export default function ExamsReportPage() {
                     remainingCount
                 };
             })
-            .filter((s: any) => {
+            .filter((s) => {
                 // فلتر العدد المتبقي إذا كان محدداً
                 if (selectedRemainingCount !== 'all' && s.remainingCount !== parseInt(selectedRemainingCount)) {
                     return false;
@@ -163,7 +164,7 @@ export default function ExamsReportPage() {
                 // 2. ولم يستوف النصاب الكلي المطلوب منه بعد
                 return !s.hasDoneSelected && !s.hasMetQuota;
             })
-            .map((s: any, i: number) => ({
+            .map((s, i: number) => ({
                 ...s,
                 rank: i + 1,
                 // تنسيق العرض: محمد أحمد (جديد، ماضي قريب)
@@ -173,49 +174,49 @@ export default function ExamsReportPage() {
 
     // ب- حساب الطلاب "الأكثر اختباراً" بناءً على عدد مرات الاختبار
     const mostTestedStudents = useMemo(() => {
-        let base = (students || []).filter((s: any) => s.status === 'active');
+        let base = (students || []).filter((s) => s.status === 'active');
 
         if (selectedGroupId !== 'all') {
-            base = base.filter((s: any) => s.groupId === selectedGroupId);
+            base = base.filter((s) => s.groupId === selectedGroupId);
         } else if (user?.role === 'teacher' || user?.role === 'supervisor') {
-            base = base.filter((s: any) => s.groupId && assignedGroupIds.includes(s.groupId));
+            base = base.filter((s) => s.groupId && assignedGroupIds.includes(s.groupId));
         }
 
         const limit = parseInt(examsLimit) || 0;
         const arabicType = EXAM_TYPE_MAP[selectedExamType];
 
-        return base.map((s: any) => {
-            const studentExams = allExams.filter((e: any) =>
+        return base.map((s) => {
+            const studentExams = allExams.filter((e) =>
                 e.studentId === s.id &&
                 (!arabicType || e.type?.trim() === arabicType.trim()) &&
                 e.grade?.trim() !== 'يعاد' // استبعاد الاختبارات التي نتيجتها "يعاد"
             );
 
             const examsList = studentExams
-                .map((e: any) => `${e.surah || 'اختبار'} (${e.type?.trim() || 'اختبار'}: ${e.grade?.trim() || 'لم يسجل'})`)
+                .map((e) => `${e.surah || 'اختبار'} (${e.type?.trim() || 'اختبار'}: ${e.grade?.trim() || 'لم يسجل'})`)
                 .join('\n- ');
 
             return {
                 ...s,
                 examsCount: studentExams.length,
                 examsList,
-                groupName: groups?.find((g: any) => g.id === s.groupId)?.name || 'غير محدد'
+                groupName: groups?.find((g) => g.id === s.groupId)?.name || 'غير محدد'
             };
         })
-            .filter((s: any) => s.examsCount >= limit && s.examsCount > 0)
-            .sort((a: any, b: any) => b.examsCount - a.examsCount)
-            .map((s: any, i: number) => ({ ...s, rank: i + 1 }));
+            .filter((s) => s.examsCount >= limit && s.examsCount > 0)
+            .sort((a, b) => b.examsCount - a.examsCount)
+            .map((s, i: number) => ({ ...s, rank: i + 1 }));
     }, [students, groups, allExams, selectedGroupId, selectedExamType, examsLimit, user, assignedGroupIds]);
 
     // د- الأهداف المنجزة
     const completedGoalsData = useMemo(() => {
         if (!allGoals || !students || !groups) return [];
         return allGoals
-            .filter((g: any) => g.isCompleted)
-            .map((g: any) => {
-                const student = students.find((s: any) => s.id === g.studentId);
-                const group = student ? groups.find((gr: any) => gr.id === student.groupId) : null;
-                const teacherName = g.completedBy || (group ? teachers?.find((t: any) => t.id === group.teacherId)?.fullName : "غير محدد");
+            .filter((g) => g.isCompleted)
+            .map((g) => {
+                const student = students.find((s) => s.id === g.studentId);
+                const group = student ? groups.find((gr) => gr.id === student.groupId) : null;
+                const teacherName = g.completedBy || (group ? teachers?.find((t) => t.id === group.teacherId)?.fullName : "غير محدد");
 
                 return {
                     ...g,
@@ -224,20 +225,20 @@ export default function ExamsReportPage() {
                     teacherName
                 };
             })
-            .filter((g: any) => g.student)
-            .sort((a: any, b: any) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+            .filter((g) => g.student)
+            .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
     }, [allGoals, students, groups, teachers]);
 
     // ج- تجميع بيانات الأداء لكل مجموعة (إحصائيات الرسوم البيانية)
     const performanceData = useMemo(() => {
         let baseGroups = (groups || []);
         if (user?.role === 'teacher' || user?.role === 'supervisor') {
-            baseGroups = baseGroups.filter((g: any) => assignedGroupIds.includes(g.id));
+            baseGroups = baseGroups.filter((g) => assignedGroupIds.includes(g.id));
         }
 
         // تصفية حسب نوع المجموعة (قرآن، تلقين، نور البيان)
         if (performanceTypeFilter !== 'all') {
-            baseGroups = baseGroups.filter((g: any) => {
+            baseGroups = baseGroups.filter((g) => {
                 const name = g.name || '';
                 if (performanceTypeFilter === 'quran') return name.includes('قرآن');
                 if (performanceTypeFilter === 'talqeen') return name.includes('تلقين');
@@ -246,9 +247,9 @@ export default function ExamsReportPage() {
             });
         }
 
-                return baseGroups.map((g: any) => {
-                    const groupStudents = (students || []).filter((s: any) => s.groupId === g.id && s.status === 'active');
-                    const groupStudentIds = new Set(groupStudents.map((s: any) => s.id));
+                return baseGroups.map((g) => {
+                    const groupStudents = (students || []).filter((s) => s.groupId === g.id && s.status === 'active');
+                    const groupStudentIds = new Set(groupStudents.map((s) => s.id));
 
                     // لكل نوع، نحسب عدد الطلاب الفريدين الذين اختبروه (مرة واحدة على الأقل)
                     const doneStudents = {
@@ -402,7 +403,7 @@ export default function ExamsReportPage() {
                                             className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
                                         >
                                             <option value="all">كل المجموعات</option>
-                                            {filteredGroupsList?.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                            {filteredGroupsList?.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                                         </select>
                                         <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                     </div>
@@ -427,7 +428,7 @@ export default function ExamsReportPage() {
                                     <span className="text-xs font-bold text-gray-400">طلاب القائمة</span>
                                     <span className="bg-amber-100 text-amber-700 text-xs font-black px-3 py-1 rounded-full font-sans">{notTestedStudents.length} طالب</span>
                                 </div>
-                                {notTestedStudents.map((student: any) => (
+                                {notTestedStudents.map((student) => (
                                     <div
                                         key={student.id}
                                         onClick={() => setSelectedStudentForDetails(student)}
@@ -472,7 +473,7 @@ export default function ExamsReportPage() {
                                 <span className="text-[10px] md:text-xs font-bold text-gray-400">طلاب القائمة</span>
                                 <span className="bg-blue-100 text-blue-700 text-[10px] md:text-xs font-black px-2 md:px-3 py-0.5 md:py-1 rounded-full font-sans">{mostTestedStudents.length} طالب</span>
                             </div>
-                            {mostTestedStudents.map((student: any) => (
+                            {mostTestedStudents.map((student) => (
                                 <div
                                     key={student.id}
                                     onClick={() => setSelectedStudentForDetails(student)}
@@ -538,7 +539,7 @@ export default function ExamsReportPage() {
                                     <p className="text-sm text-gray-400 font-bold mt-1">لم يتم إنجاز أي أهداف للطلاب المحددين</p>
                                 </div>
                             ) : (
-                                completedGoalsData.map((goal: any) => (
+                                completedGoalsData.map((goal) => (
                                     <div key={goal.id} className="bg-white rounded-[16px] md:rounded-[20px] p-3 md:p-4 border border-gray-100 shadow-sm">
                                         <div className="flex items-center justify-between border-b border-gray-50 pb-3 mb-3">
                                             <div className="flex items-center gap-2">
@@ -559,14 +560,14 @@ export default function ExamsReportPage() {
 
                                         <div className="flex items-center justify-between flex-wrap gap-2">
                                             <div 
-                                                onClick={() => setSelectedStudentForDetails(goal.student)}
+                                                onClick={() => setSelectedStudentForDetails(goal.student || null)}
                                                 className="flex items-center gap-2 cursor-pointer group hover:bg-blue-50 p-1.5 pr-2 rounded-xl transition-colors border border-transparent hover:border-blue-100"
                                             >
                                                 <div className="w-7 h-7 bg-blue-50 group-hover:bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 shrink-0 transition-colors">
                                                     <User size={14} />
                                                 </div>
                                                 <div className="text-right">
-                                                    <h4 className="text-xs md:text-sm font-bold text-gray-800 group-hover:text-blue-700 transition-colors">{goal.student.fullName}</h4>
+                                                    <h4 className="text-xs md:text-sm font-bold text-gray-800 group-hover:text-blue-700 transition-colors">{goal.student?.fullName}</h4>
                                                     <span className="text-[9px] md:text-[10px] font-bold text-gray-400">{goal.groupName}</span>
                                                 </div>
                                             </div>
@@ -619,7 +620,7 @@ export default function ExamsReportPage() {
                                 <div className="relative">
                                     <select
                                         value={performanceTypeFilter}
-                                        onChange={(e) => setPerformanceTypeFilter(e.target.value as any)}
+                                        onChange={(e) => setPerformanceTypeFilter(e.target.value as 'all' | 'quran' | 'talqeen' | 'noor')}
                                         className="appearance-none bg-white border border-gray-100 px-3 md:px-5 py-1.5 md:py-2 pr-2 md:pr-3 rounded-lg md:rounded-xl text-[9px] md:text-sm font-bold text-gray-600 focus:outline-none text-right cursor-pointer"
                                     >
                                         <option value="all">كل المجموعات</option>
@@ -633,7 +634,7 @@ export default function ExamsReportPage() {
 
                             {/* الرسوم البيانية (أشرطة التقدم) */}
                             <div className="space-y-6">
-                                {performanceData.map((data: any) => {
+                                {performanceData.map((data) => {
                                         const totalSt = data.totalStudents;
 
                                         if (performanceFilter === 'all') {
@@ -673,7 +674,7 @@ export default function ExamsReportPage() {
                                             );
                                         }
 
-                                        const testedVal = (data.tested as any)[performanceFilter];
+                                        const testedVal = data.tested[performanceFilter as 'new' | 'near' | 'far'];
                                         const barWidth = `${(testedVal / Math.max(totalSt, 1)) * 100}%`;
                                         const barColor = performanceFilter === 'new' ? 'from-green-400 to-emerald-500'
                                             : performanceFilter === 'near' ? 'from-amber-400 to-orange-500'
