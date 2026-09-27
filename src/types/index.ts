@@ -51,6 +51,7 @@ export interface Teacher {
   weeklyWorkingDays?: number; // عدد أيام العمل أسبوعياً
   password?: string;
   responsibleSections?: string[];
+  joinDate?: string;
 }
 
 export interface Group {

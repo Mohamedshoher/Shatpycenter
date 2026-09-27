@@ -17,6 +17,28 @@ export interface AutomationRule {
     createdAt: Date;
 }
 
+interface ChecksTeacher { id: string; full_name: string }
+interface ChecksGroup { id: string; teacher_id: string | null }
+interface ChecksStudent { id: string; group_id: string | null }
+interface ChecksDeduction { teacher_id: string; reason: string | null }
+interface ChecksAttendance { student_id: string | null }
+interface ChecksTeacherAttendance { teacher_id: string; status: string | null }
+interface DailyReportsChecksResult {
+    teachers: ChecksTeacher[];
+    groups: ChecksGroup[];
+    students: ChecksStudent[];
+    deductions: ChecksDeduction[];
+    attendance: ChecksAttendance[];
+    teacherAttendance: ChecksTeacherAttendance[];
+}
+interface WeeklyExamsChecksResult {
+    teachers: ChecksTeacher[];
+    groups: ChecksGroup[];
+    students: ChecksStudent[];
+    exams: ChecksAttendance[];
+    deductions: ChecksDeduction[];
+}
+
 export interface AutomationLog {
     id: string;
     ruleId: string;
@@ -37,7 +59,7 @@ const WEEKEND_DAYS = [4, 5]; // الخميس والجمعة
 const DAYS_MAP = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
 /** تحويل أي صيغة تاريخ إلى YYYY-MM-DD */
-const normalizeDate = (dateInput: any): string => {
+const normalizeDate = (dateInput: string | Date | undefined): string => {
     if (!dateInput) return formatLocalDate(new Date());
     
     if (dateInput instanceof Date) return formatLocalDate(dateInput);
@@ -99,10 +121,10 @@ export const getLogs = async (logLimit: number = 500, selectedDateStr?: string):
         }
         const data = await res.json();
 
-        const mappedLogs: AutomationLog[] = (data || []).map((row: any) => ({
-            id: row.id, ruleId: row.rule_id || row.ruleId, ruleName: row.rule_name || row.ruleName, triggeredBy: 'system',
-            recipientId: row.affected_entity_id || row.recipientId, recipientName: row.affected_entity_name || row.recipientName,
-            messageSent: row.details || row.messageSent, timestamp: new Date(row.triggered_at || row.timestamp), status: (row.status || 'success') as any
+        const mappedLogs: AutomationLog[] = (data || []).map((row: { id: string; rule_id?: string; rule_name?: string; affected_entity_id?: string; affected_entity_name?: string; details?: string; triggered_at?: string; status?: 'success' | 'failed' }) => ({
+            id: row.id, ruleId: row.rule_id || '', ruleName: row.rule_name || '', triggeredBy: 'system',
+            recipientId: row.affected_entity_id || '', recipientName: row.affected_entity_name || '',
+            messageSent: row.details || '', timestamp: new Date(row.triggered_at || Date.now()), status: row.status || 'success'
         }));
 
         if (selectedDateStr) return mappedLogs;
@@ -131,8 +153,8 @@ export const getRules = async (): Promise<AutomationRule[]> => {
         const res = await fetch('/api/automation/rules');
         if (res.ok) {
             const data = await res.json();
-            const rules = (data || []).map((row: any) => ({
-                id: row.id, name: row.name, trigger: row.type as any, recipients: row.recipients || [],
+            const rules: AutomationRule[] = (data || []).map((row: { id: string; name: string; type: AutomationRule['trigger']; recipients?: AutomationRule['recipients']; schedule?: AutomationRule['schedule']; conditions: AutomationRule['condition']; actions: AutomationRule['action']; is_active: boolean; created_at: string }) => ({
+                id: row.id, name: row.name, trigger: row.type, recipients: row.recipients || [],
                 schedule: row.schedule, condition: row.conditions, action: row.actions,
                 enabled: row.is_active, createdAt: new Date(row.created_at)
             }));
@@ -157,7 +179,7 @@ export const getRules = async (): Promise<AutomationRule[]> => {
     ];
 };
 
-export const createRule = async (rule: any) => {
+export const createRule = async (rule: Omit<AutomationRule, 'id' | 'createdAt'>) => {
     const res = await fetch('/api/automation/rules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -171,8 +193,8 @@ export const createRule = async (rule: any) => {
     return { ...rule, id: data.id, createdAt: new Date(data.created_at) };
 };
 
-export const updateRule = async (id: string, updates: any) => {
-    const dbUpdates: any = { id };
+export const updateRule = async (id: string, updates: Partial<AutomationRule>) => {
+    const dbUpdates: Record<string, unknown> = { id };
     if (updates.name) dbUpdates.name = updates.name;
     if (updates.enabled !== undefined) dbUpdates.is_active = updates.enabled;
     if (updates.condition) dbUpdates.conditions = updates.condition;
@@ -210,7 +232,7 @@ export const executeDeduction = async (
     // ربط الخصم بشكل مباشر بصفحة جدول حضور المدرس (تقويم المعلم)
     try {
         const attendanceStatus = amt >= 1 ? 'absent' : (amt >= 0.5 ? 'half' : 'quarter');
-        await updateTeacherAttendance(tId, targetDate, attendanceStatus as any, `مخالفة أتمتة: ${reason}`);
+        await updateTeacherAttendance(tId, targetDate, attendanceStatus, `مخالفة أتمتة: ${reason}`);
     } catch (e) {
         console.error("Failed to post attendance to teacher profile automatically", e);
     }
@@ -262,17 +284,18 @@ export const checkMissingDailyReports = async (customDate?: string): Promise<Aut
             console.error('checks-data error:', await checksRes.text());
             return [];
         }
-        const result: any = await checksRes.json();
+        const result: DailyReportsChecksResult = await checksRes.json();
         const { teachers, groups, students: allStudents, deductions, attendance, teacherAttendance } = result;
         if (!teachers?.length) return [];
 
-        const alreadyDeducted = new Set((deductions || []).filter((d: any) => d.reason?.includes('التقرير')).map((d: any) => d.teacher_id));
-        const submittedStudents = new Set((attendance || []).map((a: any) => a.student_id));
-        const absentTeachers = new Set((teacherAttendance || []).filter((a: any) => a.status === 'absent').map((a: any) => a.teacher_id));
+        const alreadyDeducted = new Set((deductions || []).filter((d) => d.reason?.includes('التقرير')).map((d) => d.teacher_id));
+        const submittedStudents = new Set((attendance || []).map((a) => a.student_id));
+        const absentTeachers = new Set((teacherAttendance || []).filter((a) => a.status === 'absent').map((a) => a.teacher_id));
 
-        const groupTeacherMap = new Map<string, string>((groups || []).map((g: any) => [g.id, g.teacher_id]));
+        const groupTeacherMap = new Map<string, string | null>((groups || []).map((g) => [g.id, g.teacher_id]));
         const teacherStudentsMap = new Map<string, string[]>();
         for (const s of allStudents || []) {
+            if (!s.group_id) continue;
             const tId = groupTeacherMap.get(s.group_id);
             if (tId) {
                 const list = teacherStudentsMap.get(tId) || [];
@@ -341,16 +364,17 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
         console.error('checks-data error:', await checksRes.text());
         return [];
     }
-    const result: any = await checksRes.json();
+    const result: WeeklyExamsChecksResult = await checksRes.json();
     const { teachers, groups, students: allStudents, exams, deductions } = result;
     if (!teachers?.length) return [];
 
-    const examStudents = new Set((exams || []).map((e: any) => e.student_id));
-    const alreadyDeducted = new Set((deductions || []).filter((d: any) => d.reason?.includes('اختبار')).map((d: any) => d.teacher_id));
+    const examStudents = new Set((exams || []).map((e) => e.student_id));
+    const alreadyDeducted = new Set((deductions || []).filter((d) => d.reason?.includes('اختبار')).map((d) => d.teacher_id));
 
-    const groupTeacherMap = new Map<string, string>((groups || []).map((g: any) => [g.id, g.teacher_id]));
+    const groupTeacherMap = new Map<string, string | null>((groups || []).map((g) => [g.id, g.teacher_id]));
     const teacherStudentsMap = new Map<string, string[]>();
     for (const s of allStudents || []) {
+        if (!s.group_id) continue;
         const tId = groupTeacherMap.get(s.group_id);
         if (tId) {
             const list = teacherStudentsMap.get(tId) || [];
@@ -405,7 +429,7 @@ export const undoAutomationDeduction = async (logId: string, teacherId: string, 
     await fetch(`/api/attendance/teacher?teacherId=${encodeURIComponent(teacherId)}&date=${encodeURIComponent(dateStr)}`, { method: 'DELETE' });
 };
 
-export const triggerAutomation = async (ruleId: string, recipientId: string, recipientName: string, data: any) => {
+export const triggerAutomation = async (ruleId: string, recipientId: string, recipientName: string, data: Record<string, unknown>) => {
     const rules = await getRules();
     const rule = rules.find(r => r.id === ruleId);
     if (!rule) return;
@@ -414,7 +438,7 @@ export const triggerAutomation = async (ruleId: string, recipientId: string, rec
     return await addLog({ ruleId, ruleName: rule.name, triggeredBy: 'system', recipientId, recipientName, messageSent: msg, timestamp: new Date(), status: 'success' });
 };
 
-export const sendManualNotification = async (_tId: string, _tName: string, _amt: number, _type: string, _note: string, _sender?: any) => {
+export const sendManualNotification = async (_tId: string, _tName: string, _amt: number, _type: string, _note: string, _sender?: string) => {
     console.log('Chat system removed - notification skipped');
 };
 

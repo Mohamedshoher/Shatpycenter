@@ -36,6 +36,14 @@ interface Transaction extends TransactionData {
     relatedUserId?: string;
 }
 
+interface ExemptionRecord {
+    id: string;
+    student_id: string;
+    student_name?: string;
+    amount: number;
+    exempted_by?: string;
+}
+
 export default function FinancePage() {
     const { user } = useAuthStore();
     const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -43,7 +51,7 @@ export default function FinancePage() {
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSalaryStatusOpen, setIsSalaryStatusOpen] = useState(false);
-    const [selectedSalaryTeacher, setSelectedSalaryTeacher] = useState<any>(null);
+    const [selectedSalaryTeacher, setSelectedSalaryTeacher] = useState<typeof teachers[number] | null>(null);
     const [isSalaryTeacherOpen, setIsSalaryTeacherOpen] = useState(false);
     const [isDeficitOpen, setIsDeficitOpen] = useState(false);
     const [isManagerDirectOpen, setIsManagerDirectOpen] = useState(false);
@@ -116,7 +124,7 @@ export default function FinancePage() {
         queryKey: ['exemptions', selectedMonth],
         queryFn: async () => {
             const res = await fetch(`/api/records/exemptions?month=${encodeURIComponent(selectedMonth)}`);
-            const data: any[] = res.ok ? await res.json() : [];
+            const data: ExemptionRecord[] = res.ok ? await res.json() : [];
             return data || [];
         },
         enabled: isClient && !!selectedMonth
@@ -139,7 +147,7 @@ export default function FinancePage() {
             id: tr.id,
             type: tr.type as 'income' | 'expense',
             title: tr.description,
-            category: tr.category as any,
+            category: tr.category as TransactionData['category'],
             amount: tr.amount,
             date: tr.date,
             notes: '',
@@ -199,18 +207,18 @@ export default function FinancePage() {
         const totalInc = totalFeesByManagerDirect + totalFromTeachers + totalOtherIncome;
         const totalExp = expenseTransactions.reduce((sum, tr) => sum + tr.amount, 0);
 
-        const exemptedIds = new Set(exemptions.map((e: any) => e.student_id));
+        const exemptedIds = new Set(exemptions.map((e) => e.student_id));
         const totalDeficit = Object.entries(collectionsByTeacher).reduce((sum, [id, data]) => {
             const tGroups = groups.filter(g => g.teacherId === id).map(g => g.id);
             const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
             return sum + tStudents.reduce((acc, s) => {
-                const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
+                const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
                 const amt = Number(s.monthlyAmount) || 0;
                 return acc + (amt > paid && !exemptedIds.has(s.id) ? amt - paid : 0);
             }, 0);
         }, 0);
 
-        const totalExempted = exemptions.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+        const totalExempted = exemptions.reduce((s: number, e) => s + (Number(e.amount) || 0), 0);
 
         const filteredDeductions = monthDeductions.filter(d => {
             const dm = `${new Date(d.appliedDate).getFullYear()}-${String(new Date(d.appliedDate).getMonth() + 1).padStart(2, '0')}`;
@@ -220,7 +228,7 @@ export default function FinancePage() {
         const totalDeductions = teachers.reduce((sum, t) => {
             const manual = filteredDeductions.filter(d => d.teacherId === t.id).reduce((a, d) => a + d.amount, 0);
             const att = allAttendanceMap[t.id] || {};
-            const absence = Object.values(att).reduce((acc: number, stat: any) => { if (stat === 'absent') return acc + 1; if (stat === 'double_absent') return acc + 2; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
+            const absence = Object.values(att).reduce((acc: number, stat) => { if (stat === 'absent') return acc + 1; if (stat === 'double_absent') return acc + 2; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
             const weeklyWorkingDays = Number(t.weeklyWorkingDays) || 5;
             const standardWorkingDays = Math.max(1, Math.round(weeklyWorkingDays * 4.33));
             const daily = t.accountingType === 'partnership' ? ((Number(t.partnershipPercentage) || 0) / standardWorkingDays) : ((Number(t.salary) || 1000) / standardWorkingDays);
@@ -231,7 +239,7 @@ export default function FinancePage() {
         const paidSet = new Set(salaryPaymentsThisMonth.map(p => p.relatedUserId).filter(Boolean));
         const activeTeachers = teachers.filter(t => {
             if (t.status === 'inactive') return false;
-            const joinDate = (t as any).joinDate;
+            const joinDate = t.joinDate;
             if (joinDate) return joinDate.substring(0, 7) <= selectedMonth;
             return true;
         });
@@ -262,7 +270,7 @@ export default function FinancePage() {
 
     const incomeDetails = useMemo(() => {
         const incomeTransactions = filteredTransactions.filter(tr => tr.type === 'income');
-        const managerFees = allFees.filter((fee: any) => {
+        const managerFees = allFees.filter((fee) => {
             const isByTeacher = teachers.some(t => fee.createdBy === t.fullName || fee.createdBy === t.phone || (fee.createdBy && normalize(fee.createdBy) === normalize(t.fullName)));
             const isExplicitManager = fee.createdBy === user?.displayName || fee.createdBy === 'المدير' || fee.createdBy === 'admin';
             return isExplicitManager || (!isByTeacher && fee.createdBy && fee.createdBy !== 'غير معروف');
@@ -296,7 +304,7 @@ export default function FinancePage() {
     const teacherPaymentStatus = useMemo(() => {
         const activeTeachers = teachers.filter(t => {
             if (t.status === 'inactive') return false;
-            const joinDate = (t as any).joinDate;
+            const joinDate = t.joinDate;
             if (joinDate) return joinDate.substring(0, 7) <= selectedMonth;
             return true;
         });
@@ -343,7 +351,7 @@ export default function FinancePage() {
 
     const deficitPerTeacher = useMemo(() => {
         const normalize = (s: string) => { if (!s) return ''; return s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/[ًٌٍَُِّ]/g, '').replace(/\s+/g, '').trim(); };
-        const exemptedIds = new Set(exemptions.map((e: any) => e.student_id));
+        const exemptedIds = new Set(exemptions.map((e) => e.student_id));
 
         const collectionsByTeacher: Record<string, { amount: number; count: number }> = {};
         teachers.filter(t => t.status === 'active' || !t.status).forEach(t => { collectionsByTeacher[t.id] = { amount: 0, count: 0 }; });
@@ -363,12 +371,12 @@ export default function FinancePage() {
             const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
             let deficit = 0, expected = 0;
             tStudents.forEach(s => {
-                const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
+                const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
                 const amt = Number(s.monthlyAmount) || 0;
                 expected += amt;
                 if (amt > paid && !exemptedIds.has(s.id)) deficit += amt - paid;
             });
-            return { teacherId: id, teacherName: teacher?.fullName || id, collected: data.amount, count: data.count, deficit, expected, unpaidStudents: tStudents.filter(s => { const paid = allFees.filter((f: any) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0); return paid < (Number(s.monthlyAmount) || 0); }).length };
+            return { teacherId: id, teacherName: teacher?.fullName || id, collected: data.amount, count: data.count, deficit, expected, unpaidStudents: tStudents.filter(s => { const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0); return paid < (Number(s.monthlyAmount) || 0); }).length };
         }).sort((a, b) => b.deficit - a.deficit);
     }, [teachers, allFees, students, groups, exemptions, selectedMonth]);
 
@@ -407,24 +415,24 @@ export default function FinancePage() {
 
     const teacherAnalysis = useMemo(() => {
         const collections = deficitPerTeacher.map(d => ({ teacherId: d.teacherId, teacherName: d.teacherName, collected: d.collected, deficit: d.deficit, expected: d.expected, unpaidStudents: d.unpaidStudents }));
-        const exemptionList = exemptions.map((ex: any) => {
+        const exemptionList = exemptions.map((ex) => {
             const student = students.find(s => s.id === ex.student_id);
             return { id: ex.id, studentName: ex.student_name || student?.fullName || 'طالب', amount: ex.amount, exemptedBy: ex.exempted_by || 'المدير' };
         });
-        const filteredDeductions = monthDeductions.filter((d: any) => {
+        const filteredDeductions = monthDeductions.filter((d) => {
             const dm = `${new Date(d.appliedDate).getFullYear()}-${String(new Date(d.appliedDate).getMonth() + 1).padStart(2, '0')}`;
             return dm === selectedMonth && d.status === 'applied' && !d.reason.startsWith('مكافأة:');
         });
         const deductionList = teachers.map(t => {
-            const manual = filteredDeductions.filter((d: any) => d.teacherId === t.id).reduce((a, d) => a + d.amount, 0);
+            const manual = filteredDeductions.filter((d) => d.teacherId === t.id).reduce((a, d) => a + d.amount, 0);
             const att = allAttendanceMap[t.id] || {};
-            const absence = Object.values(att).reduce((acc: number, stat: any) => { if (stat === 'absent') return acc + 1; if (stat === 'double_absent') return acc + 2; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
+            const absence = Object.values(att).reduce((acc: number, stat) => { if (stat === 'absent') return acc + 1; if (stat === 'double_absent') return acc + 2; if (stat === 'half') return acc + 0.5; if (stat === 'quarter') return acc + 0.25; return acc; }, 0);
             const weeklyWorkingDays = Number(t.weeklyWorkingDays) || 5;
             const standardWorkingDays = Math.max(1, Math.round(weeklyWorkingDays * 4.33));
             const daily = t.accountingType === 'partnership' ? ((Number(t.partnershipPercentage) || 0) / standardWorkingDays) : ((Number(t.salary) || 1000) / standardWorkingDays);
             const total = Math.round((manual + absence) * daily);
             return total > 0 ? { teacherId: t.id, teacherName: t.fullName, amount: total, manualDays: manual, absenceDays: absence } : null;
-        }).filter(Boolean).sort((a: any, b: any) => b.amount - a.amount);
+        }).filter((d): d is NonNullable<typeof d> => d !== null).sort((a, b) => b.amount - a.amount);
         return { collections, exemptionList, deductionList };
     }, [deficitPerTeacher, exemptions, students, teachers, selectedMonth, monthDeductions, allAttendanceMap]);
 
@@ -619,12 +627,12 @@ export default function FinancePage() {
                             لا توجد مبالغ محصلة هذا الشهر.
                         </div>
                     ) : (
-                        incomeDetails.managerFees.map((fee: any) => {
+                        incomeDetails.managerFees.map((fee) => {
                             const std = students.find(s => s.id === fee.studentId);
                             return (
                                 <div key={fee.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
                                     <div className="text-right">
-                                        <p className="font-black text-gray-900 text-sm">{std?.fullName || fee.studentName || 'طالب'}</p>
+                                        <p className="font-black text-gray-900 text-sm">{std?.fullName || 'طالب'}</p>
                                         <p className="text-[10px] text-gray-400 font-bold">{typeof fee.date === 'string' ? fee.date.split('T')[0] : fee.date}</p>
                                     </div>
                                     <div className="text-left">
@@ -704,7 +712,7 @@ export default function FinancePage() {
                                     لا توجد مبالغ مستلمة من هذا المدرس هذا الشهر.
                                 </div>
                             ) : (
-                                selectedFromTeacherTxns.map((tr: any) => (
+                                selectedFromTeacherTxns.map((tr) => (
                                     <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
                                         <div className="text-right">
                                             <p className="font-black text-gray-900 text-sm">{tr.title}</p>
@@ -797,7 +805,7 @@ export default function FinancePage() {
                             لا توجد إيرادات أخرى هذا الشهر.
                         </div>
                     ) : (
-                        incomeDetails.otherTxns.map((tr: any) => (
+                        incomeDetails.otherTxns.map((tr) => (
                             <div key={tr.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
                                 <div className="text-right">
                                     <p className="font-black text-gray-900 text-sm">{tr.title || tr.category}</p>
@@ -924,12 +932,12 @@ export default function FinancePage() {
                     </button>
                 </div>
                 <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
-                    {(teacherAnalysis.deductionList as any[]).length === 0 ? (
+                    {teacherAnalysis.deductionList.length === 0 ? (
                         <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
                             لا توجد خصومات هذا الشهر.
                         </div>
                     ) : (
-                        (teacherAnalysis.deductionList as any[]).map((d: any) => (
+                        teacherAnalysis.deductionList.map((d) => (
                             <div key={d.teacherId} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
                                 <div className="text-right">
                                     <p className="font-black text-gray-900 text-sm">{d.teacherName}</p>
