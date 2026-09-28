@@ -37,6 +37,9 @@ export default function AutomationPage() {
         if (confirm(`هل أنت متأكد من رغبتك في تشغيل فحص التقارير ليوم ${checkDateDisplay} وتطبيق الخصومات على المخالفين؟`)) {
             const result = await executeMissingReportDeduction(checkDateStr);
             setSelectedDate('');
+            // نعيد تحميل السجل يدويًا لأن setSelectedDate('') لا يُعيد تشغيل الـ useEffect
+            // إذا كان selectedDate أصلاً '' (وهي الحالة الافتراضية "الأحدث")
+            await loadLogs('');
 
             const violators = (result || []).filter((r) => r.recipientId !== 'system');
 
@@ -52,6 +55,9 @@ export default function AutomationPage() {
         if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص الاختبارات اليومية وتطبيق الخصومات على من لم يسجّل اختباراً؟")) {
             const result = await executeMissingExamDeduction();
             setSelectedDate('');
+            // نعيد تحميل السجل يدويًا لأن setSelectedDate('') لا يُعيد تشغيل الـ useEffect
+            // إذا كان selectedDate أصلاً '' (وهي الحالة الافتراضية "الأحدث")
+            await loadLogs('');
 
             const violators = (result || []).filter((r) => r.recipientId !== 'system');
 
