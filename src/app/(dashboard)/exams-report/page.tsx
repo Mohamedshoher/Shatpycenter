@@ -71,6 +71,7 @@ export default function ExamsReportPage() {
 
     const [selectedRemainingCount, setSelectedRemainingCount] = useState('all'); // فلتر عدد الاختبارات المتبقية (3، 2، 1)
     const [goalsGroupFilter, setGoalsGroupFilter] = useState('all'); // فلتر المجموعة لتبويب الأهداف
+    const [goalsExamTypeFilter, setGoalsExamTypeFilter] = useState<'all' | 'new' | 'near' | 'far'>('all'); // فلتر نوع الاختبار لتبويب الأهداف
 
     // --- 4. إدارة الوقت والتاريخ ---
     const [selectedDate, setSelectedDate] = useState(new Date()); // التاريخ المختار للتقارير الشهرية
@@ -223,8 +224,15 @@ export default function ExamsReportPage() {
             })
             .filter((g) => g.student)
             .filter((g) => goalsGroupFilter === 'all' || g.groupId === goalsGroupFilter)
+            .filter((g) => goalsExamTypeFilter === 'all' || g.examType?.trim() === EXAM_TYPE_MAP[goalsExamTypeFilter])
+            .filter((g) => {
+                if (!g.completedAt) return false;
+                const d = new Date(g.completedAt);
+                const goalMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                return goalMonthKey === monthKey;
+            })
             .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
-    }, [allGoals, students, groups, teachers, goalsGroupFilter]);
+    }, [allGoals, students, groups, teachers, goalsGroupFilter, goalsExamTypeFilter, monthKey]);
 
     // ج- تجميع بيانات الأداء لكل مجموعة (إحصائيات الرسوم البيانية)
     const performanceData = useMemo(() => {
@@ -290,7 +298,7 @@ export default function ExamsReportPage() {
         : activeTab === 'performance'
             ? [performanceFilter !== 'all', performanceTypeFilter !== 'all'].filter(Boolean).length
             : activeTab === 'goals'
-                ? [goalsGroupFilter !== 'all'].filter(Boolean).length
+                ? [goalsGroupFilter !== 'all', goalsExamTypeFilter !== 'all'].filter(Boolean).length
                 : 0;
 
     return (
@@ -563,7 +571,20 @@ export default function ExamsReportPage() {
                         <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
                             {showFilters && (
                                 <SlideIn show={showFilters}>
-                                    <div className="flex justify-center md:justify-end mb-2">
+                                    <div className="flex justify-center md:justify-end mb-2 gap-2">
+                                        <div className="relative">
+                                            <select
+                                                value={goalsExamTypeFilter}
+                                                onChange={(e) => setGoalsExamTypeFilter(e.target.value as 'all' | 'new' | 'near' | 'far')}
+                                                className="appearance-none bg-white border border-gray-100 px-5 py-2 pr-3 rounded-lg md:rounded-2xl text-[10px] md:text-sm font-bold text-gray-600 focus:outline-none text-right"
+                                            >
+                                                <option value="all">كل الأنواع</option>
+                                                <option value="new">جديد</option>
+                                                <option value="near">ماضي قريب</option>
+                                                <option value="far">ماضي بعيد</option>
+                                            </select>
+                                            <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        </div>
                                         <div className="relative">
                                             <select
                                                 value={goalsGroupFilter}
@@ -580,7 +601,7 @@ export default function ExamsReportPage() {
                             )}
 
                             <div className="flex items-center justify-between px-1 mb-2">
-                                <span className="text-[10px] md:text-xs font-bold text-gray-400">الأهداف المنجزة</span>
+                                <span className="text-[10px] md:text-xs font-bold text-gray-400">الأهداف المنجزة ({currentMonthLabel})</span>
                                 <span className="bg-emerald-100 text-emerald-700 text-[10px] md:text-xs font-black px-2 md:px-3 py-0.5 md:py-1 rounded-full font-sans">{completedGoalsData.length} هدف</span>
                             </div>
 
