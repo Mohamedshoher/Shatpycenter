@@ -16,6 +16,7 @@ import { useAuthStore } from '../../../store/useAuthStore';
 import type { ExamGoal, ExamRecord } from '../services/recordsService';
 import { Student } from '@/types';
 import type { StudentRecordsHook } from '../hooks/types';
+import { GOALS_FEATURE_ENABLED } from '@/config/features';
 
 type ExamType = 'جديد' | 'ماضي قريب' | 'ماضي بعيد';
 const EXAM_TYPES: ExamType[] = ['جديد', 'ماضي قريب', 'ماضي بعيد'];
@@ -92,7 +93,7 @@ export default function ExamsTab({ student, records }: { student: Student; recor
     const toggleGoal = (id: string) =>
         setExpandedGoals(p => ({ ...p, [id]: !p[id] }));
     
-    const [showUnclassified, setShowUnclassified] = useState(false);
+    const [showUnclassified, setShowUnclassified] = useState(!GOALS_FEATURE_ENABLED);
 
     // ── مودال تسجيل اختبار ──
     const [examModal, setExamModal] = useState<{ open: boolean; type: ExamType; goalId: string } | null>(null);
@@ -133,7 +134,7 @@ export default function ExamsTab({ student, records }: { student: Student; recor
             type: examModal.type,
             grade: examGrade,
             date: examDate,
-            goalId: examModal.goalId,
+            goalId: examModal.goalId || null,
         });
         setExamModal(null);
     };
@@ -229,12 +230,14 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                         >
                             <span>{type}</span>
                             <div className="flex items-center gap-1">
-                                <span className={cn(
-                                    "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
-                                    isActive ? "bg-white/25 text-white" : "bg-gray-200 text-gray-400"
-                                )}>
-                                    {goalCount} هدف
-                                </span>
+                                {GOALS_FEATURE_ENABLED && (
+                                    <span className={cn(
+                                        "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+                                        isActive ? "bg-white/25 text-white" : "bg-gray-200 text-gray-400"
+                                    )}>
+                                        {goalCount} هدف
+                                    </span>
+                                )}
                                 <span className={cn(
                                     "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
                                     isActive ? "bg-white/20 text-white" : "bg-gray-200 text-gray-400"
@@ -247,8 +250,8 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                 })}
             </div>
 
-            {/* زر إضافة هدف جديد (في الأعلى) */}
-            {canEdit && (
+            {/* زر إضافة هدف جديد (في الأعلى) — الأهداف موقوفة مؤقتاً */}
+            {GOALS_FEATURE_ENABLED && canEdit && (
                 <button
                     onClick={() => openGoalModal(activeTab)}
                     className={cn(
@@ -261,9 +264,30 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                 </button>
             )}
 
-            {/* ═══ قائمة الأهداف للنوع النشط ═══ */}
+            {/* زر تسجيل اختبار مباشر (بدون هدف) — يظهر طالما الأهداف موقوفة */}
+            {!GOALS_FEATURE_ENABLED && canEdit && (
+                <button
+                    onClick={() => openExamModal(activeTab, '')}
+                    className={cn(
+                        "w-full py-3 rounded-2xl border-2 border-dashed text-sm font-bold flex items-center justify-center gap-2 transition-all hover:border-solid",
+                        cfg.color, cfg.border, cfg.bg, "hover:bg-white"
+                    )}
+                >
+                    <Plus size={15} />
+                    تسجيل اختبار «{activeTab}»
+                </button>
+            )}
+
+            {/* ═══ قائمة الأهداف للنوع النشط — الأهداف موقوفة مؤقتاً ═══ */}
             <div className="space-y-3">
-                {activeGoals.length === 0 && (
+                {!GOALS_FEATURE_ENABLED && unclassifiedExams.length === 0 && (
+                    <div className={cn("rounded-2xl border-2 border-dashed p-6 text-center", cfg.border)}>
+                        <Target size={28} className={cn("mx-auto mb-2 opacity-40", cfg.color)} />
+                        <p className="text-sm font-bold text-gray-400">لا توجد اختبارات مسجّلة لهذا النوع بعد</p>
+                    </div>
+                )}
+
+                {GOALS_FEATURE_ENABLED && activeGoals.length === 0 && (
                     <div className={cn("rounded-2xl border-2 border-dashed p-6 text-center", cfg.border)}>
                         <Target size={28} className={cn("mx-auto mb-2 opacity-40", cfg.color)} />
                         <p className="text-sm font-bold text-gray-400">لا توجد أهداف لهذا النوع بعد</p>
@@ -271,7 +295,7 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                     </div>
                 )}
 
-                {activeGoals.map((goal) => {
+                {GOALS_FEATURE_ENABLED && activeGoals.map((goal) => {
                     const goalExams = exams
                         .filter((e) => e.goalId === goal.id)
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -473,7 +497,7 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                                     <BookOpen size={14} className="text-gray-600" />
                                 </div>
                                 <p className="text-gray-800 font-black text-sm">
-                                    📂 اختبارات غير مصنفة 
+                                    {GOALS_FEATURE_ENABLED ? '📂 اختبارات غير مصنفة' : 'الاختبارات المسجّلة'}
                                     <span className="text-[10px] bg-white text-gray-600 px-2 py-0.5 rounded-full mr-2">
                                         {unclassifiedExams.length} اختبار
                                     </span>

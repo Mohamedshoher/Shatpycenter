@@ -26,6 +26,7 @@ import { useAllGoals } from '@/features/students/hooks/useAllGoals';
 import { Student } from '@/types';
 import Target from 'lucide-react/dist/esm/icons/target';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import { GOALS_FEATURE_ENABLED } from '@/config/features';
 
 const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
 
@@ -380,16 +381,18 @@ export default function ExamsReportPage() {
                         لم يختبروا
                         <span className={cn("text-[8px] md:text-[10px] font-black px-1 md:px-1.5 py-0.5 rounded-full font-sans", activeTab === 'notTested' ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-500")}>{notTestedStudents.length}</span>
                     </button>
-                    <button
-                        onClick={() => setActiveTab('goals')}
-                        className={cn(
-                            "flex-1 py-1.5 md:py-2.5 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-0.5 md:gap-1.5",
-                            activeTab === 'goals' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                        )}
-                    >
-                        <Target size={12} />
-                        الأهداف
-                    </button>
+                    {GOALS_FEATURE_ENABLED && (
+                        <button
+                            onClick={() => setActiveTab('goals')}
+                            className={cn(
+                                "flex-1 py-1.5 md:py-2.5 rounded-lg text-[10px] md:text-sm font-bold transition-all flex items-center justify-center gap-0.5 md:gap-1.5",
+                                activeTab === 'goals' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                            )}
+                        >
+                            <Target size={12} />
+                            الأهداف
+                        </button>
+                    )}
                 </div>
 
                 {/* --- زر إظهار/إخفاء الفلاتر (فقط للتبويبات التي تملك فلاتر) --- */}
@@ -567,7 +570,7 @@ export default function ExamsReportPage() {
 
 
                     {/* --- التبويب 3: الأهداف المنتهية --- */}
-                    {activeTab === 'goals' && (
+                    {GOALS_FEATURE_ENABLED && activeTab === 'goals' && (
                         <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
                             {showFilters && (
                                 <SlideIn show={showFilters}>
