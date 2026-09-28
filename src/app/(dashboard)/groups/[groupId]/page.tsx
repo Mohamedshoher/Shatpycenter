@@ -41,6 +41,7 @@ export default function GroupDetailPage() {
         if (foundGroup.name.includes('قرآن')) color = 'bg-blue-100 text-blue-600';
         else if (foundGroup.name.includes('تلقين')) color = 'bg-green-100 text-green-600';
         else if (foundGroup.name.includes('نور بيان')) color = 'bg-orange-100 text-orange-600';
+        else if (foundGroup.name.includes('تجويد')) color = 'bg-purple-100 text-purple-600';
 
 
         return {
