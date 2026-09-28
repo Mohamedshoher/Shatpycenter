@@ -426,7 +426,8 @@ export default function AddStaffModal({ isOpen, onClose, initialTeacher }: AddSt
                             {[
                                 { id: 'قرآن', label: 'قرآن' },
                                 { id: 'نور بيان', label: 'نور بيان' },
-                                { id: 'تلقين', label: 'تلقين' }
+                                { id: 'تلقين', label: 'تلقين' },
+                                { id: 'تجويد', label: 'تجويد' }
                             ].map(section => {
                                 const isSelected = formData.responsibleSections.includes(section.id);
                                 return (

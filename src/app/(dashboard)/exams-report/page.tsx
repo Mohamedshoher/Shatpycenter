@@ -68,7 +68,7 @@ export default function ExamsReportPage() {
     const [selectedExamType, setSelectedExamType] = useState('new'); // نوع الاختبار (جديد، قريب، بعيد)
     const [examsLimit] = useState('1'); // الحد الأدنى للاختبارات (لتبويب الأكثر اختباراً)
     const [performanceFilter, setPerformanceFilter] = useState<'all' | 'new' | 'near' | 'far'>('all'); // فلتر تبويب الأداء
-    const [performanceTypeFilter, setPerformanceTypeFilter] = useState<'all' | 'quran' | 'talqeen' | 'noor'>('all'); // فلتر نوع المجموعة
+    const [performanceTypeFilter, setPerformanceTypeFilter] = useState<'all' | 'quran' | 'talqeen' | 'noor' | 'tajweed'>('all'); // فلتر نوع المجموعة
 
     const [selectedRemainingCount, setSelectedRemainingCount] = useState('all'); // فلتر عدد الاختبارات المتبقية (3، 2، 1)
     const [goalsGroupFilter, setGoalsGroupFilter] = useState('all'); // فلتر المجموعة لتبويب الأهداف
@@ -121,8 +121,8 @@ export default function ExamsReportPage() {
                 const groupName = groups?.find((g) => g.id === s.groupId)?.name || 'غير محدد';
 
                 // تحديد عدد الاختبارات المطلوبة حسب نوع المجموعة
-                // تلقين/نور بيان: 2، قرآن (الافتراضي): 3
-                const isReducedReq = groupName.includes('تلقين') || groupName.includes('نور بيان') || groupName.includes('نور البيان');
+                // تلقين/نور بيان/تجويد: 2، قرآن (الافتراضي): 3
+                const isReducedReq = groupName.includes('تلقين') || groupName.includes('نور بيان') || groupName.includes('نور البيان') || groupName.includes('تجويد');
                 const requiredCount = isReducedReq ? 2 : 3;
 
                 // جلب اختبارات الطالب لهذا النصف (باستثناء "يعاد")
@@ -249,6 +249,7 @@ export default function ExamsReportPage() {
                 if (performanceTypeFilter === 'quran') return name.includes('قرآن');
                 if (performanceTypeFilter === 'talqeen') return name.includes('تلقين');
                 if (performanceTypeFilter === 'noor') return name.includes('نور بيان') || name.includes('نور البيان');
+                if (performanceTypeFilter === 'tajweed') return name.includes('تجويد');
                 return true;
             });
         }
@@ -700,13 +701,14 @@ export default function ExamsReportPage() {
                                         <div className="relative">
                                             <select
                                                 value={performanceTypeFilter}
-                                                onChange={(e) => setPerformanceTypeFilter(e.target.value as 'all' | 'quran' | 'talqeen' | 'noor')}
+                                                onChange={(e) => setPerformanceTypeFilter(e.target.value as 'all' | 'quran' | 'talqeen' | 'noor' | 'tajweed')}
                                                 className="appearance-none bg-white border border-gray-100 px-3 md:px-5 py-1.5 md:py-2 pr-2 md:pr-3 rounded-lg md:rounded-xl text-[9px] md:text-sm font-bold text-gray-600 focus:outline-none text-right cursor-pointer"
                                             >
                                                 <option value="all">كل المجموعات</option>
                                                 <option value="quran">قرآن</option>
                                                 <option value="talqeen">تلقين</option>
                                                 <option value="noor">نور البيان</option>
+                                                <option value="tajweed">تجويد</option>
                                             </select>
                                             <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                         </div>

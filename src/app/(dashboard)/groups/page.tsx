@@ -139,6 +139,7 @@ export default function GroupsPage() {
             if (group.name.includes('قرآن')) color = 'bg-blue-100 text-blue-600';
             else if (group.name.includes('تلقين')) color = 'bg-green-100 text-green-600';
             else if (group.name.includes('نور بيان')) color = 'bg-orange-100 text-orange-600';
+            else if (group.name.includes('تجويد')) color = 'bg-purple-100 text-purple-600';
 
 
             return {
@@ -247,7 +248,7 @@ export default function GroupsPage() {
                                             <FadeIn show={isConfigDropdownOpen}>
                                                 <div className="absolute top-[120%] left-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-2">
                                                         <div className="px-4 py-2 text-[10px] font-black tracking-widest text-gray-400 border-b border-gray-50 uppercase">الفلترة</div>
-                                                        {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'حضور ممتاز', 'حضور ضعيف'].map((type) => (
+                                                        {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'تجويد', 'حضور ممتاز', 'حضور ضعيف'].map((type) => (
                                                             <button
                                                                 key={type}
                                                                 onClick={(e) => {
