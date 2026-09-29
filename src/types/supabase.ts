@@ -213,6 +213,42 @@ export type Database = {
           },
         ]
       }
+      exam_cycle_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          student_id: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          student_id: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          student_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_cycle_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_cycle_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "teacher_parent_access"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
       exam_goals: {
         Row: {
           completed_at: string | null
@@ -819,6 +855,7 @@ export type Database = {
       }
       teacher_attendance: {
         Row: {
+          applied_by: string | null
           created_at: string
           date: string
           id: string
@@ -827,6 +864,7 @@ export type Database = {
           teacher_id: string | null
         }
         Insert: {
+          applied_by?: string | null
           created_at?: string
           date: string
           id?: string
@@ -835,6 +873,7 @@ export type Database = {
           teacher_id?: string | null
         }
         Update: {
+          applied_by?: string | null
           created_at?: string
           date?: string
           id?: string
