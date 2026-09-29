@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      agreement_terms: {
+        Row: {
+          content: string
+          icon: string | null
+          id: string
+          order_index: number
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content: string
+          icon?: string | null
+          id?: string
+          order_index: number
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: string
+          icon?: string | null
+          id?: string
+          order_index?: number
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           created_at: string
