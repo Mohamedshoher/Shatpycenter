@@ -53,7 +53,7 @@ const GroupHeaderCell = ({ label, column, sort, onSort, className = '' }: {
     return (
         <th
             onClick={() => onSort(column)}
-            className={cn('px-1.5 md:px-2 py-2 md:py-2.5 text-[9px] md:text-[10px] font-black cursor-pointer select-none whitespace-nowrap', isActive ? 'text-blue-600' : 'text-gray-400', className)}
+            className={cn('px-1.5 md:px-2 py-2 md:py-2.5 text-[9px] md:text-[10px] font-black cursor-pointer select-none whitespace-nowrap border-b border-gray-100', isActive ? 'text-blue-600' : 'text-gray-400', className)}
         >
             <span className="inline-flex items-center gap-1">
                 {label}
@@ -65,7 +65,7 @@ const GroupHeaderCell = ({ label, column, sort, onSort, className = '' }: {
 
 // خلية قيمة (رقم أو نسبة) مع دلتا التغيّر، تُستخدم في جدول أداء المجموعات
 const GroupValueCell = ({ current, previous, suffix = '' }: { current: number | null; previous: number | null; suffix?: string }) => (
-    <td className="px-1.5 md:px-2 py-2.5 md:py-3 min-w-[64px] md:min-w-[76px]">
+    <td className="px-1.5 md:px-2 py-2.5 md:py-3 min-w-[64px] md:min-w-[76px] border-b border-gray-50">
         <div className="flex flex-col">
             <span className="text-xs md:text-sm font-black text-gray-800 font-sans">{current ?? '—'}{current !== null && suffix}</span>
             {current !== null && previous !== null && <Delta current={current} previous={previous} suffix={suffix} />}
@@ -115,7 +115,7 @@ export default function AnalyticsPage() {
     };
     const groupSortValue = (g: GroupAnalytics, column: GroupSortColumn): number | string => {
         switch (column) {
-            case 'name': return g.teacherName;
+            case 'name': return g.name;
             case 'total': return g.current.pagesSum;
             case 'new': return g.current.newPages;
             case 'near': return g.current.nearPages;
@@ -226,9 +226,9 @@ export default function AnalyticsPage() {
                             <div className="text-center py-10 bg-white/40 rounded-2xl border-2 border-dashed border-gray-100 text-gray-400 text-sm font-bold">لا توجد مجموعات لعرضها</div>
                         ) : (
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-                                <table className="w-full text-right border-collapse">
+                                <table className="w-full text-right border-separate border-spacing-0">
                                     <thead>
-                                        <tr className="bg-gray-50 border-b border-gray-100">
+                                        <tr className="bg-gray-50">
                                             <GroupHeaderCell label="المجموعة" column="name" sort={groupSort} onSort={toggleGroupSort} className="text-right min-w-[110px] md:min-w-[140px] sticky right-0 z-20 bg-gray-50 shadow-[-6px_0_6px_-4px_rgba(0,0,0,0.08)]" />
                                             <GroupHeaderCell label="الكل" column="total" sort={groupSort} onSort={toggleGroupSort} />
                                             <GroupHeaderCell label="جديد" column="new" sort={groupSort} onSort={toggleGroupSort} />
@@ -239,10 +239,10 @@ export default function AnalyticsPage() {
                                             <GroupHeaderCell label="الحضور" column="attendance" sort={groupSort} onSort={toggleGroupSort} />
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="[&>tr:last-child>td]:border-b-0">
                                         {sortedGroups.map((g) => (
-                                            <tr key={g.id} className="border-b border-gray-50 last:border-0">
-                                                <td className="px-2.5 md:px-3 py-2.5 md:py-3 min-w-[110px] md:min-w-[140px] max-w-[150px] sticky right-0 z-10 bg-white shadow-[-6px_0_6px_-4px_rgba(0,0,0,0.08)]">
+                                            <tr key={g.id}>
+                                                <td className="px-2.5 md:px-3 py-2.5 md:py-3 min-w-[110px] md:min-w-[140px] max-w-[150px] sticky right-0 z-10 bg-white border-b border-gray-50 shadow-[-6px_0_6px_-4px_rgba(0,0,0,0.08)]">
                                                     <p className="text-[11px] md:text-xs font-bold text-gray-800 truncate">{g.name}</p>
                                                     <p className="text-[9px] md:text-[10px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
                                                 </td>
