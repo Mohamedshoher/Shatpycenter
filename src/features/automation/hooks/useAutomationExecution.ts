@@ -26,11 +26,11 @@ export const useAutomationExecution = () => {
     }, []);
 
     // أتمتة الاختبارات اليومية
-    const executeMissingExamDeduction = useCallback(async () => {
+    const executeMissingExamDeduction = useCallback(async (customDate?: string) => {
         setIsExecutingExams(true);
         setError(null);
         try {
-            const createdLogs = await automationService.checkMissingDailyExams();
+            const createdLogs = await automationService.checkMissingDailyExams(customDate);
             setLogs(createdLogs);
             return createdLogs;
         } catch (err) {

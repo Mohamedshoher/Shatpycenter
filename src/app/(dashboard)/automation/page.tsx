@@ -18,6 +18,7 @@ export default function AutomationPage() {
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
     const defaultCheckDate = yesterday.toISOString().split('T')[0];
     const [reportCheckDate, setReportCheckDate] = useState<string>(defaultCheckDate);
+    const [examCheckDate, setExamCheckDate] = useState<string>(defaultCheckDate);
 
     useEffect(() => {
         loadLogs(selectedDate);
@@ -52,8 +53,10 @@ export default function AutomationPage() {
     };
 
     const handleRunExamCheck = async () => {
-        if (confirm("هل أنت متأكد من رغبتك في تشغيل فحص الاختبارات اليومية وتطبيق الخصومات على من لم يسجّل اختباراً؟")) {
-            const result = await executeMissingExamDeduction();
+        const checkDateStr = examCheckDate;
+        const checkDateDisplay = new Date(checkDateStr + 'T12:00:00').toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
+        if (confirm(`هل أنت متأكد من رغبتك في تشغيل فحص الاختبارات ليوم ${checkDateDisplay} وتطبيق الخصومات على المخالفين؟`)) {
+            const result = await executeMissingExamDeduction(checkDateStr);
             setSelectedDate('');
             // نعيد تحميل السجل يدويًا لأن setSelectedDate('') لا يُعيد تشغيل الـ useEffect
             // إذا كان selectedDate أصلاً '' (وهي الحالة الافتراضية "الأحدث")
@@ -62,9 +65,9 @@ export default function AutomationPage() {
             const violators = (result || []).filter((r) => r.recipientId !== 'system');
 
             if (violators.length > 0) {
-                alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة.`);
+                alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة ليوم ${checkDateDisplay}.`);
             } else {
-                alert("✨ تم الفحص: لم يتم العثور على مخالفات جديدة اليوم.");
+                alert(`✨ تم الفحص ليوم ${checkDateDisplay}: لم يتم العثور على مخالفات جديدة.`);
             }
         }
     };
@@ -229,14 +232,22 @@ export default function AutomationPage() {
                             <span>{isExecuting ? 'جاري الفحص...' : 'فحص التقارير'}</span>
                         </button>
                     </div>
-                    <button
-                        onClick={handleRunExamCheck}
-                        disabled={isExecutingExams}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl font-black text-sm hover:bg-emerald-100 transition-all disabled:opacity-50 md:self-center"
-                    >
-                        <BookOpen className="w-5 h-5 shrink-0" />
-                        <span>{isExecutingExams ? 'جاري فحص الاختبارات...' : 'فحص الاختبارات'}</span>
-                    </button>
+                    <div className="flex-1 flex flex-col gap-2 min-w-0">
+                        <input
+                            type="date"
+                            value={examCheckDate}
+                            onChange={(e) => setExamCheckDate(e.target.value)}
+                            className="w-full bg-white border border-gray-200 text-xs font-bold text-emerald-700 px-3 py-2 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <button
+                            onClick={handleRunExamCheck}
+                            disabled={isExecutingExams}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl font-black text-sm hover:bg-emerald-100 transition-all disabled:opacity-50"
+                        >
+                            <BookOpen className="w-5 h-5 shrink-0" />
+                            <span>{isExecutingExams ? 'جاري فحص الاختبارات...' : 'فحص الاختبارات'}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

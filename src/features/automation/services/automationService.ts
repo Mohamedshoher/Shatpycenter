@@ -336,29 +336,20 @@ export const checkMissingDailyReports = async (customDate?: string): Promise<Aut
     }
 };
 
-export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
-    const today = new Date();
+export const checkMissingDailyExams = async (customDate?: string): Promise<AutomationLog[]> => {
+    const target = customDate ? new Date(customDate + 'T12:00:00') : (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d; })();
+    const dateStr = customDate || normalizeDate(target);
+    const dayOfWeek = target.getDay();
+    const dayName = target.toLocaleDateString('ar-EG', { weekday: 'long' });
     const startTime = new Date();
 
-    // حساب نطاق الأسبوع: من السبت الماضي (بداية الأسبوع الدراسي) إلى أمس
-    const dayOfWeek = today.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
-    const daysSinceSaturday = (dayOfWeek - 6 + 7) % 7;
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - daysSinceSaturday);
-
-    const weekEnd = new Date(today);
-    weekEnd.setDate(weekEnd.getDate() - 1);
-
-    const startDateStr = normalizeDate(weekStart);
-    const endDateStr = normalizeDate(weekEnd);
-
-    if (weekStart > weekEnd) return [];
+    if (!customDate && WEEKEND_DAYS.includes(dayOfWeek)) return [];
 
     const rules = await getRules();
     const rule = rules.find(r => r.trigger === 'repeated_exams' && r.enabled);
     if (!rule) return [];
 
-    const checksRes = await fetch(`/api/automation/checks-data?type=weekly-exams&startDate=${encodeURIComponent(startDateStr)}&endDate=${encodeURIComponent(endDateStr)}`);
+    const checksRes = await fetch(`/api/automation/checks-data?type=weekly-exams&startDate=${encodeURIComponent(dateStr)}&endDate=${encodeURIComponent(dateStr)}`);
     if (!checksRes.ok) {
         console.error('checks-data error:', await checksRes.text());
         return [];
@@ -395,16 +386,16 @@ export const checkMissingDailyExams = async (): Promise<AutomationLog[]> => {
         if (!studentIds.some(id => examStudents.has(id))) {
             nonCompliantTeachers++;
             if (!alreadyDeducted.has(t.id)) {
-                const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.5, 'عدم تسجيل الاختبارات لمدار اسبوع', rule.id, 'فحص الاختبارات الأسبوعية', endDateStr, startTime);
+                const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.5, `عدم تسجيل الاختبارات ليوم ${dayName} بتاريخ ${dateStr}`, rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
                 logs.push(...res.logs);
             }
         }
     }
 
     if (nonCompliantTeachers === 0 && checkedTeachers > 0) {
-        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات الأسبوعية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سجلوا اختبارات من ${startDateStr} إلى ${endDateStr}`, timestamp: startTime, status: 'success' }));
+        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '✅ التزام كامل', messageSent: `الجميع سجلوا اختبارات ليوم ${dayName} بتاريخ ${dateStr}`, timestamp: startTime, status: 'success' }));
     } else if (checkedTeachers === 0) {
-        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات الأسبوعية', triggeredBy: 'system', recipientId: 'system', recipientName: '⚠️ تحذير', messageSent: `لم يتم العثور على معلمين للفحص من ${startDateStr} إلى ${endDateStr}`, timestamp: startTime, status: 'failed' }));
+        logs.push(await addLog({ ruleId: rule.id, ruleName: 'فحص الاختبارات اليومية', triggeredBy: 'system', recipientId: 'system', recipientName: '⚠️ تحذير', messageSent: `لم يتم العثور على معلمين للفحص ليوم ${dayName} بتاريخ ${dateStr}`, timestamp: startTime, status: 'failed' }));
     }
     return logs;
 };
