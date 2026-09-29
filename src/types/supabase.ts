@@ -320,6 +320,8 @@ export type Database = {
           goal_id: string | null
           grade: string | null
           id: string
+          lines_count: number | null
+          pages_count: number | null
           student_id: string | null
           surah: string | null
         }
@@ -330,6 +332,8 @@ export type Database = {
           goal_id?: string | null
           grade?: string | null
           id?: string
+          lines_count?: number | null
+          pages_count?: number | null
           student_id?: string | null
           surah?: string | null
         }
@@ -340,6 +344,8 @@ export type Database = {
           goal_id?: string | null
           grade?: string | null
           id?: string
+          lines_count?: number | null
+          pages_count?: number | null
           student_id?: string | null
           surah?: string | null
         }

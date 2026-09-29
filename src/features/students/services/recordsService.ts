@@ -22,6 +22,8 @@ export interface ExamRecord {
     grade: string;
     date: string;
     goalId?: string | null;
+    pagesCount?: number | null;
+    linesCount?: number | null;
     notes?: string;
     recordedBy?: string;
     timestamp?: number;
