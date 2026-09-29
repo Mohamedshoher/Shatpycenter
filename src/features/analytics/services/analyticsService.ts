@@ -21,6 +21,11 @@ export interface AnalyticsOverview {
 export interface GroupAnalyticsPeriod {
     examsCount: number;
     pagesSum: number;
+    newPages: number;
+    nearPages: number;
+    farPages: number;
+    notTestedRate: number | null;
+    withdrawnRate: number | null;
     attendanceRate: number | null;
 }
 

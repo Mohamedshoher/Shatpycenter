@@ -9,19 +9,21 @@ import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
 import Minus from 'lucide-react/dist/esm/icons/minus';
 import Search from 'lucide-react/dist/esm/icons/search';
 import User from 'lucide-react/dist/esm/icons/user';
-import ArrowDownAZ from 'lucide-react/dist/esm/icons/arrow-down-a-z';
-import ArrowUpDown from 'lucide-react/dist/esm/icons/arrow-up-down';
+import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up';
+import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
+import ChevronsUpDown from 'lucide-react/dist/esm/icons/chevrons-up-down';
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import {
     getAnalyticsOverview,
     getGroupsAnalytics,
     getStudentAnalytics,
+    GroupAnalytics,
 } from '@/features/analytics/services/analyticsService';
 import { Student } from '@/types';
 
 type TabType = 'general' | 'groups' | 'students';
-type SortMode = 'name' | 'change';
+type GroupSortColumn = 'name' | 'total' | 'new' | 'near' | 'far' | 'notTested' | 'withdrawn' | 'attendance';
 
 const TABS: { id: TabType; label: string }[] = [
     { id: 'general', label: 'عام' },
@@ -42,6 +44,34 @@ const Delta = ({ current, previous, suffix = '' }: { current: number; previous: 
         </span>
     );
 };
+
+// رأس عمود قابل للترتيب في جدول أداء المجموعات
+const GroupHeaderCell = ({ label, column, sort, onSort, className = '' }: {
+    label: string; column: GroupSortColumn; sort: { column: GroupSortColumn; dir: 'asc' | 'desc' }; onSort: (c: GroupSortColumn) => void; className?: string;
+}) => {
+    const isActive = sort.column === column;
+    return (
+        <th
+            onClick={() => onSort(column)}
+            className={cn('px-2 py-2.5 text-[10px] font-black cursor-pointer select-none whitespace-nowrap', isActive ? 'text-blue-600' : 'text-gray-400', className)}
+        >
+            <span className="inline-flex items-center gap-1">
+                {label}
+                {isActive ? (sort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ChevronsUpDown size={11} className="opacity-40" />}
+            </span>
+        </th>
+    );
+};
+
+// خلية قيمة (رقم أو نسبة) مع دلتا التغيّر، تُستخدم في جدول أداء المجموعات
+const GroupValueCell = ({ current, previous, suffix = '' }: { current: number | null; previous: number | null; suffix?: string }) => (
+    <td className="px-2 py-3">
+        <div className="flex flex-col">
+            <span className="text-sm font-black text-gray-800 font-sans">{current ?? '—'}{current !== null && suffix}</span>
+            {current !== null && previous !== null && <Delta current={current} previous={previous} suffix={suffix} />}
+        </div>
+    </td>
+);
 
 const StatCard = ({ title, current, previous, unit = '', rate = false }: { title: string; current: number | null; previous: number | null; unit?: string; rate?: boolean }) => (
     <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-1.5">
@@ -76,16 +106,35 @@ export default function AnalyticsPage() {
         enabled: activeTab === 'groups',
     });
 
-    const [sortMode, setSortMode] = useState<SortMode>('name');
+    // ترتيب جدول أداء المجموعات: الضغط على رأس أي عمود يرتب تصاعدياً/تنازلياً حسبه
+    const [groupSort, setGroupSort] = useState<{ column: GroupSortColumn; dir: 'asc' | 'desc' }>({ column: 'name', dir: 'asc' });
+    const toggleGroupSort = (column: GroupSortColumn) => {
+        setGroupSort((prev) => prev.column === column
+            ? { column, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+            : { column, dir: column === 'name' ? 'asc' : 'desc' });
+    };
+    const groupSortValue = (g: GroupAnalytics, column: GroupSortColumn): number | string => {
+        switch (column) {
+            case 'name': return g.teacherName;
+            case 'total': return g.current.pagesSum;
+            case 'new': return g.current.newPages;
+            case 'near': return g.current.nearPages;
+            case 'far': return g.current.farPages;
+            case 'notTested': return g.current.notTestedRate ?? -1;
+            case 'withdrawn': return g.current.withdrawnRate ?? -1;
+            case 'attendance': return g.current.attendanceRate ?? -1;
+        }
+    };
     const sortedGroups = useMemo(() => {
         const list = [...groups];
-        if (sortMode === 'name') {
-            list.sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'ar'));
-        } else {
-            list.sort((a, b) => (b.current.pagesSum - b.previous.pagesSum) - (a.current.pagesSum - a.previous.pagesSum));
-        }
+        list.sort((a, b) => {
+            const va = groupSortValue(a, groupSort.column);
+            const vb = groupSortValue(b, groupSort.column);
+            const cmp = typeof va === 'string' ? va.localeCompare(vb as string, 'ar') : (va as number) - (vb as number);
+            return groupSort.dir === 'asc' ? cmp : -cmp;
+        });
         return list;
-    }, [groups, sortMode]);
+    }, [groups, groupSort]);
 
     // --- قسم الطالب الفردي ---
     const [studentSearch, setStudentSearch] = useState('');
@@ -164,31 +213,11 @@ export default function AnalyticsPage() {
                     </section>
                 )}
 
-                {/* تبويب أداء المجموعات: مدرس/مجموعة + صفحات + عدد اختبارات + حضور، مع الترتيب */}
+                {/* تبويب أداء المجموعات: مدرس/مجموعة + صفحات (الكل/جديد/قريب/بعيد) + نسبة عدم الاختبار + نسبة الانصراف + الحضور، مع ترتيب بالضغط على رأس أي عمود */}
                 {activeTab === 'groups' && (
                     <section className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <h2 className="text-sm font-black text-gray-500">أداء المجموعات والمدرسين (مقارنة بالشهر السابق)</h2>
-                        </div>
-                        <div className="flex items-center justify-end gap-2">
-                            <button
-                                onClick={() => setSortMode('name')}
-                                className={cn(
-                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all',
-                                    sortMode === 'name' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
-                                )}
-                            >
-                                <ArrowDownAZ size={13} /> ترتيب أبجدي (المدرس)
-                            </button>
-                            <button
-                                onClick={() => setSortMode('change')}
-                                className={cn(
-                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all',
-                                    sortMode === 'change' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
-                                )}
-                            >
-                                <ArrowUpDown size={13} /> ترتيب حسب نسبة التغيّر
-                            </button>
                         </div>
 
                         {groupsLoading ? (
@@ -196,35 +225,38 @@ export default function AnalyticsPage() {
                         ) : sortedGroups.length === 0 ? (
                             <div className="text-center py-10 bg-white/40 rounded-2xl border-2 border-dashed border-gray-100 text-gray-400 text-sm font-bold">لا توجد مجموعات لعرضها</div>
                         ) : (
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 text-[10px] font-black text-gray-400 border-b border-gray-100">
-                                    <span className="col-span-5">المجموعة</span>
-                                    <span className="col-span-3">صفحات</span>
-                                    <span className="col-span-2">اختبارات</span>
-                                    <span className="col-span-2">الحضور</span>
-                                </div>
-                                {sortedGroups.map((g) => (
-                                    <div key={g.id} className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 last:border-0 items-center">
-                                        <div className="col-span-5 min-w-0">
-                                            <p className="text-xs font-bold text-gray-800 truncate">{g.name}</p>
-                                            <p className="text-[10px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
-                                        </div>
-                                        <div className="col-span-3 flex flex-col">
-                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.pagesSum}</span>
-                                            <Delta current={g.current.pagesSum} previous={g.previous.pagesSum} />
-                                        </div>
-                                        <div className="col-span-2 flex flex-col">
-                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.examsCount}</span>
-                                            <Delta current={g.current.examsCount} previous={g.previous.examsCount} />
-                                        </div>
-                                        <div className="col-span-2 flex flex-col">
-                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.attendanceRate ?? '—'}{g.current.attendanceRate !== null && '%'}</span>
-                                            {g.current.attendanceRate !== null && g.previous.attendanceRate !== null && (
-                                                <Delta current={g.current.attendanceRate} previous={g.previous.attendanceRate} suffix="%" />
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+                                <table className="w-full text-right border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-50 border-b border-gray-100">
+                                            <GroupHeaderCell label="المجموعة" column="name" sort={groupSort} onSort={toggleGroupSort} className="text-right min-w-[140px]" />
+                                            <GroupHeaderCell label="الكل" column="total" sort={groupSort} onSort={toggleGroupSort} />
+                                            <GroupHeaderCell label="جديد" column="new" sort={groupSort} onSort={toggleGroupSort} />
+                                            <GroupHeaderCell label="قريب" column="near" sort={groupSort} onSort={toggleGroupSort} />
+                                            <GroupHeaderCell label="بعيد" column="far" sort={groupSort} onSort={toggleGroupSort} />
+                                            <GroupHeaderCell label="لم يختبروا" column="notTested" sort={groupSort} onSort={toggleGroupSort} />
+                                            <GroupHeaderCell label="الانصراف" column="withdrawn" sort={groupSort} onSort={toggleGroupSort} />
+                                            <GroupHeaderCell label="الحضور" column="attendance" sort={groupSort} onSort={toggleGroupSort} />
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sortedGroups.map((g) => (
+                                            <tr key={g.id} className="border-b border-gray-50 last:border-0">
+                                                <td className="px-3 py-3 min-w-[140px]">
+                                                    <p className="text-xs font-bold text-gray-800 truncate">{g.name}</p>
+                                                    <p className="text-[10px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
+                                                </td>
+                                                <GroupValueCell current={g.current.pagesSum} previous={g.previous.pagesSum} />
+                                                <GroupValueCell current={g.current.newPages} previous={g.previous.newPages} />
+                                                <GroupValueCell current={g.current.nearPages} previous={g.previous.nearPages} />
+                                                <GroupValueCell current={g.current.farPages} previous={g.previous.farPages} />
+                                                <GroupValueCell current={g.current.notTestedRate} previous={g.previous.notTestedRate} suffix="%" />
+                                                <GroupValueCell current={g.current.withdrawnRate} previous={g.previous.withdrawnRate} suffix="%" />
+                                                <GroupValueCell current={g.current.attendanceRate} previous={g.previous.attendanceRate} suffix="%" />
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
                     </section>
