@@ -22,6 +22,7 @@ export interface AnalyticsOverview {
 export interface GroupAnalyticsPeriod {
     examsCount: number;
     pagesSum: number;
+    linesSum: number;
     attendanceRate: number | null;
 }
 
@@ -43,6 +44,9 @@ export interface StudentMonthAnalytics {
     newPages: number;
     nearPages: number;
     farPages: number;
+    newLines: number;
+    nearLines: number;
+    farLines: number;
     attendanceRate: number | null;
 }
 

@@ -79,10 +79,14 @@ export default function AnalyticsPage() {
     const [sortMode, setSortMode] = useState<SortMode>('name');
     const sortedGroups = useMemo(() => {
         const list = [...groups];
+        // نجمع دلتا الصفحات والأسطر معًا كمقياس نشاط واحد، لأن بعض المجموعات
+        // (كالتلقين) تُقاس بالأسطر أساسًا وليس الصفحات
+        const activityDelta = (g: typeof list[number]) =>
+            (g.current.pagesSum - g.previous.pagesSum) + (g.current.linesSum - g.previous.linesSum);
         if (sortMode === 'name') {
             list.sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'ar'));
         } else {
-            list.sort((a, b) => (b.current.pagesSum - b.previous.pagesSum) - (a.current.pagesSum - a.previous.pagesSum));
+            list.sort((a, b) => activityDelta(b) - activityDelta(a));
         }
         return list;
     }, [groups, sortMode]);
@@ -198,14 +202,15 @@ export default function AnalyticsPage() {
                         ) : (
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                                 <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 text-[10px] font-black text-gray-400 border-b border-gray-100">
-                                    <span className="col-span-4">المجموعة</span>
-                                    <span className="col-span-3">صفحات الاختبارات</span>
-                                    <span className="col-span-2">عدد الاختبارات</span>
-                                    <span className="col-span-3">نسبة الحضور</span>
+                                    <span className="col-span-3">المجموعة</span>
+                                    <span className="col-span-3">صفحات</span>
+                                    <span className="col-span-3">أسطر</span>
+                                    <span className="col-span-1">اختبارات</span>
+                                    <span className="col-span-2">الحضور</span>
                                 </div>
                                 {sortedGroups.map((g) => (
                                     <div key={g.id} className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 last:border-0 items-center">
-                                        <div className="col-span-4 min-w-0">
+                                        <div className="col-span-3 min-w-0">
                                             <p className="text-xs font-bold text-gray-800 truncate">{g.name}</p>
                                             <p className="text-[10px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
                                         </div>
@@ -213,11 +218,15 @@ export default function AnalyticsPage() {
                                             <span className="text-sm font-black text-gray-800 font-sans">{g.current.pagesSum}</span>
                                             <Delta current={g.current.pagesSum} previous={g.previous.pagesSum} />
                                         </div>
-                                        <div className="col-span-2 flex flex-col">
+                                        <div className="col-span-3 flex flex-col">
+                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.linesSum}</span>
+                                            <Delta current={g.current.linesSum} previous={g.previous.linesSum} />
+                                        </div>
+                                        <div className="col-span-1 flex flex-col">
                                             <span className="text-sm font-black text-gray-800 font-sans">{g.current.examsCount}</span>
                                             <Delta current={g.current.examsCount} previous={g.previous.examsCount} />
                                         </div>
-                                        <div className="col-span-3 flex flex-col">
+                                        <div className="col-span-2 flex flex-col">
                                             <span className="text-sm font-black text-gray-800 font-sans">{g.current.attendanceRate ?? '—'}{g.current.attendanceRate !== null && '%'}</span>
                                             {g.current.attendanceRate !== null && g.previous.attendanceRate !== null && (
                                                 <Delta current={g.current.attendanceRate} previous={g.previous.attendanceRate} suffix="%" />
@@ -291,28 +300,36 @@ export default function AnalyticsPage() {
                                                 const prevMonth = arr[i + 1];
                                                 return (
                                                     <div key={m.monthKey} className="bg-gray-50/60 rounded-xl px-3 py-3 space-y-2">
-                                                        <div className="flex items-center justify-between">
+                                                        <div className="flex items-center justify-between flex-wrap gap-1">
                                                             <span className="text-xs font-bold text-gray-600">{m.label}</span>
                                                             <div className="flex items-center gap-3">
-                                                                <span className="text-xs font-black text-gray-800 font-sans">{m.pagesSum} صفحة إجمالاً</span>
+                                                                <span className="text-xs font-black text-gray-800 font-sans">{m.pagesSum} صفحة</span>
                                                                 {prevMonth && <Delta current={m.pagesSum} previous={prevMonth.pagesSum} />}
+                                                                <span className="text-xs font-black text-gray-800 font-sans">{m.linesSum} سطر</span>
+                                                                {prevMonth && <Delta current={m.linesSum} previous={prevMonth.linesSum} />}
                                                             </div>
                                                         </div>
                                                         <div className="grid grid-cols-3 gap-2">
                                                             <div className="bg-blue-50 rounded-lg px-2 py-1.5 text-center space-y-0.5">
                                                                 <p className="text-[9px] font-bold text-blue-500">جديد</p>
-                                                                <p className="text-xs font-black text-blue-700 font-sans">{m.newPages}</p>
+                                                                <p className="text-xs font-black text-blue-700 font-sans">{m.newPages} ص</p>
                                                                 {prevMonth && <Delta current={m.newPages} previous={prevMonth.newPages} />}
+                                                                <p className="text-xs font-black text-blue-700 font-sans">{m.newLines} سط</p>
+                                                                {prevMonth && <Delta current={m.newLines} previous={prevMonth.newLines} />}
                                                             </div>
                                                             <div className="bg-amber-50 rounded-lg px-2 py-1.5 text-center space-y-0.5">
                                                                 <p className="text-[9px] font-bold text-amber-500">ماضي قريب</p>
-                                                                <p className="text-xs font-black text-amber-700 font-sans">{m.nearPages}</p>
+                                                                <p className="text-xs font-black text-amber-700 font-sans">{m.nearPages} ص</p>
                                                                 {prevMonth && <Delta current={m.nearPages} previous={prevMonth.nearPages} />}
+                                                                <p className="text-xs font-black text-amber-700 font-sans">{m.nearLines} سط</p>
+                                                                {prevMonth && <Delta current={m.nearLines} previous={prevMonth.nearLines} />}
                                                             </div>
                                                             <div className="bg-purple-50 rounded-lg px-2 py-1.5 text-center space-y-0.5">
                                                                 <p className="text-[9px] font-bold text-purple-500">ماضي بعيد</p>
-                                                                <p className="text-xs font-black text-purple-700 font-sans">{m.farPages}</p>
+                                                                <p className="text-xs font-black text-purple-700 font-sans">{m.farPages} ص</p>
                                                                 {prevMonth && <Delta current={m.farPages} previous={prevMonth.farPages} />}
+                                                                <p className="text-xs font-black text-purple-700 font-sans">{m.farLines} سط</p>
+                                                                {prevMonth && <Delta current={m.farLines} previous={prevMonth.farLines} />}
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400">

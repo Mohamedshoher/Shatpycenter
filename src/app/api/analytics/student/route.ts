@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
             months.push({ monthKey, label: d.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' }) });
         }
 
-        const sumType = (rows: { pages_count: number | null }[]) => rows.reduce((s, e) => s + (Number(e.pages_count) || 0), 0);
+        const sumPages = (rows: { pages_count: number | null }[]) => rows.reduce((s, e) => s + (Number(e.pages_count) || 0), 0);
+        const sumLines = (rows: { lines_count: number | null }[]) => rows.reduce((s, e) => s + (Number(e.lines_count) || 0), 0);
 
         const result = months.map(({ monthKey, label }) => {
             const monthExams = (exams || []).filter((e) => (e.date || '').slice(0, 7) === monthKey);
@@ -48,11 +49,14 @@ export async function GET(request: NextRequest) {
                 monthKey,
                 label,
                 examsCount: monthExams.length,
-                pagesSum: sumType(monthExams),
-                linesSum: monthExams.reduce((s, e) => s + (Number(e.lines_count) || 0), 0),
-                newPages: sumType(newExams),
-                nearPages: sumType(nearExams),
-                farPages: sumType(farExams),
+                pagesSum: sumPages(monthExams),
+                linesSum: sumLines(monthExams),
+                newPages: sumPages(newExams),
+                nearPages: sumPages(nearExams),
+                farPages: sumPages(farExams),
+                newLines: sumLines(newExams),
+                nearLines: sumLines(nearExams),
+                farLines: sumLines(farExams),
                 attendanceRate: (present + absent) > 0 ? Math.round((present / (present + absent)) * 100) : null,
             };
         });
