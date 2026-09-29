@@ -25,13 +25,15 @@ export async function GET(request: NextRequest) {
             date: string | null;
             created_at: string;
             goal_id: string | null;
+            pages_count: number | null;
+            lines_count: number | null;
         };
         let data: ExamRow[];
         try {
             data = await fetchAllRows<ExamRow>((from, to) => {
                 let query = supabase
                     .from('exams')
-                    .select('id, student_id, surah, exam_type, grade, date, created_at, goal_id')
+                    .select('id, student_id, surah, exam_type, grade, date, created_at, goal_id, pages_count, lines_count')
                     .range(from, to);
 
                 if (monthKey) {
@@ -67,6 +69,8 @@ export async function GET(request: NextRequest) {
             grade: row.grade,
             date: row.date,
             goalId: row.goal_id ?? null,
+            pagesCount: row.pages_count ?? null,
+            linesCount: row.lines_count ?? null,
             notes: '',
             timestamp: new Date(row.created_at).getTime()
         }));
@@ -92,7 +96,9 @@ export async function POST(request: NextRequest) {
                 exam_type: record.type,
                 grade: record.grade,
                 date: record.date,
-                goal_id: record.goalId ?? null
+                goal_id: record.goalId ?? null,
+                pages_count: record.pagesCount ?? null,
+                lines_count: record.linesCount ?? null
             }])
             .select('id, created_at')
             .single();

@@ -74,6 +74,12 @@ function daysLeft(endDate: string) {
 const fmt = (d: string) =>
     d ? new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
 
+const measureLabel = (exam: ExamRecord) => {
+    if (exam.pagesCount) return `${exam.pagesCount} صفحة`;
+    if (exam.linesCount) return `${exam.linesCount} سطر`;
+    return null;
+};
+
 const gradeColor = (grade: string) => {
     if (grade === 'ممتاز') return 'bg-green-100 text-green-700 border-green-200';
     if (grade === 'يعاد')  return 'bg-red-100 text-red-600 border-red-200';
@@ -100,6 +106,8 @@ export default function ExamsTab({ student, records }: { student: Student; recor
     const [surahName, setSurahName] = useState('');
     const [examGrade, setExamGrade] = useState('ممتاز');
     const [examDate, setExamDate]   = useState(today());
+    const [pagesCount, setPagesCount] = useState('');
+    const [linesCount, setLinesCount] = useState('');
 
     // ── تعديل نوع الاختبار ──
     const [editingExamId, setEditingExamId] = useState<string | null>(null);
@@ -119,6 +127,7 @@ export default function ExamsTab({ student, records }: { student: Student; recor
     // ── فتح مودال الاختبار ──
     const openExamModal = (type: ExamType, goalId: string) => {
         setSurahName(''); setExamDate(today()); setExamGrade('ممتاز');
+        setPagesCount(''); setLinesCount('');
         setExamModal({ open: true, type, goalId });
         // افتح قائمة الهدف تلقائياً
         setExpandedGoals(p => ({ ...p, [goalId]: true }));
@@ -128,6 +137,7 @@ export default function ExamsTab({ student, records }: { student: Student; recor
     const handleAddExam = () => {
         if (!examModal) return;
         if (!surahName.trim()) return alert('أدخل اسم السورة');
+        if (!pagesCount.trim() && !linesCount.trim()) return alert('أدخل عدد الصفحات أو عدد الأسطر');
         addExam.mutate({
             studentId: student.id,
             surah: surahName,
@@ -135,6 +145,8 @@ export default function ExamsTab({ student, records }: { student: Student; recor
             grade: examGrade,
             date: examDate,
             goalId: examModal.goalId || null,
+            pagesCount: pagesCount.trim() ? Number(pagesCount) : null,
+            linesCount: linesCount.trim() ? Number(linesCount) : null,
         });
         setExamModal(null);
     };
@@ -471,7 +483,12 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                                                                 {EXAM_TYPES.map(t => <option key={t}>{t}</option>)}
                                                             </select>
                                                         ) : (
-                                                            <span className="text-[10px] font-bold bg-gray-50 text-gray-400 px-2 py-0.5 rounded-lg border border-gray-100">{exam.type}</span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[10px] font-bold bg-gray-50 text-gray-400 px-2 py-0.5 rounded-lg border border-gray-100">{exam.type}</span>
+                                                                {measureLabel(exam) && (
+                                                                    <span className="text-[10px] font-bold bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-lg border border-indigo-100">{measureLabel(exam)}</span>
+                                                                )}
+                                                            </div>
                                                         )}
                                                         <span className="text-[10px] text-gray-400 font-bold">{exam.date}</span>
                                                     </div>
@@ -552,7 +569,12 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                                                         {EXAM_TYPES.map(t => <option key={t}>{t}</option>)}
                                                     </select>
                                                 ) : (
-                                                    <span className="text-[10px] font-bold bg-gray-50 text-gray-400 px-2 py-0.5 rounded-lg border border-gray-100">{exam.type}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-bold bg-gray-50 text-gray-400 px-2 py-0.5 rounded-lg border border-gray-100">{exam.type}</span>
+                                                        {measureLabel(exam) && (
+                                                            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-lg border border-indigo-100">{measureLabel(exam)}</span>
+                                                        )}
+                                                    </div>
                                                 )}
                                                 <span className="text-[10px] text-gray-400 font-bold">{exam.date}</span>
                                             </div>
@@ -571,8 +593,8 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                 مودال تسجيل اختبار
             ════════════════════════════════════════ */}
             {examModal?.open && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setExamModal(null); }}>
-                    <div className="w-full max-w-md bg-white rounded-[28px] shadow-2xl overflow-hidden" style={{ animation: 'slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1)' }}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setExamModal(null); }}>
+                    <div className="w-full max-w-md bg-white rounded-[28px] shadow-2xl overflow-hidden" style={{ animation: 'popIn 0.2s ease-out' }}>
                         <div className={cn("px-6 pt-6 pb-5", TYPE_CONFIG[examModal.type].headerBg)}>
                             <div className="flex items-center justify-between">
                                 <div>
@@ -596,18 +618,57 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                                     className="w-full h-12 rounded-xl px-4 text-sm border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:bg-white transition-all"
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 block mb-1.5">التقدير</label>
-                                    <select value={examGrade} onChange={e => setExamGrade(e.target.value)} className="w-full h-12 rounded-xl text-sm font-bold border border-gray-200 bg-gray-50 px-3 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                                        <option>ممتاز</option><option>جيد جداً</option><option>جيد</option><option>يعاد</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 block mb-1.5">📅 التاريخ</label>
-                                    <input type="date" value={examDate} onChange={e => setExamDate(e.target.value)} className="w-full h-12 rounded-xl px-3 text-sm border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer" />
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 block mb-1.5">
+                                    عدد الصفحات أو عدد الأسطر <span className="text-gray-400 font-normal">(أدخل واحداً منهما)</span>
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input
+                                        type="number" min="0" inputMode="numeric"
+                                        value={pagesCount}
+                                        onChange={e => setPagesCount(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleAddExam()}
+                                        placeholder="عدد الصفحات"
+                                        className="w-full h-12 rounded-xl px-3 text-sm text-center font-bold border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:bg-white transition-all"
+                                    />
+                                    <input
+                                        type="number" min="0" inputMode="numeric"
+                                        value={linesCount}
+                                        onChange={e => setLinesCount(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleAddExam()}
+                                        placeholder="عدد الأسطر"
+                                        className="w-full h-12 rounded-xl px-3 text-sm text-center font-bold border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:bg-white transition-all"
+                                    />
                                 </div>
                             </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 block mb-1.5">التقدير</label>
+                                <div className="grid grid-cols-4 gap-1.5">
+                                    {(['ممتاز', 'جيد جداً', 'جيد', 'يعاد'] as const).map(g => (
+                                        <button
+                                            key={g}
+                                            type="button"
+                                            onClick={() => setExamGrade(g)}
+                                            className={cn(
+                                                "h-11 rounded-xl text-[11px] font-bold border transition-all",
+                                                examGrade === g
+                                                    ? cn(TYPE_CONFIG[examModal.type].activeBg, "text-white border-transparent shadow-sm")
+                                                    : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
+                                            )}
+                                        >
+                                            {g}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 block mb-1.5">📅 التاريخ</label>
+                                <input type="date" value={examDate} onChange={e => setExamDate(e.target.value)} className="w-full h-11 rounded-xl px-3 text-sm border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer" />
+                            </div>
+
                             <div className="flex gap-3 pt-1">
                                 <Button onClick={handleAddExam} disabled={addExam.isPending} className={cn("flex-1 h-12 text-sm font-bold rounded-xl", TYPE_CONFIG[examModal.type].activeBg)}>
                                     {addExam.isPending ? 'جاري الحفظ...' : '✓ حفظ الاختبار'}
@@ -728,6 +789,10 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                 @keyframes slideUp {
                     from { transform: translateY(60px); opacity: 0; }
                     to   { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes popIn {
+                    from { transform: scale(0.95); opacity: 0; }
+                    to   { transform: scale(1); opacity: 1; }
                 }
             `}</style>
         </div>
