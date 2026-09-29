@@ -217,8 +217,10 @@ export default function ExamsTab({ student, records }: { student: Student; recor
     const cfg = TYPE_CONFIG[activeTab];
 
     // ── الاختبارات غير المصنفة (التي لا يوجد هدف من نفس نوعها) ──
+    // ملحوظة: طالما ميزة الأهداف موقوفة، تظهر كل الاختبارات هنا حتى لو كانت
+    // مسجّلة قديماً تحت هدف (goalId)، لأن بطاقات الأهداف لا تُعرض أصلاً الآن.
     const unclassifiedExams = exams
-        .filter((e) => !e.goalId && e.type === activeTab)
+        .filter((e) => (GOALS_FEATURE_ENABLED ? !e.goalId : true) && e.type === activeTab)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return (
