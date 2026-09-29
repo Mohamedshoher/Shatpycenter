@@ -42,16 +42,20 @@ export async function GET(request: NextRequest) {
         const activeStudents = (students || []).filter((s) => s.status === 'active');
         const studentIds = activeStudents.map((s) => s.id);
 
+        // نجلب سجلات الشهر كاملة (بلا فلترة .in() بأعداد طلاب كبيرة قد تُطيل الرابط وتفشل بصمت)
+        // ثم نُصفّي حسب طلاب كل مجموعة في summarize أدناه.
+        const studentIdSet = new Set(studentIds);
         const fetchPeriod = async (start: string, end: string) => {
             const [examsRes, attRes] = await Promise.all([
-                studentIds.length > 0
-                    ? supabase.from('exams').select('student_id, pages_count, lines_count').in('student_id', studentIds).gte('date', start).lte('date', end)
-                    : Promise.resolve({ data: [] }),
-                studentIds.length > 0
-                    ? supabase.from('attendance').select('student_id, status').in('student_id', studentIds).gte('date', start).lte('date', end)
-                    : Promise.resolve({ data: [] }),
+                supabase.from('exams').select('student_id, pages_count, lines_count').gte('date', start).lte('date', end),
+                supabase.from('attendance').select('student_id, status').gte('date', start).lte('date', end),
             ]);
-            return { exams: examsRes.data || [], attendance: attRes.data || [] };
+            if (examsRes.error) console.error('analytics/groups exams error:', examsRes.error.message);
+            if (attRes.error) console.error('analytics/groups attendance error:', attRes.error.message);
+            return {
+                exams: (examsRes.data || []).filter((e) => studentIdSet.has(e.student_id as string)),
+                attendance: (attRes.data || []).filter((a) => studentIdSet.has(a.student_id as string)),
+            };
         };
 
         const [current, previous] = await Promise.all([fetchPeriod(cur.start, cur.end), fetchPeriod(prev.start, prev.end)]);
