@@ -273,9 +273,12 @@ export default function ExamsReportPage() {
                         if (type === 'ماضي بعيد') doneStudents.far.add(e.studentId);
                     }
 
+                    const teacherFirstName = teachers?.find((t) => t.id === g.teacherId)?.fullName?.trim().split(' ')[0] || '';
+
                     return {
                         id: g.id,
                         name: g.name,
+                        teacherFirstName,
                         totalStudents: groupStudents.length,
                         tested: {
                             new: doneStudents.new.size,
@@ -289,7 +292,7 @@ export default function ExamsReportPage() {
                         }
                     };
                 });
-    }, [groups, students, allExams, user, assignedGroupIds, performanceTypeFilter]);
+    }, [groups, students, allExams, user, assignedGroupIds, performanceTypeFilter, teachers]);
 
     // هل التبويب الحالي عنده فلاتر أصلاً؟ (الأكثر اختباراً بلا فلاتر)
     const hasFilterableTab = activeTab === 'notTested' || activeTab === 'performance' || activeTab === 'goals';
@@ -725,7 +728,10 @@ export default function ExamsReportPage() {
                                             return (
                                                 <div key={data.id} className="space-y-3 bg-white rounded-2xl p-4 border border-gray-100">
                                                     <div className="flex flex-row-reverse items-center justify-between">
-                                                        <span className="text-sm font-bold text-gray-700">{data.name}</span>
+                                                        <span className="text-sm font-bold text-gray-700">
+                                                            {data.name}
+                                                            {data.teacherFirstName && <span className="text-xs font-bold text-gray-400"> - {data.teacherFirstName}</span>}
+                                                        </span>
                                                         <span className="text-xs font-black text-gray-400 font-sans">{totalSt} طالب</span>
                                                     </div>
                                                     <div className="space-y-2 pr-2">
@@ -769,7 +775,10 @@ export default function ExamsReportPage() {
                                         return (
                                             <div key={data.id} className="space-y-2">
                                                 <div className="flex flex-row-reverse items-center justify-between px-1">
-                                                    <span className="text-sm font-bold text-gray-700">{data.name}</span>
+                                                    <span className="text-sm font-bold text-gray-700">
+                                                        {data.name}
+                                                        {data.teacherFirstName && <span className="text-xs font-bold text-gray-400"> - {data.teacherFirstName}</span>}
+                                                    </span>
                                                     <span className="text-xs font-black text-gray-400 font-sans">
                                                         <span className={textColor}>{testedVal}</span>
                                                         <span className="text-gray-300">/</span>
