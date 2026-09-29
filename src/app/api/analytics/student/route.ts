@@ -3,7 +3,8 @@ import { getErrorMessage } from '@/lib/error-message';
 import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 
-// السجل الشهري لطالب واحد على مدى عدد شهور معيّن (اختبارات: عدد/صفحات/أسطر، ونسبة حضور)
+// السجل الشهري لطالب واحد على مدى عدد شهور معيّن: صفحات كل نوع اختبار
+// (جديد / ماضي قريب / ماضي بعيد) على حدة، ونسبة حضوره.
 export async function GET(request: NextRequest) {
     const session = await requireSession(request);
     if (session instanceof NextResponse) return session;
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
 
         const supabase = createServerSupabase();
         const [{ data: exams }, { data: attendance }] = await Promise.all([
-            supabase.from('exams').select('date, pages_count, lines_count').eq('student_id', studentId).gte('date', startStr),
+            supabase.from('exams').select('date, exam_type, pages_count, lines_count').eq('student_id', studentId).gte('date', startStr),
             supabase.from('attendance').select('date, status').eq('student_id', studentId).gte('date', startStr),
         ]);
 
@@ -31,17 +32,27 @@ export async function GET(request: NextRequest) {
             months.push({ monthKey, label: d.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' }) });
         }
 
+        const sumType = (rows: { pages_count: number | null }[]) => rows.reduce((s, e) => s + (Number(e.pages_count) || 0), 0);
+
         const result = months.map(({ monthKey, label }) => {
             const monthExams = (exams || []).filter((e) => (e.date || '').slice(0, 7) === monthKey);
             const monthAttendance = (attendance || []).filter((a) => (a.date || '').slice(0, 7) === monthKey);
             const present = monthAttendance.filter((a) => a.status === 'present').length;
             const absent = monthAttendance.filter((a) => a.status === 'absent').length;
+
+            const newExams = monthExams.filter((e) => e.exam_type?.trim() === 'جديد');
+            const nearExams = monthExams.filter((e) => e.exam_type?.trim() === 'ماضي قريب');
+            const farExams = monthExams.filter((e) => e.exam_type?.trim() === 'ماضي بعيد');
+
             return {
                 monthKey,
                 label,
                 examsCount: monthExams.length,
-                pagesSum: monthExams.reduce((s, e) => s + (Number(e.pages_count) || 0), 0),
+                pagesSum: sumType(monthExams),
                 linesSum: monthExams.reduce((s, e) => s + (Number(e.lines_count) || 0), 0),
+                newPages: sumType(newExams),
+                nearPages: sumType(nearExams),
+                farPages: sumType(farExams),
                 attendanceRate: (present + absent) > 0 ? Math.round((present / (present + absent)) * 100) : null,
             };
         });

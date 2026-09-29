@@ -17,18 +17,15 @@ import {
     getAnalyticsOverview,
     getGroupsAnalytics,
     getStudentAnalytics,
-    GroupAnalytics,
 } from '@/features/analytics/services/analyticsService';
 import { Student } from '@/types';
 
-type TabType = 'general' | 'new' | 'past' | 'attendance' | 'students';
+type TabType = 'general' | 'groups' | 'students';
 type SortMode = 'name' | 'change';
 
 const TABS: { id: TabType; label: string }[] = [
     { id: 'general', label: 'عام' },
-    { id: 'new', label: 'الجديد' },
-    { id: 'past', label: 'الماضي' },
-    { id: 'attendance', label: 'الحضور' },
+    { id: 'groups', label: 'أداء المجموعات' },
     { id: 'students', label: 'الأولاد' },
 ];
 
@@ -56,89 +53,6 @@ const StatCard = ({ title, current, previous, unit = '', rate = false }: { title
     </div>
 );
 
-// جدول مقارنة مجموعات قابل لإعادة الاستخدام في تبويبات (الجديد/الماضي/الحضور)
-const GroupsCompareTable = ({
-    groups,
-    getCurrent,
-    getPrevious,
-    metricLabel,
-    unit = '',
-}: {
-    groups: GroupAnalytics[];
-    getCurrent: (g: GroupAnalytics) => number | null;
-    getPrevious: (g: GroupAnalytics) => number | null;
-    metricLabel: string;
-    unit?: string;
-}) => {
-    const [sortMode, setSortMode] = useState<SortMode>('name');
-
-    const sorted = useMemo(() => {
-        const list = [...groups];
-        if (sortMode === 'name') {
-            list.sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'ar'));
-        } else {
-            list.sort((a, b) => {
-                const da = (getCurrent(a) ?? 0) - (getPrevious(a) ?? 0);
-                const db = (getCurrent(b) ?? 0) - (getPrevious(b) ?? 0);
-                return db - da;
-            });
-        }
-        return list;
-    }, [groups, sortMode, getCurrent, getPrevious]);
-
-    return (
-        <div className="space-y-3">
-            <div className="flex items-center justify-end gap-2">
-                <button
-                    onClick={() => setSortMode('name')}
-                    className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all',
-                        sortMode === 'name' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
-                    )}
-                >
-                    <ArrowDownAZ size={13} /> ترتيب أبجدي (المدرس)
-                </button>
-                <button
-                    onClick={() => setSortMode('change')}
-                    className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all',
-                        sortMode === 'change' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
-                    )}
-                >
-                    <ArrowUpDown size={13} /> ترتيب حسب نسبة التغيّر
-                </button>
-            </div>
-
-            {sorted.length === 0 ? (
-                <div className="text-center py-10 bg-white/40 rounded-2xl border-2 border-dashed border-gray-100 text-gray-400 text-sm font-bold">لا توجد مجموعات لعرضها</div>
-            ) : (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 text-[10px] font-black text-gray-400 border-b border-gray-100">
-                        <span className="col-span-5">المجموعة / المدرس</span>
-                        <span className="col-span-7">{metricLabel}</span>
-                    </div>
-                    {sorted.map((g) => {
-                        const cur = getCurrent(g);
-                        const prev = getPrevious(g);
-                        return (
-                            <div key={g.id} className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 last:border-0 items-center">
-                                <div className="col-span-5 min-w-0">
-                                    <p className="text-xs font-bold text-gray-800 truncate">{g.name}</p>
-                                    <p className="text-[10px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
-                                </div>
-                                <div className="col-span-7 flex items-center gap-3">
-                                    <span className="text-sm font-black text-gray-800 font-sans">{cur === null ? '—' : `${cur}${unit}`}</span>
-                                    {cur !== null && prev !== null && <Delta current={cur} previous={prev} suffix={unit} />}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-};
-
 export default function AnalyticsPage() {
     const { data: allStudents } = useStudents();
     const [activeTab, setActiveTab] = useState<TabType>('general');
@@ -159,8 +73,19 @@ export default function AnalyticsPage() {
     const { data: groups = [], isLoading: groupsLoading } = useQuery({
         queryKey: ['analytics-groups', monthKey],
         queryFn: () => getGroupsAnalytics(monthKey),
-        enabled: activeTab !== 'general' && activeTab !== 'students',
+        enabled: activeTab === 'groups',
     });
+
+    const [sortMode, setSortMode] = useState<SortMode>('name');
+    const sortedGroups = useMemo(() => {
+        const list = [...groups];
+        if (sortMode === 'name') {
+            list.sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'ar'));
+        } else {
+            list.sort((a, b) => (b.current.pagesSum - b.previous.pagesSum) - (a.current.pagesSum - a.previous.pagesSum));
+        }
+        return list;
+    }, [groups, sortMode]);
 
     // --- قسم الطالب الفردي ---
     const [studentSearch, setStudentSearch] = useState('');
@@ -196,7 +121,7 @@ export default function AnalyticsPage() {
                         </div>
                     </div>
 
-                    {/* تبويبات: عام / الجديد / الماضي / الحضور / الأولاد */}
+                    {/* تبويبات: عام / أداء المجموعات / الأولاد */}
                     <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl overflow-x-auto">
                         {TABS.map((tab) => (
                             <button
@@ -239,59 +164,73 @@ export default function AnalyticsPage() {
                     </section>
                 )}
 
-                {/* تبويب الجديد */}
-                {activeTab === 'new' && (
+                {/* تبويب أداء المجموعات: مدرس/مجموعة + صفحات + عدد اختبارات + حضور، مع الترتيب */}
+                {activeTab === 'groups' && (
                     <section className="space-y-3">
-                        <h2 className="text-sm font-black text-gray-500 px-1">اختبارات الجديد لكل مجموعة</h2>
+                        <div className="flex items-center justify-between px-1">
+                            <h2 className="text-sm font-black text-gray-500">أداء المجموعات والمدرسين (مقارنة بالشهر السابق)</h2>
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                            <button
+                                onClick={() => setSortMode('name')}
+                                className={cn(
+                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all',
+                                    sortMode === 'name' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                )}
+                            >
+                                <ArrowDownAZ size={13} /> ترتيب أبجدي (المدرس)
+                            </button>
+                            <button
+                                onClick={() => setSortMode('change')}
+                                className={cn(
+                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all',
+                                    sortMode === 'change' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                )}
+                            >
+                                <ArrowUpDown size={13} /> ترتيب حسب نسبة التغيّر
+                            </button>
+                        </div>
+
                         {groupsLoading ? (
                             <div className="text-center py-10 text-gray-400 text-sm font-bold">جاري التحميل...</div>
+                        ) : sortedGroups.length === 0 ? (
+                            <div className="text-center py-10 bg-white/40 rounded-2xl border-2 border-dashed border-gray-100 text-gray-400 text-sm font-bold">لا توجد مجموعات لعرضها</div>
                         ) : (
-                            <GroupsCompareTable
-                                groups={groups}
-                                getCurrent={(g) => g.current.new.pagesSum}
-                                getPrevious={(g) => g.previous.new.pagesSum}
-                                metricLabel="صفحات الجديد المُختبرة"
-                            />
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 text-[10px] font-black text-gray-400 border-b border-gray-100">
+                                    <span className="col-span-4">المجموعة</span>
+                                    <span className="col-span-3">صفحات الاختبارات</span>
+                                    <span className="col-span-2">عدد الاختبارات</span>
+                                    <span className="col-span-3">نسبة الحضور</span>
+                                </div>
+                                {sortedGroups.map((g) => (
+                                    <div key={g.id} className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 last:border-0 items-center">
+                                        <div className="col-span-4 min-w-0">
+                                            <p className="text-xs font-bold text-gray-800 truncate">{g.name}</p>
+                                            <p className="text-[10px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
+                                        </div>
+                                        <div className="col-span-3 flex flex-col">
+                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.pagesSum}</span>
+                                            <Delta current={g.current.pagesSum} previous={g.previous.pagesSum} />
+                                        </div>
+                                        <div className="col-span-2 flex flex-col">
+                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.examsCount}</span>
+                                            <Delta current={g.current.examsCount} previous={g.previous.examsCount} />
+                                        </div>
+                                        <div className="col-span-3 flex flex-col">
+                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.attendanceRate ?? '—'}{g.current.attendanceRate !== null && '%'}</span>
+                                            {g.current.attendanceRate !== null && g.previous.attendanceRate !== null && (
+                                                <Delta current={g.current.attendanceRate} previous={g.previous.attendanceRate} suffix="%" />
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </section>
                 )}
 
-                {/* تبويب الماضي */}
-                {activeTab === 'past' && (
-                    <section className="space-y-3">
-                        <h2 className="text-sm font-black text-gray-500 px-1">اختبارات الماضي (قريب وبعيد) لكل مجموعة</h2>
-                        {groupsLoading ? (
-                            <div className="text-center py-10 text-gray-400 text-sm font-bold">جاري التحميل...</div>
-                        ) : (
-                            <GroupsCompareTable
-                                groups={groups}
-                                getCurrent={(g) => g.current.past.pagesSum}
-                                getPrevious={(g) => g.previous.past.pagesSum}
-                                metricLabel="صفحات الماضي المُختبرة"
-                            />
-                        )}
-                    </section>
-                )}
-
-                {/* تبويب الحضور */}
-                {activeTab === 'attendance' && (
-                    <section className="space-y-3">
-                        <h2 className="text-sm font-black text-gray-500 px-1">نسبة الحضور لكل مجموعة</h2>
-                        {groupsLoading ? (
-                            <div className="text-center py-10 text-gray-400 text-sm font-bold">جاري التحميل...</div>
-                        ) : (
-                            <GroupsCompareTable
-                                groups={groups}
-                                getCurrent={(g) => g.current.attendanceRate}
-                                getPrevious={(g) => g.previous.attendanceRate}
-                                metricLabel="نسبة الحضور"
-                                unit="%"
-                            />
-                        )}
-                    </section>
-                )}
-
-                {/* تبويب الأولاد */}
+                {/* تبويب الأولاد: بحث عن طالب + تفصيل شهري بالأنواع الثلاثة */}
                 {activeTab === 'students' && (
                     <section className="space-y-3">
                         <h2 className="text-sm font-black text-gray-500 px-1">متابعة طالب على مدار الشهور</h2>
@@ -328,7 +267,7 @@ export default function AnalyticsPage() {
                                     <div className="text-center py-8 text-gray-400 text-sm font-bold">جاري التحميل...</div>
                                 ) : (
                                     <>
-                                        {/* رسم أعمدة بسيط لعدد الصفحات شهريًا */}
+                                        {/* رسم أعمدة بسيط لإجمالي عدد الصفحات شهريًا */}
                                         <div className="flex items-end gap-2 h-32">
                                             {studentMonths.map((m) => (
                                                 <div key={m.monthKey} className="flex-1 flex flex-col items-center gap-1.5">
@@ -346,18 +285,36 @@ export default function AnalyticsPage() {
                                             ))}
                                         </div>
 
-                                        {/* جدول شهري تفصيلي */}
+                                        {/* جدول شهري تفصيلي بالأنواع الثلاثة */}
                                         <div className="border-t border-gray-100 pt-4 space-y-2">
                                             {studentMonths.slice().reverse().map((m, i, arr) => {
                                                 const prevMonth = arr[i + 1];
                                                 return (
-                                                    <div key={m.monthKey} className="flex items-center justify-between text-xs bg-gray-50/60 rounded-xl px-3 py-2.5">
-                                                        <span className="font-bold text-gray-600">{m.label}</span>
-                                                        <div className="flex items-center gap-4">
-                                                            <span className="font-black text-gray-800 font-sans">{m.pagesSum} صفحة</span>
-                                                            {prevMonth && <Delta current={m.pagesSum} previous={prevMonth.pagesSum} />}
-                                                            <span className="font-bold text-gray-400 font-sans">{m.examsCount} اختبار</span>
-                                                            <span className="font-bold text-gray-400 font-sans">{m.attendanceRate ?? '—'}{m.attendanceRate !== null && '%'} حضور</span>
+                                                    <div key={m.monthKey} className="bg-gray-50/60 rounded-xl px-3 py-3 space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs font-bold text-gray-600">{m.label}</span>
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-xs font-black text-gray-800 font-sans">{m.pagesSum} صفحة إجمالاً</span>
+                                                                {prevMonth && <Delta current={m.pagesSum} previous={prevMonth.pagesSum} />}
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            <div className="bg-blue-50 rounded-lg px-2 py-1.5 text-center">
+                                                                <p className="text-[9px] font-bold text-blue-500">جديد</p>
+                                                                <p className="text-xs font-black text-blue-700 font-sans">{m.newPages}</p>
+                                                            </div>
+                                                            <div className="bg-amber-50 rounded-lg px-2 py-1.5 text-center">
+                                                                <p className="text-[9px] font-bold text-amber-500">ماضي قريب</p>
+                                                                <p className="text-xs font-black text-amber-700 font-sans">{m.nearPages}</p>
+                                                            </div>
+                                                            <div className="bg-purple-50 rounded-lg px-2 py-1.5 text-center">
+                                                                <p className="text-[9px] font-bold text-purple-500">ماضي بعيد</p>
+                                                                <p className="text-xs font-black text-purple-700 font-sans">{m.farPages}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400">
+                                                            <span>{m.examsCount} اختبار</span>
+                                                            <span>{m.attendanceRate ?? '—'}{m.attendanceRate !== null && '%'} حضور</span>
                                                         </div>
                                                     </div>
                                                 );

@@ -19,15 +19,9 @@ export interface AnalyticsOverview {
     previous: PeriodStats;
 }
 
-export interface GroupExamTypeStats {
+export interface GroupAnalyticsPeriod {
     examsCount: number;
     pagesSum: number;
-}
-
-export interface GroupAnalyticsPeriod {
-    all: GroupExamTypeStats;
-    new: GroupExamTypeStats;
-    past: GroupExamTypeStats;
     attendanceRate: number | null;
 }
 
@@ -46,6 +40,9 @@ export interface StudentMonthAnalytics {
     examsCount: number;
     pagesSum: number;
     linesSum: number;
+    newPages: number;
+    nearPages: number;
+    farPages: number;
     attendanceRate: number | null;
 }
 

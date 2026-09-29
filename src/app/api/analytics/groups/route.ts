@@ -4,7 +4,7 @@ import { createServerSupabase } from '@/lib/supabase-server';
 import { requireSession } from '@/lib/auth-server';
 import { getMonthRange, getPreviousMonthKey } from '@/lib/month-range';
 
-// مقارنة كل مجموعة (اختبارات الجديد، اختبارات الماضي، الحضور) بين الشهر المختار والشهر السابق له.
+// أداء كل مجموعة (صفحات الاختبارات، عدد الاختبارات، نسبة الحضور) بين الشهر المختار والشهر السابق له.
 export async function GET(request: NextRequest) {
     const session = await requireSession(request);
     if (session instanceof NextResponse) return session;
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         const fetchPeriod = async (start: string, end: string) => {
             const [examsRes, attRes] = await Promise.all([
                 studentIds.length > 0
-                    ? supabase.from('exams').select('student_id, exam_type, pages_count, lines_count').in('student_id', studentIds).gte('date', start).lte('date', end)
+                    ? supabase.from('exams').select('student_id, pages_count, lines_count').in('student_id', studentIds).gte('date', start).lte('date', end)
                     : Promise.resolve({ data: [] }),
                 studentIds.length > 0
                     ? supabase.from('attendance').select('student_id, status').in('student_id', studentIds).gte('date', start).lte('date', end)
@@ -56,25 +56,14 @@ export async function GET(request: NextRequest) {
 
         const [current, previous] = await Promise.all([fetchPeriod(cur.start, cur.end), fetchPeriod(prev.start, prev.end)]);
 
-        const summarizeExams = (exams: { exam_type: string | null; pages_count: number | null }[]) => ({
-            examsCount: exams.length,
-            pagesSum: exams.reduce((s, e) => s + (Number(e.pages_count) || 0), 0),
-        });
-
         const summarize = (period: typeof current, groupStudentIds: string[]) => {
             const exams = period.exams.filter((e) => groupStudentIds.includes(e.student_id as string));
-            const newExams = exams.filter((e) => e.exam_type?.trim() === 'جديد');
-            const pastExams = exams.filter((e) => e.exam_type?.trim() === 'ماضي قريب' || e.exam_type?.trim() === 'ماضي بعيد');
             const attendance = period.attendance.filter((a) => groupStudentIds.includes(a.student_id as string));
+            const pagesSum = exams.reduce((s, e) => s + (Number(e.pages_count) || 0), 0);
             const present = attendance.filter((a) => a.status === 'present').length;
             const absent = attendance.filter((a) => a.status === 'absent').length;
             const attendanceRate = (present + absent) > 0 ? Math.round((present / (present + absent)) * 100) : null;
-            return {
-                all: summarizeExams(exams),
-                new: summarizeExams(newExams),
-                past: summarizeExams(pastExams),
-                attendanceRate,
-            };
+            return { examsCount: exams.length, pagesSum, attendanceRate };
         };
 
         const result = groups.map((g) => {
