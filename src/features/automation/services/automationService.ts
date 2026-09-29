@@ -386,7 +386,7 @@ export const checkMissingDailyExams = async (customDate?: string): Promise<Autom
         if (!studentIds.some(id => examStudents.has(id))) {
             nonCompliantTeachers++;
             if (!alreadyDeducted.has(t.id)) {
-                const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.5, `عدم تسجيل الاختبارات ليوم ${dayName} بتاريخ ${dateStr}`, rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
+                const res = await executeDeduction(t.id, t.full_name, rule.condition.deductionAmount || 0.25, `عدم تسجيل الاختبارات ليوم ${dayName} بتاريخ ${dateStr}`, rule.id, 'فحص الاختبارات اليومية', dateStr, startTime);
                 logs.push(...res.logs);
             }
         }
