@@ -225,38 +225,55 @@ export default function AnalyticsPage() {
                         ) : sortedGroups.length === 0 ? (
                             <div className="text-center py-10 bg-white/40 rounded-2xl border-2 border-dashed border-gray-100 text-gray-400 text-sm font-bold">لا توجد مجموعات لعرضها</div>
                         ) : (
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-                                <table className="w-full text-right border-separate border-spacing-0">
-                                    <thead>
-                                        <tr className="bg-gray-50">
-                                            <GroupHeaderCell label="المجموعة" column="name" sort={groupSort} onSort={toggleGroupSort} className="text-right min-w-[110px] md:min-w-[140px] sticky right-0 z-20 bg-gray-50 shadow-[-6px_0_6px_-4px_rgba(0,0,0,0.08)]" />
-                                            <GroupHeaderCell label="الكل" column="total" sort={groupSort} onSort={toggleGroupSort} />
-                                            <GroupHeaderCell label="جديد" column="new" sort={groupSort} onSort={toggleGroupSort} />
-                                            <GroupHeaderCell label="قريب" column="near" sort={groupSort} onSort={toggleGroupSort} />
-                                            <GroupHeaderCell label="بعيد" column="far" sort={groupSort} onSort={toggleGroupSort} />
-                                            <GroupHeaderCell label="لم يختبروا" column="notTested" sort={groupSort} onSort={toggleGroupSort} />
-                                            <GroupHeaderCell label="الانصراف" column="withdrawn" sort={groupSort} onSort={toggleGroupSort} />
-                                            <GroupHeaderCell label="الحضور" column="attendance" sort={groupSort} onSort={toggleGroupSort} />
-                                        </tr>
-                                    </thead>
-                                    <tbody className="[&>tr:last-child>td]:border-b-0">
-                                        {sortedGroups.map((g) => (
-                                            <tr key={g.id}>
-                                                <td className="px-2.5 md:px-3 py-2.5 md:py-3 min-w-[110px] md:min-w-[140px] max-w-[150px] sticky right-0 z-10 bg-white border-b border-gray-50 shadow-[-6px_0_6px_-4px_rgba(0,0,0,0.08)]">
-                                                    <p className="text-[11px] md:text-xs font-bold text-gray-800 truncate">{g.name}</p>
-                                                    <p className="text-[9px] md:text-[10px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
-                                                </td>
-                                                <GroupValueCell current={g.current.pagesSum} previous={g.previous.pagesSum} />
-                                                <GroupValueCell current={g.current.newPages} previous={g.previous.newPages} />
-                                                <GroupValueCell current={g.current.nearPages} previous={g.previous.nearPages} />
-                                                <GroupValueCell current={g.current.farPages} previous={g.previous.farPages} />
-                                                <GroupValueCell current={g.current.notTestedRate} previous={g.previous.notTestedRate} suffix="%" />
-                                                <GroupValueCell current={g.current.withdrawnRate} previous={g.previous.withdrawnRate} suffix="%" />
-                                                <GroupValueCell current={g.current.attendanceRate} previous={g.previous.attendanceRate} suffix="%" />
+                            // عمود اسم المجموعة ثابت (~ثلث العرض) خارج منطقة السحب، وباقي الأعمدة
+                            // في جدول منفصل قابل للسحب أفقياً بمفرده حتى لا تتحرك الصفحة كلها معه.
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex" dir="rtl">
+                                <div className="w-[34%] md:w-[220px] shrink-0 border-l border-gray-100">
+                                    <button
+                                        onClick={() => toggleGroupSort('name')}
+                                        className={cn(
+                                            'w-full flex items-center gap-1 px-2.5 md:px-3 py-2 md:py-2.5 text-[9px] md:text-[10px] font-black bg-gray-50 border-b border-gray-100 cursor-pointer select-none text-right',
+                                            groupSort.column === 'name' ? 'text-blue-600' : 'text-gray-400'
+                                        )}
+                                    >
+                                        المجموعة
+                                        {groupSort.column === 'name' ? (groupSort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ChevronsUpDown size={11} className="opacity-40" />}
+                                    </button>
+                                    {sortedGroups.map((g) => (
+                                        <div key={g.id} className="px-2.5 md:px-3 py-2.5 md:py-3 border-b border-gray-50 last:border-b-0">
+                                            <p className="text-[11px] md:text-xs font-bold text-gray-800 truncate">{g.name}</p>
+                                            <p className="text-[9px] md:text-[10px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex-1 min-w-0 overflow-x-auto overscroll-x-contain">
+                                    <table className="border-separate border-spacing-0 text-right" style={{ minWidth: '480px', width: '100%' }}>
+                                        <thead>
+                                            <tr className="bg-gray-50">
+                                                <GroupHeaderCell label="الكل" column="total" sort={groupSort} onSort={toggleGroupSort} />
+                                                <GroupHeaderCell label="جديد" column="new" sort={groupSort} onSort={toggleGroupSort} />
+                                                <GroupHeaderCell label="قريب" column="near" sort={groupSort} onSort={toggleGroupSort} />
+                                                <GroupHeaderCell label="بعيد" column="far" sort={groupSort} onSort={toggleGroupSort} />
+                                                <GroupHeaderCell label="لم يختبروا" column="notTested" sort={groupSort} onSort={toggleGroupSort} />
+                                                <GroupHeaderCell label="الانصراف" column="withdrawn" sort={groupSort} onSort={toggleGroupSort} />
+                                                <GroupHeaderCell label="الحضور" column="attendance" sort={groupSort} onSort={toggleGroupSort} />
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="[&>tr:last-child>td]:border-b-0">
+                                            {sortedGroups.map((g) => (
+                                                <tr key={g.id}>
+                                                    <GroupValueCell current={g.current.pagesSum} previous={g.previous.pagesSum} />
+                                                    <GroupValueCell current={g.current.newPages} previous={g.previous.newPages} />
+                                                    <GroupValueCell current={g.current.nearPages} previous={g.previous.nearPages} />
+                                                    <GroupValueCell current={g.current.farPages} previous={g.previous.farPages} />
+                                                    <GroupValueCell current={g.current.notTestedRate} previous={g.previous.notTestedRate} suffix="%" />
+                                                    <GroupValueCell current={g.current.withdrawnRate} previous={g.previous.withdrawnRate} suffix="%" />
+                                                    <GroupValueCell current={g.current.attendanceRate} previous={g.previous.attendanceRate} suffix="%" />
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
                     </section>
