@@ -299,22 +299,30 @@ export default function AnalyticsPage() {
                                                             </div>
                                                         </div>
                                                         <div className="grid grid-cols-3 gap-2">
-                                                            <div className="bg-blue-50 rounded-lg px-2 py-1.5 text-center">
+                                                            <div className="bg-blue-50 rounded-lg px-2 py-1.5 text-center space-y-0.5">
                                                                 <p className="text-[9px] font-bold text-blue-500">جديد</p>
                                                                 <p className="text-xs font-black text-blue-700 font-sans">{m.newPages}</p>
+                                                                {prevMonth && <Delta current={m.newPages} previous={prevMonth.newPages} />}
                                                             </div>
-                                                            <div className="bg-amber-50 rounded-lg px-2 py-1.5 text-center">
+                                                            <div className="bg-amber-50 rounded-lg px-2 py-1.5 text-center space-y-0.5">
                                                                 <p className="text-[9px] font-bold text-amber-500">ماضي قريب</p>
                                                                 <p className="text-xs font-black text-amber-700 font-sans">{m.nearPages}</p>
+                                                                {prevMonth && <Delta current={m.nearPages} previous={prevMonth.nearPages} />}
                                                             </div>
-                                                            <div className="bg-purple-50 rounded-lg px-2 py-1.5 text-center">
+                                                            <div className="bg-purple-50 rounded-lg px-2 py-1.5 text-center space-y-0.5">
                                                                 <p className="text-[9px] font-bold text-purple-500">ماضي بعيد</p>
                                                                 <p className="text-xs font-black text-purple-700 font-sans">{m.farPages}</p>
+                                                                {prevMonth && <Delta current={m.farPages} previous={prevMonth.farPages} />}
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400">
                                                             <span>{m.examsCount} اختبار</span>
-                                                            <span>{m.attendanceRate ?? '—'}{m.attendanceRate !== null && '%'} حضور</span>
+                                                            <span className="flex items-center gap-1.5">
+                                                                {m.attendanceRate ?? '—'}{m.attendanceRate !== null && '%'} حضور
+                                                                {prevMonth && m.attendanceRate !== null && prevMonth.attendanceRate !== null && (
+                                                                    <Delta current={m.attendanceRate} previous={prevMonth.attendanceRate} suffix="%" />
+                                                                )}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 );
