@@ -9,19 +9,20 @@ import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
 import Minus from 'lucide-react/dist/esm/icons/minus';
 import Search from 'lucide-react/dist/esm/icons/search';
 import User from 'lucide-react/dist/esm/icons/user';
-import ArrowDownAZ from 'lucide-react/dist/esm/icons/arrow-down-a-z';
-import ArrowUpDown from 'lucide-react/dist/esm/icons/arrow-up-down';
+import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up';
+import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import {
     getAnalyticsOverview,
     getGroupsAnalytics,
     getStudentAnalytics,
+    GroupAnalytics,
 } from '@/features/analytics/services/analyticsService';
 import { Student } from '@/types';
 
 type TabType = 'general' | 'groups' | 'students';
-type SortMode = 'name' | 'change';
+type GroupSortColumn = 'name' | 'total' | 'new' | 'near' | 'far' | 'notTested' | 'withdrawn' | 'attendance';
 
 const TABS: { id: TabType; label: string }[] = [
     { id: 'general', label: 'عام' },
@@ -42,6 +43,15 @@ const Delta = ({ current, previous, suffix = '' }: { current: number; previous: 
         </span>
     );
 };
+
+// بطاقة مقياس واحد داخل بطاقة المجموعة (قيمة + دلتا التغيّر)
+const GroupMetricTile = ({ label, current, previous, suffix = '' }: { label: string; current: number | null; previous: number | null; suffix?: string }) => (
+    <div className="bg-gray-50/70 rounded-xl px-2 py-2 text-center space-y-0.5">
+        <p className="text-[9px] font-bold text-gray-400 truncate">{label}</p>
+        <p className="text-sm font-black text-gray-800 font-sans">{current ?? '—'}{current !== null && suffix}</p>
+        {current !== null && previous !== null ? <Delta current={current} previous={previous} suffix={suffix} /> : <span className="text-gray-300 text-[10px] font-bold">—</span>}
+    </div>
+);
 
 const StatCard = ({ title, current, previous, unit = '', rate = false }: { title: string; current: number | null; previous: number | null; unit?: string; rate?: boolean }) => (
     <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-1.5">
@@ -76,16 +86,30 @@ export default function AnalyticsPage() {
         enabled: activeTab === 'groups',
     });
 
-    const [sortMode, setSortMode] = useState<SortMode>('name');
+    // ترتيب بطاقات أداء المجموعات: فلتر "ترتيب حسب" + اتجاه تصاعدي/تنازلي
+    const [groupSort, setGroupSort] = useState<{ column: GroupSortColumn; dir: 'asc' | 'desc' }>({ column: 'name', dir: 'asc' });
+    const groupSortValue = (g: GroupAnalytics, column: GroupSortColumn): number | string => {
+        switch (column) {
+            case 'name': return g.name;
+            case 'total': return g.current.pagesSum;
+            case 'new': return g.current.newPages;
+            case 'near': return g.current.nearPages;
+            case 'far': return g.current.farPages;
+            case 'notTested': return g.current.notTestedRate ?? -1;
+            case 'withdrawn': return g.current.withdrawnRate ?? -1;
+            case 'attendance': return g.current.attendanceRate ?? -1;
+        }
+    };
     const sortedGroups = useMemo(() => {
         const list = [...groups];
-        if (sortMode === 'name') {
-            list.sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'ar'));
-        } else {
-            list.sort((a, b) => (b.current.pagesSum - b.previous.pagesSum) - (a.current.pagesSum - a.previous.pagesSum));
-        }
+        list.sort((a, b) => {
+            const va = groupSortValue(a, groupSort.column);
+            const vb = groupSortValue(b, groupSort.column);
+            const cmp = typeof va === 'string' ? va.localeCompare(vb as string, 'ar') : (va as number) - (vb as number);
+            return groupSort.dir === 'asc' ? cmp : -cmp;
+        });
         return list;
-    }, [groups, sortMode]);
+    }, [groups, groupSort]);
 
     // --- قسم الطالب الفردي ---
     const [studentSearch, setStudentSearch] = useState('');
@@ -164,30 +188,36 @@ export default function AnalyticsPage() {
                     </section>
                 )}
 
-                {/* تبويب أداء المجموعات: مدرس/مجموعة + صفحات + عدد اختبارات + حضور، مع الترتيب */}
+                {/* تبويب أداء المجموعات: بطاقة لكل مجموعة (الكل/جديد/قريب/بعيد/لم يختبروا/الانصراف/الحضور) مع فلتر ترتيب */}
                 {activeTab === 'groups' && (
                     <section className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <h2 className="text-sm font-black text-gray-500">أداء المجموعات والمدرسين (مقارنة بالشهر السابق)</h2>
                         </div>
-                        <div className="flex items-center justify-end gap-2">
-                            <button
-                                onClick={() => setSortMode('name')}
-                                className={cn(
-                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all',
-                                    sortMode === 'name' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
-                                )}
+
+                        {/* فلتر الترتيب */}
+                        <div className="flex items-center gap-2 px-1">
+                            <span className="text-[11px] font-bold text-gray-400 shrink-0">ترتيب حسب</span>
+                            <select
+                                value={groupSort.column}
+                                onChange={(e) => setGroupSort((prev) => ({ ...prev, column: e.target.value as GroupSortColumn }))}
+                                className="flex-1 h-9 rounded-lg border border-gray-200 bg-white px-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             >
-                                <ArrowDownAZ size={13} /> ترتيب أبجدي (المدرس)
-                            </button>
+                                <option value="name">اسم المجموعة</option>
+                                <option value="total">الكل (الصفحات)</option>
+                                <option value="new">جديد</option>
+                                <option value="near">قريب</option>
+                                <option value="far">بعيد</option>
+                                <option value="notTested">لم يختبروا</option>
+                                <option value="withdrawn">الانصراف</option>
+                                <option value="attendance">الحضور</option>
+                            </select>
                             <button
-                                onClick={() => setSortMode('change')}
-                                className={cn(
-                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all',
-                                    sortMode === 'change' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
-                                )}
+                                onClick={() => setGroupSort((prev) => ({ ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' }))}
+                                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                                title={groupSort.dir === 'asc' ? 'تصاعدي' : 'تنازلي'}
                             >
-                                <ArrowUpDown size={13} /> ترتيب حسب نسبة التغيّر
+                                {groupSort.dir === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
                             </button>
                         </div>
 
@@ -196,32 +226,21 @@ export default function AnalyticsPage() {
                         ) : sortedGroups.length === 0 ? (
                             <div className="text-center py-10 bg-white/40 rounded-2xl border-2 border-dashed border-gray-100 text-gray-400 text-sm font-bold">لا توجد مجموعات لعرضها</div>
                         ) : (
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 text-[10px] font-black text-gray-400 border-b border-gray-100">
-                                    <span className="col-span-5">المجموعة</span>
-                                    <span className="col-span-3">صفحات</span>
-                                    <span className="col-span-2">اختبارات</span>
-                                    <span className="col-span-2">الحضور</span>
-                                </div>
+                            <div className="space-y-2.5">
                                 {sortedGroups.map((g) => (
-                                    <div key={g.id} className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 last:border-0 items-center">
-                                        <div className="col-span-5 min-w-0">
-                                            <p className="text-xs font-bold text-gray-800 truncate">{g.name}</p>
-                                            <p className="text-[10px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
+                                    <div key={g.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-black text-gray-800 truncate">{g.name}</p>
+                                            <p className="text-[11px] text-gray-400 truncate">{g.teacherName} · {g.studentsCount} طالب</p>
                                         </div>
-                                        <div className="col-span-3 flex flex-col">
-                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.pagesSum}</span>
-                                            <Delta current={g.current.pagesSum} previous={g.previous.pagesSum} />
-                                        </div>
-                                        <div className="col-span-2 flex flex-col">
-                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.examsCount}</span>
-                                            <Delta current={g.current.examsCount} previous={g.previous.examsCount} />
-                                        </div>
-                                        <div className="col-span-2 flex flex-col">
-                                            <span className="text-sm font-black text-gray-800 font-sans">{g.current.attendanceRate ?? '—'}{g.current.attendanceRate !== null && '%'}</span>
-                                            {g.current.attendanceRate !== null && g.previous.attendanceRate !== null && (
-                                                <Delta current={g.current.attendanceRate} previous={g.previous.attendanceRate} suffix="%" />
-                                            )}
+                                        <div className="grid grid-cols-4 gap-2">
+                                            <GroupMetricTile label="الكل" current={g.current.pagesSum} previous={g.previous.pagesSum} />
+                                            <GroupMetricTile label="جديد" current={g.current.newPages} previous={g.previous.newPages} />
+                                            <GroupMetricTile label="قريب" current={g.current.nearPages} previous={g.previous.nearPages} />
+                                            <GroupMetricTile label="بعيد" current={g.current.farPages} previous={g.previous.farPages} />
+                                            <GroupMetricTile label="لم يختبروا" current={g.current.notTestedRate} previous={g.previous.notTestedRate} suffix="%" />
+                                            <GroupMetricTile label="الانصراف" current={g.current.withdrawnRate} previous={g.previous.withdrawnRate} suffix="%" />
+                                            <GroupMetricTile label="الحضور" current={g.current.attendanceRate} previous={g.previous.attendanceRate} suffix="%" />
                                         </div>
                                     </div>
                                 ))}
