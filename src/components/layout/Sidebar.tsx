@@ -19,6 +19,7 @@ import Archive from 'lucide-react/dist/esm/icons/archive'
 import Zap from 'lucide-react/dist/esm/icons/zap'
 import UserCheck from 'lucide-react/dist/esm/icons/user-check'
 import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
 import { FadeIn } from '@/components/ui/transition';
@@ -104,6 +105,12 @@ export default function Sidebar() {
             label: 'تقارير الاختبارات',
             href: '/exams-report',
             icon: FileText,
+            roles: ['director', 'supervisor', 'teacher']
+        },
+        {
+            label: 'دورة الاختبارات',
+            href: '/exam-cycle',
+            icon: RefreshCw,
             roles: ['director', 'supervisor', 'teacher']
         },
         {
