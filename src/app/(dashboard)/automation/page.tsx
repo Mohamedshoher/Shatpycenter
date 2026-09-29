@@ -92,15 +92,15 @@ export default function AutomationPage() {
     );
 
     const renderLogList = (items: typeof logs, title: string, Icon: React.ComponentType<{ className?: string }>, colorClass: string, bgClass: string, borderClass: string) => (
-        <div className={`rounded-3xl p-6 shadow-sm border ${borderClass} h-full flex flex-col ${bgClass}`}>
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className={`p-2.5 rounded-xl shadow-sm ${colorClass} bg-white border border-current/10`}>
-                        <Icon className="w-5 h-5" />
+        <div className={`rounded-3xl p-4 md:p-6 shadow-sm border ${borderClass} h-full flex flex-col ${bgClass}`}>
+            <div className="flex items-center justify-between gap-2 mb-4 md:mb-6">
+                <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                    <div className={`shrink-0 p-2 md:p-2.5 rounded-xl shadow-sm ${colorClass} bg-white border border-current/10`}>
+                        <Icon className="w-4 h-4 md:w-5 md:h-5" />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+                    <h2 className="text-sm md:text-xl font-bold text-gray-900 truncate">{title}</h2>
                 </div>
-                <span className={`text-xs font-black px-3 py-1 rounded-full ${colorClass} bg-white shadow-sm border border-current/10`}>
+                <span className={`shrink-0 text-[10px] md:text-xs font-black px-2.5 md:px-3 py-1 rounded-full ${colorClass} bg-white shadow-sm border border-current/10`}>
                     {items.filter(i => i.recipientId !== 'system').length} عملية
                 </span>
             </div>
@@ -172,71 +172,69 @@ export default function AutomationPage() {
     );
 
     return (
-        <div className="space-y-6 pb-20 p-4 md:p-6" dir="rtl">
+        <div className="space-y-4 md:space-y-6 pb-20 p-3 md:p-6 overflow-x-hidden" dir="rtl">
             {/* Minimal Navigation Header */}
-            <div className="flex items-center justify-between bg-white/60 backdrop-blur-md sticky top-0 z-50 py-3 -mx-4 px-4 md:-mx-6 md:px-6 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                    <Link
-                        href="/"
-                        className="w-10 h-10 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all"
-                    >
-                        <Home className="w-5 h-5" />
-                    </Link>
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">مركز الشاطبي</span>
-                        <h2 className="text-sm font-black text-gray-900 leading-none">نظام الأتمتة</h2>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white/60 backdrop-blur-md sticky top-0 z-50 py-3 -mx-3 px-3 md:-mx-6 md:px-6 border-b border-gray-100">
+                <div className="flex items-center justify-between md:justify-start gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <Link
+                            href="/"
+                            className="w-10 h-10 shrink-0 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all"
+                        >
+                            <Home className="w-5 h-5" />
+                        </Link>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">مركز الشاطبي</span>
+                            <h2 className="text-sm font-black text-gray-900 leading-none truncate">نظام الأتمتة</h2>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 bg-gray-50/80 px-2 py-1.5 rounded-xl border border-gray-100">
-                    <span className="text-xs font-bold text-gray-500">عرض نتائج:</span>
-                    <div className="relative">
-                        <input 
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="bg-white border border-gray-200 text-xs font-bold text-indigo-700 px-2 py-1 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                        />
-                        {selectedDate && (
-                            <button 
-                                onClick={() => setSelectedDate('')}
-                                className="mr-2 text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors"
-                            >
-                                (الأحدث)
-                            </button>
-                        )}
-                    </div>
+                <div className="flex items-center gap-2 bg-gray-50/80 px-2.5 py-2 rounded-xl border border-gray-100 w-full md:w-auto">
+                    <span className="text-xs font-bold text-gray-500 shrink-0">عرض نتائج:</span>
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="flex-1 min-w-0 md:flex-none bg-white border border-gray-200 text-xs font-bold text-indigo-700 px-2 py-1.5 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    />
+                    {selectedDate && (
+                        <button
+                            onClick={() => setSelectedDate('')}
+                            className="shrink-0 text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                            (الأحدث)
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Main Action Header - Just Buttons */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden space-y-4">
+            <div className="bg-white rounded-3xl p-4 md:p-6 shadow-sm border border-gray-100 relative overflow-hidden space-y-4">
                 <div className="absolute top-0 left-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-                <div className="relative z-10 flex flex-row items-center justify-between gap-3">
-                    <div className="flex-1 flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="date"
-                                value={reportCheckDate}
-                                onChange={(e) => setReportCheckDate(e.target.value)}
-                                className="bg-white border border-gray-200 text-xs font-bold text-indigo-700 px-2 py-1 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-                            />
-                            <button
-                                onClick={handleRunReportCheck}
-                                disabled={isExecuting}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-sm md:text-base hover:bg-indigo-100 transition-all disabled:opacity-50"
-                            >
-                                <Calendar className="w-5 h-5" />
-                                <span>{isExecuting ? 'جاري الفحص...' : 'فحص التقارير'}</span>
-                            </button>
-                        </div>
+                <div className="relative z-10 flex flex-col md:flex-row items-stretch gap-3">
+                    <div className="flex-1 flex flex-col gap-2 min-w-0">
+                        <input
+                            type="date"
+                            value={reportCheckDate}
+                            onChange={(e) => setReportCheckDate(e.target.value)}
+                            className="w-full bg-white border border-gray-200 text-xs font-bold text-indigo-700 px-3 py-2 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <button
+                            onClick={handleRunReportCheck}
+                            disabled={isExecuting}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-sm hover:bg-indigo-100 transition-all disabled:opacity-50"
+                        >
+                            <Calendar className="w-5 h-5 shrink-0" />
+                            <span>{isExecuting ? 'جاري الفحص...' : 'فحص التقارير'}</span>
+                        </button>
                     </div>
                     <button
                         onClick={handleRunExamCheck}
                         disabled={isExecutingExams}
-                        className="flex-1 flex flex-col md:flex-row items-center justify-center gap-2 px-4 py-4 md:py-3 bg-emerald-50 text-emerald-700 rounded-2xl font-black text-sm md:text-base hover:bg-emerald-100 transition-all disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl font-black text-sm hover:bg-emerald-100 transition-all disabled:opacity-50 md:self-center"
                     >
-                        <BookOpen className="w-5 h-5 mb-1 md:mb-0" />
+                        <BookOpen className="w-5 h-5 shrink-0" />
                         <span>{isExecutingExams ? 'جاري فحص الاختبارات...' : 'فحص الاختبارات'}</span>
                     </button>
                 </div>
