@@ -63,12 +63,14 @@ export async function GET(request: NextRequest) {
         const summarize = (period: typeof current, groupStudentIds: string[]) => {
             const exams = period.exams.filter((e) => groupStudentIds.includes(e.student_id as string));
             const attendance = period.attendance.filter((a) => groupStudentIds.includes(a.student_id as string));
-            const pagesSum = exams.reduce((s, e) => s + (Number(e.pages_count) || 0), 0);
-            const linesSum = exams.reduce((s, e) => s + (Number(e.lines_count) || 0), 0);
+            const rawPages = exams.reduce((s, e) => s + (Number(e.pages_count) || 0), 0);
+            const rawLines = exams.reduce((s, e) => s + (Number(e.lines_count) || 0), 0);
+            // كل 15 سطر = صفحة، حتى تظهر مجموعات التلقين (المقاسة بالأسطر) بنفس وحدة الصفحات
+            const pagesSum = Math.round(rawPages + rawLines / 15);
             const present = attendance.filter((a) => a.status === 'present').length;
             const absent = attendance.filter((a) => a.status === 'absent').length;
             const attendanceRate = (present + absent) > 0 ? Math.round((present / (present + absent)) * 100) : null;
-            return { examsCount: exams.length, pagesSum, linesSum, attendanceRate };
+            return { examsCount: exams.length, pagesSum, attendanceRate };
         };
 
         const result = groups.map((g) => {

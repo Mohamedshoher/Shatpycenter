@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/auth-server';
 
 // السجل الشهري لطالب واحد على مدى عدد شهور معيّن: صفحات كل نوع اختبار
 // (جديد / ماضي قريب / ماضي بعيد) على حدة، ونسبة حضوره.
+// كل 15 سطر يُحسب صفحة، فالكل يظهر بوحدة الصفحات (حتى التلقين).
 export async function GET(request: NextRequest) {
     const session = await requireSession(request);
     if (session instanceof NextResponse) return session;
@@ -32,8 +33,9 @@ export async function GET(request: NextRequest) {
             months.push({ monthKey, label: d.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' }) });
         }
 
-        const sumPages = (rows: { pages_count: number | null }[]) => rows.reduce((s, e) => s + (Number(e.pages_count) || 0), 0);
-        const sumLines = (rows: { lines_count: number | null }[]) => rows.reduce((s, e) => s + (Number(e.lines_count) || 0), 0);
+        // كل 15 سطر = صفحة، حتى تظهر أنشطة التلقين (المقاسة بالأسطر) بنفس وحدة الصفحات
+        const sumPages = (rows: { pages_count: number | null; lines_count: number | null }[]) =>
+            Math.round(rows.reduce((s, e) => s + (Number(e.pages_count) || 0) + (Number(e.lines_count) || 0) / 15, 0));
 
         const result = months.map(({ monthKey, label }) => {
             const monthExams = (exams || []).filter((e) => (e.date || '').slice(0, 7) === monthKey);
@@ -50,13 +52,9 @@ export async function GET(request: NextRequest) {
                 label,
                 examsCount: monthExams.length,
                 pagesSum: sumPages(monthExams),
-                linesSum: sumLines(monthExams),
                 newPages: sumPages(newExams),
                 nearPages: sumPages(nearExams),
                 farPages: sumPages(farExams),
-                newLines: sumLines(newExams),
-                nearLines: sumLines(nearExams),
-                farLines: sumLines(farExams),
                 attendanceRate: (present + absent) > 0 ? Math.round((present / (present + absent)) * 100) : null,
             };
         });

@@ -62,8 +62,10 @@ export async function GET(request: NextRequest) {
             const fees = (feesRes.data || []).filter((f) => scopedStudentIds.has(f.student_id as string));
 
             const examsCount = exams.length;
-            const pagesSum = exams.reduce((s, e) => s + (Number(e.pages_count) || 0), 0);
-            const linesSum = exams.reduce((s, e) => s + (Number(e.lines_count) || 0), 0);
+            const rawPages = exams.reduce((s, e) => s + (Number(e.pages_count) || 0), 0);
+            const rawLines = exams.reduce((s, e) => s + (Number(e.lines_count) || 0), 0);
+            // كل 15 سطر = صفحة، حتى تظهر مجموعات التلقين (المقاسة بالأسطر) بنفس وحدة الصفحات
+            const pagesSum = Math.round(rawPages + rawLines / 15);
             const testedIds = new Set(exams.map((e) => e.student_id));
             const notTestedCount = [...activeStudentIds].filter((id) => !testedIds.has(id)).length;
 
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
                 .reduce((s, st) => s + (Number(st.monthly_amount) || 0), 0);
             const collectionRate = expected > 0 ? Math.round((collected / expected) * 100) : null;
 
-            return { examsCount, pagesSum, linesSum, notTestedCount, attendanceRate, collected, expected, collectionRate };
+            return { examsCount, pagesSum, notTestedCount, attendanceRate, collected, expected, collectionRate };
         };
 
         const [current, previous] = await Promise.all([fetchPeriod(cur.start, cur.end), fetchPeriod(prev.start, prev.end)]);
