@@ -71,34 +71,53 @@ const TermContent = ({ content }: { content: string }) => {
     );
 };
 
+const SECTIONS = ['قرآن', 'تلقين', 'نور بيان', 'تجويد'] as const;
+
+const scopeBadge = (term: AgreementTerm) => {
+    if (term.scope === 'teacher') return 'نسخة خاصة بهذا المعلم';
+    if (term.scope === 'section') return `نسخة خاصة بقسم ${term.scopeValue}`;
+    return null;
+};
+
 export const TeacherAgreementTab = ({ teacher }: Props) => {
     const { user } = useAuthStore();
     const isDirector = user?.role === 'director';
     const queryClient = useQueryClient();
 
     const { data: terms = [], isLoading } = useQuery({
-        queryKey: ['agreement-terms'],
-        queryFn: getAgreementTerms,
+        queryKey: ['agreement-terms', teacher?.id],
+        queryFn: () => getAgreementTerms(teacher?.id),
+        enabled: !!teacher?.id,
     });
 
     const [editingTerm, setEditingTerm] = useState<AgreementTerm | null>(null);
     const [editTitle, setEditTitle] = useState('');
     const [editContent, setEditContent] = useState('');
+    const [step, setStep] = useState<'edit' | 'scope'>('edit');
+    const [chosenScope, setChosenScope] = useState<'all' | 'section' | 'teacher'>('all');
+    const [chosenSection, setChosenSection] = useState<typeof SECTIONS[number]>('قرآن');
 
     const openEdit = (term: AgreementTerm) => {
         setEditingTerm(term);
         setEditTitle(term.title);
         setEditContent(term.content);
+        setStep('edit');
+        setChosenScope('all');
     };
+
+    const closeModal = () => { setEditingTerm(null); setStep('edit'); };
 
     const saveMutation = useMutation({
         mutationFn: () => {
             if (!editingTerm) return Promise.reject('no term');
-            return updateAgreementTerm(editingTerm.id, editTitle, editContent);
+            return updateAgreementTerm(editingTerm.id, editTitle, editContent, chosenScope, {
+                scopeValue: chosenScope === 'section' ? chosenSection : undefined,
+                teacherId: chosenScope === 'teacher' ? teacher?.id : undefined,
+            });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['agreement-terms'] });
-            setEditingTerm(null);
+            closeModal();
         },
     });
 
@@ -126,7 +145,7 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
                     <div className="space-y-6">
                         {terms.map((term) => (
                             <div key={term.id} className="bg-white rounded-2xl p-5 border border-emerald-50 shadow-sm">
-                                <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center justify-between mb-1">
                                     <h4 className="font-black text-emerald-800 text-base flex items-center gap-2">
                                         <span>{term.icon}</span> {term.title}
                                     </h4>
@@ -140,6 +159,11 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
                                         </button>
                                     )}
                                 </div>
+                                {scopeBadge(term) && (
+                                    <span className="inline-block text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full mb-2">
+                                        {scopeBadge(term)}
+                                    </span>
+                                )}
                                 <TermContent content={applyTokens(term.content, teacher)} />
                             </div>
                         ))}
@@ -155,47 +179,106 @@ export const TeacherAgreementTab = ({ teacher }: Props) => {
 
             {/* مودال تعديل البند (للمدير فقط) */}
             {editingTerm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setEditingTerm(null); }}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
                     <div className="w-full max-w-lg bg-white rounded-[28px] shadow-2xl overflow-hidden">
                         <div className="px-6 pt-6 pb-5 bg-emerald-600">
                             <div className="flex items-center justify-between">
-                                <h3 className="font-black text-white text-base">تعديل البند</h3>
-                                <button onClick={() => setEditingTerm(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors">
+                                <h3 className="font-black text-white text-base">{step === 'edit' ? 'تعديل البند' : 'تطبيق التعديل على...'}</h3>
+                                <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors">
                                     <X size={14} />
                                 </button>
                             </div>
                         </div>
-                        <div className="px-6 py-5 space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 block mb-1.5">عنوان البند</label>
-                                <input
-                                    type="text" value={editTitle}
-                                    onChange={e => setEditTitle(e.target.value)}
-                                    className="w-full h-12 rounded-xl px-4 text-sm border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                                />
+
+                        {step === 'edit' ? (
+                            <div className="px-6 py-5 space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 block mb-1.5">عنوان البند</label>
+                                    <input
+                                        type="text" value={editTitle}
+                                        onChange={e => setEditTitle(e.target.value)}
+                                        className="w-full h-12 rounded-xl px-4 text-sm border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 block mb-1.5">
+                                        نص البند
+                                        <span className="text-gray-400 font-normal mr-2">
+                                            (&quot;- &quot; قائمة، &quot;! &quot; تحذير أحمر، &quot;* &quot; ملحوظة، سطر فارغ = فقرة جديدة)
+                                        </span>
+                                    </label>
+                                    <textarea
+                                        value={editContent}
+                                        onChange={e => setEditContent(e.target.value)}
+                                        rows={10}
+                                        className="w-full rounded-xl px-4 py-3 text-sm border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-300 leading-relaxed"
+                                        dir="rtl"
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-1">
+                                    <Button
+                                        onClick={() => {
+                                            if (!editTitle.trim() || !editContent.trim()) return;
+                                            setStep('scope');
+                                        }}
+                                        className="flex-1 h-12 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700"
+                                    >
+                                        التالي
+                                    </Button>
+                                    <button onClick={closeModal} className="px-5 h-12 rounded-xl text-sm font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">إلغاء</button>
+                                </div>
                             </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 block mb-1.5">
-                                    نص البند
-                                    <span className="text-gray-400 font-normal mr-2">
-                                        (&quot;- &quot; قائمة، &quot;! &quot; تحذير أحمر، &quot;* &quot; ملحوظة، سطر فارغ = فقرة جديدة)
-                                    </span>
-                                </label>
-                                <textarea
-                                    value={editContent}
-                                    onChange={e => setEditContent(e.target.value)}
-                                    rows={10}
-                                    className="w-full rounded-xl px-4 py-3 text-sm border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-300 leading-relaxed"
-                                    dir="rtl"
-                                />
+                        ) : (
+                            <div className="px-6 py-5 space-y-4">
+                                <p className="text-sm text-gray-600 leading-relaxed">
+                                    هل تريد تعميم هذا التعديل على الجميع، أم يكون خاصًا بقسم معين، أم بهذا المعلم فقط
+                                    ({teacher?.fullName})؟
+                                </p>
+
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => setChosenScope('all')}
+                                        className={`w-full text-right px-4 py-3 rounded-xl text-sm font-bold border transition-all ${chosenScope === 'all' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+                                    >
+                                        🌍 تعميم على جميع المجموعات
+                                    </button>
+
+                                    <button
+                                        onClick={() => setChosenScope('section')}
+                                        className={`w-full text-right px-4 py-3 rounded-xl text-sm font-bold border transition-all ${chosenScope === 'section' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+                                    >
+                                        🗂️ تعميم على قسم معين فقط
+                                    </button>
+                                    {chosenScope === 'section' && (
+                                        <div className="grid grid-cols-2 gap-2 pr-4">
+                                            {SECTIONS.map((s) => (
+                                                <button
+                                                    key={s}
+                                                    onClick={() => setChosenSection(s)}
+                                                    className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all ${chosenSection === s ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                                                >
+                                                    {s}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <button
+                                        onClick={() => setChosenScope('teacher')}
+                                        className={`w-full text-right px-4 py-3 rounded-xl text-sm font-bold border transition-all ${chosenScope === 'teacher' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+                                    >
+                                        👤 لا، خاص بهذا المعلم فقط ({teacher?.fullName})
+                                    </button>
+                                </div>
+
+                                <div className="flex gap-3 pt-1">
+                                    <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="flex-1 h-12 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700">
+                                        {saveMutation.isPending ? 'جاري الحفظ...' : '✓ حفظ وإرسال الإشعار'}
+                                    </Button>
+                                    <button onClick={() => setStep('edit')} className="px-5 h-12 rounded-xl text-sm font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">رجوع</button>
+                                </div>
                             </div>
-                            <div className="flex gap-3 pt-1">
-                                <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="flex-1 h-12 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700">
-                                    {saveMutation.isPending ? 'جاري الحفظ...' : '✓ حفظ وإشعار المعلمين'}
-                                </Button>
-                                <button onClick={() => setEditingTerm(null)} className="px-5 h-12 rounded-xl text-sm font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">إلغاء</button>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             )}

@@ -1,5 +1,7 @@
 import { getErrorMessage } from '@/lib/error-message';
 
+export type AgreementTermScope = 'all' | 'section' | 'teacher';
+
 export interface AgreementTerm {
     id: string;
     orderIndex: number;
@@ -8,11 +10,14 @@ export interface AgreementTerm {
     content: string;
     updatedAt?: string;
     updatedBy?: string;
+    scope: AgreementTermScope;
+    scopeValue: string | null;
 }
 
-export const getAgreementTerms = async (): Promise<AgreementTerm[]> => {
+export const getAgreementTerms = async (teacherId?: string): Promise<AgreementTerm[]> => {
     try {
-        const res = await fetch('/api/agreement-terms');
+        const qs = teacherId ? `?teacherId=${encodeURIComponent(teacherId)}` : '';
+        const res = await fetch(`/api/agreement-terms${qs}`);
         if (!res.ok) return [];
         return (await res.json()) || [];
     } catch (error) {
@@ -21,11 +26,17 @@ export const getAgreementTerms = async (): Promise<AgreementTerm[]> => {
     }
 };
 
-export const updateAgreementTerm = async (id: string, title: string, content: string): Promise<void> => {
+export const updateAgreementTerm = async (
+    id: string,
+    title: string,
+    content: string,
+    scope: AgreementTermScope,
+    options?: { scopeValue?: string; teacherId?: string }
+): Promise<void> => {
     const res = await fetch('/api/agreement-terms', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, title, content }),
+        body: JSON.stringify({ id, title, content, scope, scopeValue: options?.scopeValue, teacherId: options?.teacherId }),
     });
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
