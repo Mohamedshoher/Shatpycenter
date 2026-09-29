@@ -145,6 +145,16 @@ export default function Sidebar() {
         user && item.roles.includes(user.role)
     );
 
+    // الصفحات الموجودة أصلاً في الشريط السفلي (BottomNavigation) على الموبايل،
+    // نخفيها من السيدبار في عرض الموبايل فقط حتى لا تتكرر (تبقى ظاهرة في عرض الديسكتوب حيث لا يوجد شريط سفلي).
+    const hasBottomNav = !(pathname.startsWith('/parent') || user?.role === 'parent' || pathname === '/login');
+    const bottomNavHrefs = ['/', '/students', '/attendance-report', '/groups', '/exams-report'];
+    const isInBottomNav = (href: string) => {
+        if (!hasBottomNav) return false;
+        if (href === '/' && user?.role === 'teacher') return false;
+        return bottomNavHrefs.includes(href);
+    };
+
     return (
         <>
             {/* Mobile Overlay */}
@@ -209,7 +219,8 @@ export default function Sidebar() {
                                     href={item.href}
                                     onClick={() => setSidebarOpen(false)} // Close on mobile navigation
                                     className={cn(
-                                        "flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200",
+                                        "items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200",
+                                        isInBottomNav(item.href) ? "hidden md:flex" : "flex",
                                         isActive
                                             ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
                                             : "text-gray-600 hover:bg-blue-50 hover:text-blue-700"
