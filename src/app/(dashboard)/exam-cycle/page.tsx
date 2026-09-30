@@ -296,16 +296,6 @@ export default function ExamCyclePage() {
                 {/* تفصيل كل مجموعة على حدة عند اختيار "كل المجموعات" */}
                 {isAllGroups ? (
                     <div className="space-y-2">
-                        <div className="flex items-center justify-between px-1">
-                            <span className="text-xs font-bold text-gray-400">
-                                توزيع يوم {WORK_DAYS[selectedDay]} على المجموعات
-                                {todayIndex === selectedDay && <span className="text-blue-500"> (النهاردة)</span>}
-                            </span>
-                            <span className="bg-blue-100 text-blue-700 text-xs font-black px-3 py-1 rounded-full font-sans">
-                                {studentsForSelectedDay.length} اختبار
-                            </span>
-                        </div>
-
                         {perGroupCountsForSelectedDay.length === 0 ? (
                             <div className="text-center py-16 bg-white/40 rounded-[28px] border-2 border-dashed border-gray-100">
                                 <RefreshCw size={28} className="mx-auto mb-2 text-gray-300" />
