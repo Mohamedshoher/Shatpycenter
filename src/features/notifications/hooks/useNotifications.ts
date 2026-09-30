@@ -20,7 +20,7 @@ export const useCreateNotification = () => {
     return useMutation({
         mutationFn: (data: {
             teacherId: string | null;
-            type: 'deduction' | 'reward' | 'system';
+            type: 'deduction' | 'reward' | 'system' | 'salary_change';
             title: string;
             message: string;
             reason?: string;

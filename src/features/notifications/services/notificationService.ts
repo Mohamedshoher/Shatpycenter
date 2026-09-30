@@ -18,7 +18,7 @@ export const getNotifications = async (teacherId?: string, limit: number = 20): 
 
 export const createNotification = async (data: {
     teacherId: string | null;
-    type: 'deduction' | 'reward' | 'system';
+    type: 'deduction' | 'reward' | 'system' | 'salary_change';
     title: string;
     message: string;
     reason?: string;
