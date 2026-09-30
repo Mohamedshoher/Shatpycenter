@@ -15,6 +15,7 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import Edit2 from 'lucide-react/dist/esm/icons/edit-2'
 import Check from 'lucide-react/dist/esm/icons/check'
 import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal';
+import Search from 'lucide-react/dist/esm/icons/search';
 import Link from 'next/link';
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { FadeIn } from '@/components/ui/transition';
@@ -52,7 +53,8 @@ export default function GroupsPage() {
         }
     });
 
-    const [searchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [filters, setFilters] = useState<string[]>(['الكل']);
 
     // Modal states
@@ -231,6 +233,20 @@ export default function GroupsPage() {
                     {/* Filters - Right */}
                     <div className="flex items-center gap-2 flex-1 justify-end max-w-2xl">
                                 <div key="controls" className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setIsSearchOpen((prev) => {
+                                            const next = !prev;
+                                            if (!next) setSearchTerm('');
+                                            return next;
+                                        })}
+                                        className={cn(
+                                            "w-11 h-11 bg-white border border-gray-100 rounded-[16px] flex items-center justify-center text-purple-500 transition-all shadow-sm active:scale-95",
+                                            isSearchOpen ? "border-purple-500" : "hover:border-purple-200"
+                                        )}
+                                        title="بحث باسم المجموعة أو المدرس"
+                                    >
+                                        <Search size={18} />
+                                    </button>
                                     {user?.role !== 'teacher' && (
                                         <div className="relative">
                                             <button
@@ -305,6 +321,20 @@ export default function GroupsPage() {
                                 </div>
                     </div>
                 </div>
+
+                {isSearchOpen && (
+                    <div className="max-w-7xl mx-auto mt-3 relative">
+                        <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            autoFocus
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="ابحث باسم المجموعة أو اسم المدرس..."
+                            className="w-full h-11 bg-white border border-purple-100 rounded-[16px] pr-11 pl-4 text-sm font-bold text-right focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                        />
+                    </div>
+                )}
             </div>
 
             <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 mt-2">
