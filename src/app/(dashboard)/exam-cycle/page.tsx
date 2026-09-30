@@ -7,6 +7,7 @@ import User from 'lucide-react/dist/esm/icons/user';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import { cn } from '@/lib/utils';
 
+import dynamic from 'next/dynamic';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -15,6 +16,9 @@ import {
     setExamCycleAssignment,
     setExamCycleAssignmentsBatch,
 } from '@/features/groups/services/examCycleService';
+import { Student } from '@/types';
+
+const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
 
 // أيام العمل بالترتيب (السبت هو أول يوم في العمل، الخميس والجمعة إجازة)
 const WORK_DAYS = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء'];
@@ -43,6 +47,9 @@ export default function ExamCyclePage() {
     const { user } = useAuthStore();
 
     const canEdit = user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'teacher';
+
+    // الضغط على اسم الطالب يفتح نافذة بياناته على تبويب الاختبارات مباشرة لتسجيل اختبار
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
     // المجموعات المتاحة حسب دور المستخدم
     const filteredGroupsList = useMemo(() => {
@@ -92,6 +99,21 @@ export default function ExamCyclePage() {
         return map;
     }, [assignments]);
 
+    // توزيع أيام كل مجموعة على حدة (بغض النظر عن كوننا في عرض "كل المجموعات")،
+    // نستخدمه في التوزيع التلقائي للطلاب الجدد وفي حد أقصى النقل اليدوي بين الأيام.
+    const dayCountsByGroup = useMemo(() => {
+        const map = new Map<string, number[]>();
+        groupStudents.forEach((s) => {
+            if (!s.groupId) return;
+            const day = assignmentMap.get(s.id);
+            if (day === undefined) return;
+            const counts = map.get(s.groupId) || [0, 0, 0, 0, 0];
+            counts[day] += 1;
+            map.set(s.groupId, counts);
+        });
+        return map;
+    }, [groupStudents, assignmentMap]);
+
     // تعيين أولي تلقائي لأي طالب جديد لسه ملوش يوم محدد: يُضاف لأقل الأيام ازدحاماً
     // نوزّع كل مجموعة على حدة (حتى في عرض "كل المجموعات") حتى لا تختلط موازنة الأيام بين مجموعات مختلفة،
     // وحتى تُوزَّع مجموعات لم تُفتح صفحتها بمفردها من قبل (كانت تظل بلا توزيع في عرض "كل المجموعات").
@@ -101,14 +123,7 @@ export default function ExamCyclePage() {
         if (unassigned.length === 0) return;
 
         const countsByGroup = new Map<string, number[]>();
-        groupStudents.forEach((s) => {
-            if (!s.groupId) return;
-            const day = assignmentMap.get(s.id);
-            if (day === undefined) return;
-            const counts = countsByGroup.get(s.groupId) || [0, 0, 0, 0, 0];
-            counts[day] += 1;
-            countsByGroup.set(s.groupId, counts);
-        });
+        dayCountsByGroup.forEach((counts, groupId) => countsByGroup.set(groupId, [...counts]));
 
         const newItems = unassigned.map((s) => {
             const groupId = s.groupId || '';
@@ -128,7 +143,24 @@ export default function ExamCyclePage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [groupStudents, assignmentMap]);
 
+    // حد أقصى للنقل اليدوي: لا يمكن نقل طالب على يوم يخليه متقدم بأكتر من طالب واحد
+    // عن أقل الأيام ازدحاماً في نفس مجموعته، حتى لا يتكدس يوم بينما باقي الأيام فاضية.
     const handleMoveStudent = async (studentId: string, newDay: number) => {
+        const student = groupStudents.find((s) => s.id === studentId);
+        const oldDay = assignmentMap.get(studentId);
+
+        if (student?.groupId && oldDay !== undefined && oldDay !== newDay) {
+            const counts = [...(dayCountsByGroup.get(student.groupId) || [0, 0, 0, 0, 0])];
+            counts[oldDay] = Math.max(0, counts[oldDay] - 1);
+            const countAfterMove = counts[newDay] + 1;
+            const minOtherDays = Math.min(...counts.filter((_, day) => day !== newDay));
+
+            if (countAfterMove - minOtherDays > 1) {
+                alert(`لا يمكن نقل الطالب إلى يوم ${WORK_DAYS[newDay]} لأنه هيبقى مزدحم أكتر من باقي الأيام بأكتر من طالب. انقل طالباً من يوم ${WORK_DAYS[newDay]} إلى يوم آخر أولاً.`);
+                return;
+            }
+        }
+
         try {
             await setExamCycleAssignment(studentId, newDay);
             queryClient.invalidateQueries({ queryKey: ['exam-cycle', selectedGroupId, groupStudentIds] });
@@ -279,12 +311,16 @@ export default function ExamCyclePage() {
                         ) : (
                             studentsForSelectedDay.map((student) => (
                                 <div key={student.id} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2 min-w-0">
+                                    <button
+                                        onClick={() => setSelectedStudent(student)}
+                                        className="flex items-center gap-2 min-w-0 text-right hover:opacity-70 transition-opacity"
+                                        title="فتح تبويب الاختبارات لتسجيل اختبار"
+                                    >
                                         <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 shrink-0">
                                             <User size={15} />
                                         </div>
                                         <span className="text-sm font-bold text-gray-800 truncate">{student.fullName}</span>
-                                    </div>
+                                    </button>
 
                                     {canEdit && (
                                         <select
@@ -303,6 +339,13 @@ export default function ExamCyclePage() {
                     </div>
                 )}
             </main>
+
+            <StudentDetailModal
+                student={selectedStudent}
+                isOpen={!!selectedStudent}
+                onClose={() => setSelectedStudent(null)}
+                initialTab="exams"
+            />
         </div>
     );
 }
