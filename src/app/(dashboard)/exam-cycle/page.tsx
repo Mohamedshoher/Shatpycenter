@@ -70,14 +70,8 @@ export default function ExamCyclePage() {
         });
     }, [groups, user]);
 
-    const [selectedGroupId, setSelectedGroupId] = useState('');
-
-    // اختيار أول مجموعة تلقائياً عند تحميل القائمة
-    useEffect(() => {
-        if (!selectedGroupId && filteredGroupsList.length > 0) {
-            setSelectedGroupId(filteredGroupsList[0].id);
-        }
-    }, [filteredGroupsList, selectedGroupId]);
+    // "كل المجموعات" هي الاختيار الافتراضي عند فتح الصفحة
+    const [selectedGroupId, setSelectedGroupId] = useState(ALL_GROUPS_VALUE);
 
     const [selectedDay, setSelectedDay] = useState<number>(() => {
         const todayIndex = getTodayWorkdayIndex();
@@ -237,41 +231,30 @@ export default function ExamCyclePage() {
                         </span>
                     </div>
 
-                    <div className="relative">
-                        <select
-                            value={selectedGroupId}
-                            onChange={(e) => { setSelectedGroupId(e.target.value); setSelectedDay(todayIndex === -1 ? 0 : todayIndex); }}
-                            className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-right"
-                        >
-                            <option value={ALL_GROUPS_VALUE}>كل المجموعات</option>
-                            {filteredGroupsList.length === 0 && <option value="">لا توجد مجموعات</option>}
-                            {filteredGroupsList.map((g) => (
-                                <option key={g.id} value={g.id}>{g.name}</option>
-                            ))}
-                        </select>
-                        <ChevronDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    <div className="flex items-center gap-2">
+                        <div className="relative flex-1 min-w-0">
+                            <select
+                                value={selectedGroupId}
+                                onChange={(e) => { setSelectedGroupId(e.target.value); setSelectedDay(todayIndex === -1 ? 0 : todayIndex); }}
+                                className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-right"
+                            >
+                                <option value={ALL_GROUPS_VALUE}>كل المجموعات</option>
+                                {filteredGroupsList.length === 0 && <option value="">لا توجد مجموعات</option>}
+                                {filteredGroupsList.map((g) => (
+                                    <option key={g.id} value={g.id}>{g.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        </div>
+                        <span className="shrink-0 bg-gray-100 text-gray-500 text-[11px] font-black px-3 py-2.5 rounded-xl font-sans">
+                            {filteredGroupsList.length} مجموعة
+                        </span>
                     </div>
                 </div>
             </header>
 
             <main className="max-w-3xl mx-auto px-3 md:px-6 py-4 space-y-4">
-                {/* تنبيه دورة كل 15 يوم لمجموعة مختارة بمفردها */}
-                {selectedGroupIsBiweekly && (
-                    <div className="flex items-center justify-between gap-2 rounded-2xl px-4 py-3 border bg-blue-50 border-blue-100 text-blue-700 text-xs font-bold">
-                        <span>دورة اختبار كل طالب هنا كل 15 يوم تقريبًا</span>
-                        <span className="font-black">نص الطلاب كل أسبوع بالتبادل</span>
-                    </div>
-                )}
-
-                {/* إجمالي اختبارات النهاردة عند اختيار "كل المجموعات" */}
-                {isAllGroups && (
-                    <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
-                        <span className="text-xs font-bold text-blue-700">إجمالي اختبارات النهاردة (كل المجموعات)</span>
-                        <span className="text-lg font-black text-blue-700 font-sans">{todayIndex === -1 ? 0 : dayCounts[todayIndex]}</span>
-                    </div>
-                )}
-
-                {/* تبويبات الأيام */}
+                {/* تبويبات الأيام: أعلى المحتوى مباشرة حتى يبقى اختيار اليوم أول حاجة تُرى */}
                 <div className="grid grid-cols-5 gap-1.5 bg-gray-100 p-1.5 rounded-2xl">
                     {WORK_DAYS.map((day, index) => (
                         <button
@@ -293,6 +276,22 @@ export default function ExamCyclePage() {
                         </button>
                     ))}
                 </div>
+
+                {/* تنبيه دورة كل 15 يوم لمجموعة مختارة بمفردها */}
+                {selectedGroupIsBiweekly && (
+                    <div className="flex items-center justify-between gap-2 rounded-2xl px-4 py-3 border bg-blue-50 border-blue-100 text-blue-700 text-xs font-bold">
+                        <span>دورة اختبار كل طالب هنا كل 15 يوم تقريبًا</span>
+                        <span className="font-black">نص الطلاب كل أسبوع بالتبادل</span>
+                    </div>
+                )}
+
+                {/* إجمالي اختبارات النهاردة عند اختيار "كل المجموعات" */}
+                {isAllGroups && (
+                    <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
+                        <span className="text-xs font-bold text-blue-700">إجمالي اختبارات النهاردة (كل المجموعات)</span>
+                        <span className="text-lg font-black text-blue-700 font-sans">{todayIndex === -1 ? 0 : dayCounts[todayIndex]}</span>
+                    </div>
+                )}
 
                 {/* تفصيل كل مجموعة على حدة عند اختيار "كل المجموعات" */}
                 {isAllGroups ? (
