@@ -498,16 +498,32 @@ export default function FinancePage() {
                                 <p className="text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">لم يتم صرف راتب أي مدرس هذا الشهر.</p>
                             ) : (
                                 teacherPaymentStatus.paid.map(t => (
-                                    <button key={t.teacher.id} onClick={() => { setSelectedSalaryTeacher(t.teacher); setIsSalaryTeacherOpen(true); }} className="w-full flex items-center justify-between p-3 bg-green-50/50 rounded-2xl border border-green-100/50 hover:border-green-300 hover:shadow-sm transition-all text-right">
-                                        <div className="text-right">
-                                            <span className="font-black text-green-700 text-sm block">{t.teacher.fullName}</span>
-                                            <span className="text-[10px] font-bold text-gray-500 block">المستحق: {t.entitlement.toLocaleString()} ج.م</span>
-                                            {t.isPartnership && <span className="text-[9px] font-bold text-blue-500 block">شراكة {t.partnershipPercentage || 0}% من {t.directorReceivedTotal.toLocaleString()} ج.م</span>}
+                                    <button key={t.teacher.id} onClick={() => { setSelectedSalaryTeacher(t.teacher); setIsSalaryTeacherOpen(true); }} className="w-full p-4 bg-green-50/50 rounded-2xl border border-green-100/50 hover:border-green-300 hover:shadow-sm transition-all text-right space-y-3">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="font-black text-green-700 text-sm truncate">{t.teacher.fullName}</span>
+                                            {t.isPartnership && (
+                                                <span className="shrink-0 text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                                                    شراكة {t.partnershipPercentage || 0}%
+                                                </span>
+                                            )}
                                         </div>
-                                        <div className="text-left">
-                                            <span className="font-black text-green-600 text-sm font-sans block">أخذ: {t.paidAmount.toLocaleString()} ج.م</span>
-                                            <span className={`text-[10px] font-black font-sans ${t.remaining > 0 ? 'text-amber-500' : 'text-green-700'}`}>بقي: {t.remaining.toLocaleString()} ج.م</span>
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                            <div className="bg-white/70 rounded-xl py-2">
+                                                <p className="text-[9px] font-bold text-gray-400">المستحق</p>
+                                                <p className="text-xs font-black text-gray-700 font-sans mt-0.5">{t.entitlement.toLocaleString()}</p>
+                                            </div>
+                                            <div className="bg-white/70 rounded-xl py-2">
+                                                <p className="text-[9px] font-bold text-gray-400">أخذ</p>
+                                                <p className="text-xs font-black text-green-600 font-sans mt-0.5">{t.paidAmount.toLocaleString()}</p>
+                                            </div>
+                                            <div className="bg-white/70 rounded-xl py-2">
+                                                <p className="text-[9px] font-bold text-gray-400">باقي</p>
+                                                <p className={`text-xs font-black font-sans mt-0.5 ${t.remaining > 0 ? 'text-amber-500' : 'text-green-700'}`}>{t.remaining.toLocaleString()}</p>
+                                            </div>
                                         </div>
+                                        {t.isPartnership && (
+                                            <p className="text-[9px] font-bold text-blue-400">النسبة من إجمالي استلام المدير: {t.directorReceivedTotal.toLocaleString()} ج.م</p>
+                                        )}
                                     </button>
                                 ))
                             )}
@@ -523,16 +539,32 @@ export default function FinancePage() {
                                 <p className="text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">تم صرف رواتب جميع المدرسين لهذا الشهر.</p>
                             ) : (
                                 teacherPaymentStatus.unpaid.map(t => (
-                                    <button key={t.teacher.id} onClick={() => { setSelectedSalaryTeacher(t.teacher); setIsSalaryTeacherOpen(true); }} className="w-full flex items-center justify-between p-3 bg-amber-50/50 rounded-2xl border border-amber-100/50 hover:border-amber-300 hover:shadow-sm transition-all text-right">
-                                        <div className="text-right">
-                                            <span className="font-black text-amber-700 text-sm block">{t.teacher.fullName}</span>
-                                            <span className="text-[10px] font-bold text-gray-500 block">المستحق: {t.entitlement.toLocaleString()} ج.م</span>
-                                            {t.isPartnership && <span className="text-[9px] font-bold text-blue-500 block">شراكة {t.partnershipPercentage || 0}% من {t.directorReceivedTotal.toLocaleString()} ج.م</span>}
+                                    <button key={t.teacher.id} onClick={() => { setSelectedSalaryTeacher(t.teacher); setIsSalaryTeacherOpen(true); }} className="w-full p-4 bg-amber-50/50 rounded-2xl border border-amber-100/50 hover:border-amber-300 hover:shadow-sm transition-all text-right space-y-3">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="font-black text-amber-700 text-sm truncate">{t.teacher.fullName}</span>
+                                            {t.isPartnership && (
+                                                <span className="shrink-0 text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                                                    شراكة {t.partnershipPercentage || 0}%
+                                                </span>
+                                            )}
                                         </div>
-                                        <div className="text-left">
-                                            <span className="font-black text-amber-600 text-sm font-sans block">بقي: {t.remaining.toLocaleString()} ج.م</span>
-                                            <span className="text-[10px] font-bold text-gray-500 font-sans block">أخذ: {t.paidAmount.toLocaleString()} ج.م</span>
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                            <div className="bg-white/70 rounded-xl py-2">
+                                                <p className="text-[9px] font-bold text-gray-400">المستحق</p>
+                                                <p className="text-xs font-black text-gray-700 font-sans mt-0.5">{t.entitlement.toLocaleString()}</p>
+                                            </div>
+                                            <div className="bg-white/70 rounded-xl py-2">
+                                                <p className="text-[9px] font-bold text-gray-400">أخذ</p>
+                                                <p className="text-xs font-black text-gray-500 font-sans mt-0.5">{t.paidAmount.toLocaleString()}</p>
+                                            </div>
+                                            <div className="bg-white/70 rounded-xl py-2">
+                                                <p className="text-[9px] font-bold text-gray-400">باقي</p>
+                                                <p className="text-xs font-black text-amber-600 font-sans mt-0.5">{t.remaining.toLocaleString()}</p>
+                                            </div>
                                         </div>
+                                        {t.isPartnership && (
+                                            <p className="text-[9px] font-bold text-blue-400">النسبة من إجمالي استلام المدير: {t.directorReceivedTotal.toLocaleString()} ج.م</p>
+                                        )}
                                     </button>
                                 ))
                             )}
