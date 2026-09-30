@@ -86,6 +86,13 @@ const gradeColor = (grade: string) => {
     return 'bg-blue-100 text-blue-700 border-blue-200';
 };
 
+// المدرس يقدر يحذف اختبار سجّله هو نفسه في نفس يوم التسجيل فقط (يعتمد على وقت الإنشاء
+// الفعلي وليس تاريخ الاختبار المُدخل، حتى لو اختار تاريخاً غير اليوم). المدير بلا قيود.
+const isDeletableByTeacher = (exam: ExamRecord) => {
+    if (!exam.timestamp) return false;
+    return new Date(exam.timestamp).toISOString().split('T')[0] === today();
+};
+
 export default function ExamsTab({ student, records }: { student: Student; records: StudentRecordsHook }) {
     const { user } = useAuthStore();
     const { exams, addExam, deleteExam, updateExam, goals, addGoal, updateGoal, deleteGoal } = records;
@@ -470,8 +477,8 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                                                                             <Pencil size={11} />
                                                                         </button>
                                                                     )}
-                                                                    {user?.role === 'director' && (
-                                                                        <button onClick={() => deleteExam.mutate(exam.id)} className="w-6 h-6 text-gray-300 hover:text-red-500 flex items-center justify-center rounded-md hover:bg-red-50" title="حذف">
+                                                                    {(user?.role === 'director' || (user?.role === 'teacher' && isDeletableByTeacher(exam))) && (
+                                                                        <button onClick={() => deleteExam.mutate(exam.id)} className="w-6 h-6 text-gray-300 hover:text-red-500 flex items-center justify-center rounded-md hover:bg-red-50" title="حذف (اليوم فقط)">
                                                                             <Trash2 size={11} />
                                                                         </button>
                                                                     )}
@@ -556,8 +563,8 @@ export default function ExamsTab({ student, records }: { student: Student; recor
                                                                     <Pencil size={11} />
                                                                 </button>
                                                             )}
-                                                            {user?.role === 'director' && (
-                                                                <button onClick={() => deleteExam.mutate(exam.id)} className="w-6 h-6 text-gray-300 hover:text-red-500 flex items-center justify-center rounded-md hover:bg-red-50" title="حذف">
+                                                            {(user?.role === 'director' || (user?.role === 'teacher' && isDeletableByTeacher(exam))) && (
+                                                                <button onClick={() => deleteExam.mutate(exam.id)} className="w-6 h-6 text-gray-300 hover:text-red-500 flex items-center justify-center rounded-md hover:bg-red-50" title="حذف (اليوم فقط)">
                                                                     <Trash2 size={11} />
                                                                 </button>
                                                             )}

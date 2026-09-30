@@ -133,7 +133,7 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-    const session = await requireSession(request);
+    const session = await requireSession(request, ['director', 'teacher', 'supervisor']);
     if (session instanceof NextResponse) return session;
 
     try {
@@ -142,6 +142,19 @@ export async function DELETE(request: NextRequest) {
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
         const supabase = createServerSupabase();
+
+        // المدرس يقدر يحذف اختباراً سجّله هو فقط في نفس يوم تسجيله (بتوقيت created_at الفعلي)،
+        // أما المدير والمشرف فبلا قيود.
+        if (session.role === 'teacher') {
+            const { data: exam, error: fetchError } = await supabase.from('exams').select('created_at').eq('id', id).single();
+            if (fetchError || !exam) return NextResponse.json({ error: 'الاختبار غير موجود' }, { status: 404 });
+            const today = new Date().toISOString().split('T')[0];
+            const examDay = (exam.created_at || '').slice(0, 10);
+            if (examDay !== today) {
+                return NextResponse.json({ error: 'لا يمكن حذف اختبار بعد يوم تسجيله' }, { status: 403 });
+            }
+        }
+
         const { error } = await supabase.from('exams').delete().eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });
