@@ -27,6 +27,8 @@ export default function GlobalMessageFAB() {
 
     if (!user) return null;
     if (pathname === '/messages' || pathname === '/parent/messages') return null;
+    // الزر العائم يظهر فقط لو فيه رسائل غير مقروءة
+    if (unreadCount === 0) return null;
 
     return (
         <button
@@ -35,11 +37,9 @@ export default function GlobalMessageFAB() {
             title="الرسائل الداخلية"
         >
             <MessageCircle size={26} />
-            {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-sm animate-pulse">
-                    {unreadCount > 99 ? '+99' : unreadCount}
-                </span>
-            )}
+            <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-sm animate-pulse">
+                {unreadCount > 99 ? '+99' : unreadCount}
+            </span>
         </button>
     );
 }
