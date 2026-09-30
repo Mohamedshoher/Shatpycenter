@@ -119,21 +119,32 @@ export default function ExamCyclePage() {
     }, [assignments]);
 
     // تعيين أولي تلقائي لأي طالب جديد لسه ملوش يوم محدد: يُضاف لأقل الأيام ازدحاماً
-    // (لا يعمل في عرض "كل المجموعات" حتى لا يوزّع الطلاب بالتوازن بين مجموعات مختلفة)
+    // نوزّع كل مجموعة على حدة (حتى في عرض "كل المجموعات") حتى لا تختلط موازنة الأيام بين مجموعات مختلفة،
+    // وحتى تُوزَّع مجموعات لم تُفتح صفحتها بمفردها من قبل (كانت تظل بلا توزيع في عرض "كل المجموعات").
     useEffect(() => {
-        if (isAllGroups || groupStudents.length === 0) return;
+        if (groupStudents.length === 0) return;
         const unassigned = groupStudents.filter((s) => !assignmentMap.has(s.id));
         if (unassigned.length === 0) return;
 
-        const counts = [0, 0, 0, 0, 0];
-        assignmentMap.forEach((day) => { counts[day] += 1; });
+        const countsByGroup = new Map<string, number[]>();
+        groupStudents.forEach((s) => {
+            if (!s.groupId) return;
+            const day = assignmentMap.get(s.id);
+            if (day === undefined) return;
+            const counts = countsByGroup.get(s.groupId) || [0, 0, 0, 0, 0];
+            counts[day] += 1;
+            countsByGroup.set(s.groupId, counts);
+        });
 
         const newItems = unassigned.map((s) => {
+            const groupId = s.groupId || '';
+            const counts = countsByGroup.get(groupId) || [0, 0, 0, 0, 0];
             let minDay = 0;
             for (let d = 1; d < 5; d++) {
                 if (counts[d] < counts[minDay]) minDay = d;
             }
             counts[minDay] += 1;
+            countsByGroup.set(groupId, counts);
             return { studentId: s.id, weekday: minDay };
         });
 
