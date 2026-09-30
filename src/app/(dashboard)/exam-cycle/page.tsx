@@ -34,20 +34,6 @@ const getWeekCycleLabel = () => {
     return weekOfMonth % 2 === 1 ? 'الجديد' : 'الماضي';
 };
 
-// مجموعات دورتها كل 15 يوم بدل كل أسبوع (بالاسم، مثل باقي الفلاتر بالمجموعة في المشروع)
-const BIWEEKLY_GROUP_KEYWORDS = ['تلقين', 'نور البيان'];
-const isBiweeklyGroup = (groupName: string) => BIWEEKLY_GROUP_KEYWORDS.some((k) => groupName.includes(k));
-
-// "أسبوع 0" أو "أسبوع 1" ثابت منذ تاريخ مرجعي (سبت 6 يناير 2024)، يتبادل كل أسبوع تقويمي
-// نستخدمه لتقسيم طلاب كل يوم في مجموعات الـ15 يوم نصفين بالتبادل، بدل تعطيل المجموعة كلها أسبوعاً كاملاً:
-// نص الطلاب يختبرون هذا الأسبوع والنص الآخر الأسبوع اللي بعده، فيظل كل يوم فيه نشاط كل أسبوع.
-const BIWEEKLY_EPOCH = new Date(2024, 0, 6).getTime();
-const getCurrentWeekParity = () => {
-    const diffDays = Math.floor((Date.now() - BIWEEKLY_EPOCH) / 86400000);
-    const weekIndex = Math.floor(diffDays / 7);
-    return weekIndex % 2;
-};
-
 const ALL_GROUPS_VALUE = '__all__';
 
 export default function ExamCyclePage() {
@@ -80,12 +66,6 @@ export default function ExamCyclePage() {
 
     const weekCycleLabel = getWeekCycleLabel();
     const isAllGroups = selectedGroupId === ALL_GROUPS_VALUE;
-
-    const groupNameMap = useMemo(() => {
-        const map = new Map<string, string>();
-        (groups || []).forEach((g) => map.set(g.id, g.name));
-        return map;
-    }, [groups]);
 
     // طلاب المجموعة المختارة (أو كل المجموعات) النشطون فقط
     const groupStudents = useMemo(() => {
@@ -157,44 +137,18 @@ export default function ExamCyclePage() {
         }
     };
 
-    // لمجموعات الـ15 يوم: نقسم طلاب كل يوم أسبوعي نصفين بالتبادل (ترتيب ثابت ثم فردي/زوجي)
-    // بدل تعطيل المجموعة كلها أسبوعاً كاملاً، حتى يفضل كل يوم فيه نشاط كل أسبوع.
-    const biweeklyTrackMap = useMemo(() => {
-        const map = new Map<string, number>();
-        const byWeekday: string[][] = [[], [], [], [], []];
-        groupStudents.forEach((s) => {
-            if (!s.groupId || !isBiweeklyGroup(groupNameMap.get(s.groupId) || '')) return;
-            const day = assignmentMap.get(s.id);
-            if (day === undefined) return;
-            byWeekday[day].push(s.id);
-        });
-        byWeekday.forEach((ids) => {
-            [...ids].sort().forEach((id, index) => map.set(id, index % 2));
-        });
-        return map;
-    }, [groupStudents, assignmentMap, groupNameMap]);
-
-    const currentWeekParity = getCurrentWeekParity();
-
-    // نحسب العدّادات مستبعدين طلاب الدورة كل 15 يوم اللي مش دورهم هذا الأسبوع
     const dayCounts = useMemo(() => {
         const counts = [0, 0, 0, 0, 0];
         groupStudents.forEach((s) => {
-            const track = biweeklyTrackMap.get(s.id);
-            if (track !== undefined && track !== currentWeekParity) return;
             const day = assignmentMap.get(s.id);
             if (day !== undefined) counts[day] += 1;
         });
         return counts;
-    }, [groupStudents, assignmentMap, biweeklyTrackMap, currentWeekParity]);
+    }, [groupStudents, assignmentMap]);
 
     const studentsForSelectedDay = useMemo(() => {
-        return groupStudents.filter((s) => {
-            const track = biweeklyTrackMap.get(s.id);
-            if (track !== undefined && track !== currentWeekParity) return false;
-            return assignmentMap.get(s.id) === selectedDay;
-        });
-    }, [groupStudents, assignmentMap, selectedDay, biweeklyTrackMap, currentWeekParity]);
+        return groupStudents.filter((s) => assignmentMap.get(s.id) === selectedDay);
+    }, [groupStudents, assignmentMap, selectedDay]);
 
     // تفصيل "كل المجموعات" حسب كل مجموعة على حدة لليوم المختار
     const perGroupCountsForSelectedDay = useMemo(() => {
@@ -209,13 +163,11 @@ export default function ExamCyclePage() {
                 id: g.id,
                 name: g.name,
                 count: counts.get(g.id) || 0,
-                isBiweekly: isBiweeklyGroup(g.name),
             }))
             .sort((a, b) => b.count - a.count);
     }, [isAllGroups, studentsForSelectedDay, filteredGroupsList]);
 
     const todayIndex = getTodayWorkdayIndex();
-    const selectedGroupIsBiweekly = !isAllGroups && isBiweeklyGroup(groupNameMap.get(selectedGroupId) || '');
 
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
@@ -277,14 +229,6 @@ export default function ExamCyclePage() {
                     ))}
                 </div>
 
-                {/* تنبيه دورة كل 15 يوم لمجموعة مختارة بمفردها */}
-                {selectedGroupIsBiweekly && (
-                    <div className="flex items-center justify-between gap-2 rounded-2xl px-4 py-3 border bg-blue-50 border-blue-100 text-blue-700 text-xs font-bold">
-                        <span>دورة اختبار كل طالب هنا كل 15 يوم تقريبًا</span>
-                        <span className="font-black">نص الطلاب كل أسبوع بالتبادل</span>
-                    </div>
-                )}
-
                 {/* إجمالي اختبارات النهاردة عند اختيار "كل المجموعات" */}
                 {isAllGroups && (
                     <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
@@ -306,9 +250,6 @@ export default function ExamCyclePage() {
                                 <div key={row.id} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center justify-between gap-2">
                                     <div className="min-w-0">
                                         <p className="text-sm font-bold text-gray-800 truncate">{row.name}</p>
-                                        {row.isBiweekly && (
-                                            <p className="text-[10px] text-blue-500 font-bold mt-0.5">دورة كل 15 يوم (نص الطلاب هذا الأسبوع)</p>
-                                        )}
                                     </div>
                                     <span className="shrink-0 bg-blue-50 text-blue-700 text-sm font-black px-3 py-1 rounded-full font-sans">
                                         {row.count}
