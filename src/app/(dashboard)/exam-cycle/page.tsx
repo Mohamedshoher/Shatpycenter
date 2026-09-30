@@ -34,6 +34,20 @@ const getWeekCycleLabel = () => {
     return weekOfMonth % 2 === 1 ? 'الجديد' : 'الماضي';
 };
 
+// مجموعات دورتها كل 15 يوم بدل كل أسبوع (بالاسم، مثل باقي الفلاتر بالمجموعة في المشروع)
+const BIWEEKLY_GROUP_KEYWORDS = ['تلقين', 'نور البيان'];
+const isBiweeklyGroup = (groupName: string) => BIWEEKLY_GROUP_KEYWORDS.some((k) => groupName.includes(k));
+
+// أسبوع نشط/مستريح ثابت منذ تاريخ مرجعي (سبت 6 يناير 2024)، لضمان تبادل كل 14 يوم بلا اعتماد على بداية الشهر
+const BIWEEKLY_EPOCH = new Date(2024, 0, 6).getTime();
+const isActiveBiweeklyWeek = () => {
+    const diffDays = Math.floor((Date.now() - BIWEEKLY_EPOCH) / 86400000);
+    const weekIndex = Math.floor(diffDays / 7);
+    return weekIndex % 2 === 0;
+};
+
+const ALL_GROUPS_VALUE = '__all__';
+
 export default function ExamCyclePage() {
     const queryClient = useQueryClient();
     const { data: students } = useStudents();
@@ -69,13 +83,29 @@ export default function ExamCyclePage() {
     });
 
     const weekCycleLabel = getWeekCycleLabel();
+    const isAllGroups = selectedGroupId === ALL_GROUPS_VALUE;
 
-    // طلاب المجموعة المختارة (النشطون فقط)
+    const groupNameMap = useMemo(() => {
+        const map = new Map<string, string>();
+        (groups || []).forEach((g) => map.set(g.id, g.name));
+        return map;
+    }, [groups]);
+
+    // مجموعات دورتها كل 15 يوم وهذا الأسبوع مستريح بالنسبة لها (لا اختبارات فيه)
+    const inactiveBiweeklyGroupIds = useMemo(() => {
+        if (isActiveBiweeklyWeek()) return new Set<string>();
+        return new Set((groups || []).filter((g) => isBiweeklyGroup(g.name)).map((g) => g.id));
+    }, [groups]);
+
+    // طلاب المجموعة المختارة (أو كل المجموعات) النشطون فقط
     const groupStudents = useMemo(() => {
+        const groupIds = isAllGroups
+            ? new Set(filteredGroupsList.map((g) => g.id))
+            : new Set([selectedGroupId]);
         return (students || [])
-            .filter((s) => s.groupId === selectedGroupId && s.status === 'active')
+            .filter((s) => s.groupId && groupIds.has(s.groupId) && s.status === 'active')
             .sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
-    }, [students, selectedGroupId]);
+    }, [students, selectedGroupId, isAllGroups, filteredGroupsList]);
 
     const groupStudentIds = useMemo(() => groupStudents.map((s) => s.id), [groupStudents]);
 
@@ -93,8 +123,9 @@ export default function ExamCyclePage() {
     }, [assignments]);
 
     // تعيين أولي تلقائي لأي طالب جديد لسه ملوش يوم محدد: يُضاف لأقل الأيام ازدحاماً
+    // (لا يعمل في عرض "كل المجموعات" حتى لا يوزّع الطلاب بالتوازن بين مجموعات مختلفة)
     useEffect(() => {
-        if (groupStudents.length === 0) return;
+        if (isAllGroups || groupStudents.length === 0) return;
         const unassigned = groupStudents.filter((s) => !assignmentMap.has(s.id));
         if (unassigned.length === 0) return;
 
@@ -125,20 +156,45 @@ export default function ExamCyclePage() {
         }
     };
 
+    // نحسب العدّادات باستثناء طلاب المجموعات ذات الدورة كل 15 يوم في أسبوعها المستريح
     const dayCounts = useMemo(() => {
         const counts = [0, 0, 0, 0, 0];
         groupStudents.forEach((s) => {
+            if (s.groupId && inactiveBiweeklyGroupIds.has(s.groupId)) return;
             const day = assignmentMap.get(s.id);
             if (day !== undefined) counts[day] += 1;
         });
         return counts;
-    }, [groupStudents, assignmentMap]);
+    }, [groupStudents, assignmentMap, inactiveBiweeklyGroupIds]);
 
     const studentsForSelectedDay = useMemo(() => {
-        return groupStudents.filter((s) => assignmentMap.get(s.id) === selectedDay);
-    }, [groupStudents, assignmentMap, selectedDay]);
+        return groupStudents.filter((s) => {
+            if (s.groupId && inactiveBiweeklyGroupIds.has(s.groupId)) return false;
+            return assignmentMap.get(s.id) === selectedDay;
+        });
+    }, [groupStudents, assignmentMap, selectedDay, inactiveBiweeklyGroupIds]);
+
+    // تفصيل "كل المجموعات" حسب كل مجموعة على حدة لليوم المختار
+    const perGroupCountsForSelectedDay = useMemo(() => {
+        if (!isAllGroups) return [];
+        const counts = new Map<string, number>();
+        studentsForSelectedDay.forEach((s) => {
+            if (!s.groupId) return;
+            counts.set(s.groupId, (counts.get(s.groupId) || 0) + 1);
+        });
+        return filteredGroupsList
+            .map((g) => ({
+                id: g.id,
+                name: g.name,
+                count: counts.get(g.id) || 0,
+                isOffWeek: inactiveBiweeklyGroupIds.has(g.id),
+            }))
+            .sort((a, b) => b.count - a.count);
+    }, [isAllGroups, studentsForSelectedDay, filteredGroupsList, inactiveBiweeklyGroupIds]);
 
     const todayIndex = getTodayWorkdayIndex();
+    const selectedGroupIsBiweekly = !isAllGroups && isBiweeklyGroup(groupNameMap.get(selectedGroupId) || '');
+    const isCurrentWeekActive = isActiveBiweeklyWeek();
 
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
@@ -160,6 +216,7 @@ export default function ExamCyclePage() {
                             onChange={(e) => { setSelectedGroupId(e.target.value); setSelectedDay(todayIndex === -1 ? 0 : todayIndex); }}
                             className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-right"
                         >
+                            <option value={ALL_GROUPS_VALUE}>كل المجموعات</option>
                             {filteredGroupsList.length === 0 && <option value="">لا توجد مجموعات</option>}
                             {filteredGroupsList.map((g) => (
                                 <option key={g.id} value={g.id}>{g.name}</option>
@@ -171,6 +228,25 @@ export default function ExamCyclePage() {
             </header>
 
             <main className="max-w-3xl mx-auto px-3 md:px-6 py-4 space-y-4">
+                {/* تنبيه دورة كل 15 يوم لمجموعة مختارة بمفردها */}
+                {selectedGroupIsBiweekly && (
+                    <div className={cn(
+                        "flex items-center justify-between gap-2 rounded-2xl px-4 py-3 border text-xs font-bold",
+                        isCurrentWeekActive ? "bg-blue-50 border-blue-100 text-blue-700" : "bg-amber-50 border-amber-100 text-amber-700"
+                    )}>
+                        <span>دورة اختبارات هذه المجموعة كل 15 يوم</span>
+                        <span className="font-black">{isCurrentWeekActive ? 'هذا الأسبوع نشط ✅' : 'هذا الأسبوع مستريح ⏸'}</span>
+                    </div>
+                )}
+
+                {/* إجمالي اختبارات النهاردة عند اختيار "كل المجموعات" */}
+                {isAllGroups && (
+                    <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
+                        <span className="text-xs font-bold text-blue-700">إجمالي اختبارات النهاردة (كل المجموعات)</span>
+                        <span className="text-lg font-black text-blue-700 font-sans">{todayIndex === -1 ? 0 : dayCounts[todayIndex]}</span>
+                    </div>
+                )}
+
                 {/* تبويبات الأيام */}
                 <div className="grid grid-cols-5 gap-1.5 bg-gray-100 p-1.5 rounded-2xl">
                     {WORK_DAYS.map((day, index) => (
@@ -194,48 +270,84 @@ export default function ExamCyclePage() {
                     ))}
                 </div>
 
-                {/* قائمة طلاب اليوم المختار */}
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between px-1">
-                        <span className="text-xs font-bold text-gray-400">
-                            طلاب يوم {WORK_DAYS[selectedDay]}
-                            {todayIndex === selectedDay && <span className="text-blue-500"> (النهاردة)</span>}
-                        </span>
-                        <span className="bg-blue-100 text-blue-700 text-xs font-black px-3 py-1 rounded-full font-sans">
-                            {studentsForSelectedDay.length} طالب
-                        </span>
-                    </div>
-
-                    {studentsForSelectedDay.length === 0 ? (
-                        <div className="text-center py-16 bg-white/40 rounded-[28px] border-2 border-dashed border-gray-100">
-                            <RefreshCw size={28} className="mx-auto mb-2 text-gray-300" />
-                            <p className="text-sm text-gray-400 font-bold">لا يوجد طلاب في هذا اليوم بعد</p>
+                {/* تفصيل كل مجموعة على حدة عند اختيار "كل المجموعات" */}
+                {isAllGroups ? (
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-bold text-gray-400">
+                                توزيع يوم {WORK_DAYS[selectedDay]} على المجموعات
+                                {todayIndex === selectedDay && <span className="text-blue-500"> (النهاردة)</span>}
+                            </span>
+                            <span className="bg-blue-100 text-blue-700 text-xs font-black px-3 py-1 rounded-full font-sans">
+                                {studentsForSelectedDay.length} اختبار
+                            </span>
                         </div>
-                    ) : (
-                        studentsForSelectedDay.map((student) => (
-                            <div key={student.id} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 shrink-0">
-                                        <User size={15} />
-                                    </div>
-                                    <span className="text-sm font-bold text-gray-800 truncate">{student.fullName}</span>
-                                </div>
 
-                                {canEdit && (
-                                    <select
-                                        value={selectedDay}
-                                        onChange={(e) => handleMoveStudent(student.id, Number(e.target.value))}
-                                        className="shrink-0 bg-gray-50 border border-gray-100 rounded-lg text-[11px] font-bold text-gray-600 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                    >
-                                        {WORK_DAYS.map((day, index) => (
-                                            <option key={day} value={index}>{day}</option>
-                                        ))}
-                                    </select>
-                                )}
+                        {perGroupCountsForSelectedDay.length === 0 ? (
+                            <div className="text-center py-16 bg-white/40 rounded-[28px] border-2 border-dashed border-gray-100">
+                                <RefreshCw size={28} className="mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm text-gray-400 font-bold">لا توجد مجموعات لعرضها</p>
                             </div>
-                        ))
-                    )}
-                </div>
+                        ) : (
+                            perGroupCountsForSelectedDay.map((row) => (
+                                <div key={row.id} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-bold text-gray-800 truncate">{row.name}</p>
+                                        {row.isOffWeek && (
+                                            <p className="text-[10px] text-amber-600 font-bold mt-0.5">دورة كل 15 يوم — مستريحة هذا الأسبوع</p>
+                                        )}
+                                    </div>
+                                    <span className="shrink-0 bg-blue-50 text-blue-700 text-sm font-black px-3 py-1 rounded-full font-sans">
+                                        {row.count}
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                ) : (
+                    /* قائمة طلاب اليوم المختار لمجموعة واحدة */
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-bold text-gray-400">
+                                طلاب يوم {WORK_DAYS[selectedDay]}
+                                {todayIndex === selectedDay && <span className="text-blue-500"> (النهاردة)</span>}
+                            </span>
+                            <span className="bg-blue-100 text-blue-700 text-xs font-black px-3 py-1 rounded-full font-sans">
+                                {studentsForSelectedDay.length} طالب
+                            </span>
+                        </div>
+
+                        {studentsForSelectedDay.length === 0 ? (
+                            <div className="text-center py-16 bg-white/40 rounded-[28px] border-2 border-dashed border-gray-100">
+                                <RefreshCw size={28} className="mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm text-gray-400 font-bold">لا يوجد طلاب في هذا اليوم بعد</p>
+                            </div>
+                        ) : (
+                            studentsForSelectedDay.map((student) => (
+                                <div key={student.id} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 shrink-0">
+                                            <User size={15} />
+                                        </div>
+                                        <span className="text-sm font-bold text-gray-800 truncate">{student.fullName}</span>
+                                    </div>
+
+                                    {canEdit && (
+                                        <select
+                                            value={selectedDay}
+                                            onChange={(e) => handleMoveStudent(student.id, Number(e.target.value))}
+                                            className="shrink-0 bg-gray-50 border border-gray-100 rounded-lg text-[11px] font-bold text-gray-600 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            {WORK_DAYS.map((day, index) => (
+                                                <option key={day} value={index}>{day}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
             </main>
         </div>
     );
