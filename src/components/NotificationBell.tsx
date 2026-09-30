@@ -24,6 +24,7 @@ const NotificationItem = memo(function NotificationItem({
         switch (type) {
             case 'deduction': return { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'خصم' };
             case 'reward': return { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'مكافأة' };
+            case 'salary_change': return { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'تغيير الراتب' };
             default: return { dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', label: 'النظام' };
         }
     };
@@ -37,7 +38,7 @@ const NotificationItem = memo(function NotificationItem({
     return (
         <div className={cn(
             "px-5 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors relative group",
-            !notif.isRead && "bg-blue-50/20"
+            !notif.isRead && (notif.type === 'salary_change' ? "bg-red-50/50" : "bg-blue-50/20")
         )}>
             <div className="flex items-start gap-3">
                 <div className={cn("w-2 h-2 rounded-full mt-1.5 shrink-0", styles.dot)} />
@@ -54,7 +55,9 @@ const NotificationItem = memo(function NotificationItem({
 
                     <p className={cn(
                         "text-xs leading-relaxed",
-                        notif.isRead ? "text-gray-500" : "text-gray-800 font-medium"
+                        notif.type === 'salary_change'
+                            ? "text-red-700 font-bold"
+                            : notif.isRead ? "text-gray-500" : "text-gray-800 font-medium"
                     )}>
                         {notif.message}
                     </p>

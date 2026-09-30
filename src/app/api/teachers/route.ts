@@ -82,6 +82,11 @@ export async function PUT(request: NextRequest) {
         const { id, ...body } = await request.json();
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
+        const supabase = createServerSupabase();
+
+        // نجلب القيم الحالية للراتب/النسبة قبل التعديل، لإرسال إشعار للمدرس لو اتغيّرت
+        const { data: existing } = await supabase.from('teachers').select('salary, partnership_percentage').eq('id', id).single();
+
         const updates: Record<string, unknown> = {};
         if (body.fullName !== undefined) updates.full_name = body.fullName;
         if (body.phone !== undefined) updates.phone = body.phone;
@@ -96,9 +101,32 @@ export async function PUT(request: NextRequest) {
         if (body.responsibleSections !== undefined) updates.responsible_sections = body.responsibleSections;
         if (body.status !== undefined) updates.status = body.status;
 
-        const supabase = createServerSupabase();
         const { error } = await supabase.from('teachers').update(updates).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+        // إشعار واضح للمدرس عند تغيير راتبه الثابت أو نسبة شراكته
+        if (existing) {
+            const oldSalary = Number(existing.salary) || 0;
+            const newSalary = body.salary !== undefined ? Number(body.salary) || 0 : oldSalary;
+            const oldPercentage = Number(existing.partnership_percentage) || 0;
+            const newPercentage = body.partnershipPercentage !== undefined ? Number(body.partnershipPercentage) || 0 : oldPercentage;
+
+            if (newSalary !== oldSalary || newPercentage !== oldPercentage) {
+                const message = newSalary !== oldSalary
+                    ? `تم تغيير راتبك من ${oldSalary} إلى ${newSalary} جنيه`
+                    : `تم تغيير نسبة شراكتك من ${oldPercentage}% إلى ${newPercentage}%`;
+                const { error: notifyError } = await supabase.from('notifications').insert([{
+                    teacher_id: id,
+                    type: 'salary_change',
+                    title: 'تغيير الراتب',
+                    message,
+                    amount: newSalary - oldSalary,
+                    related_date: new Date().toISOString().split('T')[0],
+                }]);
+                if (notifyError) console.error('teachers PUT salary notification error:', notifyError.message);
+            }
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });

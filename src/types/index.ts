@@ -111,7 +111,7 @@ export interface FinancialTransaction {
 export interface AppNotification {
   id: string;
   teacherId: string | null;
-  type: 'deduction' | 'reward' | 'system';
+  type: 'deduction' | 'reward' | 'system' | 'salary_change';
   title: string;
   message: string;
   reason: string;
