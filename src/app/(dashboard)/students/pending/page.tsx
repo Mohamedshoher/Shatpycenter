@@ -198,137 +198,139 @@ export default function PendingStudentsPage() {
     return (
         <div className="p-4 md:p-6 space-y-6 pb-24" dir="rtl">
             {/* Header */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                        <Users size={28} />
+            <div className="bg-white rounded-3xl p-4 md:p-6 shadow-sm border border-gray-100 space-y-3">
+                <div className="flex items-center gap-3 md:gap-4">
+                    <div className="w-11 h-11 md:w-14 md:h-14 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0">
+                        <Users size={22} />
                     </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-2xl font-black text-gray-900">الطلاب الجدد والمنتظرون</h1>
-                            {/* القائمة المنسدلة لحالة الدفع */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                                    className={cn(
-                                        'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5',
-                                        filterStatus !== 'all' ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    )}
-                                >
-                                    {filterStatus === 'all' ? 'الكل' : filterStatus === 'paid' ? 'مدفوع ✓' : 'غير مدفوع ✗'}
-                                    <ChevronDown size={14} />
-                                </button>
-                                {showStatusDropdown && (
-                                    <>
-                                        <div className="fixed inset-0 z-[300]" onClick={() => setShowStatusDropdown(false)} />
-                                        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-[301] min-w-[160px] p-2">
-                                            {[
-                                                { key: 'all', label: 'الكل' },
-                                                { key: 'paid', label: 'مدفوع ✓' },
-                                                { key: 'unpaid', label: 'غير مدفوع ✗' },
-                                            ].map(f => (
-                                                <button
-                                                    key={f.key}
-                                                    onClick={() => { setFilterStatus(f.key as 'all' | 'paid' | 'unpaid'); setShowStatusDropdown(false); }}
-                                                    className={cn(
-                                                        'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
-                                                        filterStatus === f.key ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
-                                                    )}
-                                                >
-                                                    {f.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                            {/* القائمة المنسدلة لأيام التسجيل */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowDateDropdown(!showDateDropdown)}
-                                    className={cn(
-                                        'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5',
-                                        daysAgoFilter !== null ? 'bg-amber-500 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    )}
-                                >
-                                    {daysAgoFilter !== null ? daysAgoLabel(daysAgoFilter) : 'الأيام'}
-                                    <ChevronDown size={14} />
-                                </button>
-                                {showDateDropdown && (
-                                    <>
-                                        <div className="fixed inset-0 z-[300]" onClick={() => setShowDateDropdown(false)} />
-                                        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-[301] min-w-[180px] p-2">
-                                            <button
-                                                onClick={() => { setDaysAgoFilter(null); setShowDateDropdown(false); }}
-                                                className={cn(
-                                                    'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
-                                                    daysAgoFilter === null ? 'bg-amber-50 text-amber-600' : 'text-gray-600 hover:bg-gray-50'
-                                                )}
-                                            >
-                                                الكل
-                                            </button>
-                                            {daysAgoOptions.map(d => (
-                                                <button
-                                                    key={d}
-                                                    onClick={() => { setDaysAgoFilter(d); setShowDateDropdown(false); }}
-                                                    className={cn(
-                                                        'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
-                                                        daysAgoFilter === d ? 'bg-amber-50 text-amber-600' : 'text-gray-600 hover:bg-gray-50'
-                                                    )}
-                                                >
-                                                    {daysAgoLabel(d)}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                            {/* القائمة المنسدلة للمجموعات */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowGroupDropdown(!showGroupDropdown)}
-                                    className={cn(
-                                        'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5',
-                                        filterGroup !== null ? 'bg-indigo-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    )}
-                                >
-                                    <LayoutGrid size={14} />
-                                    {filterGroup !== null ? getGroupName(filterGroup) : 'المجموعات'}
-                                    <ChevronDown size={14} />
-                                </button>
-                                {showGroupDropdown && (
-                                    <>
-                                        <div className="fixed inset-0 z-[300]" onClick={() => setShowGroupDropdown(false)} />
-                                        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-[301] min-w-[180px] p-2 max-h-[300px] overflow-y-auto">
-                                            <button
-                                                onClick={() => { setFilterGroup(null); setShowGroupDropdown(false); }}
-                                                className={cn(
-                                                    'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
-                                                    filterGroup === null ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50'
-                                                )}
-                                            >
-                                                الكل
-                                            </button>
-                                            {groups.map((g: Group) => (
-                                                <button
-                                                    key={g.id}
-                                                    onClick={() => { setFilterGroup(g.id); setShowGroupDropdown(false); }}
-                                                    className={cn(
-                                                        'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
-                                                        filterGroup === g.id ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50'
-                                                    )}
-                                                >
-                                                    {g.name}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                        <p className="text-sm text-gray-500 font-bold mt-1">
+                    <div className="flex-1 min-w-0">
+                        <h1 className="text-base md:text-2xl font-black text-gray-900 truncate">الطلاب الجدد والمنتظرون</h1>
+                        <p className="text-xs md:text-sm text-gray-500 font-bold mt-0.5">
                             {pendingStudents.length + recentStudents.length} طالب جديد أو في انتظار الموافقة
                         </p>
+                    </div>
+                </div>
+
+                {/* صف الفلاتر: قابل للسحب أفقياً في عرض الموبايل حتى لا يتزاحم مع العنوان */}
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+                    {/* القائمة المنسدلة لحالة الدفع */}
+                    <div className="relative shrink-0">
+                        <button
+                            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                            className={cn(
+                                'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap',
+                                filterStatus !== 'all' ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            )}
+                        >
+                            {filterStatus === 'all' ? 'الكل' : filterStatus === 'paid' ? 'مدفوع ✓' : 'غير مدفوع ✗'}
+                            <ChevronDown size={14} />
+                        </button>
+                        {showStatusDropdown && (
+                            <>
+                                <div className="fixed inset-0 z-[300]" onClick={() => setShowStatusDropdown(false)} />
+                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-[301] min-w-[160px] p-2">
+                                    {[
+                                        { key: 'all', label: 'الكل' },
+                                        { key: 'paid', label: 'مدفوع ✓' },
+                                        { key: 'unpaid', label: 'غير مدفوع ✗' },
+                                    ].map(f => (
+                                        <button
+                                            key={f.key}
+                                            onClick={() => { setFilterStatus(f.key as 'all' | 'paid' | 'unpaid'); setShowStatusDropdown(false); }}
+                                            className={cn(
+                                                'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                                filterStatus === f.key ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
+                                            )}
+                                        >
+                                            {f.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    {/* القائمة المنسدلة لأيام التسجيل */}
+                    <div className="relative shrink-0">
+                        <button
+                            onClick={() => setShowDateDropdown(!showDateDropdown)}
+                            className={cn(
+                                'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap',
+                                daysAgoFilter !== null ? 'bg-amber-500 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            )}
+                        >
+                            {daysAgoFilter !== null ? daysAgoLabel(daysAgoFilter) : 'الأيام'}
+                            <ChevronDown size={14} />
+                        </button>
+                        {showDateDropdown && (
+                            <>
+                                <div className="fixed inset-0 z-[300]" onClick={() => setShowDateDropdown(false)} />
+                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-[301] min-w-[180px] p-2">
+                                    <button
+                                        onClick={() => { setDaysAgoFilter(null); setShowDateDropdown(false); }}
+                                        className={cn(
+                                            'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                            daysAgoFilter === null ? 'bg-amber-50 text-amber-600' : 'text-gray-600 hover:bg-gray-50'
+                                        )}
+                                    >
+                                        الكل
+                                    </button>
+                                    {daysAgoOptions.map(d => (
+                                        <button
+                                            key={d}
+                                            onClick={() => { setDaysAgoFilter(d); setShowDateDropdown(false); }}
+                                            className={cn(
+                                                'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                                daysAgoFilter === d ? 'bg-amber-50 text-amber-600' : 'text-gray-600 hover:bg-gray-50'
+                                            )}
+                                        >
+                                            {daysAgoLabel(d)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    {/* القائمة المنسدلة للمجموعات */}
+                    <div className="relative shrink-0">
+                        <button
+                            onClick={() => setShowGroupDropdown(!showGroupDropdown)}
+                            className={cn(
+                                'px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap',
+                                filterGroup !== null ? 'bg-indigo-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            )}
+                        >
+                            <LayoutGrid size={14} />
+                            {filterGroup !== null ? getGroupName(filterGroup) : 'المجموعات'}
+                            <ChevronDown size={14} />
+                        </button>
+                        {showGroupDropdown && (
+                            <>
+                                <div className="fixed inset-0 z-[300]" onClick={() => setShowGroupDropdown(false)} />
+                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-[301] min-w-[180px] p-2 max-h-[300px] overflow-y-auto">
+                                    <button
+                                        onClick={() => { setFilterGroup(null); setShowGroupDropdown(false); }}
+                                        className={cn(
+                                            'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                            filterGroup === null ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50'
+                                        )}
+                                    >
+                                        الكل
+                                    </button>
+                                    {groups.map((g: Group) => (
+                                        <button
+                                            key={g.id}
+                                            onClick={() => { setFilterGroup(g.id); setShowGroupDropdown(false); }}
+                                            className={cn(
+                                                'w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                                                filterGroup === g.id ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50'
+                                            )}
+                                        >
+                                            {g.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -350,16 +352,16 @@ export default function PendingStudentsPage() {
                             return (
                             <div
                                 key={student.id}
-                                className="bg-white rounded-3xl p-4 shadow-sm border border-green-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
+                                className="bg-white rounded-3xl p-4 shadow-sm border border-green-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out] space-y-3"
                             >
-                                {/* Line 1: avatar + name + badges + actions */}
-                                <div className="flex items-center gap-3 mb-2">
+                                {/* Line 1: avatar + name + actions */}
+                                <div className="flex items-start gap-3">
                                     <div className="w-10 h-10 shrink-0 bg-green-100 rounded-xl flex items-center justify-center text-green-600 font-black text-sm">
                                         {student.fullName[0]}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-black text-gray-900 leading-tight">{student.fullName}</h3>
-                                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                        <h3 className="font-black text-gray-900 leading-tight truncate">{student.fullName}</h3>
+                                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                             <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-600 rounded-full">
                                                 {student.status === 'active' ? 'نشط' : student.status}
                                             </span>
@@ -376,17 +378,17 @@ export default function PendingStudentsPage() {
                                         <button onClick={() => handleWelcomeWhatsApp(student)} className="w-8 h-8 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 flex items-center justify-center transition-colors" title="إرسال ترحيب واتساب"><MessageCircle size={15} /></button>
                                     </div>
                                 </div>
-                                {/* Line 2: compact info row */}
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-600">
-                                    <span className="flex items-center gap-1"><Users size={12} className="text-gray-400" /><span className="font-black text-gray-700">{getGroupName(student.groupId)}</span></span>
-                                    <span className="flex items-center gap-1"><Phone size={12} className="text-blue-400" /><span className="font-sans">{student.parentPhone}</span></span>
-                                    <span className="flex items-center gap-1"><Calendar size={12} className="text-orange-400" /><span>{student.enrollmentDate}</span></span>
+                                {/* شبكة بيانات منظمة بدل السطر المزدحم */}
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 pt-2 border-t border-gray-50 text-xs text-gray-600">
+                                    <div className="flex items-center gap-1.5 min-w-0"><Users size={12} className="text-gray-400 shrink-0" /><span className="font-black text-gray-700 truncate">{getGroupName(student.groupId)}</span></div>
+                                    <div className="flex items-center gap-1.5 min-w-0"><Phone size={12} className="text-blue-400 shrink-0" /><span className="font-sans truncate">{student.parentPhone}</span></div>
+                                    <div className="flex items-center gap-1.5 min-w-0"><Calendar size={12} className="text-orange-400 shrink-0" /><span className="truncate">{student.enrollmentDate}</span></div>
                                     {student.monthlyAmount && (
-                                        <span className="flex items-center gap-1"><CreditCard size={12} className="text-gray-400" /><span>{student.monthlyAmount} ج.م</span></span>
+                                        <div className="flex items-center gap-1.5 min-w-0"><CreditCard size={12} className="text-gray-400 shrink-0" /><span className="truncate">{student.monthlyAmount} ج.م</span></div>
                                     )}
                                 </div>
                                 {student.notes && (
-                                    <div className="mt-2 pt-2 border-t border-dashed border-gray-100 flex items-start gap-2 text-xs text-gray-500">
+                                    <div className="pt-2 border-t border-dashed border-gray-100 flex items-start gap-2 text-xs text-gray-500">
                                         <MessageSquare size={13} className="shrink-0 mt-0.5 text-gray-400" />
                                         <span className="leading-relaxed">{student.notes}</span>
                                     </div>
@@ -415,16 +417,16 @@ export default function PendingStudentsPage() {
                             return (
                             <div
                                 key={student.id}
-                                className="bg-white rounded-3xl p-4 shadow-sm border border-amber-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out]"
+                                className="bg-white rounded-3xl p-4 shadow-sm border border-amber-100 hover:shadow-xl transition-all animate-[fadeIn_0.3s_ease-out] space-y-3"
                             >
-                                {/* Line 1: avatar + name + badges + actions */}
-                                <div className="flex items-center gap-3 mb-2">
+                                {/* Line 1: avatar + name + actions */}
+                                <div className="flex items-start gap-3">
                                     <div className="w-10 h-10 shrink-0 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 font-black text-sm">
                                         {student.fullName[0]}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-black text-gray-900 leading-tight">{student.fullName}</h3>
-                                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                        <h3 className="font-black text-gray-900 leading-tight truncate">{student.fullName}</h3>
+                                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                             <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-600 rounded-full">معلق</span>
                                             <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold bg-orange-50 text-orange-600 rounded-full">
                                                 {(() => {
@@ -448,20 +450,20 @@ export default function PendingStudentsPage() {
                                         <button onClick={() => handleReject(student)} className="w-8 h-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors"><UserX size={15} /></button>
                                     </div>
                                 </div>
-                                {/* Line 2: compact info row */}
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-600">
-                                    <span className="flex items-center gap-1"><LayoutGrid size={12} className="text-indigo-400" /><span className="font-black text-gray-700">{getGroupName(student.groupId)}</span></span>
-                                    <span className="flex items-center gap-1"><Phone size={12} className="text-blue-400" /><span className="font-sans">{student.parentPhone}</span></span>
-                                    <span className="flex items-center gap-1"><Calendar size={12} className="text-orange-400" /><span>{student.enrollmentDate}</span></span>
+                                {/* شبكة بيانات منظمة بدل السطر المزدحم */}
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 pt-2 border-t border-gray-50 text-xs text-gray-600">
+                                    <div className="flex items-center gap-1.5 min-w-0"><LayoutGrid size={12} className="text-indigo-400 shrink-0" /><span className="font-black text-gray-700 truncate">{getGroupName(student.groupId)}</span></div>
+                                    <div className="flex items-center gap-1.5 min-w-0"><Phone size={12} className="text-blue-400 shrink-0" /><span className="font-sans truncate">{student.parentPhone}</span></div>
+                                    <div className="flex items-center gap-1.5 min-w-0"><Calendar size={12} className="text-orange-400 shrink-0" /><span className="truncate">{student.enrollmentDate}</span></div>
                                     {student.appointment && (
-                                        <span className="flex items-center gap-1"><BookOpen size={12} className="text-indigo-400" /><span>{student.appointment}</span></span>
+                                        <div className="flex items-center gap-1.5 min-w-0"><BookOpen size={12} className="text-indigo-400 shrink-0" /><span className="truncate">{student.appointment}</span></div>
                                     )}
                                     {student.monthlyAmount && (
-                                        <span className="flex items-center gap-1"><CreditCard size={12} className="text-gray-400" /><span>{student.monthlyAmount} ج.م</span></span>
+                                        <div className="flex items-center gap-1.5 min-w-0"><CreditCard size={12} className="text-gray-400 shrink-0" /><span className="truncate">{student.monthlyAmount} ج.م</span></div>
                                     )}
                                 </div>
                                 {student.notes && (
-                                    <div className="mt-2 pt-2 border-t border-dashed border-gray-100 flex items-start gap-2 text-xs text-gray-500">
+                                    <div className="pt-2 border-t border-dashed border-gray-100 flex items-start gap-2 text-xs text-gray-500">
                                         <MessageSquare size={13} className="shrink-0 mt-0.5 text-gray-400" />
                                         <span className="leading-relaxed">{student.notes}</span>
                                     </div>
