@@ -1,9 +1,22 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePathname, useRouter } from 'next/navigation';
 import { getCurrentSession } from '@/features/auth/services/authService';
+
+// شاشة بداية خفيفة تظهر فوراً بدل شاشة بيضاء فارغة أثناء التحقق من الجلسة عبر الشبكة
+const SplashScreen = () => (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <div className="flex flex-col items-center gap-3">
+            <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-50 p-2 animate-pulse">
+                <Image src="/icon-192.png" alt="مركز الشاطبي" width={64} height={64} className="w-full h-full object-contain" priority />
+            </div>
+            <div className="w-6 h-6 border-[3px] border-gray-200 border-t-blue-500 rounded-full animate-spin" />
+        </div>
+    </div>
+);
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
     const { user, setUser } = useAuthStore();
@@ -44,8 +57,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
     }, [user, pathname, router, isChecked]);
 
-    // عدم إظهار أي شيء حتى نتأكد من صحة الجلسة الحقيقية
-    if (!isChecked) return null;
+    // شاشة بداية بدل الفراغ الأبيض أثناء التحقق من صحة الجلسة عبر الشبكة
+    if (!isChecked) return <SplashScreen />;
 
     if (!user && pathname !== '/login') {
         return null;
