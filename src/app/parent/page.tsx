@@ -58,57 +58,61 @@ export default function ParentDashboard() {
         <div className="min-h-screen bg-gray-50/50 font-sans pb-32" dir="rtl">
             {/* رأس الصفحة الثابت - مرن مع الحاوية */}
             <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between relative">
-                    {/* الجانب الأيمن: زر تسجيل الخروج */}
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-red-600 hover:text-white transition-all shadow-sm active:scale-95 shrink-0"
-                    >
-                        <LogOut size={16} />
-                        <span className="hidden xs:inline">تسجيل خروج</span>
-                    </button>
-
-                    {/* المنتصف: شعار المركز */}
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                        <div className="bg-white w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center shadow-lg border border-gray-50">
-                            <Image src="/icon-192.png" alt="شعار المركز" width={40} height={40} className="w-8 h-8 md:w-10 md:h-10 object-contain" />
+                <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+                    {/* الجانب الأيمن: شعار المركز + اسمه (الاسم يظهر من md فصاعداً فقط) */}
+                    <div className="flex items-center gap-2 min-w-0">
+                        <div className="bg-white w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm border border-gray-50 shrink-0">
+                            <Image src="/icon-192.png" alt="شعار المركز" width={32} height={32} className="w-6 h-6 md:w-8 md:h-8 object-contain" />
                         </div>
+                        <span className="hidden md:block font-black text-gray-800 text-sm truncate">مركز الشاطبي</span>
                     </div>
 
-                    {/* الجانب الأيسر: أزرار التنقل السريع */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    {/* الجانب الأيسر: أزرار الإجراءات — أيقونة فقط في الموبايل، مع نص من md فصاعداً */}
+                    <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
                         <button
                             onClick={() => router.push("/parent/messages")}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-sky-50 text-sky-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-sky-600 hover:text-white transition-all active:scale-95"
+                            className="w-10 h-10 md:w-auto md:px-4 md:py-2.5 flex items-center justify-center gap-2 bg-sky-50 text-sky-600 rounded-xl md:rounded-2xl text-xs font-black hover:bg-sky-600 hover:text-white transition-all active:scale-95"
+                            title="الرسائل"
                         >
                             <MessageCircle size={16} />
-                            <span className="hidden sm:inline">الرسائل</span>
+                            <span className="hidden md:inline">الرسائل</span>
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-2xl text-[11px] md:text-xs font-black hover:bg-blue-600 hover:text-white transition-all active:scale-95">
+                        <button
+                            className="w-10 h-10 md:w-auto md:px-4 md:py-2.5 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 rounded-xl md:rounded-2xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+                            title="الرئيسية"
+                        >
                             <Home size={16} />
-                            <span className="hidden sm:inline">الرئيسية</span>
+                            <span className="hidden md:inline">الرئيسية</span>
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="w-10 h-10 md:w-auto md:px-4 md:py-2.5 flex items-center justify-center gap-2 bg-red-50 text-red-600 rounded-xl md:rounded-2xl text-xs font-black hover:bg-red-600 hover:text-white transition-all active:scale-95"
+                            title="تسجيل خروج"
+                        >
+                            <LogOut size={16} />
+                            <span className="hidden md:inline">تسجيل خروج</span>
                         </button>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
+            <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-12">
                 {/* قسم رسالة الترحيب بولي الأمر - خطوط مرنة */}
-                <div className="mb-12 md:mb-16 text-center sm:text-right">
-                    <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-tight">
+                <div className="mb-8 md:mb-16 text-center sm:text-right">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-tight">
                         {myKids.length > 0
                             ? `مرحباً ولي أمر ${myKids.map(k => k.fullName.split(' ')[0]).join(' و ')} 👋`
                             : "مرحباً بك ولي أمرنا العزيز 👋"}
                     </h2>
-                    <p className="text-base md:text-xl text-gray-400 font-bold mt-4 max-w-2xl">
+                    <p className="text-sm sm:text-base md:text-xl text-gray-400 font-bold mt-3 md:mt-4 max-w-2xl mx-auto sm:mx-0">
                         نسعد بمتابعتك المستمرة لرحلة أبنائك التعليمية في مركز الشاطبي وتطورهم في حفظ القرآن الكريم.
                     </p>
                 </div>
 
                 {/* عنوان القسم والشبكة المرنة */}
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center justify-between mb-5 md:mb-8">
                     <div className="flex items-center gap-3 border-r-4 border-teal-500 pr-4">
-                        <h1 className="text-xl md:text-2xl font-black text-gray-700 uppercase tracking-wide">أبنائي الطلاب</h1>
+                        <h1 className="text-lg md:text-2xl font-black text-gray-700 uppercase tracking-wide">أبنائي الطلاب</h1>
                         <span className="bg-teal-50 text-teal-600 px-3 py-1 rounded-full text-xs font-black">
                             {myKids.length} سجلات
                         </span>
