@@ -326,22 +326,32 @@ export default function TeacherList() {
                                         <h3 className="font-bold text-gray-800 text-lg group-hover/card:text-teal-600 transition-colors truncate whitespace-nowrap">
                                             {teacher.fullName}
                                         </h3>
-                                        {/* شارة الوظيفة */}
-                                        <span className={cn(
-                                            "text-[10px] font-black px-2 py-0.5 rounded-full w-fit mt-0.5",
-                                            teacher.role === 'schedule_secretary'
-                                                ? "bg-purple-100 text-purple-600"
-                                                : teacher.role === 'supervisor'
-                                                    ? "bg-blue-100 text-blue-600"
-                                                    : "bg-teal-50 text-teal-600"
-                                        )}>
-                                            {teacher.role === 'schedule_secretary' ? (
-                                                <span className="flex items-center gap-1">
-                                                    <CalendarClock size={10} />
-                                                    سكرتارية مواعيد
+                                        <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                            {/* شارة الوظيفة */}
+                                            <span className={cn(
+                                                "text-[10px] font-black px-2 py-0.5 rounded-full w-fit",
+                                                teacher.role === 'schedule_secretary'
+                                                    ? "bg-purple-100 text-purple-600"
+                                                    : teacher.role === 'supervisor'
+                                                        ? "bg-blue-100 text-blue-600"
+                                                        : "bg-teal-50 text-teal-600"
+                                            )}>
+                                                {teacher.role === 'schedule_secretary' ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <CalendarClock size={10} />
+                                                        سكرتارية مواعيد
+                                                    </span>
+                                                ) : teacher.role === 'supervisor' ? 'مشرف' : 'مدرس'}
+                                            </span>
+                                            {/* شارة طريقة الحساب: نسبة الشراكة أو الراتب الثابت */}
+                                            {(teacher.role === 'teacher' || teacher.role === 'supervisor') && (
+                                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full w-fit bg-amber-50 text-amber-600 font-sans">
+                                                    {teacher.accountingType === 'partnership'
+                                                        ? `شراكة ${teacher.partnershipPercentage || 0}%`
+                                                        : `${(teacher.salary || 0).toLocaleString()} ج.م`}
                                                 </span>
-                                            ) : teacher.role === 'supervisor' ? 'مشرف' : 'مدرس'}
-                                        </span>
+                                            )}
+                                        </div>
                                     </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
