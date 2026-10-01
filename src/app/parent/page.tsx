@@ -59,12 +59,22 @@ export default function ParentDashboard() {
             {/* رأس الصفحة الثابت - مرن مع الحاوية */}
             <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
-                    {/* الجانب الأيمن: شعار المركز + اسمه (الاسم يظهر من md فصاعداً فقط) */}
+                    {/* الجانب الأيمن: شعار المركز + اسمه + زر جروب الواتساب */}
                     <div className="flex items-center gap-2 min-w-0">
                         <div className="bg-white w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm border border-gray-50 shrink-0">
                             <Image src="/icon-192.png" alt="شعار المركز" width={32} height={32} className="w-6 h-6 md:w-8 md:h-8 object-contain" />
                         </div>
                         <span className="hidden md:block font-black text-gray-800 text-sm truncate">مركز الشاطبي</span>
+                        <a
+                            href={process.env.NEXT_PUBLIC_WHATSAPP_GROUP_LINK || 'https://chat.whatsapp.com/DbCD3T6nDTdJEBm8V8dxOA'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-10 h-10 md:w-auto md:px-4 md:py-2.5 flex items-center justify-center gap-2 bg-green-50 text-green-600 rounded-xl md:rounded-2xl text-xs font-black hover:bg-green-600 hover:text-white transition-all active:scale-95 shrink-0"
+                            title="جروب واتساب المركز"
+                        >
+                            <MessageCircle size={16} />
+                            <span className="hidden md:inline">جروب الواتساب</span>
+                        </a>
                     </div>
 
                     {/* الجانب الأيسر: أزرار الإجراءات — أيقونة فقط في الموبايل، مع نص من md فصاعداً */}
