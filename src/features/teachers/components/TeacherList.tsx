@@ -343,8 +343,8 @@ export default function TeacherList() {
                                                     </span>
                                                 ) : teacher.role === 'supervisor' ? 'مشرف' : 'مدرس'}
                                             </span>
-                                            {/* شارة طريقة الحساب: نسبة الشراكة أو الراتب الثابت */}
-                                            {(teacher.role === 'teacher' || teacher.role === 'supervisor') && (
+                                            {/* شارة طريقة الحساب: نسبة الشراكة أو الراتب الثابت — للمدير فقط */}
+                                            {user?.role === 'director' && (teacher.role === 'teacher' || teacher.role === 'supervisor') && (
                                                 <span className="text-[10px] font-black px-2 py-0.5 rounded-full w-fit bg-amber-50 text-amber-600 font-sans">
                                                     {teacher.accountingType === 'partnership'
                                                         ? `شراكة ${teacher.partnershipPercentage || 0}%`
