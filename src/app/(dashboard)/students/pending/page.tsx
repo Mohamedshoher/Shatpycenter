@@ -211,8 +211,9 @@ export default function PendingStudentsPage() {
                     </div>
                 </div>
 
-                {/* صف الفلاتر: قابل للسحب أفقياً في عرض الموبايل حتى لا يتزاحم مع العنوان */}
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+                {/* صف الفلاتر: في صف منفصل عن العنوان؛ يلتف لسطر جديد بدل السحب الأفقي
+                    حتى لا تُقصّ القوائم المنسدلة (overflow-x-auto كان يُخفي الجزء الأسفل منها) */}
+                <div className="flex items-center gap-2 flex-wrap">
                     {/* القائمة المنسدلة لحالة الدفع */}
                     <div className="relative shrink-0">
                         <button
