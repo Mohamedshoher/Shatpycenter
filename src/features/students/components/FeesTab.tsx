@@ -42,7 +42,7 @@ export default function FeesTab({ student, records }: { student: Student; record
         return list;
     })();
 
-    const handleSaveFee = async () => {
+    const handleSaveFee = () => {
         if (!receiptNum) return alert('برجاء إدخال رقم الوصل');
 
         // 1. تسجيل الرسوم للطالب
@@ -55,19 +55,22 @@ export default function FeesTab({ student, records }: { student: Student; record
             createdBy: user?.displayName || 'غير معروف',
         });
 
-        // 2. مزامنة مع الخزينة المالية (إيراد)
-        try {
-            const { addTransaction } = await import('@/features/finance/services/financeService');
-            await addTransaction({
-                amount: Number(feeAmount),
+        const currentFeeAmount = feeAmount;
+        const currentPaymentMonth = paymentMonth;
+
+        // 2. مزامنة مع الخزينة المالية (إيراد) - تعمل في الخلفية دون انتظارها
+        // حتى تختفي النافذة فوراً بعد الضغط على تأكيد الدفع
+        import('@/features/finance/services/financeService')
+            .then(({ addTransaction }) => addTransaction({
+                amount: Number(currentFeeAmount),
                 type: 'income',
                 category: 'fees',
                 date: new Date().toISOString().split('T')[0],
-                description: `رسوم ${paymentMonth} - الطالب: ${student.fullName}`,
+                description: `رسوم ${currentPaymentMonth} - الطالب: ${student.fullName}`,
                 relatedUserId: student.id,
                 performedBy: user?.uid || 'غير معروف'
-            });
-        } catch (e) { console.error(e); }
+            }))
+            .catch((e) => console.error(e));
 
         setIsPaymentModalOpen(false);
         setReceiptNum('');
