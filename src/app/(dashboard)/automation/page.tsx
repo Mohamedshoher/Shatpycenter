@@ -7,6 +7,7 @@ import { useAutomation } from '@/features/automation/hooks/useAutomation';
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import BookOpen from 'lucide-react/dist/esm/icons/book-open'
+import Layers from 'lucide-react/dist/esm/icons/layers'
 import Home from 'lucide-react/dist/esm/icons/home';
 import { cn } from '@/lib/utils';
 
@@ -14,15 +15,14 @@ export default function AutomationPage() {
     const { isExecuting, isExecutingExams, executeMissingReportDeduction, executeMissingExamDeduction } = useAutomationExecution();
     const { logs, loading: logsLoading, loadLogs, undoLogAction } = useAutomation();
 
-    const [selectedDate, setSelectedDate] = useState<string>(''); // Empty means Latest
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
     const defaultCheckDate = yesterday.toISOString().split('T')[0];
-    const [reportCheckDate, setReportCheckDate] = useState<string>(defaultCheckDate);
-    const [examCheckDate, setExamCheckDate] = useState<string>(defaultCheckDate);
+    const [checkDate, setCheckDate] = useState<string>(defaultCheckDate);
+    const [isExecutingBoth, setIsExecutingBoth] = useState(false);
 
     useEffect(() => {
-        loadLogs(selectedDate);
-    }, [loadLogs, selectedDate]);
+        loadLogs('');
+    }, [loadLogs]);
 
     const handleUndo = async (logId: string, teacherId: string, timestamp: Date) => {
         try {
@@ -32,45 +32,48 @@ export default function AutomationPage() {
         }
     };
 
+    const checkDateDisplay = new Date(checkDate + 'T12:00:00').toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    const reportViolationsAlert = (violators: unknown[]) => {
+        if (violators.length > 0) {
+            alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة ليوم ${checkDateDisplay}.`);
+        } else {
+            alert(`✨ تم الفحص ليوم ${checkDateDisplay}: لم يتم العثور على مخالفات جديدة.`);
+        }
+    };
+
     const handleRunReportCheck = async () => {
-        const checkDateStr = reportCheckDate;
-        const checkDateDisplay = new Date(checkDateStr + 'T12:00:00').toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
         if (confirm(`هل أنت متأكد من رغبتك في تشغيل فحص التقارير ليوم ${checkDateDisplay} وتطبيق الخصومات على المخالفين؟`)) {
-            const result = await executeMissingReportDeduction(checkDateStr);
-            setSelectedDate('');
-            // نعيد تحميل السجل يدويًا لأن setSelectedDate('') لا يُعيد تشغيل الـ useEffect
-            // إذا كان selectedDate أصلاً '' (وهي الحالة الافتراضية "الأحدث")
+            const result = await executeMissingReportDeduction(checkDate);
             await loadLogs('');
-
-            const violators = (result || []).filter((r) => r.recipientId !== 'system');
-
-            if (violators.length > 0) {
-                alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة ليوم ${checkDateDisplay}.`);
-            } else {
-                alert(`✨ تم الفحص ليوم ${checkDateDisplay}: لم يتم العثور على مخالفات جديدة.`);
-            }
+            reportViolationsAlert((result || []).filter((r) => r.recipientId !== 'system'));
         }
     };
 
     const handleRunExamCheck = async () => {
-        const checkDateStr = examCheckDate;
-        const checkDateDisplay = new Date(checkDateStr + 'T12:00:00').toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
         if (confirm(`هل أنت متأكد من رغبتك في تشغيل فحص الاختبارات ليوم ${checkDateDisplay} وتطبيق الخصومات على المخالفين؟`)) {
-            const result = await executeMissingExamDeduction(checkDateStr);
-            setSelectedDate('');
-            // نعيد تحميل السجل يدويًا لأن setSelectedDate('') لا يُعيد تشغيل الـ useEffect
-            // إذا كان selectedDate أصلاً '' (وهي الحالة الافتراضية "الأحدث")
+            const result = await executeMissingExamDeduction(checkDate);
             await loadLogs('');
+            reportViolationsAlert((result || []).filter((r) => r.recipientId !== 'system'));
+        }
+    };
 
-            const violators = (result || []).filter((r) => r.recipientId !== 'system');
-
-            if (violators.length > 0) {
-                alert(`✅ تمت العملية بنجاح! تم تسجيل ${violators.length} مخالفة ليوم ${checkDateDisplay}.`);
-            } else {
-                alert(`✨ تم الفحص ليوم ${checkDateDisplay}: لم يتم العثور على مخالفات جديدة.`);
+    const handleRunBothChecks = async () => {
+        if (confirm(`هل أنت متأكد من رغبتك في تشغيل فحص التقارير والاختبارات معاً ليوم ${checkDateDisplay} وتطبيق الخصومات على المخالفين؟`)) {
+            setIsExecutingBoth(true);
+            try {
+                const reportResult = await executeMissingReportDeduction(checkDate);
+                const examResult = await executeMissingExamDeduction(checkDate);
+                await loadLogs('');
+                const violators = [...(reportResult || []), ...(examResult || [])].filter((r) => r.recipientId !== 'system');
+                reportViolationsAlert(violators);
+            } finally {
+                setIsExecutingBoth(false);
             }
         }
     };
+
+    const isAnyExecuting = isExecuting || isExecutingExams || isExecutingBoth;
 
     const lastReportTimestamp = Math.max(
         ...logs
@@ -177,87 +180,70 @@ export default function AutomationPage() {
     return (
         <div className="space-y-4 md:space-y-6 pb-20 p-3 md:p-6 overflow-x-hidden" dir="rtl">
             {/* Minimal Navigation Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white/60 backdrop-blur-md sticky top-0 z-50 py-3 -mx-3 px-3 md:-mx-6 md:px-6 border-b border-gray-100">
-                <div className="flex items-center justify-between md:justify-start gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <Link
-                            href="/"
-                            className="w-10 h-10 shrink-0 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all"
-                        >
-                            <Home className="w-5 h-5" />
-                        </Link>
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">مركز الشاطبي</span>
-                            <h2 className="text-sm font-black text-gray-900 leading-none truncate">نظام الأتمتة</h2>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 bg-gray-50/80 px-2.5 py-2 rounded-xl border border-gray-100 w-full md:w-auto">
-                    <span className="text-xs font-bold text-gray-500 shrink-0">عرض نتائج:</span>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="flex-1 min-w-0 md:flex-none bg-white border border-gray-200 text-xs font-bold text-indigo-700 px-2 py-1.5 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                    />
-                    {selectedDate && (
-                        <button
-                            onClick={() => setSelectedDate('')}
-                            className="shrink-0 text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                            (الأحدث)
-                        </button>
-                    )}
+            <div className="flex items-center gap-3 bg-white/60 backdrop-blur-md sticky top-0 z-50 py-3 -mx-3 px-3 md:-mx-6 md:px-6 border-b border-gray-100">
+                <Link
+                    href="/"
+                    className="w-10 h-10 shrink-0 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all"
+                >
+                    <Home className="w-5 h-5" />
+                </Link>
+                <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">مركز الشاطبي</span>
+                    <h2 className="text-sm font-black text-gray-900 leading-none truncate">نظام الأتمتة</h2>
                 </div>
             </div>
 
-            {/* Main Action Header - Just Buttons */}
+            {/* Main Action Header - Shared date + 3 buttons */}
             <div className="bg-white rounded-3xl p-4 md:p-6 shadow-sm border border-gray-100 relative overflow-hidden space-y-4">
                 <div className="absolute top-0 left-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-                <div className="relative z-10 flex flex-col md:flex-row items-stretch gap-3">
-                    <div className="flex-1 flex flex-col gap-2 min-w-0">
-                        <input
-                            type="date"
-                            value={reportCheckDate}
-                            onChange={(e) => setReportCheckDate(e.target.value)}
-                            className="w-full bg-white border border-gray-200 text-xs font-bold text-indigo-700 px-3 py-2 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                        <button
-                            onClick={handleRunReportCheck}
-                            disabled={isExecuting}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-sm hover:bg-indigo-100 transition-all disabled:opacity-50"
-                        >
-                            <Calendar className="w-5 h-5 shrink-0" />
-                            <span>{isExecuting ? 'جاري الفحص...' : 'فحص التقارير'}</span>
-                        </button>
-                    </div>
-                    <div className="flex-1 flex flex-col gap-2 min-w-0">
-                        <input
-                            type="date"
-                            value={examCheckDate}
-                            onChange={(e) => setExamCheckDate(e.target.value)}
-                            className="w-full bg-white border border-gray-200 text-xs font-bold text-emerald-700 px-3 py-2 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-                        <button
-                            onClick={handleRunExamCheck}
-                            disabled={isExecutingExams}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl font-black text-sm hover:bg-emerald-100 transition-all disabled:opacity-50"
-                        >
-                            <BookOpen className="w-5 h-5 shrink-0" />
-                            <span>{isExecutingExams ? 'جاري فحص الاختبارات...' : 'فحص الاختبارات'}</span>
-                        </button>
-                    </div>
+
+                <div className="relative z-10 flex items-center gap-2 bg-gray-50/80 px-3 py-2 rounded-xl border border-gray-100 w-full md:w-fit">
+                    <span className="text-xs font-bold text-gray-500 shrink-0">تاريخ الفحص:</span>
+                    <input
+                        type="date"
+                        value={checkDate}
+                        onChange={(e) => setCheckDate(e.target.value)}
+                        className="flex-1 md:flex-none bg-white border border-gray-200 text-xs font-bold text-gray-700 px-2 py-1.5 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    />
+                </div>
+
+                <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button
+                        onClick={handleRunReportCheck}
+                        disabled={isAnyExecuting}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-sm hover:bg-indigo-100 transition-all disabled:opacity-50"
+                    >
+                        <Calendar className="w-5 h-5 shrink-0" />
+                        <span>{isExecuting ? 'جاري الفحص...' : 'فحص التقارير'}</span>
+                    </button>
+
+                    <button
+                        onClick={handleRunExamCheck}
+                        disabled={isAnyExecuting}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl font-black text-sm hover:bg-emerald-100 transition-all disabled:opacity-50"
+                    >
+                        <BookOpen className="w-5 h-5 shrink-0" />
+                        <span>{isExecutingExams ? 'جاري فحص الاختبارات...' : 'فحص الاختبارات'}</span>
+                    </button>
+
+                    <button
+                        onClick={handleRunBothChecks}
+                        disabled={isAnyExecuting}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-violet-50 text-violet-700 rounded-2xl font-black text-sm hover:bg-violet-100 transition-all disabled:opacity-50"
+                    >
+                        <Layers className="w-5 h-5 shrink-0" />
+                        <span>{isExecutingBoth ? 'جاري فحص الاثنين...' : 'التقارير والاختبارات معاً'}</span>
+                    </button>
                 </div>
             </div>
 
             {/* Split Logs Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <div className="h-full">
-                    {renderLogList(reportLogs, selectedDate ? `سجل التقارير (${new Date(selectedDate).toLocaleDateString('ar-EG', {month: 'short', day: 'numeric'})})` : "سجل التقارير الأخير", Calendar, "text-indigo-600", "bg-indigo-50/40", "border-indigo-100/60")}
+                    {renderLogList(reportLogs, "سجل التقارير الأخير", Calendar, "text-indigo-600", "bg-indigo-50/40", "border-indigo-100/60")}
                 </div>
                 <div className="h-full">
-                    {renderLogList(examLogs, selectedDate ? `سجل الاختبارات (${new Date(selectedDate).toLocaleDateString('ar-EG', {month: 'short', day: 'numeric'})})` : "سجل الاختبارات الأخير", BookOpen, "text-emerald-600", "bg-emerald-50/40", "border-emerald-100/60")}
+                    {renderLogList(examLogs, "سجل الاختبارات الأخير", BookOpen, "text-emerald-600", "bg-emerald-50/40", "border-emerald-100/60")}
                 </div>
             </div>
         </div>
