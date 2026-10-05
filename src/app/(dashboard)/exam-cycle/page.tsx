@@ -7,6 +7,8 @@ import User from 'lucide-react/dist/esm/icons/user';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import ArrowLeftRight from 'lucide-react/dist/esm/icons/arrow-left-right';
 import X from 'lucide-react/dist/esm/icons/x';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { cn } from '@/lib/utils';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 
@@ -19,6 +21,7 @@ import {
     setExamCycleAssignment,
     setExamCycleAssignmentsBatch,
 } from '@/features/groups/services/examCycleService';
+import { getAllExams } from '@/features/students/services/recordsService';
 import { Student } from '@/types';
 
 const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
@@ -76,6 +79,8 @@ export default function ExamCyclePage() {
 
     const weekCycleLabel = getWeekCycleLabel();
     const isAllGroups = selectedGroupId === ALL_GROUPS_VALUE;
+    const todayIndex = getTodayWorkdayIndex();
+    const todayStr = new Date().toISOString().split('T')[0];
 
     // طلاب المجموعة المختارة (أو كل المجموعات) النشطون فقط
     const groupStudents = useMemo(() => {
@@ -220,6 +225,77 @@ export default function ExamCyclePage() {
         return groupStudents.filter((s) => assignmentMap.get(s.id) === selectedDay);
     }, [groupStudents, assignmentMap, selectedDay]);
 
+    // تواريخ أيام هذا الأسبوع الفعلية (السبت هو أول يوم عمل) لمعرفة هل عدّى يوم الطالب المحدد أم لا
+    const weekDates = useMemo(() => {
+        const now = new Date();
+        const diffFromSaturday = (now.getDay() + 1) % 7;
+        const saturday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffFromSaturday);
+        return WORK_DAYS.map((_, i) => {
+            const d = new Date(saturday);
+            d.setDate(saturday.getDate() + i);
+            return d.toISOString().split('T')[0];
+        });
+    }, []);
+
+    // اختبارات طلاب المجموعة المختارة، لمعرفة من أدى اختباره فعلاً هذا الأسبوع
+    const { data: examsForGroup = [] } = useQuery({
+        queryKey: ['exam-cycle-exams', groupStudentIds],
+        queryFn: () => getAllExams(undefined, undefined, groupStudentIds),
+        enabled: groupStudentIds.length > 0,
+    });
+
+    const examDatesByStudent = useMemo(() => {
+        const map = new Map<string, Set<string>>();
+        examsForGroup.forEach((exam) => {
+            if (!exam.studentId || !exam.date) return;
+            const set = map.get(exam.studentId) || new Set<string>();
+            set.add(exam.date);
+            map.set(exam.studentId, set);
+        });
+        return map;
+    }, [examsForGroup]);
+
+    const hasExamInRange = (studentId: string, fromDate: string, toDate: string) => {
+        const dates = examDatesByStudent.get(studentId);
+        if (!dates) return false;
+        for (const d of dates) {
+            if (d >= fromDate && d <= toDate) return true;
+        }
+        return false;
+    };
+
+    type DayStudentStatus = 'done' | 'missed' | 'pending';
+
+    // قائمة طلاب اليوم المختار لعرض مجموعة واحدة: طلاب اليوم نفسه + من "ترحّل" إليه
+    // لأنه فوّت اختباره في يوم سابق هذا الأسبوع ولسه ما سجلش
+    const displayStudentsForDay = useMemo(() => {
+        if (isAllGroups) return [] as { student: Student; status: DayStudentStatus; carriedFromDay?: number }[];
+        const items: { student: Student; status: DayStudentStatus; carriedFromDay?: number }[] = [];
+
+        groupStudents.forEach((s) => {
+            const day = assignmentMap.get(s.id);
+            if (day === undefined) return;
+
+            if (day === selectedDay) {
+                const dueDate = weekDates[selectedDay];
+                let status: DayStudentStatus = 'pending';
+                if (dueDate <= todayStr) {
+                    status = hasExamInRange(s.id, dueDate, todayStr) ? 'done' : (dueDate < todayStr ? 'missed' : 'pending');
+                }
+                items.push({ student: s, status });
+            } else if (day < selectedDay && selectedDay <= todayIndex) {
+                const dueDate = weekDates[day];
+                const stillMissing = !hasExamInRange(s.id, dueDate, weekDates[selectedDay]);
+                if (stillMissing) {
+                    items.push({ student: s, status: 'missed', carriedFromDay: day });
+                }
+            }
+        });
+
+        return items.sort((a, b) => a.student.fullName.localeCompare(b.student.fullName, 'ar'));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [groupStudents, assignmentMap, selectedDay, isAllGroups, weekDates, todayStr, todayIndex, examDatesByStudent]);
+
     // تفصيل "كل المجموعات" حسب كل مجموعة على حدة لليوم المختار
     const perGroupCountsForSelectedDay = useMemo(() => {
         if (!isAllGroups) return [];
@@ -236,8 +312,6 @@ export default function ExamCyclePage() {
             }))
             .sort((a, b) => b.count - a.count);
     }, [isAllGroups, studentsForSelectedDay, filteredGroupsList]);
-
-    const todayIndex = getTodayWorkdayIndex();
 
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
@@ -337,27 +411,40 @@ export default function ExamCyclePage() {
                                 {todayIndex === selectedDay && <span className="text-blue-500"> (النهاردة)</span>}
                             </span>
                             <span className="bg-blue-100 text-blue-700 text-xs font-black px-3 py-1 rounded-full font-sans">
-                                {studentsForSelectedDay.length} طالب
+                                {displayStudentsForDay.length} طالب
                             </span>
                         </div>
 
-                        {studentsForSelectedDay.length === 0 ? (
+                        {displayStudentsForDay.length === 0 ? (
                             <div className="text-center py-16 bg-white/40 rounded-[28px] border-2 border-dashed border-gray-100">
                                 <RefreshCw size={28} className="mx-auto mb-2 text-gray-300" />
                                 <p className="text-sm text-gray-400 font-bold">لا يوجد طلاب في هذا اليوم بعد</p>
                             </div>
                         ) : (
-                            studentsForSelectedDay.map((student) => (
+                            displayStudentsForDay.map(({ student, status, carriedFromDay }) => (
                                 <div key={student.id} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center justify-between gap-2">
                                     <button
                                         onClick={() => setSelectedStudent(student)}
                                         className="flex items-center gap-2 min-w-0 text-right hover:opacity-70 transition-opacity"
                                         title="فتح تبويب الاختبارات لتسجيل اختبار"
                                     >
-                                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 shrink-0">
-                                            <User size={15} />
+                                        <div className={cn(
+                                            "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                                            status === 'done' ? "bg-green-50 text-green-600" : status === 'missed' ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                                        )}>
+                                            {status === 'done' ? <CheckCircle2 size={15} /> : status === 'missed' ? <AlertCircle size={15} /> : <User size={15} />}
                                         </div>
-                                        <span className="text-sm font-bold text-gray-800 truncate">{student.fullName}</span>
+                                        <div className="min-w-0 flex flex-col">
+                                            <span className={cn(
+                                                "text-sm font-bold truncate",
+                                                status === 'done' ? "text-green-600" : status === 'missed' ? "text-red-600" : "text-gray-800"
+                                            )}>
+                                                {student.fullName}
+                                            </span>
+                                            {carriedFromDay !== undefined && (
+                                                <span className="text-[9px] font-bold text-red-400">مؤجل من يوم {WORK_DAYS[carriedFromDay]}</span>
+                                            )}
+                                        </div>
                                     </button>
 
                                     {canEdit && (
