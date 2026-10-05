@@ -266,11 +266,27 @@ export default function ExamCyclePage() {
 
     type DayStudentStatus = 'done' | 'missed' | 'pending';
 
+    // آخر يوم عمل بالأسبوع (الأربعاء): بدل عرض طلاب الأربعاء فقط، نعرض هنا كل من لم
+    // يختبر طول الأسبوع كله (من السبت لحد النهاردة)، باعتباره "الحصاد النهائي" للأسبوع
+    const isWeekEndView = selectedDay === WORK_DAYS.length - 1;
+
     // قائمة طلاب اليوم المختار لعرض مجموعة واحدة: طلاب اليوم نفسه + من "ترحّل" إليه
     // لأنه فوّت اختباره في يوم سابق هذا الأسبوع ولسه ما سجلش
+    // (في يوم الأربعاء: القائمة بتبقى كل من لم يختبر طول الأسبوع بدل يوم الأربعاء فقط)
     const displayStudentsForDay = useMemo(() => {
         if (isAllGroups) return [] as { student: Student; status: DayStudentStatus; carriedFromDay?: number }[];
         const items: { student: Student; status: DayStudentStatus; carriedFromDay?: number }[] = [];
+
+        if (isWeekEndView) {
+            groupStudents.forEach((s) => {
+                const day = assignmentMap.get(s.id);
+                if (day === undefined) return;
+                if (!hasExamInRange(s.id, weekDates[0], todayStr)) {
+                    items.push({ student: s, status: 'missed', carriedFromDay: day !== selectedDay ? day : undefined });
+                }
+            });
+            return items.sort((a, b) => a.student.fullName.localeCompare(b.student.fullName, 'ar'));
+        }
 
         groupStudents.forEach((s) => {
             const day = assignmentMap.get(s.id);
@@ -294,16 +310,28 @@ export default function ExamCyclePage() {
 
         return items.sort((a, b) => a.student.fullName.localeCompare(b.student.fullName, 'ar'));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [groupStudents, assignmentMap, selectedDay, isAllGroups, weekDates, todayStr, todayIndex, examDatesByStudent]);
+    }, [groupStudents, assignmentMap, selectedDay, isAllGroups, isWeekEndView, weekDates, todayStr, todayIndex, examDatesByStudent]);
 
     // تفصيل "كل المجموعات" حسب كل مجموعة على حدة لليوم المختار
+    // (في يوم الأربعاء: عدد من لم يختبر طول الأسبوع في كل مجموعة)
     const perGroupCountsForSelectedDay = useMemo(() => {
         if (!isAllGroups) return [];
         const counts = new Map<string, number>();
-        studentsForSelectedDay.forEach((s) => {
-            if (!s.groupId) return;
-            counts.set(s.groupId, (counts.get(s.groupId) || 0) + 1);
-        });
+
+        if (isWeekEndView) {
+            groupStudents.forEach((s) => {
+                if (!s.groupId || !assignmentMap.has(s.id)) return;
+                if (!hasExamInRange(s.id, weekDates[0], todayStr)) {
+                    counts.set(s.groupId, (counts.get(s.groupId) || 0) + 1);
+                }
+            });
+        } else {
+            studentsForSelectedDay.forEach((s) => {
+                if (!s.groupId) return;
+                counts.set(s.groupId, (counts.get(s.groupId) || 0) + 1);
+            });
+        }
+
         return filteredGroupsList
             .map((g) => ({
                 id: g.id,
@@ -311,7 +339,8 @@ export default function ExamCyclePage() {
                 count: counts.get(g.id) || 0,
             }))
             .sort((a, b) => b.count - a.count);
-    }, [isAllGroups, studentsForSelectedDay, filteredGroupsList]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAllGroups, isWeekEndView, studentsForSelectedDay, filteredGroupsList, groupStudents, assignmentMap, weekDates, todayStr, examDatesByStudent]);
 
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
@@ -374,10 +403,17 @@ export default function ExamCyclePage() {
                 </div>
 
                 {/* إجمالي اختبارات النهاردة عند اختيار "كل المجموعات" */}
-                {isAllGroups && (
+                {isAllGroups && !isWeekEndView && (
                     <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
                         <span className="text-xs font-bold text-blue-700">إجمالي اختبارات النهاردة (كل المجموعات)</span>
                         <span className="text-lg font-black text-blue-700 font-sans">{todayIndex === -1 ? 0 : dayCounts[todayIndex]}</span>
+                    </div>
+                )}
+
+                {isAllGroups && isWeekEndView && (
+                    <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+                        <span className="text-xs font-bold text-red-600">الطلاب اللي لم يختبروا طول الأسبوع (كل المجموعات)</span>
+                        <span className="text-lg font-black text-red-600 font-sans">{perGroupCountsForSelectedDay.reduce((sum, r) => sum + r.count, 0)}</span>
                     </div>
                 )}
 
@@ -391,14 +427,21 @@ export default function ExamCyclePage() {
                             </div>
                         ) : (
                             perGroupCountsForSelectedDay.map((row) => (
-                                <div key={row.id} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center justify-between gap-2">
+                                <button
+                                    key={row.id}
+                                    onClick={() => setSelectedGroupId(row.id)}
+                                    className="w-full bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center justify-between gap-2 hover:border-blue-200 transition-colors text-right"
+                                >
                                     <div className="min-w-0">
                                         <p className="text-sm font-bold text-gray-800 truncate">{row.name}</p>
                                     </div>
-                                    <span className="shrink-0 bg-blue-50 text-blue-700 text-sm font-black px-3 py-1 rounded-full font-sans">
+                                    <span className={cn(
+                                        "shrink-0 text-sm font-black px-3 py-1 rounded-full font-sans",
+                                        isWeekEndView ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-700"
+                                    )}>
                                         {row.count}
                                     </span>
-                                </div>
+                                </button>
                             ))
                         )}
                     </div>
@@ -407,10 +450,19 @@ export default function ExamCyclePage() {
                     <div className="space-y-2">
                         <div className="flex items-center justify-between px-1">
                             <span className="text-xs font-bold text-gray-400">
-                                طلاب يوم {WORK_DAYS[selectedDay]}
-                                {todayIndex === selectedDay && <span className="text-blue-500"> (النهاردة)</span>}
+                                {isWeekEndView ? (
+                                    'الطلاب اللي لم يختبروا طول الأسبوع'
+                                ) : (
+                                    <>
+                                        طلاب يوم {WORK_DAYS[selectedDay]}
+                                        {todayIndex === selectedDay && <span className="text-blue-500"> (النهاردة)</span>}
+                                    </>
+                                )}
                             </span>
-                            <span className="bg-blue-100 text-blue-700 text-xs font-black px-3 py-1 rounded-full font-sans">
+                            <span className={cn(
+                                "text-xs font-black px-3 py-1 rounded-full font-sans",
+                                isWeekEndView ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-700"
+                            )}>
                                 {displayStudentsForDay.length} طالب
                             </span>
                         </div>
