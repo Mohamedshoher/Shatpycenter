@@ -5,7 +5,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import User from 'lucide-react/dist/esm/icons/user';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import ArrowLeftRight from 'lucide-react/dist/esm/icons/arrow-left-right';
+import X from 'lucide-react/dist/esm/icons/x';
 import { cn } from '@/lib/utils';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 
 import dynamic from 'next/dynamic';
 import { useStudents } from '@/features/students/hooks/useStudents';
@@ -156,7 +159,7 @@ export default function ExamCyclePage() {
             const minOtherDays = Math.min(...counts.filter((_, day) => day !== newDay));
 
             if (countAfterMove - minOtherDays > 1) {
-                alert(`لا يمكن نقل الطالب إلى يوم ${WORK_DAYS[newDay]} لأنه هيبقى مزدحم أكتر من باقي الأيام بأكتر من طالب. انقل طالباً من يوم ${WORK_DAYS[newDay]} إلى يوم آخر أولاً.`);
+                alert(`لا يمكن نقل الطالب إلى يوم ${WORK_DAYS[newDay]} لأنه هيبقى مزدحم أكتر من باقي الأيام بأكتر من طالب. استخدم زر "تبديل" لتبديل مكانه مع طالب آخر في يوم ${WORK_DAYS[newDay]} بدلاً من ذلك.`);
                 return;
             }
         }
@@ -166,6 +169,41 @@ export default function ExamCyclePage() {
             queryClient.invalidateQueries({ queryKey: ['exam-cycle', selectedGroupId, groupStudentIds] });
         } catch (err) {
             console.error('تعذر نقل الطالب:', err);
+        }
+    };
+
+    // تبديل مكان طالبين: كل منهما يأخذ يوم الآخر، فلا يتأثر إجمالي عدد أي يوم
+    // (بعكس النقل العادي، لا يوجد حد أقصى هنا لأن العدد الكلي لكل يوم يفضل ثابت)
+    const [swapStudent, setSwapStudent] = useState<Student | null>(null);
+    const [swapDay, setSwapDay] = useState<number | null>(null);
+
+    const swapCandidates = useMemo(() => {
+        if (!swapStudent || swapDay === null) return [];
+        return groupStudents.filter((s) =>
+            s.groupId === swapStudent.groupId && s.id !== swapStudent.id && assignmentMap.get(s.id) === swapDay
+        );
+    }, [groupStudents, swapStudent, swapDay, assignmentMap]);
+
+    const closeSwapModal = () => {
+        setSwapStudent(null);
+        setSwapDay(null);
+    };
+
+    const handleSwapStudents = async (partnerId: string) => {
+        if (!swapStudent || swapDay === null) return;
+        const studentDay = assignmentMap.get(swapStudent.id);
+        if (studentDay === undefined) return;
+
+        try {
+            await setExamCycleAssignmentsBatch([
+                { studentId: swapStudent.id, weekday: swapDay },
+                { studentId: partnerId, weekday: studentDay },
+            ]);
+            queryClient.invalidateQueries({ queryKey: ['exam-cycle', selectedGroupId, groupStudentIds] });
+        } catch (err) {
+            console.error('تعذر تبديل الطلاب:', err);
+        } finally {
+            closeSwapModal();
         }
     };
 
@@ -323,15 +361,24 @@ export default function ExamCyclePage() {
                                     </button>
 
                                     {canEdit && (
-                                        <select
-                                            value={selectedDay}
-                                            onChange={(e) => handleMoveStudent(student.id, Number(e.target.value))}
-                                            className="shrink-0 bg-gray-50 border border-gray-100 rounded-lg text-[11px] font-bold text-gray-600 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        >
-                                            {WORK_DAYS.map((day, index) => (
-                                                <option key={day} value={index}>{day}</option>
-                                            ))}
-                                        </select>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <select
+                                                value={selectedDay}
+                                                onChange={(e) => handleMoveStudent(student.id, Number(e.target.value))}
+                                                className="bg-gray-50 border border-gray-100 rounded-lg text-[11px] font-bold text-gray-600 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                            >
+                                                {WORK_DAYS.map((day, index) => (
+                                                    <option key={day} value={index}>{day}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                onClick={() => { setSwapStudent(student); setSwapDay(null); }}
+                                                className="p-1.5 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors"
+                                                title="تبديل مكانه مع طالب آخر"
+                                            >
+                                                <ArrowLeftRight size={14} />
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             ))
@@ -346,6 +393,63 @@ export default function ExamCyclePage() {
                 onClose={() => setSelectedStudent(null)}
                 initialTab="exams"
             />
+
+            {/* مودال تبديل مكان طالبين */}
+            <FadeIn show={!!swapStudent} className="fixed inset-0 z-[300]">
+                <div onClick={closeSwapModal} className="absolute inset-0 bg-black/40" />
+            </FadeIn>
+            <SlideIn show={!!swapStudent} className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+                <div className="relative bg-white p-5 rounded-[28px] w-full max-w-sm max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-black text-sm text-gray-800">تبديل مكان: {swapStudent?.fullName}</h3>
+                        <button onClick={closeSwapModal} className="p-1.5 text-gray-400 hover:bg-gray-50 rounded-lg">
+                            <X size={16} />
+                        </button>
+                    </div>
+
+                    <p className="text-[11px] text-gray-400 font-bold mb-3">اختر اليوم اللي عايز تبدل معاه، هيظهر لك طلابه وتختار منهم</p>
+
+                    <div className="grid grid-cols-5 gap-1 mb-4">
+                        {WORK_DAYS.map((day, index) => {
+                            const studentCurrentDay = swapStudent ? assignmentMap.get(swapStudent.id) : undefined;
+                            if (index === studentCurrentDay) return null;
+                            return (
+                                <button
+                                    key={day}
+                                    onClick={() => setSwapDay(index)}
+                                    className={cn(
+                                        "py-2 rounded-xl text-[10px] font-black transition-all",
+                                        swapDay === index ? "bg-amber-500 text-white" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                    )}
+                                >
+                                    {day}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {swapDay !== null && (
+                        <div className="flex-1 overflow-y-auto space-y-2 -mx-1 px-1">
+                            {swapCandidates.length === 0 ? (
+                                <p className="text-center text-xs text-gray-400 font-bold py-6">لا يوجد طلاب في يوم {WORK_DAYS[swapDay]} لنفس المجموعة</p>
+                            ) : (
+                                swapCandidates.map((candidate) => (
+                                    <button
+                                        key={candidate.id}
+                                        onClick={() => handleSwapStudents(candidate.id)}
+                                        className="w-full flex items-center gap-2 bg-gray-50 hover:bg-amber-50 rounded-xl p-3 text-right transition-colors"
+                                    >
+                                        <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center text-amber-600 shrink-0">
+                                            <User size={13} />
+                                        </div>
+                                        <span className="text-sm font-bold text-gray-700 truncate">{candidate.fullName}</span>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </div>
+            </SlideIn>
         </div>
     );
 }
