@@ -61,6 +61,8 @@ export default function GroupsPage() {
     // مجموعات التجويد مالهاش تبويب لوحدها، بتظهر تحت مجموعات القرآن داخل نفس تبويب "قرآن"
     // حتى يفضل صف التبويبات سطر واحد على عرض الهاتف
     const CATEGORY_TABS = ['الكل', 'تلقين', 'نور بيان', 'قرآن'];
+    // أسماء مختصرة تُعرض على التبويب فقط (المطابقة الفعلية بالاسم الكامل في CATEGORY_TABS)
+    const CATEGORY_TAB_LABELS: Record<string, string> = { 'نور بيان': 'نور' };
     const [categoryTab, setCategoryTab] = useState<string>('الكل');
 
     // Modal states
@@ -371,23 +373,24 @@ export default function GroupsPage() {
                     </div>
                 )}
 
-                {/* تبويبات الأقسام: تلقين / نور بيان / قرآن / تجويد، كل قسم لوحده حتى ما يختلطوش ببعض.
-                    flex-wrap بدل التمرير الأفقي حتى تتناسق الشاشة على عرض الهاتف من غير سحب يمين أو شمال */}
-                <div className="max-w-7xl mx-auto mt-3 flex items-center flex-wrap gap-1.5">
+                {/* تبويبات الأقسام: تلقين / نور بيان / قرآن، كل قسم لوحده حتى ما يختلطوش ببعض.
+                    عدد أعمدة = عدد التبويبات (grid) حتى يستحيل انكسارهم لسطر تاني مهما ضاقت الشاشة،
+                    وأسماء مختصرة + خط صغير حتى تتسع كلها بجانب بعض */}
+                <div className="max-w-7xl mx-auto mt-3 grid grid-cols-4 gap-1">
                     {CATEGORY_TABS.map((cat) => (
                         <button
                             key={cat}
                             onClick={() => setCategoryTab(cat)}
                             className={cn(
-                                "shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-[14px] text-xs font-black transition-all border",
+                                "min-w-0 flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-xl text-[10px] font-black transition-all border",
                                 categoryTab === cat
                                     ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-500/20"
                                     : "bg-white border-gray-100 text-gray-500 hover:border-purple-200 hover:text-purple-600"
                             )}
                         >
-                            {cat}
+                            <span className="truncate">{CATEGORY_TAB_LABELS[cat] ?? cat}</span>
                             <span className={cn(
-                                "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+                                "shrink-0 text-[8px] px-1 py-0.5 rounded-full font-bold",
                                 categoryTab === cat ? "bg-white/25 text-white" : "bg-gray-100 text-gray-400"
                             )}>
                                 {categoryCounts[cat] ?? 0}
