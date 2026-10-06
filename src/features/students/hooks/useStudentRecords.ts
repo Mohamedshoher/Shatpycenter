@@ -89,6 +89,10 @@ export const useStudentRecords = (studentId: string) => {
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['exams', studentId] });
+            // دورة الاختبارات وصفحات التحليلات عندها نسخة منفصلة من بيانات الاختبارات
+            // (exam-cycle-exams, all-exams)، لازم تتحدّث برضو وإلا تفضل تعتبر الطالب لسه ما اختبرش
+            queryClient.invalidateQueries({ queryKey: ['exam-cycle-exams'] });
+            queryClient.invalidateQueries({ queryKey: ['all-exams'] });
         }
     });
 
@@ -109,6 +113,8 @@ export const useStudentRecords = (studentId: string) => {
         mutationFn: deleteExamRecord,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exams', studentId] });
+            queryClient.invalidateQueries({ queryKey: ['exam-cycle-exams'] });
+            queryClient.invalidateQueries({ queryKey: ['all-exams'] });
         }
     });
 
@@ -116,6 +122,8 @@ export const useStudentRecords = (studentId: string) => {
         mutationFn: ({ id, data }: { id: string; data: Partial<ExamRecord> }) => updateExamRecord(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exams', studentId] });
+            queryClient.invalidateQueries({ queryKey: ['exam-cycle-exams'] });
+            queryClient.invalidateQueries({ queryKey: ['all-exams'] });
         }
     });
 
