@@ -105,6 +105,29 @@ body {
 .dark .border-gray-200,
 .dark .border-gray-300 { border-color: #334155; }
 
+.dark .text-slate-900,
+.dark .text-slate-800 { color: #e2e8f0; }
+.dark .text-slate-700,
+.dark .text-slate-600 { color: #cbd5e1; }
+.dark .text-slate-500,
+.dark .text-slate-400 { color: #94a3b8; }
+.dark .text-slate-300,
+.dark .text-slate-200 { color: #475569; }
+
+/* معظم حقول الإدخال (input/select/textarea) مالهاش كلاس لون نص صريح، فبتعتمد على
+   لون المتصفح الافتراضي (أسود) — وده بيبقى غير مرئي فوق خلفية الكارت الداكنة بعد
+   التحويل فوق. بنفرض لون نص فاتح على عناصر النماذج كلها مباشرة بغض النظر عن كلاسها. */
+.dark input,
+.dark select,
+.dark textarea {
+  color: #f1f5f9;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
 /* عناصر داكنة أصلاً في الوضع العادي (هيدرز/أوفرلايز) نسيبها زي ما هي حتى لا تتضارب */
 .dark .bg-slate-900,
 .dark .bg-gray-900 { background-color: #020617; }
