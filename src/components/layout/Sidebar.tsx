@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useThemeStore } from '@/store/useThemeStore';
 import { cn } from '@/lib/utils';
 import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard'
 import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid'
@@ -23,6 +24,8 @@ import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
+import Moon from 'lucide-react/dist/esm/icons/moon';
+import Sun from 'lucide-react/dist/esm/icons/sun';
 import { FadeIn } from '@/components/ui/transition';
 import { logout } from '@/features/auth/services/authService';
 import { useMessagingStore } from '@/features/messaging/store/useMessagingStore';
@@ -31,6 +34,7 @@ import { useRouter } from 'next/navigation';
 export default function Sidebar() {
     const { user, setUser } = useAuthStore();
     const { isSidebarOpen, setSidebarOpen } = useUIStore();
+    const { theme, toggleTheme } = useThemeStore();
     const pathname = usePathname();
     const router = useRouter();
 
@@ -192,12 +196,21 @@ export default function Sidebar() {
                             </div>
                             <span className="text-lg font-black text-gray-900 tracking-tighter">مركز الشاطبي</span>
                         </div>
-                        <button
-                            onClick={() => setSidebarOpen(false)}
-                            className="md:hidden p-1 rounded-md hover:bg-gray-100"
-                        >
-                            <X size={20} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={toggleTheme}
+                                className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                                title={theme === 'dark' ? 'تفعيل الوضع العادي' : 'تفعيل الوضع الليلي'}
+                            >
+                                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                            </button>
+                            <button
+                                onClick={() => setSidebarOpen(false)}
+                                className="md:hidden p-1 rounded-md hover:bg-gray-100"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Navigation */}
