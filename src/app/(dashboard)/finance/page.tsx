@@ -64,6 +64,8 @@ export default function FinancePage() {
     const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
     const [isDeliveryDeficitOpen, setIsDeliveryDeficitOpen] = useState(false);
     const [isProfitBreakdownOpen, setIsProfitBreakdownOpen] = useState(false);
+    const [isExpensesBreakdownOpen, setIsExpensesBreakdownOpen] = useState(false);
+    const [expandedExpenseKey, setExpandedExpenseKey] = useState<string | null>(null);
     const [isDevelopmentOpen, setIsDevelopmentOpen] = useState(false);
     const queryClient = useQueryClient();
     const { data: teachers = [] } = useTeachers();
@@ -368,6 +370,39 @@ export default function FinancePage() {
         () => directorProfitByTeacher.reduce((sum, t) => sum + t.directorProfit, 0),
         [directorProfitByTeacher]
     );
+
+    // تفصيل إجمالي المصروفات هذا الشهر: كل مدفوعات مدرس تتجمع تحت اسمه (حتى لو اتصرفت
+    // على دفعات)، وأي مصروف تاني مالوش مدرس مرتبط بيه يتجمع تحت فئته
+    const categoryLabels: Record<string, string> = {
+        salary: 'رواتب (بدون مدرس محدد)',
+        utilities: 'فواتير ومرافق',
+        other: 'مصروفات أخرى',
+    };
+
+    const expenseBreakdown = useMemo(() => {
+        const map = new Map<string, { key: string; label: string; total: number; transactions: { id: string; date: string; amount: number; title: string }[] }>();
+
+        filteredTransactions
+            .filter(tr => tr.type === 'expense')
+            .forEach(tr => {
+                const teacher = tr.relatedUserId ? teachers.find(t => t.id === tr.relatedUserId) : undefined;
+                const key = teacher ? `teacher:${teacher.id}` : `category:${tr.category}`;
+                const label = teacher ? teacher.fullName : (categoryLabels[tr.category] || tr.category || 'مصروفات أخرى');
+
+                const entry = map.get(key) || { key, label, total: 0, transactions: [] };
+                entry.total += tr.amount;
+                entry.transactions.push({ id: tr.id, date: tr.date, amount: tr.amount, title: tr.title });
+                map.set(key, entry);
+            });
+
+        return Array.from(map.values())
+            .map(entry => ({
+                ...entry,
+                transactions: entry.transactions.sort((a, b) => b.date.localeCompare(a.date)),
+            }))
+            .sort((a, b) => b.total - a.total);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filteredTransactions, teachers]);
 
     const deficitPerTeacher = useMemo(() => {
         const normalize = (s: string) => { if (!s) return ''; return s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/[ًٌٍَُِّ]/g, '').replace(/\s+/g, '').trim(); };
@@ -1113,6 +1148,83 @@ export default function FinancePage() {
                 </div>
             </SlideIn>
 
+            {/* Expenses Breakdown Modal: تفصيل إجمالي المصروفات هذا الشهر حسب المدرس/الفئة */}
+            <FadeIn show={isExpensesBreakdownOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsExpensesBreakdownOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isExpensesBreakdownOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600">
+                            <ArrowDownCircle size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">تفصيل إجمالي المصروفات</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">عن شهر {months.find(m => m.value === selectedMonth)?.label || selectedMonth}</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsExpensesBreakdownOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
+                    {expenseBreakdown.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا توجد مصروفات مسجلة هذا الشهر.
+                        </div>
+                    ) : (
+                        expenseBreakdown.map(entry => {
+                            const isExpanded = expandedExpenseKey === entry.key;
+                            return (
+                                <div key={entry.key} className="bg-white rounded-2xl border border-red-100 shadow-sm overflow-hidden">
+                                    <button
+                                        onClick={() => setExpandedExpenseKey(isExpanded ? null : entry.key)}
+                                        className="w-full flex items-center justify-between gap-3 p-4 text-right hover:bg-red-50/30 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <ChevronDown size={16} className={cn("shrink-0 text-gray-400 transition-transform", isExpanded && "rotate-180")} />
+                                            <div className="min-w-0">
+                                                <p className="font-black text-gray-900 text-sm truncate">{entry.label}</p>
+                                                <p className="text-[10px] text-gray-400 font-bold">{entry.transactions.length} عملية</p>
+                                            </div>
+                                        </div>
+                                        <p className="shrink-0 text-lg font-black text-red-600 font-sans">
+                                            {entry.total.toLocaleString()} <span className="text-[9px]">ج.م</span>
+                                        </p>
+                                    </button>
+
+                                    {isExpanded && (
+                                        <div className="border-t border-red-50 divide-y divide-red-50/70">
+                                            {entry.transactions.map(txn => (
+                                                <div key={txn.id} className="flex items-center justify-between gap-3 px-4 py-2.5 bg-red-50/10">
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-bold text-gray-600 truncate">{txn.title}</p>
+                                                        <p className="text-[10px] text-gray-400 font-bold">{txn.date}</p>
+                                                    </div>
+                                                    <p className="shrink-0 text-sm font-black text-red-500 font-sans">
+                                                        {txn.amount.toLocaleString()} <span className="text-[9px]">ج.م</span>
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-red-600 font-sans">
+                            {totalExpenses.toLocaleString()} <span className="text-sm">ج.م</span>
+                        </div>
+                        <p className="text-xs font-black text-gray-400">إجمالي المصروفات</p>
+                    </div>
+                </div>
+            </SlideIn>
+
             {/* Sticky Header */}
             <div className="sticky top-0 z-[70] bg-white/95 backdrop-blur-xl px-4 py-3 border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
@@ -1278,7 +1390,10 @@ export default function FinancePage() {
 
                         {/* Section 3: Summary */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Link href="/finance/expenses" className="bg-white/90 backdrop-blur-xl border border-red-100/50 rounded-[32px] p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                            <button
+                                onClick={() => setIsExpensesBreakdownOpen(true)}
+                                className="bg-white/90 backdrop-blur-xl border border-red-100/50 rounded-[32px] p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all text-right"
+                            >
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600">
                                         <ArrowDownCircle size={24} />
@@ -1288,7 +1403,7 @@ export default function FinancePage() {
                                         <h3 className="text-2xl font-black text-red-600 font-sans">{totalExpenses.toLocaleString()} <span className="text-xs">ج.م</span></h3>
                                     </div>
                                 </div>
-                            </Link>
+                            </button>
                             <button
                                 onClick={() => setIsProfitBreakdownOpen(true)}
                                 className={cn(
