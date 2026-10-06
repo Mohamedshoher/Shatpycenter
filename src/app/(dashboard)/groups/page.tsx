@@ -57,8 +57,10 @@ export default function GroupsPage() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [filters, setFilters] = useState<string[]>(['الكل']);
 
-    // تبويبات القسم (تلقين / نور بيان / قرآن / تجويد) للتنقل بينها بدل ما تختلط كل المجموعات مع بعض
-    const CATEGORY_TABS = ['الكل', 'تلقين', 'نور بيان', 'قرآن', 'تجويد'];
+    // تبويبات القسم (تلقين / نور بيان / قرآن) للتنقل بينها بدل ما تختلط كل المجموعات مع بعض.
+    // مجموعات التجويد مالهاش تبويب لوحدها، بتظهر تحت مجموعات القرآن داخل نفس تبويب "قرآن"
+    // حتى يفضل صف التبويبات سطر واحد على عرض الهاتف
+    const CATEGORY_TABS = ['الكل', 'تلقين', 'نور بيان', 'قرآن'];
     const [categoryTab, setCategoryTab] = useState<string>('الكل');
 
     // Modal states
@@ -179,13 +181,17 @@ export default function GroupsPage() {
         });
     }, [enhancedGroups, user]);
 
+    // مجموعات التجويد تُعتبر جزءاً من تبويب "قرآن" (تظهر تحتها) بدل تبويب مستقل
+    const matchesCategoryTab = (groupName: string, cat: string) =>
+        cat === 'قرآن' ? (groupName.includes('قرآن') || groupName.includes('تجويد')) : groupName.includes(cat);
+
     // عدد مجموعات كل قسم لعرضه كرقم على كل تبويب
     const categoryCounts = useMemo(() => {
         const counts: Record<string, number> = {};
         CATEGORY_TABS.forEach(cat => {
             counts[cat] = cat === 'الكل'
                 ? roleScopedGroups.length
-                : roleScopedGroups.filter(g => g.name.includes(cat)).length;
+                : roleScopedGroups.filter(g => matchesCategoryTab(g.name, cat)).length;
         });
         return counts;
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -193,7 +199,7 @@ export default function GroupsPage() {
 
     const filteredGroups = (() => {
         const baseFiltered = roleScopedGroups.filter(group => {
-            if (categoryTab !== 'الكل' && !group.name.includes(categoryTab)) return false;
+            if (categoryTab !== 'الكل' && !matchesCategoryTab(group.name, categoryTab)) return false;
 
             const matchesFilter = (() => {
                 if (filters.includes('الكل')) {
@@ -214,6 +220,12 @@ export default function GroupsPage() {
         const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (g) => `${g.name} ${g.teacher}`);
 
         return finalResults.sort((a, b) => {
+            // داخل تبويب "قرآن": مجموعات القرآن أولاً، ثم التجويد تحتها
+            if (categoryTab === 'قرآن') {
+                const aIsTajweed = a.name.includes('تجويد') ? 1 : 0;
+                const bIsTajweed = b.name.includes('تجويد') ? 1 : 0;
+                if (aIsTajweed !== bIsTajweed) return aIsTajweed - bIsTajweed;
+            }
             if (sortBy === 'studentCount') return b.count - a.count;
             if (sortBy === 'attendance') return b.attendancePercentage - a.attendancePercentage;
             return a.name.localeCompare(b.name, 'ar');
