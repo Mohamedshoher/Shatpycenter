@@ -55,6 +55,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
+      <head>
+        {/* تطبيق الوضع الليلي قبل أول رسم للصفحة حتى لا تومض الشاشة بيضاء قبل ما يتحول لداكن */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try {
+              if (localStorage.getItem('shatpycenter-theme') === 'dark') {
+                document.documentElement.classList.add('dark');
+              }
+            } catch (e) {}`,
+          }}
+        />
+      </head>
       <body className={`${cairo.variable} ${cairo.className} antialiased bg-gray-50`}>
         <QueryProvider>
           <AuthProvider>
