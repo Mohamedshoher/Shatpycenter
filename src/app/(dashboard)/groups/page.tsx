@@ -15,9 +15,8 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import Edit2 from 'lucide-react/dist/esm/icons/edit-2'
 import Check from 'lucide-react/dist/esm/icons/check'
 import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal';
-import Search from 'lucide-react/dist/esm/icons/search';
 import Link from 'next/link';
-import { cn, tieredSearchFilter } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { FadeIn } from '@/components/ui/transition';
 import dynamic from 'next/dynamic';
 
@@ -53,17 +52,13 @@ export default function GroupsPage() {
         }
     });
 
-    const [searchTerm, setSearchTerm] = useState('');
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [filters, setFilters] = useState<string[]>(['الكل']);
 
-    // تبويبات القسم (تلقين / نور بيان / قرآن) للتنقل بينها بدل ما تختلط كل المجموعات مع بعض.
-    // مجموعات التجويد مالهاش تبويب لوحدها، بتظهر تحت مجموعات القرآن داخل نفس تبويب "قرآن"
-    // حتى يفضل صف التبويبات سطر واحد على عرض الهاتف
-    const CATEGORY_TABS = ['الكل', 'تلقين', 'نور بيان', 'قرآن'];
+    // تبويبات القسم: تلقين / نور بيان / قرآن / تجويد، كل قسم لوحده حتى ما يختلطوش ببعض
+    const CATEGORY_TABS = ['تلقين', 'نور بيان', 'قرآن', 'تجويد'];
     // أسماء مختصرة تُعرض على التبويب فقط (المطابقة الفعلية بالاسم الكامل في CATEGORY_TABS)
     const CATEGORY_TAB_LABELS: Record<string, string> = { 'نور بيان': 'نور' };
-    const [categoryTab, setCategoryTab] = useState<string>('الكل');
+    const [categoryTab, setCategoryTab] = useState<string>(CATEGORY_TABS[0]);
 
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -183,17 +178,15 @@ export default function GroupsPage() {
         });
     }, [enhancedGroups, user]);
 
-    // مجموعات التجويد تُعتبر جزءاً من تبويب "قرآن" (تظهر تحتها) بدل تبويب مستقل
-    const matchesCategoryTab = (groupName: string, cat: string) =>
-        cat === 'قرآن' ? (groupName.includes('قرآن') || groupName.includes('تجويد')) : groupName.includes(cat);
+    const matchesCategoryTab = (groupName: string, cat: string) => groupName.includes(cat);
 
-    // عدد مجموعات كل قسم لعرضه كرقم على كل تبويب
+    // إجمالي عدد طلاب كل قسم (مش عدد المجموعات) لعرضه كرقم على كل تبويب
     const categoryCounts = useMemo(() => {
         const counts: Record<string, number> = {};
         CATEGORY_TABS.forEach(cat => {
-            counts[cat] = cat === 'الكل'
-                ? roleScopedGroups.length
-                : roleScopedGroups.filter(g => matchesCategoryTab(g.name, cat)).length;
+            counts[cat] = roleScopedGroups
+                .filter(g => matchesCategoryTab(g.name, cat))
+                .reduce((sum, g) => sum + g.count, 0);
         });
         return counts;
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -201,7 +194,7 @@ export default function GroupsPage() {
 
     const filteredGroups = (() => {
         const baseFiltered = roleScopedGroups.filter(group => {
-            if (categoryTab !== 'الكل' && !matchesCategoryTab(group.name, categoryTab)) return false;
+            if (!matchesCategoryTab(group.name, categoryTab)) return false;
 
             const matchesFilter = (() => {
                 if (filters.includes('الكل')) {
@@ -218,21 +211,15 @@ export default function GroupsPage() {
             return matchesFilter;
         });
 
-        // تطبيق البحث المتدرج على المجموعات (باسم المجموعة أو اسم المعلم)
-        const finalResults = tieredSearchFilter(baseFiltered, searchTerm, (g) => `${g.name} ${g.teacher}`);
-
-        return finalResults.sort((a, b) => {
-            // داخل تبويب "قرآن": مجموعات القرآن أولاً، ثم التجويد تحتها
-            if (categoryTab === 'قرآن') {
-                const aIsTajweed = a.name.includes('تجويد') ? 1 : 0;
-                const bIsTajweed = b.name.includes('تجويد') ? 1 : 0;
-                if (aIsTajweed !== bIsTajweed) return aIsTajweed - bIsTajweed;
-            }
+        return baseFiltered.sort((a, b) => {
             if (sortBy === 'studentCount') return b.count - a.count;
             if (sortBy === 'attendance') return b.attendancePercentage - a.attendancePercentage;
             return a.name.localeCompare(b.name, 'ar');
         });
     })();
+
+    // إجمالي طلاب القسم المختار حالياً، يُعرض في منتصف الهيدر
+    const currentCategoryStudentTotal = categoryCounts[categoryTab] ?? 0;
 
     const activeSortedTeachers = useMemo(() => {
         if (!teachers) return [];
@@ -261,29 +248,15 @@ export default function GroupsPage() {
                         )}
                     </div>
 
-                    {/* Groups Count - Center */}
+                    {/* Students Count - Center: إجمالي طلاب القسم المختار حالياً (مش عدد المجموعات) */}
                     <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/50 px-4 h-11 rounded-[16px] border border-purple-100/50 shadow-sm pointer-events-none transition-all duration-300">
-                        <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest hidden sm:inline">المجموعات</span>
-                        <span className="text-xl font-black text-purple-600 font-sans">{filteredGroups?.length || 0}</span>
+                        <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest hidden sm:inline">الطلاب</span>
+                        <span className="text-xl font-black text-purple-600 font-sans">{currentCategoryStudentTotal}</span>
                     </div>
 
                     {/* Filters - Right */}
                     <div className="flex items-center gap-2 flex-1 justify-end max-w-2xl">
                                 <div key="controls" className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setIsSearchOpen((prev) => {
-                                            const next = !prev;
-                                            if (!next) setSearchTerm('');
-                                            return next;
-                                        })}
-                                        className={cn(
-                                            "w-11 h-11 bg-white border border-gray-100 rounded-[16px] flex items-center justify-center text-purple-500 transition-all shadow-sm active:scale-95",
-                                            isSearchOpen ? "border-purple-500" : "hover:border-purple-200"
-                                        )}
-                                        title="بحث باسم المجموعة أو المدرس"
-                                    >
-                                        <Search size={18} />
-                                    </button>
                                     {user?.role !== 'teacher' && (
                                         <div className="relative">
                                             <button
@@ -359,21 +332,7 @@ export default function GroupsPage() {
                     </div>
                 </div>
 
-                {isSearchOpen && (
-                    <div className="max-w-7xl mx-auto mt-3 relative">
-                        <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            autoFocus
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="ابحث باسم المجموعة أو اسم المدرس..."
-                            className="w-full h-11 bg-white border border-purple-100 rounded-[16px] pr-11 pl-4 text-sm font-bold text-right focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-                        />
-                    </div>
-                )}
-
-                {/* تبويبات الأقسام: تلقين / نور بيان / قرآن، كل قسم لوحده حتى ما يختلطوش ببعض.
+                {/* تبويبات الأقسام: تلقين / نور بيان / قرآن / تجويد، كل قسم لوحده حتى ما يختلطوش ببعض.
                     عدد أعمدة = عدد التبويبات (grid) حتى يستحيل انكسارهم لسطر تاني مهما ضاقت الشاشة،
                     وأسماء مختصرة + خط صغير حتى تتسع كلها بجانب بعض */}
                 <div className="max-w-7xl mx-auto mt-3 grid grid-cols-4 gap-1">
