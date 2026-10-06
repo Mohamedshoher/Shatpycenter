@@ -359,8 +359,9 @@ export default function GroupsPage() {
                     </div>
                 )}
 
-                {/* تبويبات الأقسام: تلقين / نور بيان / قرآن / تجويد، كل قسم لوحده حتى ما يختلطوش ببعض */}
-                <div className="max-w-7xl mx-auto mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                {/* تبويبات الأقسام: تلقين / نور بيان / قرآن / تجويد، كل قسم لوحده حتى ما يختلطوش ببعض.
+                    flex-wrap بدل التمرير الأفقي حتى تتناسق الشاشة على عرض الهاتف من غير سحب يمين أو شمال */}
+                <div className="max-w-7xl mx-auto mt-3 flex items-center flex-wrap gap-1.5">
                     {CATEGORY_TABS.map((cat) => (
                         <button
                             key={cat}
