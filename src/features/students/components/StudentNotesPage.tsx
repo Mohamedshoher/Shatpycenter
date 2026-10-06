@@ -4,9 +4,13 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getNotesPage, replyToNote, deleteStudentNote, markNoteAsRead } from '@/features/students/services/recordsService';
-import { getStudentById } from '@/features/students/services/studentService';
+import { getStudentById, updateStudent } from '@/features/students/services/studentService';
 import EditStudentModal from '@/features/students/components/EditStudentModal';
 import { useStudents } from '@/features/students/hooks/useStudents';
+import { getGroups } from '@/features/groups/services/groupService';
+import { getTeachers } from '@/features/teachers/services/teacherService';
+import { getGroupLabel } from '@/features/groups/utils/groupLabel';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -25,6 +29,8 @@ import Reply from 'lucide-react/dist/esm/icons/reply'
 import Send from 'lucide-react/dist/esm/icons/send'
 import Search from 'lucide-react/dist/esm/icons/search'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
+import ArrowLeftRight from 'lucide-react/dist/esm/icons/arrow-left-right'
+import X from 'lucide-react/dist/esm/icons/x'
 
 interface NoteItem {
     id: string;
@@ -72,12 +78,29 @@ export default function StudentNotesPage() {
     const [readOverrides, setReadOverrides] = useState<Record<string, boolean>>({});
     const [editStudent, setEditStudent] = useState<Student | null>(null);
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+    const [groupChangeNote, setGroupChangeNote] = useState<NoteItem | null>(null);
+    const [changingGroup, setChangingGroup] = useState(false);
 
     const { data: allNotes = [], isLoading } = useQuery({
         queryKey: ['student-notes-page', teacherId ?? 'all'],
         queryFn: () => getNotesPage({ teacherId }),
         staleTime: 1000 * 30,
     });
+
+    const { data: groups } = useQuery({
+        queryKey: ['groups'],
+        queryFn: () => getGroups(),
+    });
+
+    const { data: allTeachers } = useQuery({
+        queryKey: ['teachers'],
+        queryFn: () => getTeachers(),
+    });
+
+    const sortedGroups = useMemo(
+        () => [...(groups || [])].sort((a, b) => a.name.localeCompare(b.name, 'ar')),
+        [groups]
+    );
 
     const visibleNotes = useMemo(
         () => (allNotes as NoteItem[])
@@ -170,6 +193,21 @@ export default function StudentNotesPage() {
         setEditingNoteId(null);
         if (student) setEditStudent(student);
         else alert('تعذر تحميل بيانات الطالب');
+    };
+
+    const handleChangeGroup = async (newGroupId: string) => {
+        if (!groupChangeNote) return;
+        setChangingGroup(true);
+        try {
+            await updateStudent(groupChangeNote.studentId, { groupId: newGroupId });
+            setGroupChangeNote(null);
+            refresh();
+        } catch (error) {
+            console.error('Error changing student group:', error);
+            alert('تعذر تغيير المجموعة، حاول مرة أخرى');
+        } finally {
+            setChangingGroup(false);
+        }
     };
 
     const handleSendReply = async (noteId: string) => {
@@ -301,9 +339,18 @@ export default function StudentNotesPage() {
                 {/* Bottom Row: Group & Teacher badges + CreatedBy + Reply button */}
                 <div className="flex flex-wrap flex-row-reverse items-center justify-between gap-3 pt-2">
                     <div className="flex flex-row-reverse flex-wrap gap-2">
-                        <div className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl text-[10px] font-black border border-indigo-100/50">
+                        <div className="flex items-center gap-1 bg-indigo-50 text-indigo-700 pr-3 pl-1.5 py-1.5 rounded-xl text-[10px] font-black border border-indigo-100/50">
                             <Users size={12} />
                             {note.groupName}
+                            {user?.role !== 'schedule_secretary' && (
+                                <button
+                                    onClick={() => setGroupChangeNote(note)}
+                                    className="w-5 h-5 flex items-center justify-center text-indigo-400 hover:text-indigo-700 hover:bg-white rounded-lg transition-colors"
+                                    title="تغيير مجموعة الطالب"
+                                >
+                                    <ArrowLeftRight size={11} />
+                                </button>
+                            )}
                         </div>
                         <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-xl text-[10px] font-black border border-purple-100/50">
                             <User size={12} />
@@ -499,6 +546,44 @@ export default function StudentNotesPage() {
                     refresh();
                 }}
             />
+
+            {/* مودال تغيير مجموعة الطالب */}
+            <FadeIn show={!!groupChangeNote} className="fixed inset-0 z-[300]">
+                <div onClick={() => !changingGroup && setGroupChangeNote(null)} className="absolute inset-0 bg-black/40" />
+            </FadeIn>
+            <SlideIn show={!!groupChangeNote} className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+                <div className="relative bg-white p-5 rounded-[28px] w-full max-w-sm max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-black text-sm text-gray-800">تغيير مجموعة: {groupChangeNote?.studentName}</h3>
+                        <button
+                            onClick={() => setGroupChangeNote(null)}
+                            disabled={changingGroup}
+                            className="p-1.5 text-gray-400 hover:bg-gray-50 rounded-lg disabled:opacity-50"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto space-y-2 -mx-1 px-1">
+                        {sortedGroups.map((group) => (
+                            <button
+                                key={group.id}
+                                disabled={changingGroup}
+                                onClick={() => handleChangeGroup(group.id)}
+                                className={cn(
+                                    "w-full flex items-center justify-between gap-2 rounded-xl p-3 text-right transition-colors disabled:opacity-50",
+                                    group.id === groupChangeNote?.groupId ? "bg-indigo-50 border border-indigo-200" : "bg-gray-50 hover:bg-indigo-50"
+                                )}
+                            >
+                                <span className="text-sm font-bold text-gray-700 truncate">{getGroupLabel(group, allTeachers)}</span>
+                                {group.id === groupChangeNote?.groupId && (
+                                    <span className="text-[10px] font-black text-indigo-600 shrink-0">الحالية</span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </SlideIn>
         </div>
     );
 }

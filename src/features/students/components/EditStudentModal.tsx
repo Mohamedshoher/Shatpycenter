@@ -9,6 +9,8 @@ import { updateStudent } from '../services/studentService'; // خدمة تحدي
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2'; // أيقونة التحميل
 import { Student, Group } from '@/types'; // استيراد نوع بيانات الطالب
 import { getGroups } from '@/features/groups/services/groupService';
+import { getTeachers } from '@/features/teachers/services/teacherService';
+import { getGroupLabel } from '@/features/groups/utils/groupLabel';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'; // مكتبة إدارة حالات البيانات (TanStack Query)
 
 import { AZHAR_CURRICULUM, getStudentAzhariInfo } from '../constants/azharCurriculum';
@@ -41,6 +43,11 @@ export default function EditStudentModal({ student, isOpen, onClose }: EditStude
     const { data: groups } = useQuery({
         queryKey: ['groups'],
         queryFn: () => getGroups()
+    });
+
+    const { data: teachers } = useQuery({
+        queryKey: ['teachers'],
+        queryFn: () => getTeachers()
     });
 
     // مراقبة التغيير في الطالب المختار لتعبئة النموذج ببياناته تلقائياً عند الفتح
@@ -229,7 +236,7 @@ export default function EditStudentModal({ student, isOpen, onClose }: EditStude
                         >
                             <option value="">اختر المجموعة</option>
                             {[...(groups || [])].sort((a, b) => a.name.localeCompare(b.name, 'ar')).map((group: Group) => (
-                                <option key={group.id} value={group.id}>{group.name}</option>
+                                <option key={group.id} value={group.id}>{getGroupLabel(group, teachers)}</option>
                             ))}
                         </select>
                     </div>

@@ -8,6 +8,8 @@ import { addStudent } from '../services/studentService';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { Student, Group } from '@/types';
 import { getGroups } from '@/features/groups/services/groupService';
+import { getTeachers } from '@/features/teachers/services/teacherService';
+import { getGroupLabel } from '@/features/groups/utils/groupLabel';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -39,6 +41,11 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
     const { data: groups } = useQuery({
         queryKey: ['groups'],
         queryFn: () => getGroups()
+    });
+
+    const { data: teachers } = useQuery({
+        queryKey: ['teachers'],
+        queryFn: () => getTeachers()
     });
 
     const myGroups = (groups?.filter((g: Group) => {
@@ -231,7 +238,7 @@ export default function AddStudentModal({ isOpen, onClose, defaultGroupId }: Add
                         >
                             <option value="">اختر المجموعة</option>
                             {myGroups.map((group: Group) => (
-                                <option key={group.id} value={group.id}>{group.name}</option>
+                                <option key={group.id} value={group.id}>{getGroupLabel(group, teachers)}</option>
                             ))}
                         </select>
                     </div>
