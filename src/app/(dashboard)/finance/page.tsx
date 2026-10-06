@@ -11,6 +11,7 @@ import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import X from 'lucide-react/dist/esm/icons/x';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
@@ -62,6 +63,7 @@ export default function FinancePage() {
     const [isDeductionsOpen, setIsDeductionsOpen] = useState(false);
     const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
     const [isDeliveryDeficitOpen, setIsDeliveryDeficitOpen] = useState(false);
+    const [isProfitBreakdownOpen, setIsProfitBreakdownOpen] = useState(false);
     const [isDevelopmentOpen, setIsDevelopmentOpen] = useState(false);
     const queryClient = useQueryClient();
     const { data: teachers = [] } = useTeachers();
@@ -346,6 +348,26 @@ export default function FinancePage() {
             paidCount: paid.length, unpaidCount: unpaid.length, totalCount: activeTeachers.length,
         };
     }, [filteredTransactions, teachers, selectedMonth, monthDeductions, allAttendanceMap, students, groups, allFees, exemptions]);
+
+    // نصيب المدير من كل مدرس شراكة هذا الشهر: إجمالي ما استلمه المدير من مجموعته ناقص نصيب المدرس (حسب نسبته)
+    const directorProfitByTeacher = useMemo(() => {
+        return teacherPaymentStatus.all
+            .filter(t => t.isPartnership && t.directorReceivedTotal > 0)
+            .map(t => ({
+                teacherId: t.teacher.id,
+                teacherName: t.teacher.fullName,
+                percentage: t.partnershipPercentage,
+                directorReceivedTotal: t.directorReceivedTotal,
+                teacherShare: t.basicSalary,
+                directorProfit: Math.round((t.directorReceivedTotal - t.basicSalary) * 100) / 100,
+            }))
+            .sort((a, b) => b.directorProfit - a.directorProfit);
+    }, [teacherPaymentStatus]);
+
+    const totalDirectorProfitFromTeachers = useMemo(
+        () => directorProfitByTeacher.reduce((sum, t) => sum + t.directorProfit, 0),
+        [directorProfitByTeacher]
+    );
 
     const deficitPerTeacher = useMemo(() => {
         const normalize = (s: string) => { if (!s) return ''; return s.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ءئؤ]/g, '').replace(/[ًٌٍَُِّ]/g, '').replace(/\s+/g, '').trim(); };
@@ -1034,6 +1056,63 @@ export default function FinancePage() {
                 </div>
             </SlideIn>
 
+            {/* Profit Breakdown Modal: نصيب المدير من كل مدرس شراكة هذا الشهر */}
+            <FadeIn show={isProfitBreakdownOpen} className="fixed inset-0 z-[100]">
+                <div onClick={() => setIsProfitBreakdownOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            </FadeIn>
+            <SlideIn show={isProfitBreakdownOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-700">
+                            <TrendingUp size={24} />
+                        </div>
+                        <div className="text-right">
+                            <h3 className="text-xl font-black text-gray-900">نصيبك من كل مدرس (شراكة)</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-0.5">مرتبة من الأعلى نصيباً للأقل، عن شهر {months.find(m => m.value === selectedMonth)?.label || selectedMonth}</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsProfitBreakdownOpen(false)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 flex items-center justify-center transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
+                    {directorProfitByTeacher.length === 0 ? (
+                        <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
+                            لا يوجد مدرسون بنظام الشراكة حصّلوا مبالغ هذا الشهر.
+                        </div>
+                    ) : (
+                        directorProfitByTeacher.map((t, index) => (
+                            <div key={t.teacherId} className="bg-white rounded-2xl p-4 border border-green-100 shadow-sm flex items-center justify-between gap-3 hover:border-green-300 transition-all">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="shrink-0 w-7 h-7 rounded-full bg-green-50 text-green-700 flex items-center justify-center text-[11px] font-black">
+                                        {index + 1}
+                                    </div>
+                                    <div className="text-right min-w-0">
+                                        <p className="font-black text-gray-900 text-sm truncate">{t.teacherName}</p>
+                                        <p className="text-[10px] text-gray-400 font-bold">
+                                            نسبته {t.percentage}% | استلمت منه {t.directorReceivedTotal.toLocaleString()} ج.م | نصيبه {t.teacherShare.toLocaleString()} ج.م
+                                        </p>
+                                    </div>
+                                </div>
+                                <p className="shrink-0 text-lg font-black text-green-700 font-sans">
+                                    {t.directorProfit.toLocaleString()} <span className="text-[9px]">ج.م</span>
+                                </p>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="text-2xl font-black text-green-700 font-sans">
+                            {totalDirectorProfitFromTeachers.toLocaleString()} <span className="text-sm">ج.م</span>
+                        </div>
+                        <p className="text-xs font-black text-gray-400">إجمالي نصيبك من كل المدرسين</p>
+                    </div>
+                </div>
+            </SlideIn>
+
             {/* Sticky Header */}
             <div className="sticky top-0 z-[70] bg-white/95 backdrop-blur-xl px-4 py-3 border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
@@ -1210,10 +1289,12 @@ export default function FinancePage() {
                                     </div>
                                 </div>
                             </Link>
-                            <div className={cn(
-                                "rounded-[32px] p-6 shadow-sm transition-all",
-                                balance >= 0 ? "bg-green-700 text-white" : "bg-red-700 text-white"
-                            )}>
+                            <button
+                                onClick={() => setIsProfitBreakdownOpen(true)}
+                                className={cn(
+                                    "rounded-[32px] p-6 shadow-sm transition-all text-right hover:shadow-lg hover:-translate-y-0.5",
+                                    balance >= 0 ? "bg-green-700 text-white" : "bg-red-700 text-white"
+                                )}>
                                 <div className="flex items-center justify-between">
                                     <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
                                         <Wallet size={24} />
@@ -1225,7 +1306,7 @@ export default function FinancePage() {
                                         </h3>
                                     </div>
                                 </div>
-                            </div>
+                            </button>
                         </div>
                     </>
                 )}
