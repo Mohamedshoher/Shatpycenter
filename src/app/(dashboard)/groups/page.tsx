@@ -57,6 +57,10 @@ export default function GroupsPage() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [filters, setFilters] = useState<string[]>(['الكل']);
 
+    // تبويبات القسم (تلقين / نور بيان / قرآن / تجويد) للتنقل بينها بدل ما تختلط كل المجموعات مع بعض
+    const CATEGORY_TABS = ['الكل', 'تلقين', 'نور بيان', 'قرآن', 'تجويد'];
+    const [categoryTab, setCategoryTab] = useState<string>('الكل');
+
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isManageModalOpen, setIsManageModalOpen] = useState(false);
@@ -154,10 +158,9 @@ export default function GroupsPage() {
         });
     }, [groups, teachers, students, attendanceMap]);
 
-    const filteredGroups = (() => {
-        if (!enhancedGroups) return [];
-
-        const baseFiltered = enhancedGroups.filter(group => {
+    // مجموعات المستخدم المسموح له برؤيتها فقط (قبل تطبيق تبويب القسم أو فلاتر الحضور)
+    const roleScopedGroups = useMemo(() => {
+        return enhancedGroups.filter(group => {
             // إذا كان مدرساً، يظهر له مجموعاته فقط
             if (user?.role === 'teacher') {
                 if (group.teacherId !== user.teacherId) return false;
@@ -172,18 +175,38 @@ export default function GroupsPage() {
                 }
             }
 
+            return true;
+        });
+    }, [enhancedGroups, user]);
+
+    // عدد مجموعات كل قسم لعرضه كرقم على كل تبويب
+    const categoryCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        CATEGORY_TABS.forEach(cat => {
+            counts[cat] = cat === 'الكل'
+                ? roleScopedGroups.length
+                : roleScopedGroups.filter(g => g.name.includes(cat)).length;
+        });
+        return counts;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [roleScopedGroups]);
+
+    const filteredGroups = (() => {
+        const baseFiltered = roleScopedGroups.filter(group => {
+            if (categoryTab !== 'الكل' && !group.name.includes(categoryTab)) return false;
+
             const matchesFilter = (() => {
                 if (filters.includes('الكل')) {
                     return true;
                 }
-                
+
                 return filters.some(f => {
                     if (f === 'حضور ممتاز') return group.attendancePercentage >= 90;
                     if (f === 'حضور ضعيف') return group.attendancePercentage > 0 && group.attendancePercentage < 75;
-                    return group.name.includes(f);
+                    return false;
                 });
             })();
-            
+
             return matchesFilter;
         });
 
@@ -263,8 +286,8 @@ export default function GroupsPage() {
 
                                             <FadeIn show={isConfigDropdownOpen}>
                                                 <div className="absolute top-[120%] left-0 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-2">
-                                                        <div className="px-4 py-2 text-[10px] font-black tracking-widest text-gray-400 border-b border-gray-50 uppercase">الفلترة</div>
-                                                        {['الكل', 'قرآن', 'تلقين', 'نور بيان', 'تجويد', 'حضور ممتاز', 'حضور ضعيف'].map((type) => (
+                                                        <div className="px-4 py-2 text-[10px] font-black tracking-widest text-gray-400 border-b border-gray-50 uppercase">الحضور</div>
+                                                        {['الكل', 'حضور ممتاز', 'حضور ضعيف'].map((type) => (
                                                             <button
                                                                 key={type}
                                                                 onClick={(e) => {
@@ -335,6 +358,30 @@ export default function GroupsPage() {
                         />
                     </div>
                 )}
+
+                {/* تبويبات الأقسام: تلقين / نور بيان / قرآن / تجويد، كل قسم لوحده حتى ما يختلطوش ببعض */}
+                <div className="max-w-7xl mx-auto mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                    {CATEGORY_TABS.map((cat) => (
+                        <button
+                            key={cat}
+                            onClick={() => setCategoryTab(cat)}
+                            className={cn(
+                                "shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-[14px] text-xs font-black transition-all border",
+                                categoryTab === cat
+                                    ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-500/20"
+                                    : "bg-white border-gray-100 text-gray-500 hover:border-purple-200 hover:text-purple-600"
+                            )}
+                        >
+                            {cat}
+                            <span className={cn(
+                                "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+                                categoryTab === cat ? "bg-white/25 text-white" : "bg-gray-100 text-gray-400"
+                            )}>
+                                {categoryCounts[cat] ?? 0}
+                            </span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
             <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 mt-2">
