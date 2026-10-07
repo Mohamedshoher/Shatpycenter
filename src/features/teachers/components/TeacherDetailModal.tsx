@@ -729,6 +729,7 @@ export default function TeacherDetailModal({
                             handleDeleteFee={handleDeleteFee}
                             collectionOverage={collectionOverage}
                             onQuickReceiveDeficit={handleQuickReceiveDeficit}
+                            isDirector={user?.role === 'director'}
                         />
                     </Suspense>
                 );
