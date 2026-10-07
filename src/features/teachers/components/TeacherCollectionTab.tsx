@@ -10,6 +10,7 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import { useQueryClient } from '@tanstack/react-query';
 import { Teacher } from '@/types';
+import { cn } from '@/lib/utils';
 
 // ==========================================================
 // مكون تبويب التحصيل المالي (TeacherCollectionTab)
@@ -48,6 +49,7 @@ interface TeacherCollectionTabProps {
     unpaidStudents: UnpaidStudent[];
     handleDeleteFee: (feeId: string, studentName: string) => void;
     collectionOverage: number;
+    onQuickReceiveDeficit?: (amount: number) => void;
 }
 
 export const TeacherCollectionTab = ({
@@ -70,8 +72,10 @@ export const TeacherCollectionTab = ({
     setShowDeficitDetails,
     realDeficit,
     unpaidStudents,
-    collectionOverage
+    collectionOverage,
+    onQuickReceiveDeficit
 }: TeacherCollectionTabProps) => {
+    const deficitAmount = Math.max(0, totalCollected - totalHandedOver);
     
     // أداة لإعادة تحديث البيانات عند الحاجة
     const queryClient = useQueryClient();
@@ -185,13 +189,22 @@ export const TeacherCollectionTab = ({
                     <div className="mt-3 w-10 h-1 bg-emerald-100 rounded-full" />
                 </div>
 
-                {/* عجز التسليم */}
-                <div className="bg-gradient-to-br from-rose-50 to-white p-4 md:p-6 rounded-[32px] border border-rose-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
+                {/* عجز التسليم: اضغط على المبلغ لو المدرس سلّمه بالفعل عشان يتسجل استلام مباشرة */}
+                <div
+                    onClick={() => !isTeacher && deficitAmount > 0 && onQuickReceiveDeficit?.(deficitAmount)}
+                    className={cn(
+                        "bg-gradient-to-br from-rose-50 to-white p-4 md:p-6 rounded-[32px] border border-rose-100 shadow-sm flex flex-col items-center justify-center text-center transition-transform",
+                        !isTeacher && deficitAmount > 0 ? "cursor-pointer hover:scale-[1.02] hover:border-rose-300" : "hover:scale-[1.02]"
+                    )}
+                    title={!isTeacher && deficitAmount > 0 ? "اضغط لتسجيل استلام هذا المبلغ من المدرس" : undefined}
+                >
                     <p className="text-[10px] md:text-xs font-black text-rose-400 mb-2 uppercase tracking-wide">عجز التسليم (معه)</p>
-                    <p className="text-xl md:text-3xl font-black text-rose-600 font-sans">{Math.max(0, totalCollected - totalHandedOver).toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
+                    <p className="text-xl md:text-3xl font-black text-rose-600 font-sans">{deficitAmount.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
                     <div className="mt-3 flex items-center gap-1">
                         <AlertCircle size={10} className="text-rose-400" />
-                        <span className="text-[9px] font-bold text-rose-400">عهدة طرف المدرس</span>
+                        <span className="text-[9px] font-bold text-rose-400">
+                            {!isTeacher && deficitAmount > 0 ? 'اضغط لتسجيل الاستلام' : 'عهدة طرف المدرس'}
+                        </span>
                     </div>
                 </div>
 

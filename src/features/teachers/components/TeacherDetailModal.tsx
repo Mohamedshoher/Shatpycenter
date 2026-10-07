@@ -490,6 +490,45 @@ export default function TeacherDetailModal({
         }
     };
 
+    // 9ب. تسجيل استلام عجز التسليم بضغطة واحدة من بطاقة "عجز التسليم (معه)" مباشرة
+    const handleQuickReceiveDeficit = async (deficitAmount: number) => {
+        if (!deficitAmount || !teacher || !user) return;
+        if (!confirm(`هل أنت متأكد من تسجيل استلام ${deficitAmount.toLocaleString()} ج.م من ${teacher.fullName}؟`)) return;
+
+        try {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const transactionDate = selectedMonthRaw === currentMonthRaw ? todayStr : `${selectedMonthRaw}-01`;
+
+            let finalDescription = `تسليم عجز التحصيل - ${teacher.fullName}`;
+            if (selectedMonthRaw !== todayStr.substring(0, 7)) {
+                const formattedToday = new Intl.DateTimeFormat('ar-EG', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                }).format(now);
+                finalDescription += ` (استلم فعلياً بتاريخ: ${formattedToday})`;
+            }
+
+            await addTransaction({
+                amount: deficitAmount,
+                type: 'income',
+                category: 'تحصيل من مدرس',
+                date: transactionDate,
+                description: finalDescription,
+                relatedUserId: teacher.id,
+                performedBy: user?.uid || user?.displayName || 'غير معروف'
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['handovers', teacher.id, selectedMonthRaw] });
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            alert('تم تسجيل استلام المبلغ بنجاح');
+        } catch (error) {
+            console.error("Error quick-receiving deficit:", error);
+            alert('حدث خطأ أثناء تسجيل العملية');
+        }
+    };
+
     // 10. حفظ تعديلات الانضباط/المكافأة من التقويم
     const handleAddDiscipline = async () => {
         if (!activeDayMenu || !teacher) return;
@@ -689,6 +728,7 @@ export default function TeacherDetailModal({
                             unpaidStudents={unpaidStudents}
                             handleDeleteFee={handleDeleteFee}
                             collectionOverage={collectionOverage}
+                            onQuickReceiveDeficit={handleQuickReceiveDeficit}
                         />
                     </Suspense>
                 );
