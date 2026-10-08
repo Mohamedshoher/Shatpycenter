@@ -38,7 +38,7 @@ import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction, addTr
 import { updateGroup } from '@/features/groups/services/groupService';
 import { createNotification } from '@/features/notifications/services/notificationService';
 import { useTeacherDashboard } from '@/features/teachers/hooks/useTeacherDashboard';
-import { TeacherDeficitModal } from './TeacherDeficitModal';
+import { TeacherDeficitModal, DeficitTab } from './TeacherDeficitModal';
 import { TeacherGroupsTab } from './TeacherGroupsTab';
 import { TeacherAgreementTab } from './TeacherAgreementTab';
 import { getErrorMessage } from '@/lib/error-message';
@@ -234,6 +234,7 @@ export default function TeacherDetailModal({
         managerCollectedPayments = [],
         totalCollectedByManager = 0,
         unpaidStudents = [],
+        allExpectedStudents = [],
         realDeficit = 0,
         collectionHistoryMapped = [],
         totalHandedOver = 0,
@@ -299,7 +300,7 @@ export default function TeacherDetailModal({
     const [notes, setNotes] = useState(''); // ملاحظات التحصيل
 
     // حالات عجز المجموعة
-    const [deficitTab, setDeficitTab] = useState<'unpaid' | 'exempted'>('unpaid');
+    const [deficitTab, setDeficitTab] = useState<DeficitTab>('unpaid');
 
     // حالات تقويم الحضور
     const [activeDayMenu, setActiveDayMenu] = useState<number | null>(null);
@@ -723,7 +724,8 @@ export default function TeacherDetailModal({
                             collectionHistoryMapped={collectionHistoryMapped}
                             setShowCollectedDetails={setShowCollectedDetails}
                             setShowManagerCollectedDetails={setShowManagerCollectedDetails}
-                            setShowDeficitDetails={setShowDeficitDetails}
+                            setShowDeficitDetails={(val) => { setDeficitTab('unpaid'); setShowDeficitDetails(val); }}
+                            onShowExpectedDetails={() => { setDeficitTab('paid'); setShowDeficitDetails(true); }}
                             realDeficit={realDeficit}
                             unpaidStudents={unpaidStudents}
                             handleDeleteFee={handleDeleteFee}
@@ -919,8 +921,8 @@ export default function TeacherDetailModal({
                         isOpen={showDeficitDetails}
                         onClose={() => setShowDeficitDetails(false)}
                         realDeficit={realDeficit}
-                        unpaidStudents={unpaidStudents}
-                        deficitTab={deficitTab as 'unpaid' | 'exempted'}
+                        allStudents={allExpectedStudents}
+                        deficitTab={deficitTab}
                         setDeficitTab={(tab) => setDeficitTab(tab)}
                         isDirector={isDirector}
                         handleExemptStudent={handleExemptStudent}

@@ -112,9 +112,9 @@ export const useTeacherDashboard = (
             totalHandedOver,
         } = salaryStats;
 
-        // 4. الطلاب الذين لم يدفعوا
+        // 4. كل الطلاب المتوقع منهم الدفع هذا الشهر (مدفوع + غير مدفوع + معفى)
         const exemptedStudentIds = exemptions.map((e) => e.student_id);
-        const unpaidStudents = students
+        const allExpectedStudents = students
             .filter(s => {
                 const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
                 if (!isMember) return false;
@@ -138,8 +138,10 @@ export const useTeacherDashboard = (
                     archivedDate: student.archivedDate,
                     parentPhone: student.parentPhone
                 };
-            })
-            .filter(s => s.remaining > 0 || s.isExempted);
+            });
+
+        // الطلاب الذين لم يدفعوا بعد (أو معفيون) - تستخدم في بطاقة عجز المجموعة
+        const unpaidStudents = allExpectedStudents.filter(s => s.remaining > 0 || s.isExempted);
 
         const realDeficit = unpaidStudents
             .filter(s => !s.isExempted)
@@ -166,6 +168,7 @@ export const useTeacherDashboard = (
             managerCollectedPayments,
             totalCollectedByManager,
             unpaidStudents,
+            allExpectedStudents,
             realDeficit,
             collectionHistoryMapped,
             totalHandedOver,

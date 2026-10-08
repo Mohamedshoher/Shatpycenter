@@ -46,6 +46,7 @@ interface TeacherCollectionTabProps {
     setShowCollectedDetails: (val: boolean) => void;
     setShowManagerCollectedDetails: (val: boolean) => void;
     setShowDeficitDetails: (val: boolean) => void;
+    onShowExpectedDetails?: () => void;
     realDeficit: number;
     unpaidStudents: UnpaidStudent[];
     handleDeleteFee: (feeId: string, studentName: string) => void;
@@ -72,6 +73,7 @@ export const TeacherCollectionTab = ({
     setShowCollectedDetails,
     setShowManagerCollectedDetails,
     setShowDeficitDetails,
+    onShowExpectedDetails,
     realDeficit,
     unpaidStudents,
     collectionOverage,
@@ -174,11 +176,15 @@ export const TeacherCollectionTab = ({
 
             {/* 3. بطاقات الإحصائيات المالية */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-                {/* المصروفات المتوقعة */}
-                <div className="bg-gradient-to-br from-indigo-50 to-white p-4 md:p-6 rounded-[32px] border border-indigo-100 shadow-sm flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-transform">
+                {/* المصروفات المتوقعة: اضغط لعرض تفاصيل من دفع ومن لم يدفع ومن معفى */}
+                <button
+                    onClick={() => onShowExpectedDetails?.()}
+                    className="bg-gradient-to-br from-indigo-50 to-white p-4 md:p-6 rounded-[32px] border border-indigo-100 shadow-sm flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-transform"
+                >
                     <p className="text-[10px] md:text-xs font-black text-indigo-400 mb-2 uppercase tracking-wide">إجمالي المصروفات المتوقعة</p>
                     <p className="text-xl md:text-3xl font-black text-indigo-700 font-sans">{expectedExpenses.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
-                </div>
+                    <span className="mt-3 px-4 py-1.5 bg-indigo-100/50 text-indigo-600 rounded-full text-[10px] font-black group-hover:bg-indigo-600 group-hover:text-white transition-all">تفاصيل الطلاب</span>
+                </button>
 
                 {/* ما حصله المدرس */}
                 <div className="bg-gradient-to-br from-blue-50 to-white p-4 md:p-6 rounded-[32px] border border-blue-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
