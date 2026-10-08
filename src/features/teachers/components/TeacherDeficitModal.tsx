@@ -4,6 +4,7 @@ import X from 'lucide-react/dist/esm/icons/x'
 import Gift from 'lucide-react/dist/esm/icons/gift'
 import UserX from 'lucide-react/dist/esm/icons/user-x';
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
+import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import type { UnpaidStudent } from './TeacherCollectionTab';
 
@@ -83,6 +84,12 @@ export const TeacherDeficitModal = ({
                                             <div className="text-right">
                                                 <h4 className="font-bold">{student.name}</h4>
                                                 <p className="text-[10px] text-gray-400">{student.groupName}</p>
+                                                {student.enrollmentDate && (
+                                                    <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
+                                                        <CalendarClock size={11} />
+                                                        {student.archivedDate ? 'عاد من الأرشيف بتاريخ' : 'التحق بتاريخ'}: {student.enrollmentDate}
+                                                    </p>
+                                                )}
                                             </div>
                                             <p className={cn("text-lg font-black", student.isExempted ? "text-green-600 line-through" : "text-red-600")}>
                                                 {student.remaining} ج.م

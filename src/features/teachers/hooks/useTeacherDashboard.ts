@@ -135,6 +135,7 @@ export const useTeacherDashboard = (
                     remaining: Math.max(0, remaining),
                     isExempted,
                     enrollmentDate: student.enrollmentDate,
+                    archivedDate: student.archivedDate,
                     parentPhone: student.parentPhone
                 };
             })

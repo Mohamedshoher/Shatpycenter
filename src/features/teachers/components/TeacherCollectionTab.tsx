@@ -24,6 +24,7 @@ export interface UnpaidStudent {
     remaining: number;
     isExempted: boolean;
     enrollmentDate?: string;
+    archivedDate?: string;
     parentPhone?: string;
 }
 
