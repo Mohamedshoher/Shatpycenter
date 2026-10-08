@@ -90,6 +90,30 @@ export const useTeacherDashboard = (
                 };
             });
 
+        // 2ب. حساب ما حصّله مدرّسون/موظفون آخرون لطلاب هذه المجموعة (قائمة تفاصيل)
+        // مبالغ محصّلة فعلاً من طلاب المجموعة لكن بواسطة شخص غير هذا المعلم وغير المدير -
+        // كانت تختفي تماماً من "ما حصله المدرس" و"المحصل من المدير" معاً، فبقت بطاقة منفصلة
+        const otherTeacherCollectedPayments = allFees
+            .filter(f => {
+                const student = students.find(s => s.id === f.studentId);
+                const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+                return isTeacherStudent && isOtherTeacher(f.createdBy);
+            })
+            .map(f => {
+                const student = students.find(s => s.id === f.studentId);
+                return {
+                    id: f.receipt,
+                    feeId: f.id,
+                    studentName: student?.fullName || 'غير معروف',
+                    amount: Number(f.amount.replace(/[^0-9.]/g, '')) || 0,
+                    date: f.date,
+                    groupName: groups.find(g => g.id === student?.groupId)?.name || '-',
+                    collectedBy: f.createdBy || '-'
+                };
+            });
+
+        const totalCollectedByOtherTeacher = otherTeacherCollectedPayments.reduce((sum, p) => sum + p.amount, 0);
+
         // 3. حساب الراتب والإحصائيات المالية (دالة موحّدة مع صفحة المالية لضمان التطابق)
         const salaryStats: TeacherSalaryStats = computeTeacherSalaryStats({
             teacher,
@@ -167,6 +191,8 @@ export const useTeacherDashboard = (
             totalCollected,
             managerCollectedPayments,
             totalCollectedByManager,
+            otherTeacherCollectedPayments,
+            totalCollectedByOtherTeacher,
             unpaidStudents,
             allExpectedStudents,
             realDeficit,

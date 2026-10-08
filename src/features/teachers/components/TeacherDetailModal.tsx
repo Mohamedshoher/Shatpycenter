@@ -233,6 +233,8 @@ export default function TeacherDetailModal({
         totalCollected = 0,
         managerCollectedPayments = [],
         totalCollectedByManager = 0,
+        otherTeacherCollectedPayments = [],
+        totalCollectedByOtherTeacher = 0,
         unpaidStudents = [],
         allExpectedStudents = [],
         realDeficit = 0,
@@ -293,6 +295,7 @@ export default function TeacherDetailModal({
     // ==========================================
     const [showCollectedDetails, setShowCollectedDetails] = useState(false);
     const [showManagerCollectedDetails, setShowManagerCollectedDetails] = useState(false);
+    const [showOtherTeacherCollectedDetails, setShowOtherTeacherCollectedDetails] = useState(false);
     const [showDeficitDetails, setShowDeficitDetails] = useState(false);
     // تبويب "التحصيل" غير متاح للمشرف، فنفتح على "الحضور" بدلاً منه كتبويب افتراضي
     const [activeTab, setActiveTab] = useState(user?.role === 'supervisor' ? 'attendance' : 'collection'); // التبويب النشط
@@ -724,6 +727,8 @@ export default function TeacherDetailModal({
                             collectionHistoryMapped={collectionHistoryMapped}
                             setShowCollectedDetails={setShowCollectedDetails}
                             setShowManagerCollectedDetails={setShowManagerCollectedDetails}
+                            setShowOtherTeacherCollectedDetails={setShowOtherTeacherCollectedDetails}
+                            totalCollectedByOtherTeacher={totalCollectedByOtherTeacher}
                             setShowDeficitDetails={(val) => { setDeficitTab('unpaid'); setShowDeficitDetails(val); }}
                             onShowExpectedDetails={() => { setDeficitTab('paid'); setShowDeficitDetails(true); }}
                             realDeficit={realDeficit}
@@ -913,6 +918,20 @@ export default function TeacherDetailModal({
                             isDirector={isDirector}
                             onDeleteFee={handleDeleteFee}
                             accentColor="indigo"
+                        />
+                    </Suspense>
+
+                    {/* نافذة تفاصيل ما حصّله مدرّسون آخرون لطلاب هذه المجموعة */}
+                    <Suspense fallback={null}>
+                        <TeacherCollectedPaymentsModal
+                            isOpen={showOtherTeacherCollectedDetails}
+                            onClose={() => setShowOtherTeacherCollectedDetails(false)}
+                            title="تحصيل مدرس آخر"
+                            totalAmount={totalCollectedByOtherTeacher}
+                            payments={otherTeacherCollectedPayments}
+                            isDirector={isDirector}
+                            onDeleteFee={handleDeleteFee}
+                            accentColor="violet"
                         />
                     </Suspense>
 

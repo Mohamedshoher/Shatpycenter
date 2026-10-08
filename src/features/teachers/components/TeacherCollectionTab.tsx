@@ -45,6 +45,8 @@ interface TeacherCollectionTabProps {
     collectionHistoryMapped: { id: string, amount: string, date: string, timestamp?: number, type: string, notes: string }[];
     setShowCollectedDetails: (val: boolean) => void;
     setShowManagerCollectedDetails: (val: boolean) => void;
+    setShowOtherTeacherCollectedDetails: (val: boolean) => void;
+    totalCollectedByOtherTeacher: number;
     setShowDeficitDetails: (val: boolean) => void;
     onShowExpectedDetails?: () => void;
     realDeficit: number;
@@ -72,6 +74,8 @@ export const TeacherCollectionTab = ({
     collectionHistoryMapped,
     setShowCollectedDetails,
     setShowManagerCollectedDetails,
+    setShowOtherTeacherCollectedDetails,
+    totalCollectedByOtherTeacher,
     setShowDeficitDetails,
     onShowExpectedDetails,
     realDeficit,
@@ -199,6 +203,15 @@ export const TeacherCollectionTab = ({
                     <p className="text-xl md:text-3xl font-black text-slate-800 font-sans">{totalCollectedByManager.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
                     <button onClick={() => setShowManagerCollectedDetails(true)} className="mt-3 px-4 py-1.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black hover:bg-slate-800 hover:text-white transition-all">عرض الطلاب</button>
                 </div>
+
+                {/* تحصيل مدرس آخر - مبالغ حصّلها مدرّس/موظف غير صاحب المجموعة لطلابها */}
+                {totalCollectedByOtherTeacher > 0 && (
+                    <div className="bg-gradient-to-br from-violet-50 to-white p-4 md:p-6 rounded-[32px] border border-violet-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
+                        <p className="text-[10px] md:text-xs font-black text-violet-500 mb-2 uppercase tracking-wide">تحصيل مدرس آخر</p>
+                        <p className="text-xl md:text-3xl font-black text-violet-700 font-sans">{totalCollectedByOtherTeacher.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
+                        <button onClick={() => setShowOtherTeacherCollectedDetails(true)} className="mt-3 px-4 py-1.5 bg-violet-100 text-violet-600 rounded-full text-[10px] font-black hover:bg-violet-600 hover:text-white transition-all">عرض التفاصيل</button>
+                    </div>
+                )}
 
                 {/* المسلم للمدير */}
                 <div className="bg-gradient-to-br from-emerald-50 to-white p-4 md:p-6 rounded-[32px] border border-emerald-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
