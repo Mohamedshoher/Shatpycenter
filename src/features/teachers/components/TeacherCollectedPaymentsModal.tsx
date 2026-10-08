@@ -14,6 +14,7 @@ interface PaymentItem {
     date: string;
     groupName: string;
     isTransferred?: boolean | null;
+    collectedBy?: string;
 }
 
 interface Props {
@@ -24,7 +25,7 @@ interface Props {
     payments: PaymentItem[];
     isDirector: boolean;
     onDeleteFee: (feeId: string, studentName: string) => void;
-    accentColor?: 'blue' | 'indigo';
+    accentColor?: 'blue' | 'indigo' | 'violet';
 }
 
 export const TeacherCollectedPaymentsModal = ({
@@ -37,8 +38,10 @@ export const TeacherCollectedPaymentsModal = ({
         return parseInt(converted.replace(/[^0-9]/g, '')) || 0;
     };
 
-    const colorClasses = accentColor === 'blue' 
+    const colorClasses = accentColor === 'blue'
         ? { bg: 'bg-blue-50', text: 'text-blue-600', border: 'hover:border-blue-200' }
+        : accentColor === 'violet'
+        ? { bg: 'bg-violet-50', text: 'text-violet-600', border: 'hover:border-violet-200' }
         : { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'hover:border-indigo-200' };
 
     return (
@@ -90,6 +93,9 @@ export const TeacherCollectedPaymentsModal = ({
                                                                 <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-bold", colorClasses.bg, colorClasses.text)}>{payment.groupName}</span>
                                                                 {payment.isTransferred && (
                                                                     <span className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-amber-50 text-amber-600">تم نقله</span>
+                                                                )}
+                                                                {payment.collectedBy && (
+                                                                    <span className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-violet-50 text-violet-600">حصّله: {payment.collectedBy}</span>
                                                                 )}
                                                                 <span className="text-[10px] text-gray-400 font-sans">{payment.date}</span>
                                                             </div>

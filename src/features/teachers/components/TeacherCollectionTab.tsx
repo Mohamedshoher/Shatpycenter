@@ -24,6 +24,7 @@ export interface UnpaidStudent {
     remaining: number;
     isExempted: boolean;
     enrollmentDate?: string;
+    archivedDate?: string;
     parentPhone?: string;
 }
 
@@ -44,12 +45,16 @@ interface TeacherCollectionTabProps {
     collectionHistoryMapped: { id: string, amount: string, date: string, timestamp?: number, type: string, notes: string }[];
     setShowCollectedDetails: (val: boolean) => void;
     setShowManagerCollectedDetails: (val: boolean) => void;
+    setShowOtherTeacherCollectedDetails: (val: boolean) => void;
+    totalCollectedByOtherTeacher: number;
     setShowDeficitDetails: (val: boolean) => void;
+    onShowExpectedDetails?: () => void;
     realDeficit: number;
     unpaidStudents: UnpaidStudent[];
     handleDeleteFee: (feeId: string, studentName: string) => void;
     collectionOverage: number;
     onQuickReceiveDeficit?: (amount: number) => void;
+    isDirector: boolean;
 }
 
 export const TeacherCollectionTab = ({
@@ -69,14 +74,27 @@ export const TeacherCollectionTab = ({
     collectionHistoryMapped,
     setShowCollectedDetails,
     setShowManagerCollectedDetails,
+    setShowOtherTeacherCollectedDetails,
+    totalCollectedByOtherTeacher,
     setShowDeficitDetails,
+    onShowExpectedDetails,
     realDeficit,
     unpaidStudents,
     collectionOverage,
-    onQuickReceiveDeficit
+    onQuickReceiveDeficit,
+    isDirector
 }: TeacherCollectionTabProps) => {
     const deficitAmount = Math.max(0, totalCollected - totalHandedOver);
-    
+
+    // ربح المدير من هذا المدرس تحديداً (نظام الشراكة فقط): إجمالي ما استلمه المدير
+    // من مجموعة هذا المدرس ناقص نصيب المدرس حسب نسبته - يظهر للمدير فقط ولا يظهر
+    // للمدرس نفسه ولا لأي مستخدم آخر مهما كان
+    const isPartnership = teacher?.accountingType === 'partnership';
+    const partnershipPercentage = Number(teacher?.partnershipPercentage) || 0;
+    const directorReceivedTotal = totalCollectedByManager + totalHandedOver;
+    const teacherShare = isPartnership ? (directorReceivedTotal * partnershipPercentage) / 100 : 0;
+    const directorProfit = Math.round((directorReceivedTotal - teacherShare) * 100) / 100;
+
     // أداة لإعادة تحديث البيانات عند الحاجة
     const queryClient = useQueryClient();
 
@@ -162,11 +180,15 @@ export const TeacherCollectionTab = ({
 
             {/* 3. بطاقات الإحصائيات المالية */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-                {/* المصروفات المتوقعة */}
-                <div className="bg-gradient-to-br from-indigo-50 to-white p-4 md:p-6 rounded-[32px] border border-indigo-100 shadow-sm flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-transform">
+                {/* المصروفات المتوقعة: اضغط لعرض تفاصيل من دفع ومن لم يدفع ومن معفى */}
+                <button
+                    onClick={() => onShowExpectedDetails?.()}
+                    className="bg-gradient-to-br from-indigo-50 to-white p-4 md:p-6 rounded-[32px] border border-indigo-100 shadow-sm flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-transform"
+                >
                     <p className="text-[10px] md:text-xs font-black text-indigo-400 mb-2 uppercase tracking-wide">إجمالي المصروفات المتوقعة</p>
                     <p className="text-xl md:text-3xl font-black text-indigo-700 font-sans">{expectedExpenses.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
-                </div>
+                    <span className="mt-3 px-4 py-1.5 bg-indigo-100/50 text-indigo-600 rounded-full text-[10px] font-black group-hover:bg-indigo-600 group-hover:text-white transition-all">تفاصيل الطلاب</span>
+                </button>
 
                 {/* ما حصله المدرس */}
                 <div className="bg-gradient-to-br from-blue-50 to-white p-4 md:p-6 rounded-[32px] border border-blue-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
@@ -181,6 +203,15 @@ export const TeacherCollectionTab = ({
                     <p className="text-xl md:text-3xl font-black text-slate-800 font-sans">{totalCollectedByManager.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
                     <button onClick={() => setShowManagerCollectedDetails(true)} className="mt-3 px-4 py-1.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black hover:bg-slate-800 hover:text-white transition-all">عرض الطلاب</button>
                 </div>
+
+                {/* تحصيل مدرس آخر - مبالغ حصّلها مدرّس/موظف غير صاحب المجموعة لطلابها */}
+                {totalCollectedByOtherTeacher > 0 && (
+                    <div className="bg-gradient-to-br from-violet-50 to-white p-4 md:p-6 rounded-[32px] border border-violet-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
+                        <p className="text-[10px] md:text-xs font-black text-violet-500 mb-2 uppercase tracking-wide">تحصيل مدرس آخر</p>
+                        <p className="text-xl md:text-3xl font-black text-violet-700 font-sans">{totalCollectedByOtherTeacher.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
+                        <button onClick={() => setShowOtherTeacherCollectedDetails(true)} className="mt-3 px-4 py-1.5 bg-violet-100 text-violet-600 rounded-full text-[10px] font-black hover:bg-violet-600 hover:text-white transition-all">عرض التفاصيل</button>
+                    </div>
+                )}
 
                 {/* المسلم للمدير */}
                 <div className="bg-gradient-to-br from-emerald-50 to-white p-4 md:p-6 rounded-[32px] border border-emerald-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
@@ -230,6 +261,17 @@ export const TeacherCollectionTab = ({
                         <p className="text-xl md:text-3xl font-black text-violet-700 font-sans">{collectionOverage.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
                         <div className="mt-3 flex items-center gap-1">
                             <span className="text-[9px] font-bold text-violet-400">مستلم زيادة عن المحصل</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* ربحك من هذا المدرس (شراكة) - للمدير فقط، لا يظهر للمدرس ولا لأي مستخدم آخر */}
+                {isDirector && isPartnership && directorReceivedTotal > 0 && (
+                    <div className="bg-gradient-to-br from-green-50 to-white p-4 md:p-6 rounded-[32px] border border-green-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
+                        <p className="text-[10px] md:text-xs font-black text-green-500 mb-2 uppercase tracking-wide">ربحك من هذا المدرس</p>
+                        <p className="text-xl md:text-3xl font-black text-green-700 font-sans">{directorProfit.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
+                        <div className="mt-3 flex items-center gap-1">
+                            <span className="text-[9px] font-bold text-green-500">بعد نسبة المدرس ({partnershipPercentage}%)</span>
                         </div>
                     </div>
                 )}

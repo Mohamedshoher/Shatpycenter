@@ -90,6 +90,30 @@ export const useTeacherDashboard = (
                 };
             });
 
+        // 2ب. حساب ما حصّله مدرّسون/موظفون آخرون لطلاب هذه المجموعة (قائمة تفاصيل)
+        // مبالغ محصّلة فعلاً من طلاب المجموعة لكن بواسطة شخص غير هذا المعلم وغير المدير -
+        // كانت تختفي تماماً من "ما حصله المدرس" و"المحصل من المدير" معاً، فبقت بطاقة منفصلة
+        const otherTeacherCollectedPayments = allFees
+            .filter(f => {
+                const student = students.find(s => s.id === f.studentId);
+                const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+                return isTeacherStudent && isOtherTeacher(f.createdBy);
+            })
+            .map(f => {
+                const student = students.find(s => s.id === f.studentId);
+                return {
+                    id: f.receipt,
+                    feeId: f.id,
+                    studentName: student?.fullName || 'غير معروف',
+                    amount: Number(f.amount.replace(/[^0-9.]/g, '')) || 0,
+                    date: f.date,
+                    groupName: groups.find(g => g.id === student?.groupId)?.name || '-',
+                    collectedBy: f.createdBy || '-'
+                };
+            });
+
+        const totalCollectedByOtherTeacher = otherTeacherCollectedPayments.reduce((sum, p) => sum + p.amount, 0);
+
         // 3. حساب الراتب والإحصائيات المالية (دالة موحّدة مع صفحة المالية لضمان التطابق)
         const salaryStats: TeacherSalaryStats = computeTeacherSalaryStats({
             teacher,
@@ -112,9 +136,9 @@ export const useTeacherDashboard = (
             totalHandedOver,
         } = salaryStats;
 
-        // 4. الطلاب الذين لم يدفعوا
+        // 4. كل الطلاب المتوقع منهم الدفع هذا الشهر (مدفوع + غير مدفوع + معفى)
         const exemptedStudentIds = exemptions.map((e) => e.student_id);
-        const unpaidStudents = students
+        const allExpectedStudents = students
             .filter(s => {
                 const isMember = s.groupId && teacherGroupIds.includes(s.groupId) && s.status !== 'archived';
                 if (!isMember) return false;
@@ -135,10 +159,13 @@ export const useTeacherDashboard = (
                     remaining: Math.max(0, remaining),
                     isExempted,
                     enrollmentDate: student.enrollmentDate,
+                    archivedDate: student.archivedDate,
                     parentPhone: student.parentPhone
                 };
-            })
-            .filter(s => s.remaining > 0 || s.isExempted);
+            });
+
+        // الطلاب الذين لم يدفعوا بعد (أو معفيون) - تستخدم في بطاقة عجز المجموعة
+        const unpaidStudents = allExpectedStudents.filter(s => s.remaining > 0 || s.isExempted);
 
         const realDeficit = unpaidStudents
             .filter(s => !s.isExempted)
@@ -164,7 +191,10 @@ export const useTeacherDashboard = (
             totalCollected,
             managerCollectedPayments,
             totalCollectedByManager,
+            otherTeacherCollectedPayments,
+            totalCollectedByOtherTeacher,
             unpaidStudents,
+            allExpectedStudents,
             realDeficit,
             collectionHistoryMapped,
             totalHandedOver,

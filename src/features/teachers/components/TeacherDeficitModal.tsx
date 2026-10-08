@@ -4,16 +4,19 @@ import X from 'lucide-react/dist/esm/icons/x'
 import Gift from 'lucide-react/dist/esm/icons/gift'
 import UserX from 'lucide-react/dist/esm/icons/user-x';
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
+import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
 import type { UnpaidStudent } from './TeacherCollectionTab';
+
+export type DeficitTab = 'paid' | 'unpaid' | 'exempted';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     realDeficit: number;
-    unpaidStudents: UnpaidStudent[];
-    deficitTab: 'unpaid' | 'exempted';
-    setDeficitTab: (tab: 'unpaid' | 'exempted') => void;
+    allStudents: UnpaidStudent[];
+    deficitTab: DeficitTab;
+    setDeficitTab: (tab: DeficitTab) => void;
     isDirector: boolean;
     handleExemptStudent: (id: string, name: string, amount: number) => void;
     handleRemoveExemption: (id: string, name: string) => void;
@@ -23,14 +26,18 @@ interface Props {
 }
 
 export const TeacherDeficitModal = ({
-    isOpen, onClose, realDeficit, unpaidStudents, 
-    deficitTab, setDeficitTab, isDirector, 
+    isOpen, onClose, realDeficit, allStudents,
+    deficitTab, setDeficitTab, isDirector,
     handleExemptStudent, handleRemoveExemption,
     monthName, senderName, selectedMonthRaw
 }: Props) => {
-    const displayedStudents = unpaidStudents
-        .filter(s => deficitTab === 'unpaid' ? !s.isExempted : s.isExempted)
-        .sort((a, b) => a.remaining - b.remaining);
+    const paidStudents = allStudents.filter(s => !s.isExempted && s.remaining <= 0);
+    const unpaidStudents = allStudents.filter(s => !s.isExempted && s.remaining > 0);
+    const exemptedStudents = allStudents.filter(s => s.isExempted);
+
+    const displayedStudents = (
+        deficitTab === 'paid' ? paidStudents : deficitTab === 'unpaid' ? unpaidStudents : exemptedStudents
+    ).slice().sort((a, b) => deficitTab === 'paid' ? a.name.localeCompare(b.name, 'ar') : a.remaining - b.remaining);
 
     const [year, month] = (selectedMonthRaw || '').split('-').map(Number);
     const day20 = new Date(year, month - 1, 20);
@@ -53,18 +60,22 @@ export const TeacherDeficitModal = ({
 
                     {/* تبويبات العجز */}
                     <div className="px-6 py-4 bg-amber-50/30 border-b border-amber-100/50 shrink-0">
+                        <div className="bg-white rounded-3xl p-3 text-center border border-amber-100/50 shadow-sm mb-3">
+                            <p className="text-[9px] font-bold text-amber-500">إجمالي العجز</p>
+                            <p className="text-lg font-black text-amber-700">{realDeficit.toLocaleString()}</p>
+                        </div>
                         <div className="grid grid-cols-3 gap-3">
-                            <div className="bg-white rounded-3xl p-3 text-center border border-amber-100/50 shadow-sm">
-                                <p className="text-[9px] font-bold text-amber-500">إجمالي العجز</p>
-                                <p className="text-lg font-black text-amber-700">{realDeficit.toLocaleString()}</p>
-                            </div>
+                            <button onClick={() => setDeficitTab('paid')} className={cn("rounded-3xl p-3 border transition-all", deficitTab === 'paid' ? "bg-blue-50 border-blue-200 shadow-sm" : "bg-white border-slate-100")}>
+                                <p className="text-[9px] font-bold text-blue-500">دفعوا</p>
+                                <p className="text-lg font-black text-blue-600">{paidStudents.length}</p>
+                            </button>
                             <button onClick={() => setDeficitTab('unpaid')} className={cn("rounded-3xl p-3 border transition-all", deficitTab === 'unpaid' ? "bg-red-50 border-red-200 shadow-sm" : "bg-white border-slate-100")}>
                                 <p className="text-[9px] font-bold text-red-500">لم يدفعوا</p>
-                                <p className="text-lg font-black text-red-600">{unpaidStudents.filter(s => !s.isExempted).length}</p>
+                                <p className="text-lg font-black text-red-600">{unpaidStudents.length}</p>
                             </button>
                             <button onClick={() => setDeficitTab('exempted')} className={cn("rounded-3xl p-3 border transition-all", deficitTab === 'exempted' ? "bg-green-50 border-green-200 shadow-sm" : "bg-white border-slate-100")}>
                                 <p className="text-[9px] font-bold text-green-500">معفيين</p>
-                                <p className="text-lg font-black text-green-600">{unpaidStudents.filter(s => s.isExempted).length}</p>
+                                <p className="text-lg font-black text-green-600">{exemptedStudents.length}</p>
                             </button>
                         </div>
                     </div>
@@ -83,13 +94,22 @@ export const TeacherDeficitModal = ({
                                             <div className="text-right">
                                                 <h4 className="font-bold">{student.name}</h4>
                                                 <p className="text-[10px] text-gray-400">{student.groupName}</p>
+                                                {student.enrollmentDate && (
+                                                    <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
+                                                        <CalendarClock size={11} />
+                                                        {student.archivedDate ? 'عاد من الأرشيف بتاريخ' : 'التحق بتاريخ'}: {student.enrollmentDate}
+                                                    </p>
+                                                )}
                                             </div>
-                                            <p className={cn("text-lg font-black", student.isExempted ? "text-green-600 line-through" : "text-red-600")}>
-                                                {student.remaining} ج.م
+                                            <p className={cn(
+                                                "text-lg font-black",
+                                                student.isExempted ? "text-green-600 line-through" : deficitTab === 'paid' ? "text-blue-600" : "text-red-600"
+                                            )}>
+                                                {deficitTab === 'paid' ? student.paidAmount : student.remaining} ج.م
                                             </p>
                                         </div>
                                         <div className="mt-3 flex justify-start gap-2">
-                                            {isDirector && (
+                                            {isDirector && deficitTab !== 'paid' && (
                                                 <>
                                                     {student.isExempted ? (
                                                         <button onClick={() => handleRemoveExemption(student.id, student.name)} className="text-xs text-red-500 bg-red-50 px-3 py-1 rounded-lg flex items-center gap-1"><UserX size={12}/> إلغاء العفو</button>
@@ -98,7 +118,7 @@ export const TeacherDeficitModal = ({
                                                     )}
                                                 </>
                                             )}
-                                            {!student.isExempted && showWhatsApp && student.parentPhone && (
+                                            {deficitTab === 'unpaid' && !student.isExempted && showWhatsApp && student.parentPhone && (
                                                 <a 
                                                     href={getWhatsAppUrl(student.parentPhone, whatsappMessage)}
                                                     target="_blank" 

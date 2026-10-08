@@ -38,7 +38,7 @@ import { getTeacherHandovers, getTeacherSalaryPayments, deleteTransaction, addTr
 import { updateGroup } from '@/features/groups/services/groupService';
 import { createNotification } from '@/features/notifications/services/notificationService';
 import { useTeacherDashboard } from '@/features/teachers/hooks/useTeacherDashboard';
-import { TeacherDeficitModal } from './TeacherDeficitModal';
+import { TeacherDeficitModal, DeficitTab } from './TeacherDeficitModal';
 import { TeacherGroupsTab } from './TeacherGroupsTab';
 import { TeacherAgreementTab } from './TeacherAgreementTab';
 import { getErrorMessage } from '@/lib/error-message';
@@ -233,7 +233,10 @@ export default function TeacherDetailModal({
         totalCollected = 0,
         managerCollectedPayments = [],
         totalCollectedByManager = 0,
+        otherTeacherCollectedPayments = [],
+        totalCollectedByOtherTeacher = 0,
         unpaidStudents = [],
+        allExpectedStudents = [],
         realDeficit = 0,
         collectionHistoryMapped = [],
         totalHandedOver = 0,
@@ -292,6 +295,7 @@ export default function TeacherDetailModal({
     // ==========================================
     const [showCollectedDetails, setShowCollectedDetails] = useState(false);
     const [showManagerCollectedDetails, setShowManagerCollectedDetails] = useState(false);
+    const [showOtherTeacherCollectedDetails, setShowOtherTeacherCollectedDetails] = useState(false);
     const [showDeficitDetails, setShowDeficitDetails] = useState(false);
     // تبويب "التحصيل" غير متاح للمشرف، فنفتح على "الحضور" بدلاً منه كتبويب افتراضي
     const [activeTab, setActiveTab] = useState(user?.role === 'supervisor' ? 'attendance' : 'collection'); // التبويب النشط
@@ -299,7 +303,7 @@ export default function TeacherDetailModal({
     const [notes, setNotes] = useState(''); // ملاحظات التحصيل
 
     // حالات عجز المجموعة
-    const [deficitTab, setDeficitTab] = useState<'unpaid' | 'exempted'>('unpaid');
+    const [deficitTab, setDeficitTab] = useState<DeficitTab>('unpaid');
 
     // حالات تقويم الحضور
     const [activeDayMenu, setActiveDayMenu] = useState<number | null>(null);
@@ -723,12 +727,16 @@ export default function TeacherDetailModal({
                             collectionHistoryMapped={collectionHistoryMapped}
                             setShowCollectedDetails={setShowCollectedDetails}
                             setShowManagerCollectedDetails={setShowManagerCollectedDetails}
-                            setShowDeficitDetails={setShowDeficitDetails}
+                            setShowOtherTeacherCollectedDetails={setShowOtherTeacherCollectedDetails}
+                            totalCollectedByOtherTeacher={totalCollectedByOtherTeacher}
+                            setShowDeficitDetails={(val) => { setDeficitTab('unpaid'); setShowDeficitDetails(val); }}
+                            onShowExpectedDetails={() => { setDeficitTab('paid'); setShowDeficitDetails(true); }}
                             realDeficit={realDeficit}
                             unpaidStudents={unpaidStudents}
                             handleDeleteFee={handleDeleteFee}
                             collectionOverage={collectionOverage}
                             onQuickReceiveDeficit={handleQuickReceiveDeficit}
+                            isDirector={user?.role === 'director'}
                         />
                     </Suspense>
                 );
@@ -913,13 +921,27 @@ export default function TeacherDetailModal({
                         />
                     </Suspense>
 
+                    {/* نافذة تفاصيل ما حصّله مدرّسون آخرون لطلاب هذه المجموعة */}
+                    <Suspense fallback={null}>
+                        <TeacherCollectedPaymentsModal
+                            isOpen={showOtherTeacherCollectedDetails}
+                            onClose={() => setShowOtherTeacherCollectedDetails(false)}
+                            title="تحصيل مدرس آخر"
+                            totalAmount={totalCollectedByOtherTeacher}
+                            payments={otherTeacherCollectedPayments}
+                            isDirector={isDirector}
+                            onDeleteFee={handleDeleteFee}
+                            accentColor="violet"
+                        />
+                    </Suspense>
+
                     {/* نافذة تفاصيل عجز المجموعة الحقيقي - الطلاب المدينين */}
                     <TeacherDeficitModal
                         isOpen={showDeficitDetails}
                         onClose={() => setShowDeficitDetails(false)}
                         realDeficit={realDeficit}
-                        unpaidStudents={unpaidStudents}
-                        deficitTab={deficitTab as 'unpaid' | 'exempted'}
+                        allStudents={allExpectedStudents}
+                        deficitTab={deficitTab}
                         setDeficitTab={(tab) => setDeficitTab(tab)}
                         isDirector={isDirector}
                         handleExemptStudent={handleExemptStudent}
