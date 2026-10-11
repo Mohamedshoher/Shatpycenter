@@ -55,6 +55,8 @@ interface TeacherCollectionTabProps {
     collectionOverage: number;
     onQuickReceiveDeficit?: (amount: number) => void;
     isDirector: boolean;
+    totalCollectedForGroup: number;
+    totalPaid: number;
 }
 
 export const TeacherCollectionTab = ({
@@ -82,18 +84,17 @@ export const TeacherCollectionTab = ({
     unpaidStudents,
     collectionOverage,
     onQuickReceiveDeficit,
-    isDirector
+    isDirector,
+    totalCollectedForGroup,
+    totalPaid
 }: TeacherCollectionTabProps) => {
     const deficitAmount = Math.max(0, totalCollected - totalHandedOver);
 
-    // ربح المدير من هذا المدرس تحديداً (نظام الشراكة فقط): إجمالي ما استلمه المدير
-    // من مجموعة هذا المدرس ناقص نصيب المدرس حسب نسبته - يظهر للمدير فقط ولا يظهر
-    // للمدرس نفسه ولا لأي مستخدم آخر مهما كان
+    // ربح المدير من هذا المدرس تحديداً (نظام الشراكة فقط): إجمالي تحصيل المجموعة
+    // بالكامل (أياً كان من حصّله: المدرس أو المدير أو مدرس تاني) ناقص ما قبضه
+    // المدرس فعلياً كاش لحد دلوقتي - يظهر للمدير فقط ولا يظهر للمدرس نفسه ولا لأي مستخدم آخر مهما كان
     const isPartnership = teacher?.accountingType === 'partnership';
-    const partnershipPercentage = Number(teacher?.partnershipPercentage) || 0;
-    const directorReceivedTotal = totalCollectedByManager + totalHandedOver;
-    const teacherShare = isPartnership ? (directorReceivedTotal * partnershipPercentage) / 100 : 0;
-    const directorProfit = Math.round((directorReceivedTotal - teacherShare) * 100) / 100;
+    const directorProfit = Math.round((totalCollectedForGroup - totalPaid) * 100) / 100;
 
     // أداة لإعادة تحديث البيانات عند الحاجة
     const queryClient = useQueryClient();
@@ -266,12 +267,12 @@ export const TeacherCollectionTab = ({
                 )}
 
                 {/* ربحك من هذا المدرس (شراكة) - للمدير فقط، لا يظهر للمدرس ولا لأي مستخدم آخر */}
-                {isDirector && isPartnership && directorReceivedTotal > 0 && (
+                {isDirector && isPartnership && totalCollectedForGroup > 0 && (
                     <div className="bg-gradient-to-br from-green-50 to-white p-4 md:p-6 rounded-[32px] border border-green-100 shadow-sm flex flex-col items-center justify-center text-center hover:scale-[1.02] transition-transform">
                         <p className="text-[10px] md:text-xs font-black text-green-500 mb-2 uppercase tracking-wide">ربحك من هذا المدرس</p>
                         <p className="text-xl md:text-3xl font-black text-green-700 font-sans">{directorProfit.toLocaleString()} <span className="text-xs md:text-sm">ج.م</span></p>
                         <div className="mt-3 flex items-center gap-1">
-                            <span className="text-[9px] font-bold text-green-500">بعد نسبة المدرس ({partnershipPercentage}%)</span>
+                            <span className="text-[9px] font-bold text-green-500">إجمالي تحصيل المجموعة ناقص ما قبضه المدرس فعلياً</span>
                         </div>
                     </div>
                 )}

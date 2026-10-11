@@ -281,6 +281,7 @@ export default function TeacherDetailModal({
         isPartnership,
         partnershipPercentage,
         directorReceivedTotal,
+        totalCollectedForGroup,
         totalWorkingDays,
         attendedDays,
         absentDays,
@@ -737,6 +738,8 @@ export default function TeacherDetailModal({
                             collectionOverage={collectionOverage}
                             onQuickReceiveDeficit={handleQuickReceiveDeficit}
                             isDirector={user?.role === 'director'}
+                            totalCollectedForGroup={totalCollectedForGroup}
+                            totalPaid={totalPaid}
                         />
                     </Suspense>
                 );

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
         const supabase = createServerSupabase();
         const { data, error } = await supabase
             .from('teachers')
-            .select('id, full_name, phone, role, accounting_type, salary, partnership_percentage, daily_hours, weekly_working_days, responsible_sections, status, created_at');
+            .select('id, full_name, phone, role, accounting_type, salary, partnership_percentage, daily_hours, weekly_working_days, responsible_sections, status, created_at, activation_date');
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
             responsibleSections: row.responsible_sections || [],
             status: row.status,
             joinDate: row.created_at,
+            activationDate: row.activation_date || row.created_at,
             assignedGroups: []
         })) as Teacher[];
 
@@ -84,8 +85,9 @@ export async function PUT(request: NextRequest) {
 
         const supabase = createServerSupabase();
 
-        // نجلب القيم الحالية للراتب/النسبة قبل التعديل، لإرسال إشعار للمدرس لو اتغيّرت
-        const { data: existing } = await supabase.from('teachers').select('salary, partnership_percentage').eq('id', id).single();
+        // نجلب القيم الحالية للراتب/النسبة/الحالة قبل التعديل، لإرسال إشعار للمدرس لو اتغيّرت الراتب
+        // ولمعرفة إن كانت الحالة تنتقل فعلاً من "غير نشط" إلى "نشط" (إعادة تنشيط)
+        const { data: existing } = await supabase.from('teachers').select('salary, partnership_percentage, status').eq('id', id).single();
 
         const updates: Record<string, unknown> = {};
         if (body.fullName !== undefined) updates.full_name = body.fullName;
@@ -100,6 +102,11 @@ export async function PUT(request: NextRequest) {
         if (body.password) updates.password = body.password;
         if (body.responsibleSections !== undefined) updates.responsible_sections = body.responsibleSections;
         if (body.status !== undefined) updates.status = body.status;
+        // إعادة التنشيط الفعلية فقط (من "غير نشط" إلى "نشط") تُسجَّل كتاريخ بداية عمل جديد
+        // هذا الشهر، حتى تُحسب الأيام السابقة لها غياباً تلقائياً في الراتب
+        if (body.status === 'active' && existing?.status === 'inactive') {
+            updates.activation_date = new Date().toISOString().split('T')[0];
+        }
 
         const { error } = await supabase.from('teachers').update(updates).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });

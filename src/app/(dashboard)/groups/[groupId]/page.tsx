@@ -5,15 +5,23 @@ import { getGroups } from '@/features/groups/services/groupService';
 import { getTeachers } from '@/features/teachers/services/teacherService';
 import { getStudents } from '@/features/students/services/studentService';
 import StudentList from '@/features/students/components/StudentList';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function GroupDetailPage() {
     const params = useParams();
     const groupId = params.groupId as string;
+    const user = useAuthStore((state) => state.user);
+    const router = useRouter();
+
+    // صفحة المجموعات ممنوعة على السكرتارية تماماً
+    useEffect(() => {
+        if (user?.role === 'schedule_secretary') router.push('/schedules');
+    }, [user, router]);
 
     const { data: groups } = useQuery({
         queryKey: ['groups'],
@@ -51,6 +59,8 @@ export default function GroupDetailPage() {
             color
         };
     }, [groups, teachers, students, groupId]);
+
+    if (user?.role === 'schedule_secretary') return null;
 
     return (
         <div className="flex flex-col h-full">

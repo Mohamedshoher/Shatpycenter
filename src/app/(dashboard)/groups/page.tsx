@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getGroups, updateGroup, deleteGroup } from '@/features/groups/services/groupService';
 import { Group } from '@/types';
@@ -8,6 +8,7 @@ import { getTeachers } from '@/features/teachers/services/teacherService';
 import { getStudents } from '@/features/students/services/studentService';
 import { getAllAttendanceForMonth } from '@/features/students/services/recordsService';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useRouter } from 'next/navigation';
 import Plus from 'lucide-react/dist/esm/icons/plus'
 import X from 'lucide-react/dist/esm/icons/x'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
@@ -72,6 +73,12 @@ export default function GroupsPage() {
 
     const [sortBy, setSortBy] = useState<'name' | 'studentCount' | 'attendance'>('name');
     const { user } = useAuthStore();
+    const router = useRouter();
+
+    // صفحة المجموعات ممنوعة على السكرتارية تماماً
+    useEffect(() => {
+        if (user?.role === 'schedule_secretary') router.push('/schedules');
+    }, [user, router]);
 
     // Mutations
     const updateMutation = useMutation({
@@ -227,6 +234,8 @@ export default function GroupsPage() {
             .filter(t => t.status === 'active')
             .sort((a, b) => a.fullName.localeCompare(b.fullName, 'ar'));
     }, [teachers]);
+
+    if (user?.role === 'schedule_secretary') return null;
 
     return (
         <div className="pb-32 transition-all duration-500">

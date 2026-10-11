@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Trophy from 'lucide-react/dist/esm/icons/trophy'
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down'
@@ -45,6 +46,12 @@ export default function ExamsReportPage() {
     const { data: groups } = useGroups();
     const { data: teachers } = useTeachers();
     const { user } = useAuthStore();
+    const router = useRouter();
+
+    // صفحة الاختبارات ممنوعة على السكرتارية تماماً
+    useEffect(() => {
+        if (user?.role === 'schedule_secretary') router.push('/schedules');
+    }, [user, router]);
 
     // --- 2. إعدادات الفلترة والأذونات ---
     // إذا كان المستخدم "مدرس"، نقوم بتصفية المجموعات لتظهر مجموعاته فقط
@@ -305,6 +312,8 @@ export default function ExamsReportPage() {
             : activeTab === 'goals'
                 ? [goalsGroupFilter !== 'all', goalsExamTypeFilter !== 'all'].filter(Boolean).length
                 : 0;
+
+    if (user?.role === 'schedule_secretary') return null;
 
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">

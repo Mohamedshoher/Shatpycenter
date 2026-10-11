@@ -73,9 +73,9 @@ export default function StudentDetailModal({
         { id: 'notes', label: 'سجل الملحوظات', icon: FileText },
     ];
 
-    // سكرتارية المواعيد ترى الحضور والمواعيد والاختبارات والملحوظات (بدون المصروفات)
+    // سكرتارية المواعيد ترى الحضور والمواعيد والملحوظات فقط (بدون المصروفات ولا الاختبارات)
     const isScheduleSecretary = user?.role === 'schedule_secretary';
-    const tabs = isScheduleSecretary ? allTabs.filter(t => t.id !== 'fees') : allTabs;
+    const tabs = isScheduleSecretary ? allTabs.filter(t => t.id !== 'fees' && t.id !== 'exams') : allTabs;
     const effectiveTab = tabs.some(t => t.id === activeTab) ? activeTab : tabs[0]?.id;
 
     return (

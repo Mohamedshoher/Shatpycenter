@@ -29,6 +29,8 @@ export default function BottomNavigation() {
 
     const filteredNavItems = navItems.filter(item => {
         if (user?.role === 'teacher' && item.id === 'home') return false;
+        // صفحتا المجموعات والاختبارات ممنوعتان على السكرتارية تماماً
+        if (user?.role === 'schedule_secretary' && (item.id === 'groups' || item.id === 'exams')) return false;
         return true;
     });
 

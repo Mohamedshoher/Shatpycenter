@@ -52,7 +52,8 @@ export interface Teacher {
   weeklyWorkingDays?: number; // عدد أيام العمل أسبوعياً
   password?: string;
   responsibleSections?: string[];
-  joinDate?: string;
+  joinDate?: string; // تاريخ إنشاء الحساب (لا يتغيّر) - يُستخدم لاستبعاد المعلم من تقارير الشهور السابقة لإنشائه
+  activationDate?: string; // تاريخ آخر تنشيط فعلي (الالتحاق أول مرة، أو آخر رجوع من "غير نشط" إلى "نشط") - لحساب غياب تلقائي عن الأيام السابقة له في راتب الشهر الحالي
 }
 
 export interface Group {

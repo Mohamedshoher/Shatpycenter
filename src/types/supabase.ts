@@ -963,6 +963,7 @@ export type Database = {
       teachers: {
         Row: {
           accounting_type: string | null
+          activation_date: string | null
           created_at: string
           daily_hours: number | null
           full_name: string
@@ -978,6 +979,7 @@ export type Database = {
         }
         Insert: {
           accounting_type?: string | null
+          activation_date?: string | null
           created_at?: string
           daily_hours?: number | null
           full_name: string
@@ -993,6 +995,7 @@ export type Database = {
         }
         Update: {
           accounting_type?: string | null
+          activation_date?: string | null
           created_at?: string
           daily_hours?: number | null
           full_name?: string

@@ -16,6 +16,7 @@ import dynamic from 'next/dynamic';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useRouter } from 'next/navigation';
 import {
     getExamCycleAssignments,
     setExamCycleAssignment,
@@ -51,6 +52,12 @@ export default function ExamCyclePage() {
     const { data: students } = useStudents();
     const { data: groups } = useGroups();
     const { user } = useAuthStore();
+    const router = useRouter();
+
+    // صفحة الاختبارات ممنوعة على السكرتارية تماماً
+    useEffect(() => {
+        if (user?.role === 'schedule_secretary') router.push('/schedules');
+    }, [user, router]);
 
     const canEdit = user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'teacher';
 
@@ -346,6 +353,8 @@ export default function ExamCyclePage() {
 
     const groupRowsToShow = isAbsenteesView ? weeklyAbsenteesByGroup : perGroupCountsForSelectedDay;
     const singleGroupItemsToShow = isAbsenteesView ? absenteeItems : displayStudentsForDay;
+
+    if (user?.role === 'schedule_secretary') return null;
 
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
