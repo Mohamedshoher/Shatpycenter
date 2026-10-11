@@ -631,34 +631,36 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                         </div>
 
                         <div className="flex items-center gap-1 sm:gap-2 pt-2 overflow-x-auto no-scrollbar relative w-full">
-                            <div className="flex gap-1 shrink-0 transition-opacity duration-300 opacity-100">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
-                                    className={cn(
-                                        "px-6 sm:px-10 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-75 border active:scale-95",
-                                        attendanceState[student.id] === 'present'
-                                            ? "bg-green-600 text-white border-green-600 shadow-lg"
-                                            : "bg-white text-green-600 border-gray-100 hover:bg-green-50"
-                                    )}
-                                >
-                                    حاضر
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'absent'); }}
-                                    className={cn(
-                                        "px-6 sm:px-10 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-75 border active:scale-95",
-                                        attendanceState[student.id] === 'absent'
-                                            ? "bg-red-500 text-white border-red-500 shadow-lg"
-                                            : "bg-white text-red-500 border-gray-100 hover:bg-red-50"
-                                    )}
-                                >
-                                    غياب
-                                </button>
-                            </div>
+                            {user?.role !== 'schedule_secretary' && (
+                                <>
+                                    <div className="flex gap-1 shrink-0 transition-opacity duration-300 opacity-100">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'present'); }}
+                                            className={cn(
+                                                "px-6 sm:px-10 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-75 border active:scale-95",
+                                                attendanceState[student.id] === 'present'
+                                                    ? "bg-green-600 text-white border-green-600 shadow-lg"
+                                                    : "bg-white text-green-600 border-gray-100 hover:bg-green-50"
+                                            )}
+                                        >
+                                            حاضر
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleAttendance(student, 'absent'); }}
+                                            className={cn(
+                                                "px-6 sm:px-10 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-75 border active:scale-95",
+                                                attendanceState[student.id] === 'absent'
+                                                    ? "bg-red-500 text-white border-red-500 shadow-lg"
+                                                    : "bg-white text-red-500 border-gray-100 hover:bg-red-50"
+                                            )}
+                                        >
+                                            غياب
+                                        </button>
+                                    </div>
 
-
-
-                            <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
+                                    <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
+                                </>
+                            )}
 
                             <div className="flex items-center gap-1 sm:gap-1.5 bg-gray-100/50 p-1 rounded-xl border border-gray-50 shrink-0">
                                 {user?.role !== 'director' && user?.role !== 'schedule_secretary' && (
