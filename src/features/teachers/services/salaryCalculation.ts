@@ -15,6 +15,7 @@ interface SalaryTeacher {
     weeklyWorkingDays?: number;
     partnershipPercentage?: number;
     salary?: number;
+    activationDate?: string; // تاريخ آخر تنشيط فعلي (YYYY-MM-DD) - لحساب غياب تلقائي عن الأيام السابقة له
 }
 
 interface SalaryStudent {
@@ -230,6 +231,18 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
         else if (status === 'half') absentDays += 0.5;
         else if (status === 'quarter') absentDays += 0.25;
     });
+
+    // 7ب. غياب تلقائي عن الأيام السابقة لتاريخ تنشيط المعلم (التحاق جديد أو رجوع من "غير نشط")
+    // إذا وقع هذا التاريخ في نفس الشهر المحدد - بدون الحاجة لتسجيل كل يوم يدوياً
+    if (teacher.activationDate && teacher.activationDate.length >= 10 && teacher.activationDate.slice(0, 7) === selectedMonthRaw) {
+        const [joinYear, joinMonth, joinDay] = teacher.activationDate.slice(0, 10).split('-').map(Number);
+        for (let day = 1; day < joinDay; day++) {
+            if (attendanceData && attendanceData[String(day)]) continue; // يوم مسجَّل فعلياً بالفعل، لا يُحسب مرتين
+            const weekDay = new Date(joinYear, joinMonth - 1, day).getDay(); // 0=أحد ... 4=خميس, 5=جمعة
+            const isWeekend = weekDay === 4 || weekDay === 5; // الخميس والجمعة إجازة رسمية
+            if (!isWeekend) absentDays += 1;
+        }
+    }
 
     const totalWorkingDays = standardWorkingDays;
     const totalAbsentDays = absentDays;
