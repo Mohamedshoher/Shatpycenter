@@ -13,7 +13,8 @@ import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import SlidersHorizontal from 'lucide-react/dist/esm/icons/sliders-horizontal';
 import { cn, getWhatsAppUrl } from '@/lib/utils';
-import { SlideIn } from '@/components/ui/transition';
+import { FadeIn, SlideIn } from '@/components/ui/transition';
+import X from 'lucide-react/dist/esm/icons/x';
 
 // --- استيراد الـ Hooks والـ Stores الخاصة بالتطبيق ---
 import { useStudents } from '@/features/students/hooks/useStudents';
@@ -266,21 +267,38 @@ export default function ExamsReportPage() {
                     const groupStudentIds = new Set(groupStudents.map((s) => s.id));
 
                     // لكل نوع، نحسب عدد الطلاب الفريدين الذين اختبروه (مرة واحدة على الأقل)
+                    // ونحتفظ بآخر اختبار (التقدير والسورة) لكل طالب في كل نوع لعرضها في النافذة المنبثقة
                     const doneStudents = {
-                        new: new Set(),
-                        near: new Set(),
-                        far: new Set(),
+                        new: new Set<string>(),
+                        near: new Set<string>(),
+                        far: new Set<string>(),
+                    };
+                    const lastExamByType: Record<'new' | 'near' | 'far', Map<string, { grade: string; surah: string; date: string }>> = {
+                        new: new Map(),
+                        near: new Map(),
+                        far: new Map(),
                     };
 
                     for (const e of allExams || []) {
                         if (!groupStudentIds.has(e.studentId)) continue;
                         const type = e.type?.trim();
-                        if (type === 'جديد') doneStudents.new.add(e.studentId);
-                        if (type === 'ماضي قريب') doneStudents.near.add(e.studentId);
-                        if (type === 'ماضي بعيد') doneStudents.far.add(e.studentId);
+                        const key = type === 'جديد' ? 'new' : type === 'ماضي قريب' ? 'near' : type === 'ماضي بعيد' ? 'far' : null;
+                        if (!key) continue;
+                        doneStudents[key].add(e.studentId);
+                        const existing = lastExamByType[key].get(e.studentId);
+                        if (!existing || (e.date && e.date >= existing.date)) {
+                            lastExamByType[key].set(e.studentId, { grade: e.grade, surah: e.surah, date: e.date });
+                        }
                     }
 
                     const teacherFirstName = teachers?.find((t) => t.id === g.teacherId)?.fullName?.trim().split(' ')[0] || '';
+
+                    const buildLists = (key: 'new' | 'near' | 'far') => ({
+                        testedStudents: groupStudents
+                            .filter((s) => doneStudents[key].has(s.id))
+                            .map((s) => ({ student: s, ...lastExamByType[key].get(s.id)! })),
+                        notTestedStudents: groupStudents.filter((s) => !doneStudents[key].has(s.id)),
+                    });
 
                     return {
                         id: g.id,
@@ -296,10 +314,29 @@ export default function ExamsReportPage() {
                             new: Math.max(0, groupStudents.length - doneStudents.new.size),
                             near: Math.max(0, groupStudents.length - doneStudents.near.size),
                             far: Math.max(0, groupStudents.length - doneStudents.far.size),
+                        },
+                        details: {
+                            new: buildLists('new'),
+                            near: buildLists('near'),
+                            far: buildLists('far'),
                         }
                     };
                 });
     }, [groups, students, allExams, user, assignedGroupIds, performanceTypeFilter, teachers]);
+
+    // بيانات النافذة المنبثقة لتفاصيل "اختبروا/لم يختبروا" عند الضغط على شريط أداء مجموعة معينة
+    const [performanceDetailTarget, setPerformanceDetailTarget] = useState<{ groupId: string; type: 'new' | 'near' | 'far' } | null>(null);
+    const performanceDetail = useMemo(() => {
+        if (!performanceDetailTarget) return null;
+        const group = performanceData.find((d) => d.id === performanceDetailTarget.groupId);
+        if (!group) return null;
+        return {
+            groupName: group.name,
+            teacherFirstName: group.teacherFirstName,
+            type: performanceDetailTarget.type,
+            ...group.details[performanceDetailTarget.type],
+        };
+    }, [performanceDetailTarget, performanceData]);
 
     // هل التبويب الحالي عنده فلاتر أصلاً؟ (الأكثر اختباراً بلا فلاتر)
     const hasFilterableTab = activeTab === 'notTested' || activeTab === 'performance' || activeTab === 'goals';
@@ -754,7 +791,12 @@ export default function ExamsReportPage() {
                                                                 : type === 'near' ? 'text-amber-600'
                                                                 : 'text-purple-600';
                                                             return (
-                                                                <div key={type} className="flex items-center gap-2">
+                                                                <button
+                                                                    key={type}
+                                                                    type="button"
+                                                                    onClick={() => setPerformanceDetailTarget({ groupId: data.id, type })}
+                                                                    className="flex items-center gap-2 w-full text-right active:scale-[0.98] transition-transform"
+                                                                >
                                                                     <span className="text-[11px] font-bold text-gray-400 w-16 shrink-0 text-left">{label}</span>
                                                                     <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden shadow-inner relative">
                                                                         <div style={{ width: `${(testedVal / Math.max(totalSt, 1)) * 100}%` }} className={`absolute right-0 top-0 h-full bg-gradient-to-l ${barColor} rounded-full animate-[chartFill_0.7s_ease-out]`} />
@@ -764,7 +806,7 @@ export default function ExamsReportPage() {
                                                                         <span className="text-gray-300">/</span>
                                                                         <span className="text-gray-400">{totalSt}</span>
                                                                     </span>
-                                                                </div>
+                                                                </button>
                                                             );
                                                         })}
                                                     </div>
@@ -782,7 +824,12 @@ export default function ExamsReportPage() {
                                             : 'text-purple-600';
 
                                         return (
-                                            <div key={data.id} className="space-y-2">
+                                            <button
+                                                type="button"
+                                                key={data.id}
+                                                onClick={() => setPerformanceDetailTarget({ groupId: data.id, type: performanceFilter as 'new' | 'near' | 'far' })}
+                                                className="space-y-2 w-full text-right active:scale-[0.98] transition-transform"
+                                            >
                                                 <div className="flex flex-row-reverse items-center justify-between px-1">
                                                     <span className="text-sm font-bold text-gray-700">
                                                         {data.name}
@@ -797,7 +844,7 @@ export default function ExamsReportPage() {
                                                 <div className="h-6 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner relative">
                                                     <div style={{ width: barWidth }} className={`absolute right-0 top-0 h-full bg-gradient-to-l ${barColor} rounded-full animate-[chartFill_0.7s_ease-out]`} />
                                                 </div>
-                                            </div>
+                                            </button>
                                         );
                                 })}
                             </div>
@@ -812,6 +859,78 @@ export default function ExamsReportPage() {
                     student={selectedStudentForDetails}
                     onClose={() => setSelectedStudentForDetails(null)}
                 />
+            )}
+
+            {/* --- مودال تفاصيل من اختبر ومن لم يختبر عند الضغط على شريط أداء مجموعة --- */}
+            {performanceDetail && (
+                <>
+                    <FadeIn show={!!performanceDetail} className="fixed inset-0 z-[220]">
+                        <div onClick={() => setPerformanceDetailTarget(null)} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+                    </FadeIn>
+                    <SlideIn show={!!performanceDetail} className="fixed inset-0 z-[221] flex items-center justify-center p-4">
+                        <div className="w-[95%] max-w-lg bg-white rounded-[32px] shadow-2xl border border-gray-100 h-[80vh] flex flex-col overflow-hidden">
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50 shrink-0">
+                                <div className="text-right">
+                                    <h3 className="text-base font-black text-gray-900">
+                                        {performanceDetail.groupName}
+                                        {performanceDetail.teacherFirstName && <span className="text-xs font-bold text-gray-400"> - {performanceDetail.teacherFirstName}</span>}
+                                    </h3>
+                                    <p className="text-xs font-bold text-gray-400 mt-0.5">
+                                        {EXAM_TYPE_MAP[performanceDetail.type]}
+                                        {' · '}{performanceDetail.testedStudents.length} اختبروا / {performanceDetail.notTestedStudents.length} لم يختبروا
+                                    </p>
+                                </div>
+                                <button onClick={() => setPerformanceDetailTarget(null)} className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center shrink-0"><X size={18} /></button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-5">
+                                {performanceDetail.testedStudents.length > 0 && (
+                                    <div>
+                                        <p className="text-[11px] font-black text-emerald-600 mb-2 px-1">اختبروا ({performanceDetail.testedStudents.length})</p>
+                                        <div className="space-y-2">
+                                            {performanceDetail.testedStudents.map((item) => (
+                                                <button
+                                                    key={item.student.id}
+                                                    onClick={() => { setSelectedStudentForDetails(item.student); setPerformanceDetailTarget(null); }}
+                                                    className="w-full flex items-center justify-between gap-2 bg-emerald-50/50 border border-emerald-100 rounded-2xl px-4 py-3 text-right hover:bg-emerald-50 transition-colors"
+                                                >
+                                                    <div className="text-left">
+                                                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">{item.grade || '-'}</span>
+                                                    </div>
+                                                    <div className="flex-1 text-right">
+                                                        <p className="text-sm font-bold text-gray-800">{item.student.fullName}</p>
+                                                        <p className="text-[10px] text-gray-400 mt-0.5">{item.surah || '-'} {item.date ? `· ${item.date}` : ''}</p>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {performanceDetail.notTestedStudents.length > 0 && (
+                                    <div>
+                                        <p className="text-[11px] font-black text-red-500 mb-2 px-1">لم يختبروا ({performanceDetail.notTestedStudents.length})</p>
+                                        <div className="space-y-2">
+                                            {performanceDetail.notTestedStudents.map((student) => (
+                                                <button
+                                                    key={student.id}
+                                                    onClick={() => { setSelectedStudentForDetails(student); setPerformanceDetailTarget(null); }}
+                                                    className="w-full flex items-center bg-red-50/50 border border-red-100 rounded-2xl px-4 py-3 text-right hover:bg-red-50 transition-colors"
+                                                >
+                                                    <p className="text-sm font-bold text-gray-800">{student.fullName}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {performanceDetail.testedStudents.length === 0 && performanceDetail.notTestedStudents.length === 0 && (
+                                    <p className="text-center py-10 text-gray-400 text-sm">لا يوجد طلاب في هذه المجموعة</p>
+                                )}
+                            </div>
+                        </div>
+                    </SlideIn>
+                </>
             )}
         </div>
     );
