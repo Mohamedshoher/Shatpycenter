@@ -37,6 +37,7 @@ interface WeeklyExamsChecksResult {
     students: ChecksStudent[];
     exams: ChecksAttendance[];
     deductions: ChecksDeduction[];
+    teacherAttendance: ChecksTeacherAttendance[];
 }
 
 export interface AutomationLog {
@@ -355,11 +356,12 @@ export const checkMissingDailyExams = async (customDate?: string): Promise<Autom
         return [];
     }
     const result: WeeklyExamsChecksResult = await checksRes.json();
-    const { teachers, groups, students: allStudents, exams, deductions } = result;
+    const { teachers, groups, students: allStudents, exams, deductions, teacherAttendance } = result;
     if (!teachers?.length) return [];
 
     const examStudents = new Set((exams || []).map((e) => e.student_id));
     const alreadyDeducted = new Set((deductions || []).filter((d) => d.reason?.includes('اختبار')).map((d) => d.teacher_id));
+    const absentTeachers = new Set((teacherAttendance || []).filter((a) => a.status === 'absent').map((a) => a.teacher_id));
 
     const groupTeacherMap = new Map<string, string | null>((groups || []).map((g) => [g.id, g.teacher_id]));
     const teacherStudentsMap = new Map<string, string[]>();
@@ -380,6 +382,9 @@ export const checkMissingDailyExams = async (customDate?: string): Promise<Autom
     for (const t of teachers) {
         const studentIds = teacherStudentsMap.get(t.id) || [];
         if (studentIds.length === 0) continue;
+
+        // المدرّس الغائب لا يُحسب عليه عدم تسجيل الاختبارات - غيابه هو السبب، ولا نحوّل خصم يومه الكامل إلى خصم ربع يوم
+        if (absentTeachers.has(t.id)) continue;
 
         checkedTeachers++;
 

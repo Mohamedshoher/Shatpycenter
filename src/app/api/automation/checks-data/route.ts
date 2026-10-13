@@ -67,9 +67,10 @@ export async function GET(request: NextRequest) {
             const endDate = searchParams.get('endDate');
             if (!startDate || !endDate) return NextResponse.json({ error: 'startDate and endDate required' }, { status: 400 });
 
-            const [examsResult, dedResult] = await Promise.all([
+            const [examsResult, dedResult, teaResult] = await Promise.all([
                 supabase.from('exams').select('student_id').gte('date', startDate).lte('date', endDate),
                 supabase.from('deductions').select('teacher_id, reason').in('teacher_id', teacherIds).gte('date', startDate).lte('date', endDate),
+                supabase.from('teacher_attendance').select('teacher_id, status').in('teacher_id', teacherIds).gte('date', startDate).lte('date', endDate),
             ]);
 
             return NextResponse.json({
@@ -78,6 +79,7 @@ export async function GET(request: NextRequest) {
                 students,
                 exams: examsResult.data || [],
                 deductions: dedResult.data || [],
+                teacherAttendance: teaResult.data || [],
             });
         }
 
