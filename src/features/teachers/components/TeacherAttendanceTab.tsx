@@ -18,6 +18,7 @@ interface TeacherAttendanceTabProps {
     selectedMonth: string;
     attendanceData: Record<string, TeacherAttendanceStatus>;
     appliedByData?: Record<number, string>;
+    notesData?: Record<number, string>;
     isTeacher: boolean;
     setActiveDayMenu: (day: number | null) => void;
     setTempStatus: (status: 'present' | 'absent' | 'discipline' | 'reward') => void;
@@ -35,8 +36,17 @@ interface TeacherAttendanceTabProps {
     deductions?: TeacherDeduction[];
 }
 
+// تحديد مصدر الخصم من نص الملاحظة المخزّنة: أتمتة تقرير يومي، أتمتة اختبارات، أو يدوي (بلا بادئة "مخالفة أتمتة:")
+const getDeductionSource = (notes?: string): 'report' | 'exam' | 'manual' | null => {
+    if (!notes) return null;
+    if (!notes.startsWith('مخالفة أتمتة:')) return 'manual';
+    if (notes.includes('التقرير اليومي')) return 'report';
+    if (notes.includes('الاختبارات')) return 'exam';
+    return 'manual';
+};
+
 export const TeacherAttendanceTab = ({
-    updateMonth, selectedMonthRaw, selectedMonth, attendanceData, appliedByData = {},
+    updateMonth, selectedMonthRaw, selectedMonth, attendanceData, appliedByData = {}, notesData = {},
     isTeacher, setActiveDayMenu, setTempStatus, activeDayMenu,
     handleAddDiscipline, tempStatus, tempAmount, setTempAmount,
     tempReason, setTempReason, dayDetails,
@@ -82,7 +92,7 @@ export const TeacherAttendanceTab = ({
                                 if (weekDayIdx === 5 || weekDayIdx === 6) continue;
                                 const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
                                 try {
-                                    await updateAttendanceAsync({ date: dateStr, status: 'absent' });
+                                    await updateAttendanceAsync({ date: dateStr, status: 'absent', notes: 'غياب يدوي (تعميد غياب بقية الشهر)' });
                                 } catch {}
                             }
                             alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
@@ -156,6 +166,13 @@ export const TeacherAttendanceTab = ({
                 <div className="bg-white p-3 md:p-8 rounded-[28px] md:rounded-[40px] border border-gray-100 shadow-sm space-y-4 md:space-y-6">
                 <h4 className="font-black text-gray-900 text-sm md:text-xl text-center">سجل حضور شهر: {selectedMonth}</h4>
 
+                {/* دليل ألوان مصدر الخصم - يميّز خصم أتمتة التقرير اليومي عن خصم أتمتة الاختبارات عن الخصم اليدوي */}
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-[9px] md:text-[11px] font-bold text-gray-500">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" /> خصم/غياب يدوي</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" /> خصم أتمتة التقرير اليومي</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block" /> خصم أتمتة الاختبارات</span>
+                </div>
+
                 <div className="grid grid-cols-7 gap-0.5 md:gap-2">
                     {/* رؤوس أيام الأسبوع */}
                     {weekDays.map(day => (
@@ -200,6 +217,15 @@ export const TeacherAttendanceTab = ({
                             const weekDayIndex = (i + startOffset) % 7;
                             const isWeekend = weekDayIndex === 5 || weekDayIndex === 6; // الخميس والجمعة إجازة رسمية
 
+                            const dayNotes = notesData[day];
+                            const deductionSource = getDeductionSource(dayNotes);
+                            const isDeductionStatus = status === 'quarter' || status === 'half' || status === 'double_absent' || status === 'absent';
+                            const isRewardStatus = status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward';
+                            const sourceLabel = deductionSource === 'report' ? 'خصم أتمتة: عدم تسليم التقرير اليومي'
+                                : deductionSource === 'exam' ? 'خصم أتمتة: عدم تسجيل الاختبارات'
+                                : deductionSource === 'manual' ? (dayNotes || 'خصم/غياب يدوي')
+                                : undefined;
+
                             return (
                                 <div key={i} className="relative">
                                     <button
@@ -209,6 +235,7 @@ export const TeacherAttendanceTab = ({
                                             const s = rawStatus || status;
                                             setTempStatus(s?.includes('reward') ? 'reward' : (s === 'present' ? 'present' : (s === 'absent' ? 'absent' : 'discipline')));
                                         }}
+                                        title={sourceLabel}
                                         className={cn(
                                             "aspect-square w-full rounded-lg md:rounded-2xl border flex flex-col items-center justify-center text-[10px] md:text-sm font-bold transition-all relative shadow-sm",
                                             isToday ? "border-blue-500 ring-2 ring-blue-500/10 shadow-lg shadow-blue-500/10" : "border-gray-100 md:border-gray-50",
@@ -216,7 +243,7 @@ export const TeacherAttendanceTab = ({
                                                 status === 'present' ? "bg-green-50 border-green-100 text-green-600" :
                                                     (status === 'quarter' || status === 'half') ? "bg-orange-50 border-orange-100 text-orange-600" :
                                                         status === 'double_absent' ? "bg-red-100 border-red-200 text-red-700" :
-                                                            (status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') ? "bg-green-50 border-green-200 text-green-600" :
+                                                            isRewardStatus ? "bg-green-50 border-green-200 text-green-600" :
                                                             status === 'absent' ? "bg-red-50 border-red-100 text-red-600" :
                                                                 "bg-gray-50/50 text-gray-400 border-gray-100 hover:border-blue-200"
                                         )}
@@ -226,10 +253,13 @@ export const TeacherAttendanceTab = ({
                                         {(status === 'present' || status?.includes('reward')) && !isWeekend && (
                                             <CheckCircle2 size={10} className="md:w-[14px] md:h-[14px] text-green-600/80" />
                                         )}
-                                        {status && (status === 'quarter' || status === 'half' || status === 'double_absent' || status === 'quarter_reward' || status === 'half_reward' || status === 'full_reward') && !isWeekend && (
+                                        {(isDeductionStatus || isRewardStatus) && !isWeekend && (
                                             <div className={cn(
                                                 "w-1 h-1 rounded-full mt-1",
-                                                status?.includes('reward') ? "bg-green-400" : "bg-orange-400"
+                                                isRewardStatus ? "bg-green-400"
+                                                    : deductionSource === 'report' ? "bg-indigo-500"
+                                                    : deductionSource === 'exam' ? "bg-purple-500"
+                                                    : "bg-orange-400"
                                             )} />
                                         )}
                                     </button>
@@ -325,6 +355,7 @@ export const TeacherAttendanceTab = ({
                                 displayReason: string;
                                 canDelete: boolean;
                                 appliedBy?: string;
+                                source?: 'report' | 'exam' | 'manual' | null;
                             }
                             const mergedRecords: MergedRecord[] = [];
 
@@ -355,7 +386,8 @@ export const TeacherAttendanceTab = ({
                                 else if (status === 'quarter') actionText = 'غياب ربع يوم';
                                 
                                 const defaultReason = `تسجيل ${actionText} يوم ${weekDays[(d - 1 + startOffset) % 7]}`;
-                                const displayReason = relatedDeduction?.reason || dayDetails[Number(day)]?.reason || defaultReason;
+                                const dayNotes = notesData[d];
+                                const displayReason = relatedDeduction?.reason || dayNotes || dayDetails[Number(day)]?.reason || defaultReason;
 
                                 mergedRecords.push({
                                     id: `att-${day}`,
@@ -366,6 +398,7 @@ export const TeacherAttendanceTab = ({
                                     displayReason,
                                     canDelete: true,
                                     appliedBy: appliedByData[d],
+                                    source: getDeductionSource(dayNotes),
                                 });
                             });
 
@@ -387,6 +420,7 @@ export const TeacherAttendanceTab = ({
                                     displayReason: d.reason,
                                     canDelete: false,
                                     appliedBy: d.appliedBy,
+                                    source: 'manual',
                                 });
                             });
 
@@ -400,14 +434,25 @@ export const TeacherAttendanceTab = ({
                                 return (
                                     <div key={rec.id} className="bg-white p-4 rounded-2xl border border-gray-100 hover:shadow-md transition-all relative group flex flex-col justify-between">
                                         <div>
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className={cn(
-                                                    "px-2 py-1 rounded-lg text-[10px] font-bold shrink-0",
-                                                    rec.isReward ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
-                                                )}>
-                                                    {rec.isReward ? 'مكافأة' : 'خصم'}
-                                                </span>
-                                                <span className="text-xs font-black text-gray-400 font-sans">{rec.day} {selectedMonth.split(' ')[0]}</span>
+                                            <div className="flex justify-between items-start mb-2 gap-2">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className={cn(
+                                                        "px-2 py-1 rounded-lg text-[10px] font-bold shrink-0",
+                                                        rec.isReward ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
+                                                    )}>
+                                                        {rec.isReward ? 'مكافأة' : 'خصم'}
+                                                    </span>
+                                                    {!rec.isReward && rec.source === 'report' && (
+                                                        <span className="px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 bg-indigo-50 text-indigo-600">أتمتة تقرير</span>
+                                                    )}
+                                                    {!rec.isReward && rec.source === 'exam' && (
+                                                        <span className="px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 bg-purple-50 text-purple-600">أتمتة اختبارات</span>
+                                                    )}
+                                                    {!rec.isReward && (rec.source === 'manual' || !rec.source) && (
+                                                        <span className="px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 bg-orange-50 text-orange-600">يدوي</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-xs font-black text-gray-400 font-sans shrink-0">{rec.day} {selectedMonth.split(' ')[0]}</span>
                                             </div>
 
                                             <div className="flex items-center justify-between mb-1 text-right">
