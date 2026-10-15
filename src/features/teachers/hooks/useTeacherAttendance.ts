@@ -11,6 +11,7 @@ import {
     getTeacherAttendance,
     getAllTeachersAttendance,
     getTeacherAttendanceAppliedBy,
+    getTeacherAttendanceNotes,
     updateTeacherAttendance,
     TeacherAttendanceStatus
 } from "../services/attendanceService";
@@ -68,6 +69,7 @@ export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
             queryClient.invalidateQueries({ queryKey: ['teacher-attendance', teacherId, monthKey] });
             queryClient.invalidateQueries({ queryKey: ['all-teachers-attendance', monthKey] });
             queryClient.invalidateQueries({ queryKey: ['teacher-attendance-applied-by', teacherId, monthKey] });
+            queryClient.invalidateQueries({ queryKey: ['teacher-attendance-notes', teacherId, monthKey] });
         }
     });
 
@@ -84,10 +86,20 @@ export const useTeacherAttendance = (teacherId?: string, monthKey?: string) => {
     });
     const appliedBy = useMemo(() => appliedByQuery.data || {}, [appliedByQuery.data]);
 
+    // 4. استعلام جلب سبب/ملاحظة كل حالة (لتمييز خصم أتمتة التقرير اليومي عن خصم أتمتة الاختبارات عن الخصم اليدوي)
+    const notesQuery = useQuery({
+        queryKey: ['teacher-attendance-notes', teacherId, monthKey],
+        queryFn: () => teacherId && monthKey ? getTeacherAttendanceNotes(teacherId, monthKey) : Promise.resolve({}),
+        enabled: !!teacherId && !!monthKey,
+        placeholderData: keepPreviousData,
+    });
+    const notes = useMemo(() => notesQuery.data || {}, [notesQuery.data]);
+
     // إرجاع البيانات والدوال اللازمة لاستخدامها في واجهة المستخدم
     return {
         attendance, // بيانات الحضور
         appliedBy, // خريطة اليوم -> اسم من طبّق الإجراء
+        notes, // خريطة اليوم -> السبب/الملاحظة المخزّنة
         loading: attendanceQuery.isLoading, // حالة التحميل
         updateAttendance: updateAttendanceMutation.mutate, // دالة التحديث العادية
         updateAttendanceAsync: updateAttendanceMutation.mutateAsync, // دالة التحديث غير المتزامنة (ترجع Promise)

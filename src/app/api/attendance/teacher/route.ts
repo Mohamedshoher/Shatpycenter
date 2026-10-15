@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         const supabase = createServerSupabase();
         let query = supabase
             .from('teacher_attendance')
-            .select('teacher_id, date, status, applied_by')
+            .select('teacher_id, date, status, applied_by, notes')
             .gte('date', `${monthKey}-01`)
             .lte('date', `${monthKey}-${lastDay}`);
 

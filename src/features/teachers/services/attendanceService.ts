@@ -65,6 +65,30 @@ export const getTeacherAttendanceAppliedBy = async (teacherId: string, monthKey:
 };
 
 /**
+ * جلب السبب/الملاحظة المخزَّنة لكل يوم حضور/خصم لمعلم محدد خلال شهر معين
+ * (تُستخدم لتمييز خصم الأتمتة - تقرير يومي أو اختبارات - عن الخصم اليدوي في تقويم الحضور)
+ */
+export const getTeacherAttendanceNotes = async (teacherId: string, monthKey: string): Promise<Record<number, string>> => {
+    try {
+        const res = await fetch(`/api/attendance/teacher?monthKey=${encodeURIComponent(monthKey)}&teacherId=${encodeURIComponent(teacherId)}`);
+        if (!res.ok) return {};
+        const data = await res.json();
+
+        const notesMap: Record<number, string> = {};
+        (data || []).forEach((row: { date: string; notes?: string | null }) => {
+            if (!row.notes) return;
+            const day = parseInt(row.date.split('-')[2], 10);
+            notesMap[day] = row.notes;
+        });
+
+        return notesMap;
+    } catch (error) {
+        console.error("Unexpected error fetching teacher attendance notes:", error);
+        return {};
+    }
+};
+
+/**
  * جلب سجل حضور جميع المعلمين خلال شهر معين
  */
 export const getAllTeachersAttendance = async (monthKey: string): Promise<Record<string, Record<string, TeacherAttendanceStatus>>> => {

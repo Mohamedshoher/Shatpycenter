@@ -134,7 +134,7 @@ export default function TeacherDetailModal({
     const { deductions, loadDeductions } = useTeacherDeductions(teacher?.id);
 
     // 2. جلب الحضور
-    const { attendance: attendanceData, appliedBy: attendanceAppliedBy, updateAttendanceAsync } = useTeacherAttendance(teacher?.id, selectedMonthRaw);
+    const { attendance: attendanceData, appliedBy: attendanceAppliedBy, notes: attendanceNotes, updateAttendanceAsync } = useTeacherAttendance(teacher?.id, selectedMonthRaw);
 
     // 3. جلب المصروفات/الرسوم للشهر المختار
     const { data: allFees = [] } = useQuery({
@@ -555,7 +555,14 @@ export default function TeacherDetailModal({
             else if (tempStatus === 'reward') finalStatus = tempAmount === 'day' ? 'full_reward' : tempAmount === 'half' ? 'half_reward' : 'quarter_reward';
 
             const date = `${selectedMonthRaw}-${String(activeDayMenu).padStart(2, '0')}`;
-            await updateAttendanceAsync({ date, status: finalStatus });
+            // نسجّل السبب كملاحظة دائمة على سجل الحضور نفسه (وليس فقط في إشعار عابر)، حتى يبقى
+            // واضحاً بعد إعادة التحميل أن هذا خصم/غياب يدوي من المدير - يختلف عن خصومات الأتمتة
+            // التي تبدأ دائماً بنص "مخالفة أتمتة: " (راجع automationService.ts)
+            let manualNotes: string | undefined;
+            if (tempStatus === 'absent') manualNotes = 'غياب يدوي';
+            else if (tempStatus === 'discipline') manualNotes = tempReason || 'خصم يدوي';
+            else if (tempStatus === 'reward') manualNotes = tempReason || 'مكافأة يدوية';
+            await updateAttendanceAsync({ date, status: finalStatus, notes: manualNotes });
 
             if (tempStatus === 'discipline' || tempStatus === 'reward') {
                 const numericAmount = tempAmount === 'day' ? 1 : tempAmount === 'double' ? 2 : tempAmount === 'half' ? 0.5 : 0.25;
@@ -755,6 +762,7 @@ export default function TeacherDetailModal({
                             selectedMonth={selectedMonth}
                             attendanceData={attendanceData}
                             appliedByData={attendanceAppliedBy}
+                            notesData={attendanceNotes}
                             isTeacher={isTeacher}
                             activeDayMenu={activeDayMenu}
                             setActiveDayMenu={setActiveDayMenu}
