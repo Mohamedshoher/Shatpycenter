@@ -387,7 +387,11 @@ export const TeacherAttendanceTab = ({
                                 
                                 const defaultReason = `تسجيل ${actionText} يوم ${weekDays[(d - 1 + startOffset) % 7]}`;
                                 const dayNotes = notesData[d];
-                                const displayReason = relatedDeduction?.reason || dayNotes || dayDetails[Number(day)]?.reason || defaultReason;
+                                // ملاحظة سجل الحضور الحالية (dayNotes) هي المصدر الأدق دائماً لأنها تعكس آخر إجراء فعلي
+                                // على هذا اليوم بالذات - بخلاف relatedDeduction التي تُطابق فقط بالتاريخ وقد تكون من
+                                // عملية أتمتة قديمة لم تعد تعكس الحالة الحالية (مثلاً لو أُعيد تحديد اليوم يدوياً لاحقاً)
+                                const cleanedNotes = dayNotes?.replace(/^مخالفة أتمتة:\s*/, '');
+                                const displayReason = cleanedNotes || relatedDeduction?.reason || dayDetails[Number(day)]?.reason || defaultReason;
 
                                 mergedRecords.push({
                                     id: `att-${day}`,

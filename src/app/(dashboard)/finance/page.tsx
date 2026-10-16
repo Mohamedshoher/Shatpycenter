@@ -12,10 +12,12 @@ import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import X from 'lucide-react/dist/esm/icons/x';
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Ban from 'lucide-react/dist/esm/icons/ban';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { getTransactionsByMonth, addTransaction } from '@/features/finance/services/financeService';
 import { getFeesByMonth } from '@/features/students/services/recordsService';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -41,6 +43,8 @@ interface ExemptionRecord {
     id: string;
     student_id: string;
     student_name?: string;
+    teacher_id?: string;
+    month?: string;
     amount: number;
     exempted_by?: string;
 }
@@ -55,6 +59,7 @@ export default function FinancePage() {
     const [selectedSalaryTeacher, setSelectedSalaryTeacher] = useState<typeof teachers[number] | null>(null);
     const [isSalaryTeacherOpen, setIsSalaryTeacherOpen] = useState(false);
     const [isDeficitOpen, setIsDeficitOpen] = useState(false);
+    const [expandedDeficitTeacherId, setExpandedDeficitTeacherId] = useState<string | null>(null);
     const [isManagerDirectOpen, setIsManagerDirectOpen] = useState(false);
     const [isFromTeachersOpen, setIsFromTeachersOpen] = useState(false);
     const [selectedFromTeacherId, setSelectedFromTeacherId] = useState<string | null>(null);
@@ -139,6 +144,38 @@ export default function FinancePage() {
         enabled: isClient && !!selectedMonth
     });
 
+    // إلغاء عجز مدرّس بالكامل عن الشهر المختار: إعفاء جماعي لكل طلابه غير المسددين دفعة واحدة
+    const cancelTeacherDeficitMutation = useMutation({
+        mutationFn: async (params: { teacherId: string; students: { id: string; name: string; remaining: number }[] }) => {
+            const res = await fetch('/api/records/exemptions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items: params.students.map(s => ({
+                        student_id: s.id,
+                        student_name: s.name,
+                        teacher_id: params.teacherId,
+                        month: selectedMonth,
+                        amount: s.remaining,
+                        exempted_by: user?.displayName || 'المدير',
+                    }))
+                }),
+            });
+            if (!res.ok) throw new Error('تعذر إلغاء العجز');
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['exemptions', selectedMonth] }),
+    });
+
+    // التراجع عن إلغاء عجز مدرّس: حذف كل إعفاءات هذا الشهر الخاصة بطلابه
+    const undoTeacherDeficitCancelMutation = useMutation({
+        mutationFn: async (exemptionIds: string[]) => {
+            await Promise.all(exemptionIds.map(id =>
+                fetch(`/api/records/exemptions?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+            ));
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['exemptions', selectedMonth] }),
+    });
+
     const allAttendanceResult = useAllTeachersAttendance(selectedMonth);
     const allAttendanceMap = useMemo(
         () => (allAttendanceResult.data || {}) as Record<string, Record<string, string>>,
@@ -210,13 +247,15 @@ export default function FinancePage() {
         const totalExp = expenseTransactions.reduce((sum, tr) => sum + tr.amount, 0);
 
         const exemptedIds = new Set(exemptions.map((e) => e.student_id));
+        // العجز يُحسب على عدد الطلاب المديونين وليس فرق (محصل - متوقع): أي طالب لم يسدد
+        // قسطه بالكامل (حتى لو دفع جزءاً منه) يُحسب عليه كامل القسط الشهري في العجز
         const totalDeficit = Object.entries(collectionsByTeacher).reduce((sum, [id]) => {
             const tGroups = groups.filter(g => g.teacherId === id).map(g => g.id);
             const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
             return sum + tStudents.reduce((acc, s) => {
                 const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
                 const amt = Number(s.monthlyAmount) || 0;
-                return acc + (amt > paid && !exemptedIds.has(s.id) ? amt - paid : 0);
+                return acc + (amt > paid && !exemptedIds.has(s.id) ? amt : 0);
             }, 0);
         }, 0);
 
@@ -424,14 +463,23 @@ export default function FinancePage() {
             const teacher = teachers.find(t => t.id === id);
             const tGroups = groups.filter(g => g.teacherId === id).map(g => g.id);
             const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
-            let deficit = 0, expected = 0;
+            let deficit = 0, rawDeficit = 0, expected = 0;
+            // كل الطلاب غير المسددين فعلياً بغض النظر عن إعفائهم - تُستخدم لمعرفة هل عجز
+            // المدرّس "صفر" لأنه حُصِّل فعلاً أم لأن كل من عليه عجز أُعفي (حتى يمكن التراجع)
+            // العجز يُحسب بعدد الطلاب المديونين: أي طالب لم يسدد بالكامل (حتى لو دفع جزءاً)
+            // يُحسب عليه كامل القسط الشهري في العجز، وليس فرق الباقي فقط
+            const unpaidStudentsList: { id: string; name: string; remaining: number }[] = [];
             tStudents.forEach(s => {
                 const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
                 const amt = Number(s.monthlyAmount) || 0;
                 expected += amt;
-                if (amt > paid && !exemptedIds.has(s.id)) deficit += amt - paid;
+                if (amt > paid) {
+                    rawDeficit += amt;
+                    unpaidStudentsList.push({ id: s.id, name: s.fullName, remaining: amt });
+                    if (!exemptedIds.has(s.id)) deficit += amt;
+                }
             });
-            return { teacherId: id, teacherName: teacher?.fullName || id, collected: data.amount, count: data.count, deficit, expected, unpaidStudents: tStudents.filter(s => { const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0); return paid < (Number(s.monthlyAmount) || 0); }).length };
+            return { teacherId: id, teacherName: teacher?.fullName || id, collected: data.amount, count: data.count, deficit, rawDeficit, expected, unpaidStudents: tStudents.filter(s => { const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0); return paid < (Number(s.monthlyAmount) || 0); }).length, unpaidStudentsList };
         }).sort((a, b) => b.deficit - a.deficit);
     }, [teachers, allFees, students, groups, exemptions, selectedMonth]);
 
@@ -662,20 +710,93 @@ export default function FinancePage() {
                 </div>
 
                 <div className="p-6 overflow-y-auto no-scrollbar space-y-3">
-                    {deficitPerTeacher.filter(d => d.deficit > 0).length === 0 ? (
+                    {deficitPerTeacher.filter(d => d.rawDeficit > 0).length === 0 ? (
                         <div className="py-20 text-center text-gray-400 text-sm font-bold bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100">
                             لا يوجد عجز هذا الشهر.
                         </div>
                     ) : (
-                        deficitPerTeacher.filter(d => d.deficit > 0).map(d => (
-                            <div key={d.teacherId} className="bg-white rounded-2xl p-4 border border-amber-100 shadow-sm flex items-center justify-between hover:border-amber-300 transition-all">
-                                <div className="text-right">
-                                    <p className="font-black text-gray-900 text-sm">{d.teacherName}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold">محصل: {d.collected.toLocaleString()} ج.م | متوقع: {d.expected.toLocaleString()} ج.م | طلاب غير مسددين: {d.unpaidStudents}</p>
+                        deficitPerTeacher.filter(d => d.rawDeficit > 0).map(d => {
+                            const isCancelled = d.deficit === 0; // كل طلابه غير المسددين أُعفوا بالفعل
+                            const teacherExemptionIds = exemptions.filter(e => e.teacher_id === d.teacherId).map(e => e.id);
+                            const isExpanded = expandedDeficitTeacherId === d.teacherId;
+                            return (
+                                <div key={d.teacherId} className={cn(
+                                    "bg-white rounded-2xl p-4 border shadow-sm transition-all space-y-3",
+                                    isCancelled ? "border-gray-100" : "border-amber-100 hover:border-amber-300"
+                                )}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <button
+                                            onClick={() => setExpandedDeficitTeacherId(isExpanded ? null : d.teacherId)}
+                                            className="text-right flex-1 min-w-0"
+                                        >
+                                            <div className="flex items-center gap-2 justify-end flex-wrap">
+                                                {isCancelled && (
+                                                    <span className="text-[9px] font-black text-teal-600 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full">تم إلغاء العجز</span>
+                                                )}
+                                                <p className="font-black text-gray-900 text-sm underline decoration-dotted underline-offset-2">{d.teacherName}</p>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 font-bold">محصل: {d.collected.toLocaleString()} ج.م | متوقع: {d.expected.toLocaleString()} ج.م | طلاب غير مسددين: {d.unpaidStudents}</p>
+                                        </button>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <p className={cn("text-lg font-black font-sans", isCancelled ? "text-gray-300 line-through" : "text-amber-600")}>
+                                                {d.rawDeficit.toLocaleString()} <span className="text-[9px]">ج.م</span>
+                                            </p>
+                                            {isCancelled ? (
+                                                <button
+                                                    title="تراجع عن الإلغاء"
+                                                    onClick={() => {
+                                                        if (teacherExemptionIds.length === 0) return;
+                                                        if (!confirm(`هل تريد التراجع عن إلغاء عجز "${d.teacherName}" وإعادته ${d.rawDeficit.toLocaleString()} ج.م؟`)) return;
+                                                        undoTeacherDeficitCancelMutation.mutate(teacherExemptionIds);
+                                                    }}
+                                                    disabled={undoTeacherDeficitCancelMutation.isPending}
+                                                    className="w-8 h-8 rounded-xl bg-gray-50 text-gray-500 hover:bg-gray-100 flex items-center justify-center transition-all disabled:opacity-50 shrink-0"
+                                                >
+                                                    <RotateCcw size={15} />
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    title="إلغاء العجز"
+                                                    onClick={() => {
+                                                        if (!confirm(`هل تريد إلغاء عجز "${d.teacherName}" بالكامل (${d.deficit.toLocaleString()} ج.م)؟ سيُعفى كل طلابه غير المسددين هذا الشهر.`)) return;
+                                                        cancelTeacherDeficitMutation.mutate({
+                                                            teacherId: d.teacherId,
+                                                            students: d.unpaidStudentsList.filter(s => !exemptions.some(e => e.student_id === s.id)),
+                                                        });
+                                                    }}
+                                                    disabled={cancelTeacherDeficitMutation.isPending}
+                                                    className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 flex items-center justify-center transition-all disabled:opacity-50 shrink-0"
+                                                >
+                                                    <Ban size={15} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {isExpanded && (
+                                        <div className="pt-3 border-t border-gray-50 space-y-1.5">
+                                            {d.unpaidStudentsList.length === 0 ? (
+                                                <p className="text-[11px] text-gray-400 font-bold text-center py-2">لا يوجد طلاب غير مسددين</p>
+                                            ) : (
+                                                d.unpaidStudentsList.map(s => {
+                                                    const isStudentExempted = exemptions.some(e => e.student_id === s.id);
+                                                    return (
+                                                        <div key={s.id} className="flex items-center justify-between bg-amber-50/30 rounded-xl px-3 py-2">
+                                                            <span className={cn("text-xs font-bold text-gray-700", isStudentExempted && "text-gray-400 line-through")}>{s.name}</span>
+                                                            <span className="flex items-center gap-1.5">
+                                                                {isStudentExempted && (
+                                                                    <span className="text-[9px] font-black text-teal-600 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded-full">مُعفى</span>
+                                                                )}
+                                                                <span className="text-xs font-black text-amber-600 font-sans">{s.remaining.toLocaleString()} ج.م</span>
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                                <p className="text-lg font-black text-amber-600 font-sans">{d.deficit.toLocaleString()} <span className="text-[9px]">ج.م</span></p>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 
