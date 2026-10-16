@@ -244,13 +244,15 @@ export default function FinancePage() {
         const totalExp = expenseTransactions.reduce((sum, tr) => sum + tr.amount, 0);
 
         const exemptedIds = new Set(exemptions.map((e) => e.student_id));
+        // العجز يُحسب على عدد الطلاب المديونين وليس فرق (محصل - متوقع): أي طالب لم يسدد
+        // قسطه بالكامل (حتى لو دفع جزءاً منه) يُحسب عليه كامل القسط الشهري في العجز
         const totalDeficit = Object.entries(collectionsByTeacher).reduce((sum, [id]) => {
             const tGroups = groups.filter(g => g.teacherId === id).map(g => g.id);
             const tStudents = students.filter(s => s.groupId && tGroups.includes(s.groupId) && s.status !== 'archived' && s.enrollmentDate && s.enrollmentDate.length >= 7 && s.enrollmentDate.substring(0, 7) <= selectedMonth);
             return sum + tStudents.reduce((acc, s) => {
                 const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
                 const amt = Number(s.monthlyAmount) || 0;
-                return acc + (amt > paid && !exemptedIds.has(s.id) ? amt - paid : 0);
+                return acc + (amt > paid && !exemptedIds.has(s.id) ? amt : 0);
             }, 0);
         }, 0);
 
@@ -461,15 +463,17 @@ export default function FinancePage() {
             let deficit = 0, rawDeficit = 0, expected = 0;
             // كل الطلاب غير المسددين فعلياً بغض النظر عن إعفائهم - تُستخدم لمعرفة هل عجز
             // المدرّس "صفر" لأنه حُصِّل فعلاً أم لأن كل من عليه عجز أُعفي (حتى يمكن التراجع)
+            // العجز يُحسب بعدد الطلاب المديونين: أي طالب لم يسدد بالكامل (حتى لو دفع جزءاً)
+            // يُحسب عليه كامل القسط الشهري في العجز، وليس فرق الباقي فقط
             const unpaidStudentsList: { id: string; name: string; remaining: number }[] = [];
             tStudents.forEach(s => {
                 const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0);
                 const amt = Number(s.monthlyAmount) || 0;
                 expected += amt;
                 if (amt > paid) {
-                    rawDeficit += amt - paid;
-                    unpaidStudentsList.push({ id: s.id, name: s.fullName, remaining: amt - paid });
-                    if (!exemptedIds.has(s.id)) deficit += amt - paid;
+                    rawDeficit += amt;
+                    unpaidStudentsList.push({ id: s.id, name: s.fullName, remaining: amt });
+                    if (!exemptedIds.has(s.id)) deficit += amt;
                 }
             });
             return { teacherId: id, teacherName: teacher?.fullName || id, collected: data.amount, count: data.count, deficit, rawDeficit, expected, unpaidStudents: tStudents.filter(s => { const paid = allFees.filter((f) => f.studentId === s.id).reduce((a, f) => a + (Number(f.amount?.toString().replace(/[^0-9.]/g, '')) || 0), 0); return paid < (Number(s.monthlyAmount) || 0); }).length, unpaidStudentsList };
