@@ -12,6 +12,8 @@ import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import X from 'lucide-react/dist/esm/icons/x';
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Ban from 'lucide-react/dist/esm/icons/ban';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
@@ -57,6 +59,7 @@ export default function FinancePage() {
     const [selectedSalaryTeacher, setSelectedSalaryTeacher] = useState<typeof teachers[number] | null>(null);
     const [isSalaryTeacherOpen, setIsSalaryTeacherOpen] = useState(false);
     const [isDeficitOpen, setIsDeficitOpen] = useState(false);
+    const [expandedDeficitTeacherId, setExpandedDeficitTeacherId] = useState<string | null>(null);
     const [isManagerDirectOpen, setIsManagerDirectOpen] = useState(false);
     const [isFromTeachersOpen, setIsFromTeachersOpen] = useState(false);
     const [selectedFromTeacherId, setSelectedFromTeacherId] = useState<string | null>(null);
@@ -715,51 +718,81 @@ export default function FinancePage() {
                         deficitPerTeacher.filter(d => d.rawDeficit > 0).map(d => {
                             const isCancelled = d.deficit === 0; // كل طلابه غير المسددين أُعفوا بالفعل
                             const teacherExemptionIds = exemptions.filter(e => e.teacher_id === d.teacherId).map(e => e.id);
+                            const isExpanded = expandedDeficitTeacherId === d.teacherId;
                             return (
                                 <div key={d.teacherId} className={cn(
                                     "bg-white rounded-2xl p-4 border shadow-sm transition-all space-y-3",
                                     isCancelled ? "border-gray-100" : "border-amber-100 hover:border-amber-300"
                                 )}>
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-right">
-                                            <div className="flex items-center gap-2 justify-end">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <button
+                                            onClick={() => setExpandedDeficitTeacherId(isExpanded ? null : d.teacherId)}
+                                            className="text-right flex-1 min-w-0"
+                                        >
+                                            <div className="flex items-center gap-2 justify-end flex-wrap">
                                                 {isCancelled && (
                                                     <span className="text-[9px] font-black text-teal-600 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full">تم إلغاء العجز</span>
                                                 )}
-                                                <p className="font-black text-gray-900 text-sm">{d.teacherName}</p>
+                                                <p className="font-black text-gray-900 text-sm underline decoration-dotted underline-offset-2">{d.teacherName}</p>
                                             </div>
                                             <p className="text-[10px] text-gray-400 font-bold">محصل: {d.collected.toLocaleString()} ج.م | متوقع: {d.expected.toLocaleString()} ج.م | طلاب غير مسددين: {d.unpaidStudents}</p>
+                                        </button>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <p className={cn("text-lg font-black font-sans", isCancelled ? "text-gray-300 line-through" : "text-amber-600")}>
+                                                {d.rawDeficit.toLocaleString()} <span className="text-[9px]">ج.م</span>
+                                            </p>
+                                            {isCancelled ? (
+                                                <button
+                                                    title="تراجع عن الإلغاء"
+                                                    onClick={() => {
+                                                        if (teacherExemptionIds.length === 0) return;
+                                                        if (!confirm(`هل تريد التراجع عن إلغاء عجز "${d.teacherName}" وإعادته ${d.rawDeficit.toLocaleString()} ج.م؟`)) return;
+                                                        undoTeacherDeficitCancelMutation.mutate(teacherExemptionIds);
+                                                    }}
+                                                    disabled={undoTeacherDeficitCancelMutation.isPending}
+                                                    className="w-8 h-8 rounded-xl bg-gray-50 text-gray-500 hover:bg-gray-100 flex items-center justify-center transition-all disabled:opacity-50 shrink-0"
+                                                >
+                                                    <RotateCcw size={15} />
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    title="إلغاء العجز"
+                                                    onClick={() => {
+                                                        if (!confirm(`هل تريد إلغاء عجز "${d.teacherName}" بالكامل (${d.deficit.toLocaleString()} ج.م)؟ سيُعفى كل طلابه غير المسددين هذا الشهر.`)) return;
+                                                        cancelTeacherDeficitMutation.mutate({
+                                                            teacherId: d.teacherId,
+                                                            students: d.unpaidStudentsList.filter(s => !exemptions.some(e => e.student_id === s.id)),
+                                                        });
+                                                    }}
+                                                    disabled={cancelTeacherDeficitMutation.isPending}
+                                                    className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 flex items-center justify-center transition-all disabled:opacity-50 shrink-0"
+                                                >
+                                                    <Ban size={15} />
+                                                </button>
+                                            )}
                                         </div>
-                                        <p className={cn("text-lg font-black font-sans", isCancelled ? "text-gray-300 line-through" : "text-amber-600")}>
-                                            {d.rawDeficit.toLocaleString()} <span className="text-[9px]">ج.م</span>
-                                        </p>
                                     </div>
-                                    {isCancelled ? (
-                                        <button
-                                            onClick={() => {
-                                                if (teacherExemptionIds.length === 0) return;
-                                                if (!confirm(`هل تريد التراجع عن إلغاء عجز "${d.teacherName}" وإعادته ${d.rawDeficit.toLocaleString()} ج.م؟`)) return;
-                                                undoTeacherDeficitCancelMutation.mutate(teacherExemptionIds);
-                                            }}
-                                            disabled={undoTeacherDeficitCancelMutation.isPending}
-                                            className="w-full py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-100 transition-all disabled:opacity-50"
-                                        >
-                                            تراجع عن الإلغاء
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={() => {
-                                                if (!confirm(`هل تريد إلغاء عجز "${d.teacherName}" بالكامل (${d.deficit.toLocaleString()} ج.م)؟ سيُعفى كل طلابه غير المسددين هذا الشهر.`)) return;
-                                                cancelTeacherDeficitMutation.mutate({
-                                                    teacherId: d.teacherId,
-                                                    students: d.unpaidStudentsList.filter(s => !exemptions.some(e => e.student_id === s.id)),
-                                                });
-                                            }}
-                                            disabled={cancelTeacherDeficitMutation.isPending}
-                                            className="w-full py-2 bg-amber-50 text-amber-600 rounded-xl text-xs font-bold hover:bg-amber-100 transition-all disabled:opacity-50"
-                                        >
-                                            إلغاء العجز
-                                        </button>
+                                    {isExpanded && (
+                                        <div className="pt-3 border-t border-gray-50 space-y-1.5">
+                                            {d.unpaidStudentsList.length === 0 ? (
+                                                <p className="text-[11px] text-gray-400 font-bold text-center py-2">لا يوجد طلاب غير مسددين</p>
+                                            ) : (
+                                                d.unpaidStudentsList.map(s => {
+                                                    const isStudentExempted = exemptions.some(e => e.student_id === s.id);
+                                                    return (
+                                                        <div key={s.id} className="flex items-center justify-between bg-amber-50/30 rounded-xl px-3 py-2">
+                                                            <span className={cn("text-xs font-bold text-gray-700", isStudentExempted && "text-gray-400 line-through")}>{s.name}</span>
+                                                            <span className="flex items-center gap-1.5">
+                                                                {isStudentExempted && (
+                                                                    <span className="text-[9px] font-black text-teal-600 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded-full">مُعفى</span>
+                                                                )}
+                                                                <span className="text-xs font-black text-amber-600 font-sans">{s.remaining.toLocaleString()} ج.م</span>
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             );
