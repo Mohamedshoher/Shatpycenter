@@ -78,24 +78,36 @@ export const TeacherAttendanceTab = ({
                 {!isTeacher && (
                     <button
                         onClick={async () => {
-                            if (!confirm('هل أنت متأكد من تعميد الغياب لبقية أيام الشهر؟')) return;
+                            const now = new Date();
+                            const currentMonthRaw = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                            if (selectedMonthRaw !== currentMonthRaw) {
+                                alert('تعميد الغياب يعمل فقط على الشهر الحالي.');
+                                return;
+                            }
+                            if (!confirm('هل أنت متأكد من تعميد الغياب من أول الشهر حتى قبل اليوم الحالي (واليوم نفسه يُسجَّل حضوراً)؟')) return;
+
                             const [yearStr, monthStr] = selectedMonthRaw.split('-');
                             const year = parseInt(yearStr);
                             const month = parseInt(monthStr);
-                            const daysInMonth = new Date(year, month, 0).getDate();
-                            const today = new Date().getDate();
+                            const today = now.getDate();
                             const firstDay = new Date(year, month - 1, 1);
                             const startOffset = (firstDay.getDay() + 1) % 7;
 
-                            for (let day = today + 1; day <= daysInMonth; day++) {
+                            for (let day = 1; day < today; day++) {
                                 const weekDayIdx = (day - 1 + startOffset) % 7;
                                 if (weekDayIdx === 5 || weekDayIdx === 6) continue;
                                 const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
                                 try {
-                                    await updateAttendanceAsync({ date: dateStr, status: 'absent', notes: 'غياب يدوي (تعميد غياب بقية الشهر)' });
+                                    await updateAttendanceAsync({ date: dateStr, status: 'absent', notes: 'غياب يدوي (تعميد غياب من أول الشهر)' });
                                 } catch {}
                             }
-                            alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
+
+                            const todayDateStr = `${selectedMonthRaw}-${String(today).padStart(2, '0')}`;
+                            try {
+                                await updateAttendanceAsync({ date: todayDateStr, status: 'present' });
+                            } catch {}
+
+                            alert('تم تعميد الغياب من أول الشهر حتى الأمس، وتسجيل اليوم الحالي حضوراً');
                         }}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-200 transition-all shrink-0 h-10 md:h-auto"
                     >
