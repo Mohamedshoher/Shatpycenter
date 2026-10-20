@@ -129,6 +129,24 @@ export async function PUT(request: NextRequest) {
         const { id, ...data } = await request.json();
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
+        const supabase = createServerSupabase();
+
+        // المدرّس مسموح له فقط بإضافة/تعديل رقم هاتف ولي الأمر، ولطلاب مجموعاته هو فقط
+        if (session.role === 'teacher') {
+            const providedKeys = Object.keys(data).filter((k) => data[k] !== undefined);
+            if (providedKeys.length !== 1 || providedKeys[0] !== 'parentPhone') {
+                return NextResponse.json({ error: 'المدرّس يمكنه فقط إضافة/تعديل رقم هاتف ولي الأمر' }, { status: 403 });
+            }
+
+            const { data: studentRow } = await supabase.from('students').select('group_id').eq('id', id).maybeSingle();
+            if (!studentRow?.group_id) return NextResponse.json({ error: 'الطالب غير موجود' }, { status: 404 });
+
+            const { data: groupRow } = await supabase.from('groups').select('teacher_id').eq('id', studentRow.group_id).maybeSingle();
+            if (!groupRow || groupRow.teacher_id !== session.teacherId) {
+                return NextResponse.json({ error: 'لا يمكنك تعديل بيانات طالب ليس في مجموعاتك' }, { status: 403 });
+            }
+        }
+
         const updates: Record<string, unknown> = {};
         if (data.fullName) updates.full_name = data.fullName;
         if (data.groupId !== undefined) updates.group_id = data.groupId;
@@ -144,7 +162,6 @@ export async function PUT(request: NextRequest) {
         if (data.enrollmentDate) updates.enrollment_date = data.enrollmentDate;
         if (data.archivedDate) updates.archived_date = data.archivedDate;
 
-        const supabase = createServerSupabase();
         const { error } = await supabase.from('students').update(updates).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json({ success: true });

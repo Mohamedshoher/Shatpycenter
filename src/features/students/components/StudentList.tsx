@@ -702,18 +702,20 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(student, 'notes'); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="الملاحظات"><FileText size={18} /></button>
                                 )}
 
-                                {(user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'schedule_secretary') && (
+                                {(user?.role === 'director' || user?.role === 'supervisor' || user?.role === 'schedule_secretary' || user?.role === 'teacher') && (
                                     <>
-                                        <button onClick={(e) => { e.stopPropagation(); handleCall(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors" title="اتصال"><Phone size={18} /></button>
-                                        {user?.role !== 'schedule_secretary' && (
+                                        {user?.role !== 'teacher' && (
+                                            <button onClick={(e) => { e.stopPropagation(); handleCall(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors" title="اتصال"><Phone size={18} /></button>
+                                        )}
+                                        {user?.role !== 'schedule_secretary' && user?.role !== 'teacher' && (
                                             <button onClick={(e) => { e.stopPropagation(); handleArchive(student); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-amber-500 transition-colors" title="أرشفة"><Archive size={18} /></button>
                                         )}
-                                        {user?.role !== 'schedule_secretary' ? (
+                                        {user?.role !== 'schedule_secretary' && user?.role !== 'teacher' ? (
                                             <button onClick={(e) => { e.stopPropagation(); setStudentToEdit(student); setIsEditModalOpen(true); }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-colors" title="تعديل"><Edit3 size={18} /></button>
                                         ) : (
-                                            <button onClick={(e) => { 
-                                                e.stopPropagation(); 
-                                                const newPhone = window.prompt('أدخل رقم الهاتف الجديد لولي أمر الطالب:', student.parentPhone);
+                                            <button onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newPhone = window.prompt(student.parentPhone ? 'أدخل رقم الهاتف الجديد لولي أمر الطالب:' : 'أدخل رقم هاتف ولي أمر الطالب:', student.parentPhone);
                                                 if (newPhone !== null && newPhone.trim() !== '' && newPhone !== student.parentPhone) {
                                                     updateStudent(student.id, { parentPhone: newPhone.trim() }).then(() => {
                                                         queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -721,7 +723,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                                         alert('حدث خطأ أثناء التحديث');
                                                     });
                                                 }
-                                            }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title="تعديل الهاتف"><Edit3 size={18} /></button>
+                                            }} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-purple-600 transition-colors" title={student.parentPhone ? 'تعديل الهاتف' : 'إضافة رقم الهاتف'}><Edit3 size={18} /></button>
                                         )}
                                     </>
                                 )}

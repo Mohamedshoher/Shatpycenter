@@ -21,6 +21,7 @@ import Edit3 from 'lucide-react/dist/esm/icons/edit-3'
 import CircleDollarSign from 'lucide-react/dist/esm/icons/circle-dollar-sign'
 import Loader from 'lucide-react/dist/esm/icons/loader'
 import Layers from 'lucide-react/dist/esm/icons/layers';
+import StickyNote from 'lucide-react/dist/esm/icons/sticky-note';
 
 // ==========================================
 // 3. استيراد الأنواع (Types) والخطافات (Hooks) والخدمات (Services)
@@ -41,6 +42,7 @@ import { useTeacherDashboard } from '@/features/teachers/hooks/useTeacherDashboa
 import { TeacherDeficitModal, DeficitTab } from './TeacherDeficitModal';
 import { TeacherGroupsTab } from './TeacherGroupsTab';
 import { TeacherAgreementTab } from './TeacherAgreementTab';
+import { TeacherNotesTab } from './TeacherNotesTab';
 import { getErrorMessage } from '@/lib/error-message';
 
 // ==========================================
@@ -684,6 +686,7 @@ export default function TeacherDetailModal({
         { id: 'payroll', label: 'الراتب', icon: CreditCard },
         { id: 'groups', label: 'المجموعات', icon: Layers },
         { id: 'agreement', label: 'الاتفاق', icon: FileText },
+        { id: 'notes', label: 'ملحوظات', icon: StickyNote },
     ].filter(tab => {
         // المشرف ممنوع من رؤية التحصيل/الراتب الخاصين بمعلم آخر، لكنه يقدر يشوف
         // تحصيله وراتبه هو في ملفه الشخصي (لما يفتح سجله هو نفسه)
@@ -825,6 +828,13 @@ export default function TeacherDetailModal({
             case 'agreement':
                 return (
                     <TeacherAgreementTab teacher={teacher} />
+                );
+            // ----------------------------------------
+            // تبويب الملحوظات (Notes)
+            // ----------------------------------------
+            case 'notes':
+                return (
+                    <TeacherNotesTab teacher={teacher} isDirector={user?.role === 'director'} />
                 );
         }
     };
