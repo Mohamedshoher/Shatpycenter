@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { getStudents, clearGroupAppointments } from '@/features/students/services/studentService';
 import { getGroups } from '@/features/groups/services/groupService';
+import { useTeachers } from '@/features/teachers/hooks/useTeachers';
 import { useAuthStore } from '@/store/useAuthStore';
 import Clock from 'lucide-react/dist/esm/icons/clock'
 import Users from 'lucide-react/dist/esm/icons/users'
@@ -66,8 +67,13 @@ export default function SchedulesDashboard() {
 
     const { data: allStudents, isLoading: isStudentsLoading } = useQuery({ queryKey: ['students'], queryFn: () => getStudents() });
     const { data: allGroups, isLoading: isGroupsLoading } = useQuery({ queryKey: ['groups'], queryFn: () => getGroups() });
+    const { data: allTeachers } = useTeachers();
 
     const isLoading = isStudentsLoading || isGroupsLoading;
+
+    // اسم المعلم المسؤول عن المجموعة (محسوب من teacherId، لأن group.teacher غير مُعبَّأ من الـ API)
+    const getTeacherName = useCallback((teacherId: string | null | undefined) =>
+        allTeachers?.find(t => t.id === teacherId)?.fullName || '', [allTeachers]);
 
     // معالجة البيانات وبناء الجدول
     const dashboardData = useMemo(() => {
@@ -80,7 +86,7 @@ export default function SchedulesDashboard() {
         }
 
         if (searchGroup) {
-            filteredGroups = filteredGroups.filter(g => g.name.includes(searchGroup) || g.teacher?.includes(searchGroup));
+            filteredGroups = filteredGroups.filter(g => g.name.includes(searchGroup) || getTeacherName(g.teacherId).includes(searchGroup));
         }
 
         const groupsData = filteredGroups.map(group => {
@@ -163,7 +169,7 @@ export default function SchedulesDashboard() {
         // ترتيب المجموعات بحيث تظهر المجموعات التي بها طلاب في هذا اليوم أولاً
         return groupsData.sort((a, b) => b.totalStudentsToday - a.totalStudentsToday);
 
-    }, [allStudents, allGroups, selectedDay, user, searchGroup]);
+    }, [allStudents, allGroups, selectedDay, user, searchGroup, getTeacherName]);
 
     // بحث عن طالب معين بالاسم لفتح تفاصيله مباشرة
     const studentSearchResults = useMemo(() => {
@@ -198,25 +204,25 @@ export default function SchedulesDashboard() {
                 </div>
                 
                 {user?.role !== 'teacher' && (
-                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                        <div className="relative">
-                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <div className="flex flex-row gap-2 w-full md:w-auto">
+                        <div className="relative flex-1 min-w-0 md:w-64 md:flex-none">
+                            <Search className="absolute right-2.5 md:right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                             <input
                                 type="text"
-                                placeholder="بحث عن طالب بالاسم..."
+                                placeholder="بحث بالاسم..."
                                 value={searchStudent}
                                 onChange={(e) => setSearchStudent(e.target.value)}
-                                className="pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold w-full sm:w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
+                                className="pl-2 pr-8 md:pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-xs md:text-sm font-bold w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
                             />
                         </div>
-                        <div className="relative">
-                            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <div className="relative flex-1 min-w-0 md:w-64 md:flex-none">
+                            <Filter className="absolute right-2.5 md:right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                             <input
                                 type="text"
-                                placeholder="بحث عن مجموعة أو معلم..."
+                                placeholder="بحث بمعلم/مجموعة..."
                                 value={searchGroup}
                                 onChange={(e) => setSearchGroup(e.target.value)}
-                                className="pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
+                                className="pl-2 pr-8 md:pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-xs md:text-sm font-bold w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
                             />
                         </div>
                     </div>
@@ -297,7 +303,7 @@ export default function SchedulesDashboard() {
                                         <h3 className="font-black text-base md:text-lg text-gray-900">{group.name}</h3>
                                         <div className="flex flex-wrap items-center gap-2 md:gap-3 text-[10px] md:text-xs font-bold text-gray-500 mt-1">
                                             <span className="flex items-center gap-1">
-                                                <Users size={14} /> المعلم: {group.teacher || 'غير محدد'}
+                                                <Users size={14} /> المعلم: {getTeacherName(group.teacherId) || 'غير محدد'}
                                             </span>
                                             <span className="hidden sm:block w-1 h-1 rounded-full bg-gray-300" />
                                             <span>السعة القصوى: {group.maxStudentsPerHour || 5} طلاب/ساعة</span>
