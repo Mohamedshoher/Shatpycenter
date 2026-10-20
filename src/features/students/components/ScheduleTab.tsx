@@ -342,73 +342,76 @@ export default function ScheduleTab({ student }: { student: Student }) {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-2.5 md:space-y-4">
             {/* بطاقة تحديد وتحديث المواعيد (تظهر فقط عند النقر على زر الإضافة/التعديل) */}
             {isEditorOpen && (
-                <div id="schedule-editor-box" className="bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 p-4 md:p-5 rounded-[28px] text-white shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 border border-blue-400/30">
+                <div id="schedule-editor-box" className="bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 p-3 md:p-5 rounded-2xl md:rounded-[28px] text-white shadow-md md:shadow-xl space-y-2.5 md:space-y-4 animate-in fade-in zoom-in-95 duration-200 border border-blue-400/30">
                     {/* الرأس وأزرار الإغلاق والسعة */}
                     <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
-                                <Clock size={18} />
+                        <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
+                            <div className="w-6 h-6 md:w-8 md:h-8 bg-white/20 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
+                                <Clock size={14} className="md:hidden" />
+                                <Clock size={18} className="hidden md:block" />
                             </div>
-                            <div>
-                                <h4 className="font-black text-sm md:text-base leading-tight">تحديد وتحديث المواعيد</h4>
-                                <span className="text-[10px] text-blue-100 font-bold">الحد الأقصى: {maxPerHour} طلاب/ساعة</span>
+                            <div className="min-w-0">
+                                <h4 className="font-black text-xs md:text-base leading-tight truncate">تحديد وتحديث المواعيد</h4>
+                                <span className="text-[9px] md:text-[10px] text-blue-100 font-bold">الحد الأقصى {maxPerHour}/ساعة</span>
                             </div>
                         </div>
                         <button
                             type="button"
                             onClick={() => setIsEditorOpen(false)}
-                            className="w-7 h-7 bg-white/15 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                            className="w-6 h-6 md:w-7 md:h-7 bg-white/15 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0"
                             title="إغلاق"
                         >
-                            <X size={15} />
+                            <X size={13} className="md:hidden" />
+                            <X size={15} className="hidden md:block" />
                         </button>
                     </div>
 
                     {/* 1. اختيار الأيام */}
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-blue-100 flex-wrap gap-1">
-                            <span>1. اختر الأيام المراد جدولتها:</span>
-                            <div className="flex items-center gap-1.5">
+                    <div className="space-y-1.5 md:space-y-2">
+                        <div className="flex items-center justify-between text-[10px] md:text-[11px] font-bold text-blue-100 flex-wrap gap-1">
+                            <span>1. اختر الأيام:</span>
+                            <div className="flex items-center gap-1 md:gap-1.5">
                                 <button
                                     type="button"
                                     onClick={handleSelectWeekdays}
-                                    className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                                    className="text-[9px] md:text-[10px] bg-white/10 hover:bg-white/20 px-1.5 md:px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
                                 >
-                                    السبت-الأربعاء
+                                    سبت-أربعاء
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleSelectAllDays}
-                                    className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                                    className="text-[9px] md:text-[10px] bg-white/10 hover:bg-white/20 px-1.5 md:px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
                                 >
-                                    السبت-الخميس
+                                    سبت-خميس
                                 </button>
                                 {selectedDays.length > 0 && (
                                     <button
                                         type="button"
                                         onClick={() => setSelectedDays([])}
-                                        className="text-[10px] text-red-200 hover:text-white transition-colors cursor-pointer"
+                                        className="text-[9px] md:text-[10px] text-red-200 hover:text-white transition-colors cursor-pointer"
                                     >
-                                        إلغاء التحديد
+                                        إلغاء
                                     </button>
                                 )}
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                        <div className="grid grid-cols-7 gap-1 md:gap-1.5">
                             {weekDaysNames.map(day => {
                                 const isSelected = selectedDays.includes(day);
                                 const hasExisting = Boolean(currentDaysMap[day]);
+                                const shortDay = day.replace(/^ال/, '');
                                 return (
                                     <button
                                         key={day}
                                         type="button"
                                         onClick={() => toggleDay(day)}
                                         className={cn(
-                                            "py-2 px-1 rounded-xl text-xs font-black transition-all flex flex-col items-center justify-center gap-0.5 relative active:scale-95 border cursor-pointer",
+                                            "py-1.5 md:py-2 px-0.5 rounded-lg md:rounded-xl text-[9px] md:text-xs font-black transition-all flex flex-col items-center justify-center gap-0.5 relative active:scale-95 border cursor-pointer",
                                             isSelected
                                                 ? "bg-white text-blue-700 border-white shadow-md font-black"
                                                 : hasExisting
@@ -416,12 +419,12 @@ export default function ScheduleTab({ student }: { student: Student }) {
                                                     : "bg-blue-700/25 text-blue-200 border-blue-500/20 hover:bg-blue-700/50"
                                         )}
                                     >
-                                        <span className="flex items-center gap-1">
-                                            {isSelected && <Check size={12} className="stroke-[3px]" />}
-                                            {day}
+                                        <span className="flex items-center gap-0.5 whitespace-nowrap">
+                                            {isSelected && <Check size={10} className="stroke-[3px] shrink-0" />}
+                                            {shortDay}
                                         </span>
                                         {hasExisting && !isSelected && (
-                                            <span className="text-[9px] text-blue-200 font-bold opacity-80">مسجل</span>
+                                            <span className="text-[7px] md:text-[9px] text-blue-200 font-bold opacity-80">مسجل</span>
                                         )}
                                     </button>
                                 );
@@ -430,36 +433,36 @@ export default function ScheduleTab({ student }: { student: Student }) {
                     </div>
 
                     {/* 2. تحديد الوقت الموحد والأوقات السريعة */}
-                    <div className="space-y-3 pt-3 border-t border-white/15">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-blue-100">
-                            <span>2. اختر الوقت {selectedDays.length > 0 ? `(${selectedDays.length} ${selectedDays.length === 1 ? 'يوم' : 'أيام'} مختارة)` : '(حدد الأيام أولاً)'}:</span>
+                    <div className="space-y-2 md:space-y-3 pt-2 md:pt-3 border-t border-white/15">
+                        <div className="flex items-center justify-between text-[10px] md:text-[11px] font-bold text-blue-100 flex-wrap gap-1">
+                            <span>2. اختر الوقت {selectedDays.length > 0 ? `(${selectedDays.length} ${selectedDays.length === 1 ? 'يوم' : 'أيام'})` : ''}:</span>
                             {selectedDays.length > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => setIsCustomMode(!isCustomMode)}
-                                    className="text-[10px] text-blue-200 hover:text-white underline underline-offset-2 cursor-pointer"
+                                    className="text-[9px] md:text-[10px] text-blue-200 hover:text-white underline underline-offset-2 cursor-pointer"
                                 >
-                                    {isCustomMode ? 'الوقت الموحد' : 'تخصيص وقت لكل يوم'}
+                                    {isCustomMode ? 'الوقت الموحد' : 'تخصيص لكل يوم'}
                                 </button>
                             )}
                         </div>
 
                         {!isCustomMode ? (
-                            <div className="space-y-2">
+                            <div className="space-y-1.5 md:space-y-2">
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="time"
                                         value={commonTime}
                                         onChange={(e) => setCommonTime(e.target.value)}
-                                        className="bg-white text-blue-900 border-none rounded-xl px-3.5 py-2 font-black text-sm focus:ring-2 focus:ring-white/50 w-32 shadow-sm"
+                                        className="bg-white text-blue-900 border-none rounded-lg md:rounded-xl px-2.5 md:px-3.5 py-1.5 md:py-2 font-black text-xs md:text-sm focus:ring-2 focus:ring-white/50 w-28 md:w-32 shadow-sm"
                                     />
-                                    <span className="text-xs font-bold text-blue-100">
+                                    <span className="text-[10px] md:text-xs font-bold text-blue-100 truncate">
                                         = {formatToStandardArabic(commonTime)}
                                     </span>
                                 </div>
 
-                                {/* مواعيد سريعة بنقرة واحدة */}
-                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                {/* مواعيد سريعة بنقرة واحدة - سطر واحد قابل للتمرير على الموبايل */}
+                                <div className="flex md:flex-wrap gap-1.5 pt-1 overflow-x-auto no-scrollbar -mx-0.5 px-0.5">
                                     {suggestedTimes.slice(0, 6).map(t => {
                                         const t24 = parseArabicToTime24(t);
                                         const isCurrent = commonTime === t24;
@@ -469,9 +472,9 @@ export default function ScheduleTab({ student }: { student: Student }) {
                                                 type="button"
                                                 onClick={() => setCommonTime(t24)}
                                                 className={cn(
-                                                    "px-2.5 py-1 rounded-lg text-[11px] font-black border transition-all cursor-pointer",
+                                                    "px-2 md:px-2.5 py-1 rounded-lg text-[10px] md:text-[11px] font-black border transition-all cursor-pointer shrink-0",
                                                     isCurrent
-                                                        ? "bg-white text-blue-700 border-white shadow-md scale-105"
+                                                        ? "bg-white text-blue-700 border-white shadow-md md:scale-105"
                                                         : "bg-white/10 hover:bg-white/20 text-white border-white/10"
                                                 )}
                                             >
@@ -484,10 +487,10 @@ export default function ScheduleTab({ student }: { student: Student }) {
                         ) : (
                             /* تخصيص وقت لكل يوم على حدة */
                             selectedDays.length > 0 ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 md:gap-2 max-h-44 overflow-y-auto pr-1">
                                     {selectedDays.map(day => (
-                                        <div key={day} className="bg-white/10 p-2.5 rounded-xl flex items-center justify-between">
-                                            <span className="text-xs font-black">{day}</span>
+                                        <div key={day} className="bg-white/10 p-2 md:p-2.5 rounded-lg md:rounded-xl flex items-center justify-between">
+                                            <span className="text-[11px] md:text-xs font-black">{day}</span>
                                             <input
                                                 type="time"
                                                 value={customDayTimes[day] || commonTime}
@@ -498,7 +501,7 @@ export default function ScheduleTab({ student }: { student: Student }) {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-xs text-blue-200 py-2">
+                                <div className="text-[11px] md:text-xs text-blue-200 py-2">
                                     اختر الأيام من الخطوة الأولى لتخصيص وقت لكل يوم
                                 </div>
                             )
@@ -510,7 +513,7 @@ export default function ScheduleTab({ student }: { student: Student }) {
                             onClick={handleSave}
                             disabled={updateMutation.isPending || selectedDays.length === 0}
                             className={cn(
-                                "w-full py-3.5 px-4 rounded-2xl font-black text-sm md:text-base transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer border active:scale-[0.99] mt-3",
+                                "w-full py-2.5 md:py-3.5 px-3 md:px-4 rounded-xl md:rounded-2xl font-black text-xs md:text-base transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer border active:scale-[0.99] mt-1.5 md:mt-3",
                                 selectedDays.length === 0
                                     ? "bg-white/15 text-white/70 border-white/20 cursor-not-allowed"
                                     : showSaveSuccess
@@ -520,22 +523,22 @@ export default function ScheduleTab({ student }: { student: Student }) {
                         >
                             {updateMutation.isPending ? (
                                 <span className="flex items-center gap-2">
-                                    <Loader2 className="animate-spin" size={18} />
-                                    <span>جاري حفظ المواعيد...</span>
+                                    <Loader2 className="animate-spin" size={16} />
+                                    <span>جاري الحفظ...</span>
                                 </span>
                             ) : showSaveSuccess ? (
                                 <span className="flex items-center gap-2">
-                                    <Check size={18} className="stroke-[3px]" />
-                                    <span>تم حفظ المواعيد بنجاح ✓</span>
+                                    <Check size={16} className="stroke-[3px]" />
+                                    <span>تم الحفظ بنجاح ✓</span>
                                 </span>
                             ) : selectedDays.length === 0 ? (
-                                <span className="flex items-center gap-2 text-xs md:text-sm">
-                                    <span>الرجاء اختيار الأيام أولاً لحفظ المواعيد</span>
+                                <span className="flex items-center gap-2 text-[10px] md:text-sm">
+                                    <span>اختر الأيام أولاً لحفظ المواعيد</span>
                                 </span>
                             ) : (
                                 <span className="flex items-center gap-2">
-                                    <Check size={18} className="stroke-[3px]" />
-                                    <span>حفظ وتثبيت مواعيد ({selectedDays.length} {selectedDays.length === 1 ? 'يوم' : 'أيام'})</span>
+                                    <Check size={16} className="stroke-[3px]" />
+                                    <span>حفظ ({selectedDays.length} {selectedDays.length === 1 ? 'يوم' : 'أيام'})</span>
                                 </span>
                             )}
                         </button>
@@ -544,14 +547,17 @@ export default function ScheduleTab({ student }: { student: Student }) {
             )}
 
             {/* عرض المواعيد الحالية المسجلة */}
-            <div className="bg-white p-4 md:p-5 rounded-[28px] border border-gray-100 shadow-sm space-y-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                    <h5 className="font-black text-gray-800 text-sm flex items-center gap-2">
-                        <div className="w-1.5 h-5 bg-blue-600 rounded-full" />
-                        المواعيد المسجلة حالياً
+            <div className="bg-white p-3 md:p-5 rounded-2xl md:rounded-[28px] border border-gray-100 shadow-sm space-y-2.5 md:space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-1.5 md:gap-2">
+                    <h5 className="font-black text-gray-800 text-xs md:text-sm flex items-center gap-1.5 md:gap-2">
+                        <div className="w-1 md:w-1.5 h-4 md:h-5 bg-blue-600 rounded-full" />
+                        المواعيد المسجلة
+                        <span className="text-[9px] md:text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 md:px-2.5 py-0.5 rounded-lg">
+                            {localAppointment ? localAppointment.split(',').length : 0}
+                        </span>
                     </h5>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 md:gap-2">
                         {/* زر فتح/إغلاق محرر المواعيد */}
                         <button
                             type="button"
@@ -559,90 +565,91 @@ export default function ScheduleTab({ student }: { student: Student }) {
                                 setIsEditorOpen(!isEditorOpen);
                             }}
                             className={cn(
-                                "flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-xl transition-all border cursor-pointer active:scale-95",
+                                "flex items-center gap-1 md:gap-1.5 text-[10px] md:text-xs font-black px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl transition-all border cursor-pointer active:scale-95",
                                 isEditorOpen
                                     ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                                     : "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
                             )}
                             title="تعديل أو إضافة موعد جديد"
                         >
-                            {isEditorOpen ? <X size={14} /> : <CalendarPlus size={14} />}
-                            <span>{isEditorOpen ? 'إغلاق المحرر' : 'تعديل / إضافة مواعيد'}</span>
+                            {isEditorOpen ? <X size={12} /> : <CalendarPlus size={12} />}
+                            <span>{isEditorOpen ? 'إغلاق' : 'تعديل / إضافة'}</span>
                         </button>
 
                         {Boolean(localAppointment) && (
                             <button
                                 onClick={handleClearAllSchedules}
                                 disabled={updateMutation.isPending}
-                                className="flex items-center gap-1.5 text-xs font-black text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-xl transition-all border border-red-100 disabled:opacity-50 cursor-pointer"
+                                className="flex items-center gap-1 md:gap-1.5 text-[10px] md:text-xs font-black text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg md:rounded-xl transition-all border border-red-100 disabled:opacity-50 cursor-pointer"
                                 title="مسح جميع مواعيد الطالب"
                             >
-                                <Trash2 size={13} />
+                                <Trash2 size={12} />
                                 <span>مسح الكل</span>
                             </button>
                         )}
-                        <span className="text-[10px] font-black text-gray-500 bg-gray-100 px-2.5 py-1 rounded-xl">
-                            {localAppointment ? localAppointment.split(',').length : 0} أيام
-                        </span>
                     </div>
                 </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-2.5">
                     {localAppointment ? localAppointment.split(',').map((p: string, i: number) => {
                         const parts = p.split(':');
                         const day = parts[0]?.trim();
                         const time = parts.slice(1).join(':')?.trim();
-                        
+
                         if (!day || !time) return null;
-                        
+
                         return (
-                            <div key={i} className="bg-gray-50/70 hover:bg-white p-3 rounded-2xl border border-gray-100 hover:border-blue-200 flex justify-between items-center transition-all hover:shadow-sm">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-xs">
+                            <div key={i} className="bg-gray-50/70 hover:bg-white p-2 md:p-3 rounded-xl md:rounded-2xl border border-gray-100 hover:border-blue-200 flex justify-between items-center transition-all hover:shadow-sm">
+                                <div className="flex items-center gap-2 md:gap-2.5 min-w-0">
+                                    <div className="w-7 h-7 md:w-8 md:h-8 bg-blue-50 text-blue-600 rounded-lg md:rounded-xl flex items-center justify-center font-black text-[11px] md:text-xs shrink-0">
                                         {day[0]}
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-gray-400 leading-tight">{day}</p>
-                                        <p className="text-xs font-black text-slate-800">{time}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-[9px] md:text-[10px] font-black text-gray-400 leading-tight truncate">{day}</p>
+                                        <p className="text-[11px] md:text-xs font-black text-slate-800 truncate">{time}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <button 
+                                <div className="flex items-center gap-1 shrink-0">
+                                    <button
                                         onClick={() => { setSwapState({ day, time }); setSelectedSlotKey(''); setSelectedSwapStudentId(''); }}
-                                        className="w-7 h-7 flex items-center justify-center text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-100 cursor-pointer"
+                                        className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-100 cursor-pointer"
                                         title="استبدال الموعد مع طالب آخر"
                                     >
-                                        <ArrowRightLeft size={14} />
+                                        <ArrowRightLeft size={12} className="md:hidden" />
+                                        <ArrowRightLeft size={14} className="hidden md:block" />
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => handleEditSchedule(day, time)}
-                                        className="w-7 h-7 flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 cursor-pointer"
+                                        className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 cursor-pointer"
                                         title="تعديل وقت هذا اليوم"
                                     >
-                                        <Edit2 size={14} />
+                                        <Edit2 size={12} className="md:hidden" />
+                                        <Edit2 size={14} className="hidden md:block" />
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => handleDeleteSchedule(day)}
-                                        className="w-7 h-7 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-100 cursor-pointer"
+                                        className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-100 cursor-pointer"
                                         title="حذف الموعد"
                                     >
-                                        <Trash2 size={14} />
+                                        <Trash2 size={12} className="md:hidden" />
+                                        <Trash2 size={14} className="hidden md:block" />
                                     </button>
                                 </div>
                             </div>
                         );
                     }) : (
-                        <div className="col-span-full py-8 text-center space-y-3 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                            <Clock size={28} className="text-gray-300 mx-auto" />
-                            <p className="text-gray-400 text-xs font-bold">لا توجد مواعيد مسجلة لهذا الطالب حالياً</p>
+                        <div className="col-span-full py-6 md:py-8 text-center space-y-2 md:space-y-3 bg-gray-50/50 rounded-xl md:rounded-2xl border border-dashed border-gray-200">
+                            <Clock size={24} className="text-gray-300 mx-auto md:hidden" />
+                            <Clock size={28} className="text-gray-300 mx-auto hidden md:block" />
+                            <p className="text-gray-400 text-[11px] md:text-xs font-bold">لا توجد مواعيد مسجلة لهذا الطالب حالياً</p>
                             <button
                                 type="button"
                                 onClick={() => {
                                     setIsEditorOpen(true);
                                 }}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-colors cursor-pointer shadow-sm"
+                                className="inline-flex items-center gap-1.5 px-3 md:px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] md:text-xs font-black transition-colors cursor-pointer shadow-sm"
                             >
-                                <Plus size={14} />
+                                <Plus size={13} />
                                 <span>إضافة جدول مواعيد الآن</span>
                             </button>
                         </div>
