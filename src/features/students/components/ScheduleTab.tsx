@@ -557,9 +557,6 @@ export default function ScheduleTab({ student }: { student: Student }) {
                             type="button"
                             onClick={() => {
                                 setIsEditorOpen(!isEditorOpen);
-                                if (!isEditorOpen && selectedDays.length === 0) {
-                                    setSelectedDays(['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء']);
-                                }
                             }}
                             className={cn(
                                 "flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-xl transition-all border cursor-pointer active:scale-95",
@@ -642,7 +639,6 @@ export default function ScheduleTab({ student }: { student: Student }) {
                                 type="button"
                                 onClick={() => {
                                     setIsEditorOpen(true);
-                                    setSelectedDays(['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء']);
                                 }}
                                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-colors cursor-pointer shadow-sm"
                             >
