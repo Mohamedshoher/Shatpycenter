@@ -76,44 +76,83 @@ export const TeacherAttendanceTab = ({
             {/* شريط اختيار الشهر وتعيمد الغياب */}
             <div className="flex flex-row-reverse items-center justify-between bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm gap-2">
                 {!isTeacher && (
-                    <button
-                        onClick={async () => {
-                            const now = new Date();
-                            const currentMonthRaw = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                            if (selectedMonthRaw !== currentMonthRaw) {
-                                alert('تعميد الغياب يعمل فقط على الشهر الحالي.');
-                                return;
-                            }
-                            if (!confirm('هل أنت متأكد من تعميد الغياب من أول الشهر حتى قبل اليوم الحالي (واليوم نفسه يُسجَّل حضوراً)؟')) return;
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                            onClick={async () => {
+                                const now = new Date();
+                                const currentMonthRaw = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                                if (selectedMonthRaw !== currentMonthRaw) {
+                                    alert('تعميد الغياب يعمل فقط على الشهر الحالي.');
+                                    return;
+                                }
+                                if (!confirm('هل أنت متأكد من تعميد الغياب من أول الشهر حتى قبل اليوم الحالي (واليوم نفسه يُسجَّل حضوراً)؟')) return;
 
-                            const [yearStr, monthStr] = selectedMonthRaw.split('-');
-                            const year = parseInt(yearStr);
-                            const month = parseInt(monthStr);
-                            const today = now.getDate();
-                            const firstDay = new Date(year, month - 1, 1);
-                            const startOffset = (firstDay.getDay() + 1) % 7;
+                                const [yearStr, monthStr] = selectedMonthRaw.split('-');
+                                const year = parseInt(yearStr);
+                                const month = parseInt(monthStr);
+                                const today = now.getDate();
+                                const firstDay = new Date(year, month - 1, 1);
+                                const startOffset = (firstDay.getDay() + 1) % 7;
 
-                            for (let day = 1; day < today; day++) {
-                                const weekDayIdx = (day - 1 + startOffset) % 7;
-                                if (weekDayIdx === 5 || weekDayIdx === 6) continue;
-                                const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
+                                for (let day = 1; day < today; day++) {
+                                    const weekDayIdx = (day - 1 + startOffset) % 7;
+                                    if (weekDayIdx === 5 || weekDayIdx === 6) continue;
+                                    const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
+                                    try {
+                                        await updateAttendanceAsync({ date: dateStr, status: 'absent', notes: 'غياب يدوي (تعميد غياب من أول الشهر)' });
+                                    } catch {}
+                                }
+
+                                const todayDateStr = `${selectedMonthRaw}-${String(today).padStart(2, '0')}`;
                                 try {
-                                    await updateAttendanceAsync({ date: dateStr, status: 'absent', notes: 'غياب يدوي (تعميد غياب من أول الشهر)' });
+                                    await updateAttendanceAsync({ date: todayDateStr, status: 'present' });
                                 } catch {}
-                            }
 
-                            const todayDateStr = `${selectedMonthRaw}-${String(today).padStart(2, '0')}`;
-                            try {
-                                await updateAttendanceAsync({ date: todayDateStr, status: 'present' });
-                            } catch {}
+                                alert('تم تعميد الغياب من أول الشهر حتى الأمس، وتسجيل اليوم الحالي حضوراً');
+                            }}
+                            className="flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-xl text-[10px] md:text-xs font-bold border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-200 transition-all shrink-0 h-9 md:h-auto"
+                            title="تعميد غياب من أول الشهر حتى الأمس (واليوم حضور)"
+                        >
+                            <Calendar size={14} />
+                            <span className="hidden md:inline">تعميد غياب (للخلف)</span>
+                            <span className="md:hidden">للخلف</span>
+                        </button>
+                        <button
+                            onClick={async () => {
+                                const now = new Date();
+                                const currentMonthRaw = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                                if (selectedMonthRaw !== currentMonthRaw) {
+                                    alert('تعميد الغياب يعمل فقط على الشهر الحالي.');
+                                    return;
+                                }
+                                if (!confirm('هل أنت متأكد من تعميد الغياب لبقية أيام الشهر (من الغد)؟')) return;
 
-                            alert('تم تعميد الغياب من أول الشهر حتى الأمس، وتسجيل اليوم الحالي حضوراً');
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-200 transition-all shrink-0 h-10 md:h-auto"
-                    >
-                        <Calendar size={14} />
-                        <span className="hidden md:inline">تعميد غياب</span>
-                    </button>
+                                const [yearStr, monthStr] = selectedMonthRaw.split('-');
+                                const year = parseInt(yearStr);
+                                const month = parseInt(monthStr);
+                                const daysInMonth = new Date(year, month, 0).getDate();
+                                const today = now.getDate();
+                                const firstDay = new Date(year, month - 1, 1);
+                                const startOffset = (firstDay.getDay() + 1) % 7;
+
+                                for (let day = today + 1; day <= daysInMonth; day++) {
+                                    const weekDayIdx = (day - 1 + startOffset) % 7;
+                                    if (weekDayIdx === 5 || weekDayIdx === 6) continue;
+                                    const dateStr = `${selectedMonthRaw}-${String(day).padStart(2, '0')}`;
+                                    try {
+                                        await updateAttendanceAsync({ date: dateStr, status: 'absent', notes: 'غياب يدوي (تعميد غياب بقية الشهر)' });
+                                    } catch {}
+                                }
+                                alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
+                            }}
+                            className="flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-xl text-[10px] md:text-xs font-bold border border-orange-100 text-orange-600 bg-orange-50 hover:bg-orange-100 hover:border-orange-200 transition-all shrink-0 h-9 md:h-auto"
+                            title="تعميد غياب لبقية الشهر (من الغد)"
+                        >
+                            <Calendar size={14} />
+                            <span className="hidden md:inline">تعميد غياب (للمستقبل)</span>
+                            <span className="md:hidden">للمستقبل</span>
+                        </button>
+                    </div>
                 )}
                 {/* زر السابق */}
                 <button
