@@ -131,11 +131,13 @@ export async function PUT(request: NextRequest) {
 
         const supabase = createServerSupabase();
 
-        // المدرّس مسموح له فقط بإضافة/تعديل رقم هاتف ولي الأمر، ولطلاب مجموعاته هو فقط
+        // المدرّس مسموح له فقط بتعديل رقم هاتف ولي الأمر أو موعد الحصة، ولطلاب مجموعاته هو فقط
         if (session.role === 'teacher') {
+            const allowedTeacherFields = ['parentPhone', 'appointment'];
             const providedKeys = Object.keys(data).filter((k) => data[k] !== undefined);
-            if (providedKeys.length !== 1 || providedKeys[0] !== 'parentPhone') {
-                return NextResponse.json({ error: 'المدرّس يمكنه فقط إضافة/تعديل رقم هاتف ولي الأمر' }, { status: 403 });
+            const isAllowed = providedKeys.length > 0 && providedKeys.every((k) => allowedTeacherFields.includes(k));
+            if (!isAllowed) {
+                return NextResponse.json({ error: 'المدرّس يمكنه فقط تعديل رقم هاتف ولي الأمر أو موعد الحصة' }, { status: 403 });
             }
 
             const { data: studentRow } = await supabase.from('students').select('group_id').eq('id', id).maybeSingle();
