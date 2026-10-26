@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
         const supabase = createServerSupabase();
         let query = supabase
             .from('students')
-            .select('id, full_name, group_id, parent_phone, status, monthly_amount, appointment, notes, is_azhari, azhari_grade, is_orphan, enrollment_date, archived_date, created_at');
+            .select('id, full_name, group_id, parent_phone, status, monthly_amount, appointment, notes, is_azhari, azhari_grade, is_orphan, enrollment_date, archived_date, created_at')
+            // بدون هذا الحد الأقصى الصريح، يقتصر الرد على أول 1000 صف فقط (حد PostgREST الافتراضي)
+            // فيختفي بعض الطلاب بصمت من أي جلب غير مفلتر بحالة أو مجموعة معينة
+            .range(0, 9999);
 
         if (studentId) {
             query = query.eq('id', studentId);
