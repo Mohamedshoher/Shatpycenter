@@ -15,26 +15,41 @@ export async function GET(request: NextRequest) {
         const studentId = searchParams.get('studentId');
 
         const supabase = createServerSupabase();
-        let query = supabase
-            .from('students')
-            .select('id, full_name, group_id, parent_phone, status, monthly_amount, appointment, notes, is_azhari, azhari_grade, is_orphan, enrollment_date, archived_date, created_at');
 
-        if (studentId) {
-            query = query.eq('id', studentId);
-        } else if (groupIds) {
-            const ids = groupIds.split(',');
-            query = query.in('group_id', ids);
+        const buildQuery = () => {
+            let q = supabase
+                .from('students')
+                .select('id, full_name, group_id, parent_phone, status, monthly_amount, appointment, notes, is_azhari, azhari_grade, is_orphan, enrollment_date, archived_date, created_at');
+
+            if (studentId) {
+                q = q.eq('id', studentId);
+            } else if (groupIds) {
+                const ids = groupIds.split(',');
+                q = q.in('group_id', ids);
+            }
+
+            if (status) {
+                q = q.eq('status', status);
+            }
+
+            return q;
+        };
+
+        // PostgREST يفرض حداً أقصى لعدد الصفوف في الرد (عادة 1000) بصرف النظر عن .range() المطلوب من العميل،
+        // فنجلب على دفعات حتى تنتهي النتائج، حتى لا يختفي طلاب بصمت عند تجاوز العدد الكلي هذا الحد
+        const PAGE_SIZE = 1000;
+        const allRows: NonNullable<Awaited<ReturnType<typeof buildQuery>>['data']> = [];
+        for (let from = 0; ; from += PAGE_SIZE) {
+            const { data: page, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+            if (error) {
+                return NextResponse.json({ error: error.message }, { status: 500 });
+            }
+            if (!page || page.length === 0) break;
+            allRows.push(...page);
+            if (page.length < PAGE_SIZE) break;
         }
 
-        if (status) {
-            query = query.eq('status', status);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
+        const data = allRows;
 
         const students: Student[] = (data || []).map((row) => {
             const notesStr = row.notes || '';
