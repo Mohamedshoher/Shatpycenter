@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getGroups } from '@/features/groups/services/groupService';
 import { getTeachers } from '@/features/teachers/services/teacherService';
-import { getStudents } from '@/features/students/services/studentService';
+import { useStudents } from '@/features/students/hooks/useStudents';
 import StudentList from '@/features/students/components/StudentList';
 import { useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -33,10 +33,7 @@ export default function GroupDetailPage() {
         queryFn: () => getTeachers()
     });
 
-    const { data: students } = useQuery({
-        queryKey: ['students'],
-        queryFn: () => getStudents()
-    });
+    const { data: students } = useStudents();
 
     const group = useMemo(() => {
         const foundGroup = groups?.find(g => g.id === groupId);

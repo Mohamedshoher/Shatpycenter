@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getGroups, updateGroup, deleteGroup } from '@/features/groups/services/groupService';
 import { Group } from '@/types';
 import { getTeachers } from '@/features/teachers/services/teacherService';
-import { getStudents } from '@/features/students/services/studentService';
+import { useStudents } from '@/features/students/hooks/useStudents';
 import { getAllAttendanceForMonth } from '@/features/students/services/recordsService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
@@ -39,10 +39,7 @@ export default function GroupsPage() {
         queryFn: () => getTeachers()
     });
 
-    const { data: students } = useQuery({
-        queryKey: ['students'],
-        queryFn: () => getStudents()
-    });
+    const { data: students } = useStudents();
 
     const { data: attendanceMap } = useQuery({
         queryKey: ['attendance-month-summary'],
