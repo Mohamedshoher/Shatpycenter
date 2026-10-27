@@ -11,12 +11,14 @@ import Search from 'lucide-react/dist/esm/icons/search';
 import User from 'lucide-react/dist/esm/icons/user';
 import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up';
 import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
+import X from 'lucide-react/dist/esm/icons/x';
 import { cn, tieredSearchFilter } from '@/lib/utils';
 import { useStudents } from '@/features/students/hooks/useStudents';
 import {
     getAnalyticsOverview,
     getGroupsAnalytics,
     getStudentAnalytics,
+    getNotTestedStudents,
     GroupAnalytics,
 } from '@/features/analytics/services/analyticsService';
 import { Student } from '@/types';
@@ -53,15 +55,24 @@ const GroupMetricTile = ({ label, current, previous, suffix = '' }: { label: str
     </div>
 );
 
-const StatCard = ({ title, current, previous, unit = '', rate = false }: { title: string; current: number | null; previous: number | null; unit?: string; rate?: boolean }) => (
-    <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-1.5">
-        <p className="text-[11px] font-bold text-gray-400">{title}</p>
-        <p className="text-2xl font-black text-gray-900 font-sans">
-            {current === null ? '—' : `${current}${rate ? '%' : ''}`} <span className="text-xs text-gray-400 font-bold">{unit}</span>
-        </p>
-        {current !== null && previous !== null && <Delta current={current} previous={previous} suffix={rate ? '%' : ''} />}
-    </div>
-);
+const StatCard = ({ title, current, previous, unit = '', rate = false, onClick }: { title: string; current: number | null; previous: number | null; unit?: string; rate?: boolean; onClick?: () => void }) => {
+    const Tag = onClick ? 'button' : 'div';
+    return (
+        <Tag
+            onClick={onClick}
+            className={cn(
+                'bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-1.5 text-right w-full',
+                onClick && 'cursor-pointer hover:border-blue-200 hover:shadow-md transition-all active:scale-[0.98]'
+            )}
+        >
+            <p className="text-[11px] font-bold text-gray-400">{title}</p>
+            <p className="text-2xl font-black text-gray-900 font-sans">
+                {current === null ? '—' : `${current}${rate ? '%' : ''}`} <span className="text-xs text-gray-400 font-bold">{unit}</span>
+            </p>
+            {current !== null && previous !== null && <Delta current={current} previous={previous} suffix={rate ? '%' : ''} />}
+        </Tag>
+    );
+};
 
 export default function AnalyticsPage() {
     const { data: allStudents } = useStudents();
@@ -128,6 +139,29 @@ export default function AnalyticsPage() {
 
     const maxPages = Math.max(1, ...studentMonths.map((m) => m.pagesSum));
 
+    // --- نافذة "لم يختبروا هذا الشهر" (بطاقة النظرة العامة) ---
+    const [isNotTestedOpen, setIsNotTestedOpen] = useState(false);
+    const [notTestedGroupFilter, setNotTestedGroupFilter] = useState('all');
+
+    const { data: notTestedStudents = [], isLoading: notTestedLoading } = useQuery({
+        queryKey: ['analytics-not-tested', monthKey],
+        queryFn: () => getNotTestedStudents(monthKey),
+        enabled: isNotTestedOpen,
+    });
+
+    const notTestedGroupsInList = useMemo(() => {
+        const map = new Map<string, string>();
+        notTestedStudents.forEach((s) => {
+            if (s.groupId) map.set(s.groupId, s.groupName);
+        });
+        return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1], 'ar'));
+    }, [notTestedStudents]);
+
+    const filteredNotTestedStudents = useMemo(() => {
+        if (notTestedGroupFilter === 'all') return notTestedStudents;
+        return notTestedStudents.filter((s) => s.groupId === notTestedGroupFilter);
+    }, [notTestedStudents, notTestedGroupFilter]);
+
     return (
         <div className="min-h-screen bg-gray-50/50 pb-24 text-right font-sans overflow-x-hidden" dir="rtl">
             <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30 px-3 md:px-6 py-3">
@@ -174,7 +208,12 @@ export default function AnalyticsPage() {
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 <StatCard title="عدد الاختبارات" current={overview.current.examsCount} previous={overview.previous.examsCount} />
                                 <StatCard title="مجموع الصفحات المُختبرة" current={overview.current.pagesSum} previous={overview.previous.pagesSum} />
-                                <StatCard title="لم يختبروا هذا الشهر" current={overview.current.notTestedCount} previous={overview.previous.notTestedCount} />
+                                <StatCard
+                                    title="لم يختبروا هذا الشهر"
+                                    current={overview.current.notTestedCount}
+                                    previous={overview.previous.notTestedCount}
+                                    onClick={() => { setNotTestedGroupFilter('all'); setIsNotTestedOpen(true); }}
+                                />
                                 <StatCard title="نسبة الحضور" current={overview.current.attendanceRate} previous={overview.previous.attendanceRate} rate />
                                 <StatCard title="نسبة تحصيل المصروفات" current={overview.current.collectionRate} previous={overview.previous.collectionRate} rate />
                                 <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-1.5">
@@ -354,6 +393,52 @@ export default function AnalyticsPage() {
                     </section>
                 )}
             </main>
+
+            {/* نافذة قائمة "لم يختبروا هذا الشهر" مع فلتر المجموعة */}
+            {isNotTestedOpen && (
+                <>
+                    <div onClick={() => setIsNotTestedOpen(false)} className="fixed inset-0 z-[220] bg-black/50 backdrop-blur-sm" />
+                    <div className="fixed inset-0 z-[221] flex items-center justify-center p-4">
+                        <div className="w-[95%] max-w-lg bg-white rounded-[32px] shadow-2xl border border-gray-100 h-[80vh] flex flex-col overflow-hidden">
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50 shrink-0">
+                                <div className="text-right">
+                                    <h3 className="text-base font-black text-gray-900">لم يختبروا هذا الشهر</h3>
+                                    <p className="text-xs font-bold text-gray-400 mt-0.5">{monthLabel} · {filteredNotTestedStudents.length} طالب</p>
+                                </div>
+                                <button onClick={() => setIsNotTestedOpen(false)} className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center shrink-0"><X size={18} /></button>
+                            </div>
+
+                            <div className="px-5 py-3 border-b border-gray-50 shrink-0">
+                                <select
+                                    value={notTestedGroupFilter}
+                                    onChange={(e) => setNotTestedGroupFilter(e.target.value)}
+                                    className="w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                >
+                                    <option value="all">كل المجموعات</option>
+                                    {notTestedGroupsInList.map(([id, name]) => (
+                                        <option key={id} value={id}>{name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-2">
+                                {notTestedLoading ? (
+                                    <div className="text-center py-10 text-gray-400 text-sm font-bold">جاري التحميل...</div>
+                                ) : filteredNotTestedStudents.length === 0 ? (
+                                    <p className="text-center py-10 text-gray-400 text-sm font-bold">لا يوجد طلاب في هذا الفلتر</p>
+                                ) : (
+                                    filteredNotTestedStudents.map((s) => (
+                                        <div key={s.id} className="flex items-center justify-between gap-2 bg-red-50/50 border border-red-100 rounded-2xl px-4 py-3">
+                                            <p className="text-sm font-bold text-gray-800">{s.fullName}</p>
+                                            <span className="text-[10px] font-bold text-gray-400 shrink-0">{s.groupName}</span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

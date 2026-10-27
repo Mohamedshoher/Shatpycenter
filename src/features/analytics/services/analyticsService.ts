@@ -71,6 +71,24 @@ export const getGroupsAnalytics = async (monthKey: string): Promise<GroupAnalyti
     }
 };
 
+export interface NotTestedStudent {
+    id: string;
+    fullName: string;
+    groupId: string | null;
+    groupName: string;
+}
+
+export const getNotTestedStudents = async (monthKey: string): Promise<NotTestedStudent[]> => {
+    try {
+        const res = await fetch(`/api/analytics/not-tested?month=${encodeURIComponent(monthKey)}`);
+        if (!res.ok) return [];
+        return (await res.json()) || [];
+    } catch (error) {
+        console.error('Error fetching not-tested students:', getErrorMessage(error));
+        return [];
+    }
+};
+
 export const getStudentAnalytics = async (studentId: string, months = 6): Promise<StudentMonthAnalytics[]> => {
     try {
         const res = await fetch(`/api/analytics/student?studentId=${encodeURIComponent(studentId)}&months=${months}`);
