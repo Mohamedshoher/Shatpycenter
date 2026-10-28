@@ -24,6 +24,10 @@ import BookOpen from 'lucide-react/dist/esm/icons/book-open'
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import CalendarCheck from 'lucide-react/dist/esm/icons/calendar-check'
 import Clock from 'lucide-react/dist/esm/icons/clock';
+import ListChecks from 'lucide-react/dist/esm/icons/list-checks';
+import CheckSquare from 'lucide-react/dist/esm/icons/check-square';
+import Square from 'lucide-react/dist/esm/icons/square';
+import FolderInput from 'lucide-react/dist/esm/icons/folder-input';
 
 
 import { cn, tieredSearchFilter, getWhatsAppUrl } from '@/lib/utils';
@@ -87,6 +91,29 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [scheduleFilterTime, setScheduleFilterTime] = useState('الكل');
+
+    // تحديد متعدد: تفعيل وضع التحديد ثم نقل/أرشفة مجموعة من الطلاب دفعة واحدة
+    const [isSelectMode, setIsSelectMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+    const [moveTargetGroupId, setMoveTargetGroupId] = useState('');
+    const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
+    const toggleSelected = useCallback((studentId: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(studentId)) next.delete(studentId);
+            else next.add(studentId);
+            return next;
+        });
+    }, []);
+
+    const exitSelectMode = useCallback(() => {
+        setIsSelectMode(false);
+        setSelectedIds(new Set());
+    }, []);
+
+    const canBulkManage = user?.role === 'director' || user?.role === 'supervisor';
 
     const [selectedDate, setSelectedDate] = useState(() => {
         const d = new Date();
@@ -317,6 +344,38 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
         }
     };
 
+    const handleBulkArchive = async () => {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`هل أنت متأكد من أرشفة ${selectedIds.size} طالب؟`)) return;
+        setIsBulkProcessing(true);
+        try {
+            const archivedDate = new Date().toISOString().split('T')[0];
+            await Promise.all(Array.from(selectedIds).map(id => updateStudent(id, { status: 'archived', archivedDate })));
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            exitSelectMode();
+        } catch {
+            alert('حدث خطأ أثناء أرشفة بعض الطلاب');
+        } finally {
+            setIsBulkProcessing(false);
+        }
+    };
+
+    const handleBulkMove = async () => {
+        if (selectedIds.size === 0 || !moveTargetGroupId) return;
+        setIsBulkProcessing(true);
+        try {
+            await Promise.all(Array.from(selectedIds).map(id => updateStudent(id, { groupId: moveTargetGroupId })));
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            setIsMoveModalOpen(false);
+            setMoveTargetGroupId('');
+            exitSelectMode();
+        } catch {
+            alert('حدث خطأ أثناء نقل بعض الطلاب');
+        } finally {
+            setIsBulkProcessing(false);
+        }
+    };
+
     const handleAttendance = useCallback(async (student: Student, status: 'present' | 'absent') => {
         const dateParts = selectedDate.split('-').map(Number);
         const day = dateParts[2];
@@ -465,6 +524,18 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 >
                                     <Search size={22} />
                                 </button>
+                                {canBulkManage && (
+                                    <button
+                                        onClick={() => { if (isSelectMode) exitSelectMode(); else setIsSelectMode(true); }}
+                                        className={cn(
+                                            "w-11 h-11 sm:w-12 sm:h-12 rounded-[18px] sm:rounded-[20px] border flex items-center justify-center transition-all active:scale-95",
+                                            isSelectMode ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-blue-600"
+                                        )}
+                                        title="تحديد عدة طلاب"
+                                    >
+                                        <ListChecks size={22} />
+                                    </button>
+                                )}
                                 {!groupId && (
                                     <div className="relative">
                                         {isFilterOpen && (
@@ -587,15 +658,27 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 {filteredStudents?.map((student, index) => (
                     <div
                         key={student.id}
-                        onClick={() => handleOpenModal(student, 'attendance')}
-                        className="bg-white rounded-2xl p-3.5 sm:p-4 shadow-sm border border-gray-100 relative group cursor-pointer hover:shadow-md transition-all"
+                        onClick={() => isSelectMode ? toggleSelected(student.id) : handleOpenModal(student, 'attendance')}
+                        className={cn(
+                            "bg-white rounded-2xl p-3.5 sm:p-4 shadow-sm border relative group cursor-pointer hover:shadow-md transition-all",
+                            isSelectMode && selectedIds.has(student.id) ? "border-blue-400 ring-2 ring-blue-100" : "border-gray-100"
+                        )}
                     >
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
                                 <div className="relative">
-                                    <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-                                        <User size={20} />
-                                    </div>
+                                    {isSelectMode ? (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); toggleSelected(student.id); }}
+                                            className="w-10 h-10 flex items-center justify-center text-blue-600"
+                                        >
+                                            {selectedIds.has(student.id) ? <CheckSquare size={24} /> : <Square size={24} className="text-gray-300" />}
+                                        </button>
+                                    ) : (
+                                        <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+                                            <User size={20} />
+                                        </div>
+                                    )}
                                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-white border border-gray-100 rounded-full flex items-center justify-center text-[10px] font-black text-blue-600 shadow-sm">
                                         {index + 1}
                                     </span>
@@ -783,7 +866,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 }}
             />
             {/* Floating Add Student Button */}
-            {user?.role !== 'schedule_secretary' && (
+            {user?.role !== 'schedule_secretary' && !isSelectMode && (
                 <button
                     onClick={() => setIsAddModalOpen(true)}
                     className="fixed bottom-20 left-6 z-[100] w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/40 active:scale-90 transition-transform hover:bg-blue-700"
@@ -791,6 +874,71 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                 >
                     <UserPlus size={26} />
                 </button>
+            )}
+
+            {/* شريط إجراءات التحديد المتعدد: نقل / أرشفة لكل الطلاب المحددين دفعة واحدة */}
+            {isSelectMode && (
+                <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-[100] bg-white border-t border-gray-100 shadow-2xl px-4 py-3">
+                    <div className="max-w-3xl mx-auto flex items-center justify-between gap-2">
+                        <button
+                            onClick={exitSelectMode}
+                            className="h-11 px-4 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-50 border border-gray-100 shrink-0"
+                        >
+                            إلغاء
+                        </button>
+                        <span className="text-xs font-black text-gray-600 shrink-0">{selectedIds.size} محدد</span>
+                        <div className="flex items-center gap-2 flex-1 justify-end">
+                            <button
+                                onClick={() => setIsMoveModalOpen(true)}
+                                disabled={selectedIds.size === 0 || isBulkProcessing}
+                                className="h-11 px-4 rounded-xl text-xs font-black bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-all flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <FolderInput size={16} />
+                                نقل إلى مجموعة
+                            </button>
+                            <button
+                                onClick={handleBulkArchive}
+                                disabled={selectedIds.size === 0 || isBulkProcessing}
+                                className="h-11 px-4 rounded-xl text-xs font-black bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100 transition-all flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <Archive size={16} />
+                                أرشفة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* نافذة اختيار المجموعة الهدف للنقل الجماعي */}
+            {isMoveModalOpen && (
+                <>
+                    <div onClick={() => !isBulkProcessing && setIsMoveModalOpen(false)} className="fixed inset-0 z-[220] bg-black/50 backdrop-blur-sm" />
+                    <div className="fixed inset-0 z-[221] flex items-center justify-center p-4">
+                        <div className="w-[95%] max-w-sm bg-white rounded-[28px] shadow-2xl border border-gray-100 p-5 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-base font-black text-gray-900">نقل {selectedIds.size} طالب إلى مجموعة</h3>
+                                <button onClick={() => setIsMoveModalOpen(false)} className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center"><X size={16} /></button>
+                            </div>
+                            <select
+                                value={moveTargetGroupId}
+                                onChange={(e) => setMoveTargetGroupId(e.target.value)}
+                                className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            >
+                                <option value="">اختر المجموعة...</option>
+                                {groups?.map((g) => (
+                                    <option key={g.id} value={g.id}>{g.name}</option>
+                                ))}
+                            </select>
+                            <button
+                                onClick={handleBulkMove}
+                                disabled={!moveTargetGroupId || isBulkProcessing}
+                                className="w-full h-11 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                {isBulkProcessing ? 'جاري النقل...' : 'تأكيد النقل'}
+                            </button>
+                        </div>
+                    </div>
+                </>
             )}
         </div >
     );
