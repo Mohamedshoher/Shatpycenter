@@ -6,6 +6,7 @@ import { updateStudent } from '../services/studentService';
 import { useGroups } from '@/features/groups/hooks/useGroups';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { getAllExams } from '../services/recordsService';
 import type { AttendanceRecord } from '../services/recordsService';
 
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus'
@@ -72,6 +73,35 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
     }, [groups, user]);
 
     const { data: students, isLoading } = useStudents(myGroupsIds, 'active');
+
+    // داخل صفحة مجموعة معينة فقط: نجلب اختبارات طلاب هذه المجموعة لعرض آخر صفحة "جديد" اختبرها كل طالب
+    // بدل اسم المجموعة (معروف أصلاً من صفحة المجموعة نفسها). queryKey يبدأ بـ 'all-exams' حتى يتحدّث
+    // تلقائياً فور تسجيل أي اختبار جديد (نفس مفتاح invalidateQueries في useStudentRecords).
+    const groupStudentIds = useMemo(() => {
+        if (!groupId || !students) return [];
+        return students.filter(s => s.groupId === groupId).map(s => s.id);
+    }, [groupId, students]);
+
+    const { data: groupExams } = useQuery({
+        queryKey: ['all-exams', 'group-latest-new', groupId, groupStudentIds.length],
+        queryFn: () => getAllExams(undefined, undefined, groupStudentIds),
+        enabled: !!groupId && groupStudentIds.length > 0,
+    });
+
+    const lastNewExamByStudent = useMemo(() => {
+        const map = new Map<string, string>();
+        (groupExams || []).forEach((exam) => {
+            if (exam.type?.trim() !== 'جديد' || !exam.studentId) return;
+            const existing = map.get(exam.studentId);
+            const existingDate = existing ? existing.split('|')[1] : '';
+            if (!existing || (exam.date && exam.date >= existingDate)) {
+                map.set(exam.studentId, `${exam.surah || 'اختبار'}|${exam.date || ''}`);
+            }
+        });
+        const result = new Map<string, string>();
+        map.forEach((value, key) => result.set(key, value.split('|')[0]));
+        return result;
+    }, [groupExams]);
 
     const groupsMap = useMemo(() => {
         return (groups || []).reduce((acc, g) => {
@@ -689,7 +719,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                     </h3>
                                     <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                                         <span className="text-[10px] sm:text-xs text-gray-400 font-medium">
-                                            {getGroupName(student.groupId)}
+                                            {groupId ? (lastNewExamByStudent.get(student.id) || 'لم يختبر بعد') : getGroupName(student.groupId)}
                                         </span>
                                         {(() => {
                                             const azhariInfo = getStudentAzhariInfo(student);
