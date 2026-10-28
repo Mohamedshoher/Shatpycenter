@@ -524,7 +524,7 @@ export default function StudentList({ groupId, customTitle }: StudentListProps) 
                                 >
                                     <Search size={22} />
                                 </button>
-                                {canBulkManage && (
+                                {canBulkManage && !!groupId && (
                                     <button
                                         onClick={() => { if (isSelectMode) exitSelectMode(); else setIsSelectMode(true); }}
                                         className={cn(
