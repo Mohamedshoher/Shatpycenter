@@ -278,8 +278,10 @@ export default function FinancePage() {
 
         const salaryPaymentsThisMonth = filteredTransactions.filter(tr => tr.type === 'expense' && tr.category === 'salary');
         const paidSet = new Set(salaryPaymentsThisMonth.map(p => p.relatedUserId).filter(Boolean));
+        // نُبقي المدرس في الحساب حتى لو أصبح غير نشط الآن، طالما أخذ مرتباً هذا الشهر،
+        // حتى لا تختفي متابعة "من أخذ فلوس ولسه عليه حاجة" بمجرد تغيير حالته
         const activeTeachers = teachers.filter(t => {
-            if (t.status === 'inactive') return false;
+            if (t.status === 'inactive' && !paidSet.has(t.id)) return false;
             const joinDate = t.joinDate;
             if (joinDate) return joinDate.substring(0, 7) <= selectedMonth;
             return true;
@@ -343,8 +345,16 @@ export default function FinancePage() {
     const selectedFromTeacherTxns = selectedFromTeacher?.transactions || [];
 
     const teacherPaymentStatus = useMemo(() => {
+        const paidThisMonthSet = new Set(
+            filteredTransactions
+                .filter(tr => tr.type === 'expense' && tr.category === 'salary')
+                .map(tr => tr.relatedUserId)
+                .filter(Boolean)
+        );
+        // نُبقي المدرس في الحساب حتى لو أصبح غير نشط الآن، طالما أخذ مرتباً هذا الشهر،
+        // حتى لا تختفي متابعة "من أخذ فلوس ولسه عليه حاجة" بمجرد تغيير حالته
         const activeTeachers = teachers.filter(t => {
-            if (t.status === 'inactive') return false;
+            if (t.status === 'inactive' && !paidThisMonthSet.has(t.id)) return false;
             const joinDate = t.joinDate;
             if (joinDate) return joinDate.substring(0, 7) <= selectedMonth;
             return true;
