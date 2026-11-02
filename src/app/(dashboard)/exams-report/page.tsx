@@ -188,6 +188,11 @@ export default function ExamsReportPage() {
                     }
                 }
 
+                // "لم يختبروا أي شيء": لم يسجَّل له أي نوع اختبار إطلاقاً هذه الفترة
+                if (selectedExamType === 'none') {
+                    return s.completedTypes.length === 0;
+                }
+
                 // يظهر الطالب إذا:
                 // 1. لم يختبر النوع المختار حالياً
                 // 2. ولم يستوف النصاب الكلي المطلوب منه بعد
@@ -531,6 +536,7 @@ export default function ExamsReportPage() {
                                                     <option value="new">جديد</option>
                                                     <option value="near">ماضي قريب</option>
                                                     <option value="far">بعيد</option>
+                                                    <option value="none">لم يختبروا أي شيء</option>
                                                 </select>
                                                 <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                             </div>
