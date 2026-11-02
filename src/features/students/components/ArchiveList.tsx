@@ -22,7 +22,7 @@ import StudentDetailModal from './StudentDetailModal';
 import { FadeIn, SlideIn } from '@/components/ui/transition';
 import EditStudentModal from './EditStudentModal';
 
-interface DebtInfo { isIndebted: boolean; amount: number; label: string; unpaidMonths: { label: string; key: string }[] }
+interface DebtInfo { isIndebted: boolean; amount: number; label: string; unpaidMonths: { label: string; key: string; amount: number }[] }
 
 export default function ArchiveList() {
     const { data: students, isLoading, restoreStudent, deleteStudent } = useStudents();
@@ -120,7 +120,7 @@ export default function ArchiveList() {
             const attendanceCounts = presentCountByStudentMonth.get(student.id) || new Map<string, number>();
 
             let totalMonthDebt = 0;
-            const unpaidMonths: { label: string; key: string }[] = [];
+            const unpaidMonths: { label: string; key: string; amount: number }[] = [];
 
             while (current <= target) {
                 const monthLabel = current.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
@@ -141,17 +141,17 @@ export default function ArchiveList() {
                     const isExempted = exemptMonths.has(monthLabel) || exemptMonths.has(monthKey);
                     if (!isPaid && !isExempted) {
                         totalMonthDebt += monthDebtAmount;
-                        unpaidMonths.push({ label: monthLabel, key: monthKey });
+                        unpaidMonths.push({ label: monthLabel, key: monthKey, amount: monthDebtAmount });
                     }
                 }
 
                 current.setMonth(current.getMonth() + 1);
             }
 
-            let label = '';
-            if (totalMonthDebt === 0.5) label = 'مدين بنصف شهر';
-            else if (totalMonthDebt === 1) label = 'مدين بشهر';
-            else if (totalMonthDebt > 1) label = `مدين (${totalMonthDebt} أشهر)`;
+            // تسمية الدين باسم الشهر/الأشهر الفعلية المستحقة (نصف أو كامل)، بدل رقم مجرد
+            const label = unpaidMonths
+                .map((m) => m.amount === 1 ? `مدين بشهر ${m.label} كاملاً` : `مدين بنصف شهر ${m.label}`)
+                .join('، ');
 
             return { isIndebted: totalMonthDebt > 0, amount: totalMonthDebt, label, unpaidMonths };
         };

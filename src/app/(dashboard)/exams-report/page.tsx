@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Trophy from 'lucide-react/dist/esm/icons/trophy'
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
@@ -25,6 +26,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import dynamic from 'next/dynamic';
 import { useAllExams } from '@/features/students/hooks/useAllExams';
 import { useAllGoals } from '@/features/students/hooks/useAllGoals';
+import { getAllAttendanceForMonth } from '@/features/students/services/recordsService';
 import { Student } from '@/types';
 import Target from 'lucide-react/dist/esm/icons/target';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
@@ -84,14 +86,27 @@ export default function ExamsReportPage() {
 
     // --- 4. إدارة الوقت والتاريخ ---
     const [selectedDate, setSelectedDate] = useState(new Date()); // التاريخ المختار للتقارير الشهرية
-    const [selectedHalf, setSelectedHalf] = useState<1 | 2>(new Date().getDate() <= 15 ? 1 : 2); // نصف الشهر المختار
+    const [selectedHalf, setSelectedHalf] = useState<1 | 2 | 'all'>(new Date().getDate() <= 15 ? 1 : 2); // نصف الشهر المختار (أو الشهر كاملاً)
     const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<Student | null>(null); // الطالب المختار لعرض تفاصيله
     const [showFilters, setShowFilters] = useState(false); // إظهار/إخفاء لوحة الفلاتر (لتبسيط الواجهة على الموبايل)
 
     // تحويل التاريخ إلى مفتاح (مثل 2023-10) لجلب بيانات الاختبارات من السيرفر
     const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-    const { data: allExams = [] } = useAllExams(monthKey, selectedHalf, relevantStudentIds);
+    const { data: allExams = [] } = useAllExams(monthKey, selectedHalf === 'all' ? undefined : selectedHalf, relevantStudentIds);
     const { data: allGoals = [] } = useAllGoals(relevantStudentIds);
+
+    // عدد حصص الحضور الفعلية لكل طالب هذا الشهر، لعرضها بجانب كل طالب في تبويب "لم يختبروا"
+    const { data: attendanceByStudent = {} } = useQuery({
+        queryKey: ['attendance-month-summary', monthKey],
+        queryFn: () => getAllAttendanceForMonth(monthKey),
+    });
+    const presentCountByStudent = useMemo(() => {
+        const map = new Map<string, number>();
+        Object.entries(attendanceByStudent).forEach(([studentId, records]) => {
+            map.set(studentId, records.filter((r) => r.status === 'present').length);
+        });
+        return map;
+    }, [attendanceByStudent]);
 
     // تسميات الشهور باللغة العربية
     const currentMonthLabel = selectedDate.toLocaleDateString('ar-EG', { month: 'long' });
@@ -362,25 +377,22 @@ export default function ExamsReportPage() {
                     اختبارات <span className="md:inline hidden">({currentMonthLabel})</span>
                     </h1>
 
-                    {/* مبدل النصف (للجوال) */}
-                    <button 
-                        onClick={() => setSelectedHalf(selectedHalf === 1 ? 2 : 1)}
-                        className="md:hidden flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-1.5 py-1 shadow-sm"
-                        title={selectedHalf === 1 ? 'النصف الأول' : 'النصف الثاني'}
-                    >
-                        <span className={cn("text-[9px] font-black transition-colors", selectedHalf === 1 ? "text-blue-600" : "text-gray-300")}>1</span>
-                        <div className="relative w-5 h-3 rounded-full bg-gray-200">
-                            <div className={cn("absolute top-0.5 w-2 h-2 rounded-full bg-blue-500 transition-all", selectedHalf === 1 ? "right-0.5" : "right-2.5")} />
-                        </div>
-                        <span className={cn("text-[9px] font-black transition-colors", selectedHalf === 2 ? "text-blue-600" : "text-gray-300")}>2</span>
-                    </button>
+                    {/* فلتر النصف / الشهر كاملاً */}
+                    <div className="relative">
+                        <select
+                            value={selectedHalf}
+                            onChange={(e) => setSelectedHalf(e.target.value === 'all' ? 'all' : (Number(e.target.value) as 1 | 2))}
+                            className="appearance-none bg-white border border-gray-200 rounded-lg pl-6 pr-2 py-1.5 text-[10px] md:text-xs font-bold text-gray-700 shadow-sm focus:outline-none"
+                        >
+                            <option value={1}>النصف الأول</option>
+                            <option value={2}>النصف الثاني</option>
+                            <option value="all">الشهر كاملاً</option>
+                        </select>
+                        <ChevronDown size={11} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
 
-                    {/* زر اختيار الشهر والنصف */}
+                    {/* زر اختيار الشهر */}
                     <div className="flex bg-gray-100/50 p-1 rounded-xl items-center gap-1 border border-gray-100 flex-row-reverse mr-auto">
-                        <div className="hidden md:flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm flex-row-reverse">
-                            <button onClick={() => setSelectedHalf(1)} className={cn("px-2 py-1 text-xs font-bold rounded transition-colors", selectedHalf === 1 ? "bg-blue-50 text-blue-600" : "text-gray-500")}>النصف الأول</button>
-                            <button onClick={() => setSelectedHalf(2)} className={cn("px-2 py-1 text-xs font-bold rounded transition-colors", selectedHalf === 2 ? "bg-blue-50 text-blue-600" : "text-gray-500")}>النصف الثاني</button>
-                        </div>
                         <div className="flex items-center gap-0.5 md:gap-1 bg-white p-0.5 md:p-1 rounded-lg border border-gray-200 shadow-sm justify-center">
                             <button onClick={goToNextMonth} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center hover:bg-gray-100 rounded text-gray-600 transition-colors">
                                 <ChevronLeft size={12} />
@@ -540,7 +552,10 @@ export default function ExamsReportPage() {
                                                     {student.fullName}
                                                     {student.completedDisplay && <span className="text-xs text-amber-600/70 mr-2 font-normal">{student.completedDisplay}</span>}
                                                 </h3>
-                                                <span className="text-xs text-gray-400 font-bold">{student.groupName}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-xs text-gray-400 font-bold">{student.groupName}</span>
+                                                    <span className="text-xs text-blue-500 font-bold">· حضر {presentCountByStudent.get(student.id) || 0} حصة</span>
+                                                </div>
                                             </div>
                                         </div>
                                         <button className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
