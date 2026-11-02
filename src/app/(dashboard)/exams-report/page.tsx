@@ -81,6 +81,7 @@ export default function ExamsReportPage() {
     const [performanceTypeFilter, setPerformanceTypeFilter] = useState<'all' | 'quran' | 'talqeen' | 'noor' | 'tajweed'>('all'); // فلتر نوع المجموعة
 
     const [selectedRemainingCount, setSelectedRemainingCount] = useState('all'); // فلتر عدد الاختبارات المتبقية (3، 2، 1)
+    const [minSessionsFilter, setMinSessionsFilter] = useState(''); // فلتر "لم يختبروا": عدد حصص الحضور (على الأقل)
     const [goalsGroupFilter, setGoalsGroupFilter] = useState('all'); // فلتر المجموعة لتبويب الأهداف
     const [goalsExamTypeFilter, setGoalsExamTypeFilter] = useState<'all' | 'new' | 'near' | 'far'>('all'); // فلتر نوع الاختبار لتبويب الأهداف
 
@@ -179,6 +180,14 @@ export default function ExamsReportPage() {
                     return false;
                 }
 
+                // فلتر عدد حصص الحضور (على الأقل) إذا كُتب رقم
+                if (minSessionsFilter.trim() !== '') {
+                    const minSessions = parseInt(minSessionsFilter);
+                    if (!isNaN(minSessions) && (presentCountByStudent.get(s.id) || 0) < minSessions) {
+                        return false;
+                    }
+                }
+
                 // يظهر الطالب إذا:
                 // 1. لم يختبر النوع المختار حالياً
                 // 2. ولم يستوف النصاب الكلي المطلوب منه بعد
@@ -190,7 +199,7 @@ export default function ExamsReportPage() {
                 // تنسيق العرض: محمد أحمد (جديد، ماضي قريب)
                 completedDisplay: s.completedTypes.length > 0 ? `(${s.completedTypes.join(' - ')})` : ''
             }));
-    }, [students, groups, allExams, selectedGroupId, selectedExamType, selectedRemainingCount, user, assignedGroupIds]);
+    }, [students, groups, allExams, selectedGroupId, selectedExamType, selectedRemainingCount, minSessionsFilter, presentCountByStudent, user, assignedGroupIds]);
 
     // ب- حساب الطلاب "الأكثر اختباراً" بناءً على عدد مرات الاختبار
     const mostTestedStudents = useMemo(() => {
@@ -358,7 +367,7 @@ export default function ExamsReportPage() {
 
     // عدد الفلاتر المفعّلة حالياً (لإظهار شارة على زر الفلترة)
     const activeFilterCount = activeTab === 'notTested'
-        ? [selectedRemainingCount !== 'all', selectedGroupId !== 'all', selectedExamType !== 'new'].filter(Boolean).length
+        ? [selectedRemainingCount !== 'all', selectedGroupId !== 'all', selectedExamType !== 'new', minSessionsFilter.trim() !== ''].filter(Boolean).length
         : activeTab === 'performance'
             ? [performanceFilter !== 'all', performanceTypeFilter !== 'all'].filter(Boolean).length
             : activeTab === 'goals'
@@ -406,6 +415,27 @@ export default function ExamsReportPage() {
                             </button>
                         </div>
                     </div>
+
+                    {/* زر إظهار/إخفاء الفلاتر (فقط للتبويبات التي تملك فلاتر) */}
+                    {hasFilterableTab && (
+                        <button
+                            onClick={() => setShowFilters((v) => !v)}
+                            className={cn(
+                                "shrink-0 flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold border transition-all",
+                                showFilters || activeFilterCount > 0
+                                    ? "bg-blue-50 border-blue-200 text-blue-600"
+                                    : "bg-white border-gray-100 text-gray-500"
+                            )}
+                        >
+                            <SlidersHorizontal size={13} />
+                            <span className="hidden sm:inline">فلترة</span>
+                            {activeFilterCount > 0 && (
+                                <span className="bg-blue-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center font-sans">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </button>
+                    )}
                 </div>
 
                 {/* --- شريط التنقل بين التبويبات --- */}
@@ -457,28 +487,6 @@ export default function ExamsReportPage() {
                     )}
                 </div>
 
-                {/* --- زر إظهار/إخفاء الفلاتر (فقط للتبويبات التي تملك فلاتر) --- */}
-                {hasFilterableTab && (
-                    <div className="max-w-4xl mx-auto mt-2 flex justify-end px-1 md:px-0">
-                        <button
-                            onClick={() => setShowFilters((v) => !v)}
-                            className={cn(
-                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] md:text-xs font-bold border transition-all",
-                                showFilters || activeFilterCount > 0
-                                    ? "bg-blue-50 border-blue-200 text-blue-600"
-                                    : "bg-white border-gray-100 text-gray-500"
-                            )}
-                        >
-                            <SlidersHorizontal size={13} />
-                            فلترة
-                            {activeFilterCount > 0 && (
-                                <span className="bg-blue-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center font-sans">
-                                    {activeFilterCount}
-                                </span>
-                            )}
-                        </button>
-                    </div>
-                )}
             </header>
 
             <main className="max-w-4xl mx-auto px-2 md:px-6 py-4 space-y-6">
@@ -525,6 +533,17 @@ export default function ExamsReportPage() {
                                                     <option value="far">بعيد</option>
                                                 </select>
                                                 <ChevronDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                            </div>
+                                            <div className="flex items-center gap-1.5 bg-white border border-gray-100 px-3 py-2 rounded-lg md:rounded-2xl">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={minSessionsFilter}
+                                                    onChange={(e) => setMinSessionsFilter(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-10 bg-transparent text-center text-[10px] md:text-sm font-bold text-gray-700 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                />
+                                                <span className="text-[10px] md:text-sm font-bold text-gray-500 whitespace-nowrap">حصة فأكثر</span>
                                             </div>
                                         </div>
                                     </div>
