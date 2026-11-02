@@ -587,7 +587,7 @@ export default function FinancePage() {
             <FadeIn show={isSalaryStatusOpen} className="fixed inset-0 z-[100]">
                 <div onClick={() => setIsSalaryStatusOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             </FadeIn>
-            <SlideIn show={isSalaryStatusOpen} className="fixed top-[10%] left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-4xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[80vh] border border-white/20">
+            <SlideIn show={isSalaryStatusOpen} className="fixed top-[4%] left-1/2 -translate-x-1/2 w-[94%] sm:w-[95%] max-w-6xl bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden flex flex-col max-h-[92vh] border border-white/20">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
@@ -608,9 +608,9 @@ export default function FinancePage() {
                         <div className="flex items-center justify-between mb-3">
                             <div className="text-sm font-black text-green-700 bg-green-50 px-3 py-1 rounded-full">✅ تم الصرف: {teacherPaymentStatus.paidCount}</div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {teacherPaymentStatus.paid.length === 0 ? (
-                                <p className="text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">لم يتم صرف راتب أي مدرس هذا الشهر.</p>
+                                <p className="md:col-span-2 text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">لم يتم صرف راتب أي مدرس هذا الشهر.</p>
                             ) : (
                                 teacherPaymentStatus.paid.map(t => (
                                     <button key={t.teacher.id} onClick={() => { setSelectedSalaryTeacher(t.teacher); setIsSalaryTeacherOpen(true); }} className="w-full p-4 bg-green-50/50 rounded-2xl border border-green-100/50 hover:border-green-300 hover:shadow-sm transition-all text-right space-y-3">
@@ -649,9 +649,9 @@ export default function FinancePage() {
                         <div className="flex items-center justify-between mb-3">
                             <div className="text-sm font-black text-amber-700 bg-amber-50 px-3 py-1 rounded-full">⏳ لم يصرف بعد: {teacherPaymentStatus.unpaidCount}</div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {teacherPaymentStatus.unpaid.length === 0 ? (
-                                <p className="text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">تم صرف رواتب جميع المدرسين لهذا الشهر.</p>
+                                <p className="md:col-span-2 text-xs text-gray-400 font-bold text-center py-4 bg-gray-50 rounded-2xl">تم صرف رواتب جميع المدرسين لهذا الشهر.</p>
                             ) : (
                                 teacherPaymentStatus.unpaid.map(t => (
                                     <button key={t.teacher.id} onClick={() => { setSelectedSalaryTeacher(t.teacher); setIsSalaryTeacherOpen(true); }} className="w-full p-4 bg-amber-50/50 rounded-2xl border border-amber-100/50 hover:border-amber-300 hover:shadow-sm transition-all text-right space-y-3">
@@ -687,13 +687,13 @@ export default function FinancePage() {
                     </div>
                 </div>
 
-                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0 space-y-2">
-                    <div className="flex items-center justify-between">
-                        <span className="font-black text-emerald-600 font-sans">{teacherPaymentStatus.totalPaidAmount.toLocaleString()} ج.م</span>
+                <div className="p-6 bg-gray-50/50 border-t border-gray-50 shrink-0 grid grid-cols-2 gap-3">
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center justify-between">
+                        <span className="font-black text-emerald-600 font-sans text-lg">{teacherPaymentStatus.totalPaidAmount.toLocaleString()} ج.م</span>
                         <span className="text-xs font-black text-gray-400">المبلغ المصروف</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                        <span className="font-black text-amber-600 font-sans">{teacherPaymentStatus.totalRemaining.toLocaleString()} ج.م</span>
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center justify-between">
+                        <span className="font-black text-amber-600 font-sans text-lg">{teacherPaymentStatus.totalRemaining.toLocaleString()} ج.م</span>
                         <span className="text-xs font-black text-gray-400">المبلغ المتبقي للصرف</span>
                     </div>
                 </div>
