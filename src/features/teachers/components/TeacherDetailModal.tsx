@@ -22,6 +22,7 @@ import CircleDollarSign from 'lucide-react/dist/esm/icons/circle-dollar-sign'
 import Loader from 'lucide-react/dist/esm/icons/loader'
 import Layers from 'lucide-react/dist/esm/icons/layers';
 import StickyNote from 'lucide-react/dist/esm/icons/sticky-note';
+import UserMinus from 'lucide-react/dist/esm/icons/user-minus';
 
 // ==========================================
 // 3. استيراد الأنواع (Types) والخطافات (Hooks) والخدمات (Services)
@@ -43,6 +44,7 @@ import { TeacherDeficitModal, DeficitTab } from './TeacherDeficitModal';
 import { TeacherGroupsTab } from './TeacherGroupsTab';
 import { TeacherAgreementTab } from './TeacherAgreementTab';
 import { TeacherNotesTab } from './TeacherNotesTab';
+import { TeacherExternalStudentsTab } from './TeacherExternalStudentsTab';
 import { getErrorMessage } from '@/lib/error-message';
 
 // ==========================================
@@ -243,6 +245,7 @@ export default function TeacherDetailModal({
         collectionHistoryMapped = [],
         totalHandedOver = 0,
         collectionOverage = 0,
+        externalCreditedStudents = [],
         salaryStats = {
             basicSalary: 0,
             attendanceBasedSalary: 0,
@@ -685,13 +688,15 @@ export default function TeacherDetailModal({
         { id: 'attendance', label: 'الحضور', icon: Calendar },
         { id: 'payroll', label: 'الراتب', icon: CreditCard },
         { id: 'groups', label: 'المجموعات', icon: Layers },
+        { id: 'external', label: 'طلاب خارجيون', icon: UserMinus },
         { id: 'agreement', label: 'الاتفاق', icon: FileText },
         { id: 'notes', label: 'ملحوظات', icon: StickyNote },
     ].filter(tab => {
-        // المشرف ممنوع من رؤية التحصيل/الراتب الخاصين بمعلم آخر، لكنه يقدر يشوف
-        // تحصيله وراتبه هو في ملفه الشخصي (لما يفتح سجله هو نفسه)
+        // المشرف ممنوع من رؤية التحصيل/الراتب/الطلاب الخارجيين الخاصين بمعلم آخر، لكنه يقدر
+        // يشوف تحصيله وراتبه هو في ملفه الشخصي (لما يفتح سجله هو نفسه)
         const isOwnProfile = user?.role === 'supervisor' && teacher?.id === user?.teacherId;
-        if (user?.role === 'supervisor' && !isOwnProfile) return tab.id !== 'payroll' && tab.id !== 'collection';
+        if (user?.role === 'supervisor' && !isOwnProfile) return tab.id !== 'payroll' && tab.id !== 'collection' && tab.id !== 'external';
+        if (user?.role === 'teacher') return tab.id !== 'external';
         return true;
     });
 
@@ -752,6 +757,16 @@ export default function TeacherDetailModal({
                             totalPaid={totalPaid}
                         />
                     </Suspense>
+                );
+            // ----------------------------------------
+            // تبويب الطلاب الخارجيين (مستحقات من طلاب سابقين)
+            // ----------------------------------------
+            case 'external':
+                return (
+                    <TeacherExternalStudentsTab
+                        students={externalCreditedStudents}
+                        monthLabel={selectedMonth}
+                    />
                 );
             // --------------------------------------------------------------------------------
             // تبويب الحضور والانصراف (Attendance)

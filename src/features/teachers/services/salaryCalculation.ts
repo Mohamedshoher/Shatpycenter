@@ -38,6 +38,9 @@ interface SalaryFee {
     createdBy?: string;
     collectedById?: string;
     collected_by_id?: string;
+    // المجموعة المستحقة فعلياً لهذه الدفعة (لو حُدِّدت صراحة وقت التحصيل)، بديلاً عن
+    // مجموعة الطالب الحالية التي قد تكون تغيّرت بعد تحصيل دفعة متأخرة لشهر سابق
+    creditedGroupId?: string | null;
 }
 
 interface SalaryAmountRecord {
@@ -136,6 +139,11 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     // Map لتحسين سرعة البحث عن الطالب في O(1) بدلاً من O(n)
     const studentMap = new Map<string, SalaryStudent>(students.map(s => [s.id, s]));
 
+    // المجموعة الفعلية المستحقة لهذه الدفعة: المحدَّدة صراحة عليها، وإلا مجموعة الطالب الحالية
+    // (مهم حتى لا تنتقل دفعة متأخرة لشهر قديم إلى المدرس الحالي بعد انتقال الطالب)
+    const getFeeEffectiveGroupId = (fee: SalaryFee, student: SalaryStudent | undefined): string | null =>
+        fee.creditedGroupId || student?.groupId || null;
+
     // دالة للتحقق إذا كان المنشئ معلماً آخر
     const isOtherTeacher = (createdBy: string | undefined) => {
         if (!createdBy || createdBy === 'غير معروف') return false;
@@ -165,7 +173,8 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     const totalCollected = allFees
         .filter(f => {
             const student = studentMap.get(f.studentId);
-            const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+            const effectiveGroupId = getFeeEffectiveGroupId(f, student);
+            const isTeacherStudent = !!effectiveGroupId && teacherGroupIds.includes(effectiveGroupId);
             const isCollectedByTeacher = (f.collectedById && f.collectedById === teacher.id) ||
                 (f.collected_by_id && f.collected_by_id === teacher.id) ||
                 f.createdBy === teacher.fullName ||
@@ -179,7 +188,8 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     const totalCollectedByManager = allFees
         .filter(f => {
             const student = studentMap.get(f.studentId);
-            const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+            const effectiveGroupId = getFeeEffectiveGroupId(f, student);
+            const isTeacherStudent = !!effectiveGroupId && teacherGroupIds.includes(effectiveGroupId);
             const isCollectedByThisTeacher = (f.collectedById && f.collectedById === teacher.id) ||
                 (f.collected_by_id && f.collected_by_id === teacher.id) ||
                 f.createdBy === teacher.fullName ||
@@ -195,7 +205,8 @@ export const computeTeacherSalaryStats = (input: TeacherSalaryInput): TeacherSal
     const totalCollectedForGroup = allFees
         .filter(f => {
             const student = studentMap.get(f.studentId);
-            return student && student.groupId && teacherGroupIds.includes(student.groupId);
+            const effectiveGroupId = getFeeEffectiveGroupId(f, student);
+            return !!effectiveGroupId && teacherGroupIds.includes(effectiveGroupId);
         })
         .reduce((sum, f) => sum + parseAmount(f.amount), 0);
 

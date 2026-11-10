@@ -442,6 +442,7 @@ export type Database = {
           collected_by_id: string | null
           created_at: string
           created_by: string | null
+          credited_group_id: string | null
           date: string | null
           id: string
           month: string | null
@@ -453,6 +454,7 @@ export type Database = {
           collected_by_id?: string | null
           created_at?: string
           created_by?: string | null
+          credited_group_id?: string | null
           date?: string | null
           id?: string
           month?: string | null
@@ -464,6 +466,7 @@ export type Database = {
           collected_by_id?: string | null
           created_at?: string
           created_by?: string | null
+          credited_group_id?: string | null
           date?: string | null
           id?: string
           month?: string | null
@@ -476,6 +479,13 @@ export type Database = {
             columns: ["collected_by_id"]
             isOneToOne: false
             referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fees_credited_group_id_fkey"
+            columns: ["credited_group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
           {
