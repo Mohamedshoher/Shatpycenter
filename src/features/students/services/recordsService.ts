@@ -37,6 +37,9 @@ export interface FeeRecord {
     receipt: string;
     date: string;
     createdBy: string;
+    // المجموعة/المدرس المستحق فعلياً لهذه الدفعة وقت تحصيلها، إن تم تحديدها صراحة
+    // (قد يختلف عن مجموعة الطالب الحالية لو انتقل بعدها إلى مدرس آخر)
+    creditedGroupId?: string | null;
     timestamp?: number;
 }
 
@@ -214,21 +217,26 @@ export const deleteExamRecord = async (id: string): Promise<void> => {
 };
 
 // ===== سجلات الرسوم =====
+type FeeRow = { id: string; student_id: string; month: string; amount: number; receipt_number: string; date: string; created_by: string; credited_group_id: string | null; created_at: string };
+
+const mapFeeRow = (row: FeeRow): FeeRecord => ({
+    id: row.id,
+    studentId: row.student_id,
+    month: row.month,
+    amount: String(row.amount),
+    receipt: row.receipt_number,
+    date: row.date,
+    createdBy: row.created_by,
+    creditedGroupId: row.credited_group_id,
+    timestamp: new Date(row.created_at).getTime()
+});
+
 export const getStudentFees = async (studentId: string): Promise<FeeRecord[]> => {
     try {
         const res = await fetch(`/api/records/fees?studentId=${encodeURIComponent(studentId)}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((row: { id: string; student_id: string; month: string; amount: number; receipt_number: string; date: string; created_by: string; created_at: string }) => ({
-            id: row.id,
-            studentId: row.student_id,
-            month: row.month,
-            amount: String(row.amount),
-            receipt: row.receipt_number,
-            date: row.date,
-            createdBy: row.created_by,
-            timestamp: new Date(row.created_at).getTime()
-        }));
+        return (data || []).map(mapFeeRow);
     } catch (error) {
         console.error("Error fetching student fees:", error);
         return [];
@@ -240,16 +248,7 @@ export const getFeesByMonth = async (monthKey: string): Promise<FeeRecord[]> => 
         const res = await fetch(`/api/records/fees?month=${encodeURIComponent(monthKey)}`);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((row: { id: string; student_id: string; month: string; amount: number; receipt_number: string; date: string; created_by: string; created_at: string }) => ({
-            id: row.id,
-            studentId: row.student_id,
-            month: row.month,
-            amount: String(row.amount),
-            receipt: row.receipt_number,
-            date: row.date,
-            createdBy: row.created_by,
-            timestamp: new Date(row.created_at).getTime()
-        }));
+        return (data || []).map(mapFeeRow);
     } catch (error) {
         console.error("Error fetching fees by month:", error);
         return [];
@@ -271,7 +270,8 @@ export const addFeeRecord = async (record: Omit<FeeRecord, 'id'>): Promise<FeeRe
             amount: parseArabicAmount(record.amount),
             receipt_number: record.receipt,
             date: record.date,
-            created_by: record.createdBy
+            created_by: record.createdBy,
+            credited_group_id: record.creditedGroupId || null
         }),
     });
     const data = await res.json().catch(() => ({}));

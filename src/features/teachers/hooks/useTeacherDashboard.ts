@@ -28,6 +28,10 @@ export const useTeacherDashboard = (
 
         const teacherGroupIds = groups.filter(g => g.teacherId === teacher.id).map(g => g.id);
 
+        // المجموعة الفعلية المستحقة لدفعة ما: المحدَّدة صراحة عليها وقت التحصيل، وإلا مجموعة الطالب الحالية
+        const getFeeEffectiveGroupId = (fee: FeeRecord, student: Student | undefined): string | null =>
+            fee.creditedGroupId || student?.groupId || null;
+
         // وظيفة للتحقق إذا كان المنشئ معلماً آخر
         const isOtherTeacher = (createdBy: string | undefined) => {
             if (!createdBy || createdBy === 'غير معروف') return false;
@@ -44,18 +48,20 @@ export const useTeacherDashboard = (
         const collectedPayments = allFees
             .filter(f => {
                 const student = students.find(s => s.id === f.studentId);
-                const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+                const effectiveGroupId = getFeeEffectiveGroupId(f, student);
+                const isTeacherStudent = !!effectiveGroupId && teacherGroupIds.includes(effectiveGroupId);
                 const isCollectedByTeacher = f.createdBy === teacher.fullName ||
                     f.createdBy === teacher.phone ||
                     (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
-                
-                // يتم تضمينها إذا حصلها المعلم (حتى لو انتقل الطالب) 
+
+                // يتم تضمينها إذا حصلها المعلم (حتى لو انتقل الطالب)
                 // أو إذا كان طالب المعلم والمنشئ غير معروف (باعتبار المعلم حصله)
                 return isCollectedByTeacher || (isTeacherStudent && (!f.createdBy || f.createdBy === 'غير معروف'));
             })
             .map(f => {
                 const student = students.find(s => s.id === f.studentId);
-                const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+                // وسم "منقول": الطالب لم يعد حالياً في مجموعات هذا المعلم، بصرف النظر عن المجموعة المستحقة للدفعة
+                const isCurrentlyWithTeacher = !!student?.groupId && teacherGroupIds.includes(student.groupId);
                 return {
                     id: f.receipt,
                     feeId: f.id,
@@ -63,7 +69,7 @@ export const useTeacherDashboard = (
                     amount: Number(f.amount.replace(/[^0-9.]/g, '')) || 0,
                     date: f.date,
                     groupName: groups.find(g => g.id === student?.groupId)?.name || '-',
-                    isTransferred: student && !isTeacherStudent // وسم "منقول" إذا لم يعد في مجموعات هذا المعلم
+                    isTransferred: !!student && !isCurrentlyWithTeacher // وسم "منقول" إذا لم يعد في مجموعات هذا المعلم
                 };
             });
 
@@ -71,7 +77,8 @@ export const useTeacherDashboard = (
         const managerCollectedPayments = allFees
             .filter(f => {
                 const student = students.find(s => s.id === f.studentId);
-                const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+                const effectiveGroupId = getFeeEffectiveGroupId(f, student);
+                const isTeacherStudent = !!effectiveGroupId && teacherGroupIds.includes(effectiveGroupId);
                 const isCollectedByThisTeacher = f.createdBy === teacher.fullName || (f.createdBy && normalize(f.createdBy) === normalize(teacher.fullName));
                 
                 // يظهر في "تحصيل المدير" فقط إذا كان الطالب حالياً في مجموعات المعلم
@@ -96,7 +103,8 @@ export const useTeacherDashboard = (
         const otherTeacherCollectedPayments = allFees
             .filter(f => {
                 const student = students.find(s => s.id === f.studentId);
-                const isTeacherStudent = student && student.groupId && teacherGroupIds.includes(student.groupId);
+                const effectiveGroupId = getFeeEffectiveGroupId(f, student);
+                const isTeacherStudent = !!effectiveGroupId && teacherGroupIds.includes(effectiveGroupId);
                 return isTeacherStudent && isOtherTeacher(f.createdBy);
             })
             .map(f => {
@@ -185,6 +193,30 @@ export const useTeacherDashboard = (
         // 6. فارق الأخذ - المبلغ الزائد الذي استلمه المدير فوق ما حصله المدرس
         const collectionOverage = Math.max(0, totalHandedOver - totalCollected);
 
+        // 7. مستحقات من طلاب سابقين: دفعات مُحتسبة لهذا المعلم (محددة صراحة على إحدى مجموعاته)
+        // لكن الطالب لم يعد حالياً في أي من مجموعاته - أي طلاب انتقلوا بعد أن استُحقّت لهذا المعلم دفعة عنهم
+        const externalCreditedFees = allFees.filter(f => {
+            if (!f.creditedGroupId || !teacherGroupIds.includes(f.creditedGroupId)) return false;
+            const student = students.find(s => s.id === f.studentId);
+            const isCurrentlyWithTeacher = !!student?.groupId && teacherGroupIds.includes(student.groupId);
+            return !isCurrentlyWithTeacher;
+        });
+        const externalCreditedStudentsMap = new Map<string, { studentId: string; studentName: string; currentGroupName: string; totalAmount: number; months: string[] }>();
+        externalCreditedFees.forEach(f => {
+            const student = students.find(s => s.id === f.studentId);
+            const entry = externalCreditedStudentsMap.get(f.studentId) || {
+                studentId: f.studentId,
+                studentName: student?.fullName || 'غير معروف',
+                currentGroupName: groups.find(g => g.id === student?.groupId)?.name || 'غير محدد',
+                totalAmount: 0,
+                months: []
+            };
+            entry.totalAmount += Number(f.amount.replace(/[^0-9.]/g, '')) || 0;
+            if (!entry.months.includes(f.month)) entry.months.push(f.month);
+            externalCreditedStudentsMap.set(f.studentId, entry);
+        });
+        const externalCreditedStudents = Array.from(externalCreditedStudentsMap.values()).sort((a, b) => b.totalAmount - a.totalAmount);
+
         return {
             expectedExpenses,
             collectedPayments,
@@ -199,6 +231,7 @@ export const useTeacherDashboard = (
             collectionHistoryMapped,
             totalHandedOver,
             collectionOverage,
+            externalCreditedStudents,
             salaryStats
         };
     }, [teacher, students, groups, allFees, selectedMonthRaw, attendanceData, handovers, exemptions, deductions, paymentsHistory, allTeachers]);
