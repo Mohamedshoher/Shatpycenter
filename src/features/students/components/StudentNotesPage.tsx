@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getNotesPage, replyToNote, deleteStudentNote, markNoteAsRead } from '@/features/students/services/recordsService';
 import { getStudentById, updateStudent } from '@/features/students/services/studentService';
 import EditStudentModal from '@/features/students/components/EditStudentModal';
+const StudentDetailModal = dynamic(() => import('@/features/students/components/StudentDetailModal'), { ssr: false });
 import { useStudents } from '@/features/students/hooks/useStudents';
 import { getGroups } from '@/features/groups/services/groupService';
 import { getTeachers } from '@/features/teachers/services/teacherService';
@@ -78,6 +80,8 @@ export default function StudentNotesPage() {
     const [readOverrides, setReadOverrides] = useState<Record<string, boolean>>({});
     const [editStudent, setEditStudent] = useState<Student | null>(null);
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+    const [detailsStudent, setDetailsStudent] = useState<Student | null>(null);
+    const [loadingDetailsNoteId, setLoadingDetailsNoteId] = useState<string | null>(null);
     const [groupChangeNote, setGroupChangeNote] = useState<NoteItem | null>(null);
     const [changingGroup, setChangingGroup] = useState(false);
 
@@ -187,6 +191,14 @@ export default function StudentNotesPage() {
         }
     };
 
+    const handleShowDetails = async (note: NoteItem) => {
+        setLoadingDetailsNoteId(note.id);
+        const student = await getStudentById(note.studentId);
+        setLoadingDetailsNoteId(null);
+        if (student) setDetailsStudent(student);
+        else alert('تعذر تحميل بيانات الطالب');
+    };
+
     const handleEdit = async (note: NoteItem) => {
         setEditingNoteId(note.id);
         const student = await getStudentById(note.studentId);
@@ -243,7 +255,14 @@ export default function StudentNotesPage() {
                             <User size={16} />
                         </div>
                         <div className="text-right">
-                            <p className="font-black text-gray-900 text-sm md:text-base leading-tight">{note.studentName}</p>
+                            <button
+                                onClick={() => handleShowDetails(note)}
+                                disabled={loadingDetailsNoteId === note.id}
+                                className="font-black text-gray-900 text-sm md:text-base leading-tight hover:text-blue-600 hover:underline transition-colors disabled:opacity-50"
+                                title="عرض تفاصيل الطالب"
+                            >
+                                {loadingDetailsNoteId === note.id ? 'جاري التحميل...' : note.studentName}
+                            </button>
                             <p className="text-[10px] text-gray-400 font-bold">{formatNoteDate(note.createdAt)}</p>
                         </div>
                     </div>
@@ -544,6 +563,17 @@ export default function StudentNotesPage() {
                 onClose={() => {
                     setEditStudent(null);
                     refresh();
+                }}
+            />
+
+            <StudentDetailModal
+                student={detailsStudent}
+                isOpen={!!detailsStudent}
+                onClose={() => setDetailsStudent(null)}
+                initialTab="attendance"
+                onEdit={(s) => {
+                    setDetailsStudent(null);
+                    setEditStudent(s);
                 }}
             />
 

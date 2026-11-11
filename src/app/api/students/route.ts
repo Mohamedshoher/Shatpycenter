@@ -164,6 +164,14 @@ export async function PUT(request: NextRequest) {
             }
         }
 
+        // نجلب حالة الطالب قبل التعديل فقط لو التعديل قد يغيّر المجموعة أو الحالة (أرشفة/استعادة)،
+        // حتى نقدر نرسل إشعارات نقل/أرشفة دقيقة للمدرسين المعنيين بعد نجاح التحديث
+        let previousStudentRow: { full_name: string; group_id: string | null; status: string | null } | null = null;
+        if (data.groupId !== undefined || data.status !== undefined) {
+            const { data: prevRow } = await supabase.from('students').select('full_name, group_id, status').eq('id', id).maybeSingle();
+            previousStudentRow = prevRow;
+        }
+
         const updates: Record<string, unknown> = {};
         if (data.fullName) updates.full_name = data.fullName;
         if (data.groupId !== undefined) updates.group_id = data.groupId;
@@ -181,6 +189,68 @@ export async function PUT(request: NextRequest) {
 
         const { error } = await supabase.from('students').update(updates).eq('id', id);
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+        // إشعارات نقل الطالب بين المجموعات وأرشفته - لا تمنع نجاح الطلب لو فشلت
+        if (previousStudentRow) {
+            try {
+                const studentName = previousStudentRow.full_name;
+                const prevGroupId = previousStudentRow.group_id;
+                const prevStatus = previousStudentRow.status;
+                const newGroupId = data.groupId !== undefined ? data.groupId : prevGroupId;
+                const newStatus = data.status !== undefined ? data.status : prevStatus;
+
+                const groupIdsToFetch = Array.from(new Set([prevGroupId, newGroupId].filter(Boolean))) as string[];
+                let groupsInfo: { id: string; name: string; teacher_id: string | null }[] = [];
+                if (groupIdsToFetch.length > 0) {
+                    const { data: gRows } = await supabase.from('groups').select('id, name, teacher_id').in('id', groupIdsToFetch);
+                    groupsInfo = gRows || [];
+                }
+                const findGroup = (gid: string | null) => (gid ? groupsInfo.find((g) => g.id === gid) : undefined);
+
+                const notificationsToInsert: { teacher_id: string; type: string; title: string; message: string }[] = [];
+
+                const isBecomingArchived = newStatus === 'archived' && prevStatus !== 'archived';
+                const isGroupChanged = data.groupId !== undefined && data.groupId !== prevGroupId;
+
+                if (isBecomingArchived) {
+                    const oldGroup = findGroup(prevGroupId);
+                    if (oldGroup?.teacher_id) {
+                        notificationsToInsert.push({
+                            teacher_id: oldGroup.teacher_id,
+                            type: 'student_archived',
+                            title: 'أرشفة طالب',
+                            message: `تم أرشفة الطالب ${studentName} من مجموعتك (${oldGroup.name})`,
+                        });
+                    }
+                } else if (isGroupChanged) {
+                    const oldGroup = findGroup(prevGroupId);
+                    const newGroup = findGroup(newGroupId);
+                    if (oldGroup?.teacher_id && oldGroup.teacher_id !== newGroup?.teacher_id) {
+                        notificationsToInsert.push({
+                            teacher_id: oldGroup.teacher_id,
+                            type: 'student_transferred_out',
+                            title: 'نقل طالب',
+                            message: `تم نقل الطالب ${studentName} من مجموعتك إلى مجموعة ${newGroup?.name || 'أخرى'}`,
+                        });
+                    }
+                    if (newGroup?.teacher_id && newGroup.teacher_id !== oldGroup?.teacher_id) {
+                        notificationsToInsert.push({
+                            teacher_id: newGroup.teacher_id,
+                            type: 'student_transferred_in',
+                            title: 'طالب جديد',
+                            message: `تم نقل الطالب ${studentName} إلى مجموعتك${oldGroup?.name ? ` من مجموعة ${oldGroup.name}` : ''}`,
+                        });
+                    }
+                }
+
+                if (notificationsToInsert.length > 0) {
+                    await supabase.from('notifications').insert(notificationsToInsert);
+                }
+            } catch (notifyErr) {
+                console.warn('تعذر إرسال إشعار نقل/أرشفة الطالب:', notifyErr);
+            }
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });

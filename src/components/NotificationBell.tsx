@@ -25,6 +25,9 @@ const NotificationItem = memo(function NotificationItem({
             case 'deduction': return { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'خصم' };
             case 'reward': return { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'مكافأة' };
             case 'salary_change': return { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'تغيير الراتب' };
+            case 'student_transferred_out': return { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'نقل طالب' };
+            case 'student_transferred_in': return { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'طالب جديد' };
+            case 'student_archived': return { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'أرشفة طالب' };
             default: return { dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', label: 'النظام' };
         }
     };
