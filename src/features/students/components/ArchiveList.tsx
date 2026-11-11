@@ -545,7 +545,7 @@ export default function ArchiveList() {
                                         {debtInfo.isIndebted && (
                                             <span className="text-[10px] sm:text-xs text-red-600 font-bold flex items-center gap-1 bg-red-50 px-2.5 py-1.5 rounded-xl border border-red-100/50">
                                                 <AlertCircle size={12} />
-                                                {debtInfo.label}
+                                                مدين
                                             </span>
                                         )}
                                     </div>
@@ -561,7 +561,7 @@ export default function ArchiveList() {
                                                         const totalAmount = debtInfo.amount * monthlyAmount;
                                                         const monthsText = (debtInfo.unpaidMonths || []).map((m: { label: string }) => m.label).join('، ');
                                                         
-                                                        const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\n\nنود إعلامكم أن الطالب مدين بـ *${debtInfo.label}* كرسوم متأخرة.\n🗓️ الأشهر المستحقة: (${monthsText})\n💰 المبلغ المطلوب: *${totalAmount} جنيه*\n\n💳 رقم الهاتف للدفع (كاش أو إنستا): *01064116467*\n\nونأسف لو في أي خطأ ويسعدنا خدمتكم في أي وقت.`;
+                                                        const message = `السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ة: *${student.fullName}*\n\nنود إعلامكم أن الطالب مدين برسوم متأخرة.\n🗓️ الأشهر المستحقة: (${monthsText})\n💰 المبلغ المطلوب: *${totalAmount} جنيه*\n\n💳 رقم الهاتف للدفع (كاش أو إنستا): *01064116467*\n\nونأسف لو في أي خطأ ويسعدنا خدمتكم في أي وقت.`;
                                                         window.open(getWhatsAppUrl(phone, message), '_blank');
                                                     }}
                                                     className="w-9 h-9 flex items-center justify-center bg-white text-green-500 rounded-lg hover:bg-green-500 hover:text-white transition-all active:scale-95 shadow-sm border border-gray-100"
