@@ -16,9 +16,8 @@ export const useStudents = (groupIds?: string[], status?: string) => {
             const updateData: Partial<Student> = { status };
             if (status === 'active' && groupId !== undefined) {
                 updateData.groupId = groupId;
-                // عودة من الأرشيف: نحدّث تاريخ الالتحاق ليصير تاريخ الرجوع الفعلي،
-                // حتى يُحسب استحقاقه الشهري من تاريخ عودته لا من التحاقه الأصلي القديم
-                updateData.enrollmentDate = new Date().toISOString().split('T')[0];
+                // عودة من الأرشيف: لا نغيّر تاريخ الالتحاق الأصلي، حتى يبقى سجله القديم
+                // (مصروفات، اختبارات، أشهر مسدَّدة) كما هو ولا يظهر وكأنه بدأ من جديد
             }
             if (status === 'archived') {
                 updateData.archivedDate = new Date().toISOString().split('T')[0];
@@ -34,7 +33,6 @@ export const useStudents = (groupIds?: string[], status?: string) => {
                     ...s,
                     status,
                     groupId: status === 'active' ? groupId : s.groupId,
-                    enrollmentDate: status === 'active' ? new Date().toISOString().split('T')[0] : s.enrollmentDate,
                 } : s);
             });
             return { previousStudents };
