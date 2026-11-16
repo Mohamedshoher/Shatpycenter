@@ -4,6 +4,8 @@ import { FadeIn, SlideIn } from '@/components/ui/transition';
 import Calendar from 'lucide-react/dist/esm/icons/calendar'
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
+import ChevronsRight from 'lucide-react/dist/esm/icons/chevrons-right'
+import ChevronsLeft from 'lucide-react/dist/esm/icons/chevrons-left'
 import X from 'lucide-react/dist/esm/icons/x'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2'
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
@@ -110,12 +112,10 @@ export const TeacherAttendanceTab = ({
 
                                 alert('تم تعميد الغياب من أول الشهر حتى الأمس، وتسجيل اليوم الحالي حضوراً');
                             }}
-                            className="flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-xl text-[10px] md:text-xs font-bold border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-200 transition-all shrink-0 h-9 md:h-auto"
+                            className="flex items-center justify-center w-9 h-9 rounded-xl border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-200 transition-all shrink-0"
                             title="تعميد غياب من أول الشهر حتى الأمس (واليوم حضور)"
                         >
-                            <Calendar size={14} />
-                            <span className="hidden md:inline">تعميد غياب (للخلف)</span>
-                            <span className="md:hidden">للخلف</span>
+                            <ChevronsRight size={16} />
                         </button>
                         <button
                             onClick={async () => {
@@ -145,12 +145,10 @@ export const TeacherAttendanceTab = ({
                                 }
                                 alert('تم تعميد الغياب لبقية أيام الشهر بنجاح');
                             }}
-                            className="flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-xl text-[10px] md:text-xs font-bold border border-orange-100 text-orange-600 bg-orange-50 hover:bg-orange-100 hover:border-orange-200 transition-all shrink-0 h-9 md:h-auto"
+                            className="flex items-center justify-center w-9 h-9 rounded-xl border border-orange-100 text-orange-600 bg-orange-50 hover:bg-orange-100 hover:border-orange-200 transition-all shrink-0"
                             title="تعميد غياب لبقية الشهر (من الغد)"
                         >
-                            <Calendar size={14} />
-                            <span className="hidden md:inline">تعميد غياب (للمستقبل)</span>
-                            <span className="md:hidden">للمستقبل</span>
+                            <ChevronsLeft size={16} />
                         </button>
                     </div>
                 )}
