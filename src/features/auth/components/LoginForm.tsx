@@ -228,7 +228,6 @@ export default function LoginForm() {
                         <div className="relative">
                             <Input
                                 type={showPassword ? "text" : "password"}
-                                inputMode="numeric"
                                 autoComplete="current-password"
                                 placeholder="••••••••"
                                 value={password}
