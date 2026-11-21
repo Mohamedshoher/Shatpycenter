@@ -1,4 +1,5 @@
 import { User } from "@/types";// نوع المستخدم
+import { clearPersistedQueryCache } from "@/components/providers/QueryProvider";
 
 /**
  * الدالة الرئيسية لتسجيل الدخول بناءً على الدور (Role)
@@ -27,6 +28,7 @@ export const loginWithRole = async (identifier: string, password: string): Promi
  */
 export const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
+    await clearPersistedQueryCache();
 };
 
 /**
