@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginWithRole } from '../services/authService';
+import { clearPersistedQueryCache } from '@/components/providers/QueryProvider';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMessagingStore } from '@/features/messaging/store/useMessagingStore';
 import { getMessagingActor } from '@/features/messaging/utils';
@@ -31,6 +32,9 @@ export const useLogin = () => {
         try {
             // 1. محاولة تسجيل الدخول عبر الخدمة (Service)
             const { user, messagingToken } = await loginWithRole(role, pass);
+
+            // مسح أي بيانات محفوظة على الجهاز من مستخدم سابق (لو انتهت جلسته دون تسجيل خروج)
+            await clearPersistedQueryCache();
 
             // 2. حفظ بيانات المستخدم المسترجعة في المتجر العالمي
             setUser(user);
